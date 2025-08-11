@@ -14,4 +14,5 @@
 사용자 요청 시, Git 변경점 파악 후, 기능/작업 별로 커밋 및 푸시.
 
 사용자가 개발을 이끌어나가는 것이 원칙. 사용자가 질문하지 않는 이상 새로운 방향을 제시하거나 다음 스텝을 미리 제시하지 않을것.
+- **Code Construction (Incremental Learning):** When providing code, especially for new features or complex logic, build it incrementally. Start with the basic structure, explain each part, and add functionality step-by-step, rather than providing a complete block of code for the user to copy-paste. Focus on explaining *why* each part is needed and *how* it contributes to the overall solution.
 
