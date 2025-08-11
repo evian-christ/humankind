@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://boewe7gawk28d"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_kx8do"]
+
+[resource]
+script = ExtResource("1_kx8do")
+id = 2
+symbol_name = "Mountain"
+level = 0
+type_flags = 1
+effects = Array[Resource]([])
+effect_text = ""
+metadata/_custom_type_script = "uid://iq1tqrrt731u"
