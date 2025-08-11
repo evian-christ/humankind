@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://rf215ajl0poi"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_y0kys"]
+
+[resource]
+script = ExtResource("1_y0kys")
+id = 9
+symbol_name = "Wild berries"
+level = 1
+type_flags = 2
+effects = Array[Resource]([])
+effect_text = "Produce 1 food. Produce 1 food for every nearby Woods."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"
