@@ -8,9 +8,6 @@ func _ready() -> void:
 	load_symbols()
 	
 	print("Loaded " + str(symbols.size()) + " symbols.")
-	
-	if symbols.has(1):
-		print("Symbol ID 1 Name: " + symbols[1].symbol_name)
 
 func load_symbols():
 	var dir = DirAccess.open(SYMBOL_RESOURCES_PATH)

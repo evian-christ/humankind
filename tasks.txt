@@ -1,36 +1,37 @@
 # Next Steps for Godot Project (as of 2025-08-11)
 
-## 1. 심볼 인스턴스 ID 생성 및 관리 (SymbolData.gd 수정)
+## [x] 1. 심볼 인스턴스 ID 생성 및 관리 (SymbolData.gd 수정)
 *   **목표:** `SymbolData`가 플레이어가 소유할 개별 심볼 인스턴스(`PlayerSymbolInstance`)에 고유한 ID를 부여하고 생성하는 기능을 갖도록 합니다.
 *   **작업 단위:**
     *   `SymbolData.gd`에 `next_instance_id` 변수를 추가합니다.
     *   `SymbolData.gd`에 `create_player_symbol_instance(definition_id: int)` 함수를 추가합니다. 이 함수는 새로운 `PlayerSymbolInstance`를 생성하고, 고유한 `instance_id`를 부여하며, `definition_id`를 설정하여 반환합니다.
 
-## 2. GameBoard.gd에서 PlayerSymbolInstance 사용
+## [x] 2. GameBoard.gd에서 PlayerSymbolInstance 사용
 *   **목표:** `GameBoard.gd`가 `Symbol` 객체 대신 `PlayerSymbolInstance` 객체를 소유하도록 변경합니다.
 *   **작업 단위:**
     *   `GameBoard.gd`의 `player_symbols` 배열이 `PlayerSymbolInstance` 타입을 저장하도록 변경합니다.
     *   `_ready()` 함수에서 "River" 심볼을 가져올 때, `SymbolData`의 새로운 함수를 사용하여 `PlayerSymbolInstance`를 생성하고 `player_symbols`에 추가합니다.
 
-## 3. 플레이어 소유 심볼을 보드에 시각적으로 표시
+## [x] 3. 플레이어 소유 심볼을 보드에 시각적으로 표시
 *   **목표:** 플레이어가 소유한 심볼들이 게임 보드 위에 실제로 보이도록 합니다.
 *   **작업 단위:**
-    *   `GameBoard.gd`에서 `player_symbols` 배열에 있는 `PlayerSymbolInstance`들을 보드 슬롯에 배치합니다.
+    *   `GameBoard.gd`에 논리적 보드(`board_grid`)를 추가하고 초기화합니다.
+    *   `GameBoard.gd`에서 `player_symbols` 배열에 있는 `PlayerSymbolInstance`들을 무작위로 보드 슬롯에 배치합니다. (20개 초과 심볼 처리 포함)
     *   각 심볼의 시각적 표현(예: 심볼 이름이 적힌 `Label` 또는 아이콘 `TextureRect`)을 슬롯에 추가합니다.
 
-## 4. Effect 리소스 스크립트 구현
+## [ ] 4. Effect 리소스 스크립트 구현
 *   **목표:** 심볼의 실제 게임 로직 효과를 정의하는 `Effect` 리소스의 기본 구조를 만듭니다.
 *   **작업 단위:**
     *   `effect.gd` 스크립트를 생성하고 `class_name Effect`, `extends Resource` 및 `effect_type`, `amount`, `condition` 같은 기본 속성들을 정의합니다.
     *   `apply_effect()` 함수 뼈대를 추가합니다.
 
-## 5. Effect .tres 파일 생성 및 심볼에 연결
+## [ ] 5. Effect .tres 파일 생성 및 심볼에 연결
 *   **목표:** 특정 심볼의 효과를 나타내는 `Effect` .tres 파일을 만들고, 해당 심볼의 `effects` 배열에 연결합니다.
 *   **작업 단위:**
     *   "Wild berries" 심볼의 "식량 1 생산" 효과를 나타내는 `produce_food_1.tres` 같은 `Effect` 리소스 파일을 생성합니다.
     *   `009_wild_berries.tres` 파일을 열어 `effects` 배열에 이 `produce_food_1.tres`를 추가합니다.
 
-## 6. 효과 적용 로직 구현
+## [ ] 6. 효과 적용 로직 구현
 *   **목표:** 게임 로직에서 심볼의 효과를 실제로 발동시킵니다.
 *   **작업 단위:**
     *   `GameBoard.gd` (또는 별도의 관리자)에서 턴이 진행될 때 `player_symbols` 배열을 순회하며 각 심볼의 `effects` 배열에 있는 `Effect`들을 실행하는 로직을 추가합니다.
