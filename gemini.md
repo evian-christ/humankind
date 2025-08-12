@@ -11,10 +11,14 @@
 - 슬롯 보드는 가로 5칸, 세로 4칸으로 총 20개의 심볼이 배치될 수 있음. 플레이어 소유 심볼이 20개 보다 낮을 경우, 심볼이 배치되고 남은 슬롯은 빈 슬롯이 됨. 플레이어 소유 심볼이 20개 보다 많은 경우, 소유 심볼 중 무작위로 선정된 20개만 무작위로 배치가 됨. 이 경우 배치 되지 않은 심볼들은 효과 등 발동하지 않고 변화 없음.
 - 각 심볼은 정해진 효과에 따라 다른 심볼과 상호작용함. 일반적으로 상호작용은 해당 심볼의 주변 심볼(nearby)(인접한 8개의 슬롯에 위치한 심볼)과 하게 됨.
 
+**CRITICAL INSTRUCTION: INCREMENTAL CODE GUIDANCE AND EXPLANATION**
+- **Incremental Code Guidance:** Do not provide full code blocks directly. Instead, guide the user step-by-step, explaining the purpose and contribution of each part.
+- **Code Construction (Incremental Learning):** When providing code, especially for new features or complex logic, build it incrementally. Start with the basic structure, explain each part, and add functionality step-by-step, rather than providing a complete block of code for the user to copy-paste. Focus on explaining *why* each part is needed and *how* it contributes to the overall solution.
+- **Language:** All responses must be in Korean.
+
 ### Instructions
 
 사용자 요청 시, Git 변경점 파악 후, 기능/작업 별로 커밋 및 푸시.
 
 사용자가 개발을 이끌어나가는 것이 원칙. 사용자가 질문하지 않는 이상 새로운 방향을 제시하거나 다음 스텝을 미리 제시하지 않을것.
-- **Code Construction (Incremental Learning):** When providing code, especially for new features or complex logic, build it incrementally. Start with the basic structure, explain each part, and add functionality step-by-step, rather than providing a complete block of code for the user to copy-paste. Focus on explaining *why* each part is needed and *how* it contributes to the overall solution.
 
