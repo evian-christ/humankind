@@ -42,6 +42,17 @@ func load_symbols():
 		file_name = dir.get_next()
 	
 	dir.list_dir_end()
-	
+
+# find and return symbol by type id
 func get_symbol_by_id(id: int) -> Symbol:
 	return symbols.get(id)
+
+# Instance creation management
+var next_instance_id: int = 1
+
+func create_player_symbol_instance(type_id: int) -> PlayerSymbolInstance:
+	var new_instance = PlayerSymbolInstance.new()
+	new_instance.instance_id = next_instance_id
+	new_instance.type_id = type_id
+	next_instance_id += 1
+	return new_instance

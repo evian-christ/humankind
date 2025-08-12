@@ -7,6 +7,10 @@ const SLOT_GAP = 1
 
 var grid_container
 
+var player_symbols: Array[PlayerSymbolInstance] = []
+
+@onready var symbol_data = get_node("/root/SymbolData")
+
 func _ready() -> void:
 	grid_container = GridContainer.new()
 	grid_container.columns = BOARD_WIDTH
@@ -20,3 +24,8 @@ func _ready() -> void:
 		var slot = Panel.new()
 		slot.custom_minimum_size = SLOT_SIZE
 		grid_container.add_child(slot)
+	
+	var river_instance = symbol_data.create_player_symbol_instance(1)
+	player_symbols.append(river_instance)
+	
+	print("Created instance for symbol type: ", river_instance.type_id, ". instance_id: ", river_instance.instance_id)

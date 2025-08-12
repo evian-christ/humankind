@@ -7,7 +7,7 @@ id,Name,Level,Effect,Type
 6,Desert,0,,Terrain
 7,Rainforest,0,,Terrain
 8,Tundra,0,,Terrain
-9,Wild berries,1,Produce 1 food. Produce 1 food when nearby Woods,Food
+9,Wild berries,1,Produce 1 food. Produce 1 food for every nearby Woods.,Food
 10,Seeds,1,Produce 5 food every 4 turns,Food
 11,Wheat,1,Produce 10 food when nearby River every 3rd time,Food
 12,Rice,2,"Produce 15 food when nearby River, Mountain every 4th time",Food
