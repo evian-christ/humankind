@@ -13,5 +13,5 @@ enum SymbolType {
 @export var symbol_name: String
 @export var level: int
 @export_flags("Terrain", "Food", "Resource", "Event") var type_flags: int
-@export var effects: Array[Resource]
+@export var effects: Array[Dictionary]
 @export var effect_text: String
