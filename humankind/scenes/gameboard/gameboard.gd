@@ -11,13 +11,16 @@ var grid_container
 
 # Player owned symbols
 var player_symbols: Array[PlayerSymbolInstance] = []
+# Player stats
+var food_amount: int = 0
+@onready var food_amount_label = $"../UI/PlayerStats/FoodLabel"
 
 # Board grid
 var board_grid: Array = []
 
 # Get SymbolData
 @onready var symbol_data = get_node("/root/SymbolData")
-@onready var ui_node = $UI
+@onready var ui_node = $"../UI"
 
 func _ready() -> void:
 	_initialise_board_grid()
@@ -38,10 +41,18 @@ func _ready() -> void:
 	# adding initial symbols to player symbols
 	var river_instance = symbol_data.create_player_symbol_instance(1)
 	var mountain_instance = symbol_data.create_player_symbol_instance(2)
+	var wild_berries_instance = symbol_data.create_player_symbol_instance(9)
 	player_symbols.append(river_instance)
 	player_symbols.append(mountain_instance)
+	player_symbols.append(wild_berries_instance)
 	
 	_place_symbols_on_board()
+	
+	print("food_amount_label: ", food_amount_label)
+	print("UI 노드 존재: ", get_node("../UI") if has_node("../UI") else "없음")
+	print("FoodDisplay 존재: ", get_node("../UI/FoodDisplay") if has_node("../UI/FoodDisplay") else "없음")
+	
+	_update_food_display()
 
 # Initialise board grid	
 func _initialise_board_grid() -> void:
@@ -89,20 +100,29 @@ func _place_symbols_on_board() -> void:
 		slot.add_child(label)
 
 func _process_symbol_interactions() -> void:
+	var total_food_gained = 0
+	
 	for x in range(BOARD_WIDTH):
 		for y in range(BOARD_HEIGHT):
 			var current_symbol_instance = board_grid[x][y]
 			if current_symbol_instance != null:
 				var symbol_definition = symbol_data.get_symbol_by_id(current_symbol_instance.type_id)
-				var nearby_coords = _get_nearby_coordinates(x, y)
 				
-				for coord in nearby_coords:
-					var nx = coord.x
-					var ny = coord.y
-					
-					var nearby_symbol_instance = board_grid[nx][ny]
-					if nearby_symbol_instance != null:
-						var nearby_symbol_definition = symbol_data.get_symbol_by_id(nearby_symbol_instance.type_id)
+				var food_gained = EffectProcessor.process_symbol_effects(
+					current_symbol_instance,
+					symbol_definition,
+					x, y,
+					board_grid,
+					symbol_data
+				)
+				
+				total_food_gained += food_gained
+	
+	food_amount += total_food_gained
+	_update_food_display()
+	
+	if total_food_gained > 0:
+		print("총 식량 획득: ", total_food_gained)
 				
 func _get_nearby_coordinates(cx: int, cy: int) -> Array[Vector2i]:
 	var nearby_coords: Array[Vector2i] = []
@@ -133,4 +153,8 @@ func _on_spin_button_pressed() -> void:
 	_place_symbols_on_board()
 	
 	_process_symbol_interactions()
+	
+func _update_food_display():
+	if food_amount_label:
+		food_amount_label.text = "Food: " + str(food_amount)
 	

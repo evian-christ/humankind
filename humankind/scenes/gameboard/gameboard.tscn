@@ -2,11 +2,19 @@
 
 [ext_resource type="Script" uid="uid://cgedtcms27emg" path="res://scenes/gameboard/gameboard.gd" id="1_e0bc2"]
 
-[node name="Gameboard" type="Node2D"]
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Gameboard" type="Node2D" parent="."]
 script = ExtResource("1_e0bc2")
 
 [node name="UI" type="Control" parent="."]
-layout_mode = 3
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -18,11 +26,30 @@ layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 30.0
-offset_top = 560.0
-offset_right = 210.0
-offset_bottom = 620.0
+offset_left = 20.0
+offset_top = -78.0
+offset_right = 200.0
+offset_bottom = -18.0
 grow_vertical = 0
 text = "Spin"
 
-[connection signal="pressed" from="UI/SpinButton" to="." method="_on_spin_button_pressed"]
+[node name="PlayerStats" type="Control" parent="UI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_bottom = 30.0
+grow_horizontal = 0
+
+[node name="FoodLabel" type="Label" parent="UI/PlayerStats"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -56.0
+offset_bottom = 23.0
+grow_horizontal = 0
+text = "Food: 0"
+
+[connection signal="pressed" from="UI/SpinButton" to="Gameboard" method="_on_spin_button_pressed"]
