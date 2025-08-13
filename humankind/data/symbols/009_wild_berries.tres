@@ -8,6 +8,30 @@ id = 9
 symbol_name = "Wild berries"
 level = 1
 type_flags = 2
-effects = Array[Resource]([])
+effects = Array[Dictionary]([{
+"condition": {
+"params": {},
+"type": 0
+},
+"effect": {
+"params": {
+"amount": 1
+},
+"type": 1
+}
+}, {
+"condition": {
+"params": {
+"target_symbol_id": 4
+},
+"type": 1
+},
+"effect": {
+"params": {
+"amount": 1
+},
+"type": 1
+}
+}])
 effect_text = "Produce 1 food. Produce 1 food for every nearby Woods."
 metadata/_custom_type_script = "uid://iq1tqrrt731u"
