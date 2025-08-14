@@ -41,16 +41,16 @@ func _ready() -> void:
 	# adding initial symbols to player symbols
 	var river_instance = symbol_data.create_player_symbol_instance(1)
 	var mountain_instance = symbol_data.create_player_symbol_instance(2)
+	var woods_instance = symbol_data.create_player_symbol_instance(4)
 	var wild_berries_instance = symbol_data.create_player_symbol_instance(9)
-	player_symbols.append(river_instance)
-	player_symbols.append(mountain_instance)
-	player_symbols.append(wild_berries_instance)
+	var seeds_instance = symbol_data.create_player_symbol_instance(10)
+	#player_symbols.append(river_instance)
+	#player_symbols.append(mountain_instance)
+	#for i in range(3): player_symbols.append(woods_instance)
+	#player_symbols.append(wild_berries_instance)
+	player_symbols.append(seeds_instance)
 	
 	_place_symbols_on_board()
-	
-	print("food_amount_label: ", food_amount_label)
-	print("UI 노드 존재: ", get_node("../UI") if has_node("../UI") else "없음")
-	print("FoodDisplay 존재: ", get_node("../UI/FoodDisplay") if has_node("../UI/FoodDisplay") else "없음")
 	
 	_update_food_display()
 
@@ -120,25 +120,7 @@ func _process_symbol_interactions() -> void:
 	
 	food_amount += total_food_gained
 	_update_food_display()
-	
-	if total_food_gained > 0:
-		print("총 식량 획득: ", total_food_gained)
 				
-func _get_nearby_coordinates(cx: int, cy: int) -> Array[Vector2i]:
-	var nearby_coords: Array[Vector2i] = []
-	
-	for dx in range(-1, 2):
-		for dy in range(-1, 2):
-			if dx == 0 and dy == 0:
-				continue
-			
-			var nx = cx + dx
-			var ny = cy + dy
-			
-			if nx >= 0 and nx < BOARD_WIDTH and ny >= 0 and ny < BOARD_HEIGHT:
-				nearby_coords.append(Vector2i(nx, ny))
-	return nearby_coords
-
 func _on_spin_button_pressed() -> void:
 	# remove symbols in slots
 	for slot in grid_container.get_children():
