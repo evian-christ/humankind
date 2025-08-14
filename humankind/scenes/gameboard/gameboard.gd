@@ -44,11 +44,13 @@ func _ready() -> void:
 	var woods_instance = symbol_data.create_player_symbol_instance(4)
 	var wild_berries_instance = symbol_data.create_player_symbol_instance(9)
 	var seeds_instance = symbol_data.create_player_symbol_instance(10)
-	#player_symbols.append(river_instance)
+	var wheat_instance = symbol_data.create_player_symbol_instance(11)
+	player_symbols.append(river_instance)
 	#player_symbols.append(mountain_instance)
 	#for i in range(3): player_symbols.append(woods_instance)
 	#player_symbols.append(wild_berries_instance)
 	player_symbols.append(seeds_instance)
+	#player_symbols.append(wheat_instance)
 	
 	_place_symbols_on_board()
 	
@@ -98,6 +100,26 @@ func _place_symbols_on_board() -> void:
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		
 		slot.add_child(label)
+		
+		# Add counter label for symbols with counters
+		var counter_label = Label.new()
+		counter_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+		counter_label.offset_left -= 30
+		counter_label.offset_top -= 20
+		counter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		counter_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		counter_label.custom_minimum_size = Vector2(20, 15)
+		
+		# Show counter for symbols that have counter-based effects
+		var has_counter = _symbol_has_counter_effect(symbol_definition)
+		if has_counter:
+			var counter_value = _get_symbol_counter_value(symbol_instance, symbol_definition)
+			counter_label.text = str(counter_value)
+			counter_label.visible = true
+		else:
+			counter_label.visible = false
+		
+		slot.add_child(counter_label)
 
 func _process_symbol_interactions() -> void:
 	var total_food_gained = 0
@@ -120,6 +142,7 @@ func _process_symbol_interactions() -> void:
 	
 	food_amount += total_food_gained
 	_update_food_display()
+	_update_counter_displays()
 				
 func _on_spin_button_pressed() -> void:
 	# remove symbols in slots
@@ -139,4 +162,47 @@ func _on_spin_button_pressed() -> void:
 func _update_food_display():
 	if food_amount_label:
 		food_amount_label.text = "Food: " + str(food_amount)
+
+func _symbol_has_counter_effect(symbol_definition: Symbol) -> bool:
+	for effect in symbol_definition.effects:
+		var condition_dict = effect.get("condition", {})
+		var condition_type = condition_dict.get("type", 0)
+		
+		# Check if symbol has COUNTER_TRIGGER or COMBINED_CONDITION
+		if condition_type == 2 or condition_type == 3:  # COUNTER_TRIGGER or COMBINED_CONDITION
+			return true
+	return false
+
+func _get_symbol_counter_value(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol) -> int:
+	for effect in symbol_definition.effects:
+		var condition_dict = effect.get("condition", {})
+		var condition_type = condition_dict.get("type", 0)
+		
+		if condition_type == 2 or condition_type == 3:  # COUNTER_TRIGGER or COMBINED_CONDITION
+			var params = condition_dict.get("params", {})
+			var counter_name = params.get("counter_name", "turn_count")
+			return symbol_instance.state_data.get(counter_name, 0)
+	
+	return 0
+
+func _update_counter_displays():
+	for x in range(BOARD_WIDTH):
+		for y in range(BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null:
+				var slot_index = y * BOARD_WIDTH + x
+				var slot = grid_container.get_child(slot_index)
+				
+				# Find counter label (should be the second child)
+				if slot.get_child_count() >= 2:
+					var counter_label = slot.get_child(1)
+					var symbol_definition = symbol_data.get_symbol_by_id(symbol_instance.type_id)
+					
+					var has_counter = _symbol_has_counter_effect(symbol_definition)
+					if has_counter:
+						var counter_value = _get_symbol_counter_value(symbol_instance, symbol_definition)
+						counter_label.text = str(counter_value)
+						counter_label.visible = true
+					else:
+						counter_label.visible = false
 	

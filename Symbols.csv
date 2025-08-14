@@ -19,9 +19,9 @@ id,Name,Level,Effect,Type
 18,Banana,1,Produce 2 food for next 3 turns when nearby Rainforest.,Food
 19,Dates,1,Produce 3 food when nearby Desert.,Food
 20,Camel,2,Produce 2 food when nearby Desert.,"Food, Resource"
-21,Hunting,1,"Produce 10 food and is removed when nearby Woods, Rainforest, Tundra.",Action
-22,Fire rituals,1,Produce 5 exp when nearby any Terrain.,Action
-23,Harvest festivals,2,Produce 8 exp when nearby River,Action
+21,Hunting,1,"Produce 10 food and is removed when nearby Woods, Rainforest, Tundra.",Event
+22,Fire rituals,1,Produce 5 exp when nearby any Terrain.,Event
+23,Harvest festivals,2,Produce 8 exp when nearby River,Event
 24,,,,
 25,,,,
 26,,,,
