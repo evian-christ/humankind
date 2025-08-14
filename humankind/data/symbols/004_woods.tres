@@ -5,9 +5,9 @@
 [resource]
 script = ExtResource("1_6txht")
 id = 4
-symbol_name = ""
+symbol_name = "Woods"
 level = 0
 type_flags = 1
-effects = Array[Resource]([])
+effects = Array[Dictionary]([])
 effect_text = ""
 metadata/_custom_type_script = "uid://iq1tqrrt731u"
