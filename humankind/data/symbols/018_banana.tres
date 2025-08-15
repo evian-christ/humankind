@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://cdyj6y2rtaw8p"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_banana"]
+
+[resource]
+script = ExtResource("1_banana")
+id = 18
+symbol_name = "Banana"
+level = 1
+type_flags = 2
+effects = Array[Dictionary]([{
+"condition": {
+"params": {
+"target_symbol_id": 7
+},
+"type": 1
+},
+"effect": {
+"params": {
+"amount": 2
+},
+"type": 1
+}
+}])
+effect_text = "Produce 2 food when nearby Rainforest."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

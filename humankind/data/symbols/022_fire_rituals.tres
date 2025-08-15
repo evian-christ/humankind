@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://bmgbp7gcwgs7f"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_fire_rituals"]
+
+[resource]
+script = ExtResource("1_fire_rituals")
+id = 22
+symbol_name = "Fire rituals"
+level = 1
+type_flags = 8
+effects = Array[Dictionary]([{
+"condition": {
+"params": {},
+"type": 5
+},
+"effect": {
+"params": {
+"amount": 5
+},
+"type": 2
+}
+}])
+effect_text = "Produce 5 exp when nearby any Terrain."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

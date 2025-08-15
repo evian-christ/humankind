@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://c1fibkmxus5jt"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_rice"]
+
+[resource]
+script = ExtResource("1_rice")
+id = 12
+symbol_name = "Rice"
+level = 2
+type_flags = 2
+effects = Array[Dictionary]([{
+"condition": {
+"params": {
+"counter_name": "rice_activation",
+"nearby_symbols": [1, 2],
+"trigger_value": 4
+},
+"type": 3
+},
+"effect": {
+"params": {
+"amount": 15
+},
+"type": 1
+}
+}])
+effect_text = "Produce 15 food when nearby River, Mountain every 4th time"
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://cmhcq8hdxht8g"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_harvest_festivals"]
+
+[resource]
+script = ExtResource("1_harvest_festivals")
+id = 23
+symbol_name = "Harvest festivals"
+level = 2
+type_flags = 8
+effects = Array[Dictionary]([{
+"condition": {
+"params": {
+"target_symbol_id": 1
+},
+"type": 1
+},
+"effect": {
+"params": {
+"amount": 8
+},
+"type": 2
+}
+}])
+effect_text = "Produce 8 exp when nearby River"
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

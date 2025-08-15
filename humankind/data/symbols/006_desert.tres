@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://clwoqphkgth3"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_desert"]
+
+[resource]
+script = ExtResource("1_desert")
+id = 6
+symbol_name = "Desert"
+level = 0
+type_flags = 1
+effects = Array[Dictionary]([])
+effect_text = ""
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

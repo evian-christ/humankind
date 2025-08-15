@@ -13,7 +13,9 @@ var grid_container
 var player_symbols: Array[PlayerSymbolInstance] = []
 # Player stats
 var food_amount: int = 0
+var exp_amount: int = 0
 @onready var food_amount_label = $"../UI/PlayerStats/FoodLabel"
+var exp_amount_label: Label
 
 # Board grid
 var board_grid: Array = []
@@ -39,22 +41,28 @@ func _ready() -> void:
 		grid_container.add_child(slot)
 	
 	# adding initial symbols to player symbols
-	var river_instance = symbol_data.create_player_symbol_instance(1)
-	var mountain_instance = symbol_data.create_player_symbol_instance(2)
-	var woods_instance = symbol_data.create_player_symbol_instance(4)
-	var wild_berries_instance = symbol_data.create_player_symbol_instance(9)
-	var seeds_instance = symbol_data.create_player_symbol_instance(10)
-	var wheat_instance = symbol_data.create_player_symbol_instance(11)
-	player_symbols.append(river_instance)
-	#player_symbols.append(mountain_instance)
-	#for i in range(3): player_symbols.append(woods_instance)
-	#player_symbols.append(wild_berries_instance)
-	player_symbols.append(seeds_instance)
-	#player_symbols.append(wheat_instance)
+	addd(22)
+	addd(23)
+	addd(4)
+	addd(1)
 	
 	_place_symbols_on_board()
 	
+	# Create Experience Label dynamically
+	exp_amount_label = Label.new()
+	exp_amount_label.text = "Exp: 0"
+	exp_amount_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	exp_amount_label.offset_left = -56
+	exp_amount_label.offset_top = 30
+	exp_amount_label.offset_right = 0
+	exp_amount_label.offset_bottom = 53
+	$"../UI/PlayerStats".add_child(exp_amount_label)
+	
 	_update_food_display()
+	_update_exp_display()
+
+func addd(type_id: int) -> void:
+	player_symbols.append(symbol_data.create_player_symbol_instance(type_id))
 
 # Initialise board grid	
 func _initialise_board_grid() -> void:
@@ -101,7 +109,7 @@ func _place_symbols_on_board() -> void:
 		
 		slot.add_child(label)
 		
-		# Add counter label for symbols with counters
+		# Add counter label for symbols with counters (bottom-right)
 		var counter_label = Label.new()
 		counter_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 		counter_label.offset_left -= 30
@@ -120,9 +128,35 @@ func _place_symbols_on_board() -> void:
 			counter_label.visible = false
 		
 		slot.add_child(counter_label)
+		
+		# Add food production label for symbols with variable food production (bottom-left)
+		var food_label = Label.new()
+		food_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+		food_label.offset_left += 5
+		food_label.offset_top -= 20
+		food_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		food_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		food_label.custom_minimum_size = Vector2(25, 15)
+		
+		# Show food production for symbols with base_food_per_turn variable
+		var has_variable_food = _symbol_has_variable_food(symbol_definition)
+		if has_variable_food:
+			# Different default values for different symbols
+			var default_value = 1
+			if symbol_instance.type_id == 16:  # Sheep ID
+				default_value = 0
+			var food_per_turn = symbol_instance.state_data.get("base_food_per_turn", default_value)
+			food_label.text = "+" + str(food_per_turn)
+			food_label.visible = true
+		else:
+			food_label.visible = false
+		
+		slot.add_child(food_label)
 
 func _process_symbol_interactions() -> void:
 	var total_food_gained = 0
+	var total_exp_gained = 0
+	var symbols_to_remove = []  # Track symbols that need to be removed
 	
 	for x in range(BOARD_WIDTH):
 		for y in range(BOARD_HEIGHT):
@@ -130,18 +164,30 @@ func _process_symbol_interactions() -> void:
 			if current_symbol_instance != null:
 				var symbol_definition = symbol_data.get_symbol_by_id(current_symbol_instance.type_id)
 				
-				var food_gained = EffectProcessor.process_symbol_effects(
+				var effect_result = EffectProcessor.process_symbol_effects(
 					current_symbol_instance,
 					symbol_definition,
 					x, y,
 					board_grid,
-					symbol_data
+					symbol_data,
+					self
 				)
 				
-				total_food_gained += food_gained
+				total_food_gained += effect_result.get("food", 0)
+				total_exp_gained += effect_result.get("exp", 0)
+				
+				# Mark for removal if needed
+				if effect_result.get("remove_self", false):
+					symbols_to_remove.append(current_symbol_instance)
+	
+	# Remove symbols from player_symbols
+	for symbol_to_remove in symbols_to_remove:
+		remove_symbol_from_player(symbol_to_remove)
 	
 	food_amount += total_food_gained
+	exp_amount += total_exp_gained
 	_update_food_display()
+	_update_exp_display()
 	_update_counter_displays()
 				
 func _on_spin_button_pressed() -> void:
@@ -162,6 +208,24 @@ func _on_spin_button_pressed() -> void:
 func _update_food_display():
 	if food_amount_label:
 		food_amount_label.text = "Food: " + str(food_amount)
+
+func _update_exp_display():
+	if exp_amount_label:
+		exp_amount_label.text = "Exp: " + str(exp_amount)
+
+func add_symbol_to_player(symbol_id: int):
+	var new_symbol_instance = symbol_data.create_player_symbol_instance(symbol_id)
+	player_symbols.append(new_symbol_instance)
+	print("Added new symbol to player: ", symbol_data.get_symbol_by_id(symbol_id).symbol_name)
+
+func remove_symbol_from_player(symbol_instance: PlayerSymbolInstance):
+	var symbol_name = symbol_data.get_symbol_by_id(symbol_instance.type_id).symbol_name
+	var index = player_symbols.find(symbol_instance)
+	if index != -1:
+		player_symbols.remove_at(index)
+		print("Removed symbol from player: ", symbol_name)
+	else:
+		print("Warning: Could not find symbol to remove: ", symbol_name)
 
 func _symbol_has_counter_effect(symbol_definition: Symbol) -> bool:
 	for effect in symbol_definition.effects:
@@ -185,6 +249,16 @@ func _get_symbol_counter_value(symbol_instance: PlayerSymbolInstance, symbol_def
 	
 	return 0
 
+func _symbol_has_variable_food(symbol_definition: Symbol) -> bool:
+	for effect in symbol_definition.effects:
+		var effect_dict = effect.get("effect", {})
+		var params = effect_dict.get("params", {})
+		var variable_name = params.get("variable_name", "")
+		
+		if variable_name == "base_food_per_turn":
+			return true
+	return false
+
 func _update_counter_displays():
 	for x in range(BOARD_WIDTH):
 		for y in range(BOARD_HEIGHT):
@@ -192,11 +266,11 @@ func _update_counter_displays():
 			if symbol_instance != null:
 				var slot_index = y * BOARD_WIDTH + x
 				var slot = grid_container.get_child(slot_index)
+				var symbol_definition = symbol_data.get_symbol_by_id(symbol_instance.type_id)
 				
-				# Find counter label (should be the second child)
+				# Update counter label (should be the second child)
 				if slot.get_child_count() >= 2:
 					var counter_label = slot.get_child(1)
-					var symbol_definition = symbol_data.get_symbol_by_id(symbol_instance.type_id)
 					
 					var has_counter = _symbol_has_counter_effect(symbol_definition)
 					if has_counter:
@@ -205,4 +279,20 @@ func _update_counter_displays():
 						counter_label.visible = true
 					else:
 						counter_label.visible = false
+				
+				# Update food production label (should be the third child)
+				if slot.get_child_count() >= 3:
+					var food_label = slot.get_child(2)
+					
+					var has_variable_food = _symbol_has_variable_food(symbol_definition)
+					if has_variable_food:
+						# Different default values for different symbols
+						var default_value = 1
+						if symbol_instance.type_id == 16:  # Sheep ID
+							default_value = 0
+						var food_per_turn = symbol_instance.state_data.get("base_food_per_turn", default_value)
+						food_label.text = "+" + str(food_per_turn)
+						food_label.visible = true
+					else:
+						food_label.visible = false
 	

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://cg1276bafddu3"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_dates"]
+
+[resource]
+script = ExtResource("1_dates")
+id = 19
+symbol_name = "Dates"
+level = 1
+type_flags = 2
+effects = Array[Dictionary]([{
+"condition": {
+"params": {
+"target_symbol_id": 6
+},
+"type": 1
+},
+"effect": {
+"params": {
+"amount": 3
+},
+"type": 1
+}
+}])
+effect_text = "Produce 3 food when nearby Desert."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

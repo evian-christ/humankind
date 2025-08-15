@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://c5yp8qlo3mn7t"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_coast"]
+
+[resource]
+script = ExtResource("1_coast")
+id = 5
+symbol_name = "Coast"
+level = 0
+type_flags = 1
+effects = Array[Dictionary]([])
+effect_text = ""
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

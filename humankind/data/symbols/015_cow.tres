@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://rh3g4v8pglui"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_cow"]
+
+[resource]
+script = ExtResource("1_cow")
+id = 15
+symbol_name = "Cow"
+level = 1
+type_flags = 2
+effects = Array[Dictionary]([{
+"condition": {
+"params": {},
+"type": 0
+},
+"effect": {
+"params": {
+"variable_name": "base_food_per_turn"
+},
+"type": 1
+}
+}, {
+"condition": {
+"params": {
+"counter_name": "grassland_counter",
+"nearby_symbols": [3],
+"trigger_value": 5
+},
+"type": 3
+},
+"effect": {
+"params": {
+"variable_name": "base_food_per_turn",
+"amount": 1
+},
+"type": 5
+}
+}])
+effect_text = "Produce 1 food. The food produced is increased by 1 when nearby Grassland for 5th time"
+metadata/_custom_type_script = "uid://iq1tqrrt731u"
