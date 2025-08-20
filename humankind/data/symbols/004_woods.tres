@@ -6,6 +6,7 @@
 script = ExtResource("1_6txht")
 id = 4
 symbol_name = "Woods"
+icon = "🌳"
 level = 0
 type_flags = 1
 effects = Array[Dictionary]([])

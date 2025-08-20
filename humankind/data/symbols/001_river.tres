@@ -6,6 +6,7 @@
 script = ExtResource("1_jyh2l")
 id = 1
 symbol_name = "River"
+icon = "🌊"
 level = 0
 type_flags = 1
 effects = Array[Resource]([])

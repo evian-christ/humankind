@@ -11,6 +11,7 @@ enum SymbolType {
 
 @export var id: int
 @export var symbol_name: String
+@export var icon: String  # 이모지나 간단한 아이콘
 @export var level: int
 @export_flags("Terrain", "Food", "Resource", "Event") var type_flags: int
 @export var effects: Array[Dictionary]

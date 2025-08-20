@@ -24,6 +24,17 @@ var board_grid: Array = []
 @onready var symbol_data = get_node("/root/SymbolData")
 @onready var ui_node = $"../UI"
 
+# 심볼 선택 관련
+var symbol_selection_pool: SymbolSelectionPool
+var is_selection_phase: bool = false
+var current_symbol_choices: Array[int] = []
+@onready var symbol_selection_ui = $"../UI/SymbolSelection"
+@onready var choice_buttons = [
+	$"../UI/SymbolSelection/SymbolChoices/ChoiceButton1",
+	$"../UI/SymbolSelection/SymbolChoices/ChoiceButton2", 
+	$"../UI/SymbolSelection/SymbolChoices/ChoiceButton3"
+]
+
 func _ready() -> void:
 	_initialise_board_grid()
 	
@@ -60,6 +71,14 @@ func _ready() -> void:
 	
 	_update_food_display()
 	_update_exp_display()
+	
+	# 심볼 선택 풀 초기화
+	symbol_selection_pool = SymbolSelectionPool.new()
+	
+	# 심볼 선택 버튼 시그널 연결
+	choice_buttons[0].pressed.connect(_on_symbol_choice_selected.bind(0))
+	choice_buttons[1].pressed.connect(_on_symbol_choice_selected.bind(1))
+	choice_buttons[2].pressed.connect(_on_symbol_choice_selected.bind(2))
 
 func addd(type_id: int) -> void:
 	player_symbols.append(symbol_data.create_player_symbol_instance(type_id))
@@ -102,10 +121,15 @@ func _place_symbols_on_board() -> void:
 		var slot = grid_container.get_child(current_slot_index)
 		
 		var label = Label.new()
-		label.text = symbol_definition.symbol_name
+		# 아이콘이 있으면 아이콘 사용, 없으면 심볼 이름 사용
+		var display_text = symbol_definition.icon if symbol_definition.icon != "" else symbol_definition.symbol_name
+		label.text = display_text
 		label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		# 아이콘이 있을 때 폰트 크기 증가
+		if symbol_definition.icon != "":
+			label.add_theme_font_size_override("font_size", 48)
 		
 		slot.add_child(label)
 		
@@ -152,6 +176,60 @@ func _place_symbols_on_board() -> void:
 			food_label.visible = false
 		
 		slot.add_child(food_label)
+
+# 플레이어 레벨 계산
+func get_player_level() -> int:
+	return exp_amount / 100
+
+# 심볼 선택 단계 시작
+func _start_selection_phase() -> void:
+	if is_selection_phase:
+		return
+	
+	is_selection_phase = true
+	var player_level = get_player_level()
+	current_symbol_choices = symbol_selection_pool.select_three_symbols(player_level, symbol_data)
+	
+	# UI 업데이트
+	_update_selection_ui()
+	symbol_selection_ui.visible = true
+	
+	print("Selection phase started. Player level: ", player_level)
+
+# 심볼 선택 UI 업데이트
+func _update_selection_ui() -> void:
+	for i in range(3):
+		if i < current_symbol_choices.size():
+			var symbol_id = current_symbol_choices[i]
+			var symbol_def = symbol_data.get_symbol_by_id(symbol_id)
+			if symbol_def:
+				var display_text = symbol_def.icon if symbol_def.icon != "" else symbol_def.symbol_name
+				choice_buttons[i].text = display_text + "\nLv." + str(symbol_def.level)
+				choice_buttons[i].disabled = false
+				# 아이콘이 있을 때 선택 버튼 폰트 크기 증가
+				if symbol_def.icon != "":
+					choice_buttons[i].add_theme_font_size_override("font_size", 32)
+		else:
+			choice_buttons[i].text = "Empty"
+			choice_buttons[i].disabled = true
+
+# 심볼 선택 처리
+func _on_symbol_choice_selected(choice_index: int) -> void:
+	if not is_selection_phase or choice_index >= current_symbol_choices.size():
+		return
+	
+	var selected_symbol_id = current_symbol_choices[choice_index]
+	add_symbol_to_player(selected_symbol_id)
+	
+	# 선택 단계 종료
+	_end_selection_phase()
+
+# 심볼 선택 단계 종료
+func _end_selection_phase() -> void:
+	is_selection_phase = false
+	current_symbol_choices.clear()
+	symbol_selection_ui.visible = false
+	print("Selection phase ended")
 
 func _process_symbol_interactions() -> void:
 	var total_food_gained = 0
@@ -204,6 +282,9 @@ func _on_spin_button_pressed() -> void:
 	_place_symbols_on_board()
 	
 	_process_symbol_interactions()
+	
+	# 심볼 상호작용 후 선택 단계 시작
+	_start_selection_phase()
 	
 func _update_food_display():
 	if food_amount_label:

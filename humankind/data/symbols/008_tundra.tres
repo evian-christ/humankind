@@ -6,6 +6,7 @@
 script = ExtResource("1_tundra")
 id = 8
 symbol_name = "Tundra"
+icon = "❄️"
 level = 0
 type_flags = 1
 effects = Array[Dictionary]([])

@@ -6,6 +6,7 @@
 script = ExtResource("1_banana")
 id = 18
 symbol_name = "Banana"
+icon = "🍌"
 level = 1
 type_flags = 2
 effects = Array[Dictionary]([{

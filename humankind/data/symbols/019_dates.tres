@@ -6,6 +6,7 @@
 script = ExtResource("1_dates")
 id = 19
 symbol_name = "Dates"
+icon = "🌴"
 level = 1
 type_flags = 2
 effects = Array[Dictionary]([{

@@ -6,6 +6,7 @@
 script = ExtResource("1_kx8do")
 id = 2
 symbol_name = "Mountain"
+icon = "⛰️"
 level = 0
 type_flags = 1
 effects = Array[Resource]([])

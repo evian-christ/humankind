@@ -6,6 +6,7 @@
 script = ExtResource("1_fire_rituals")
 id = 22
 symbol_name = "Fire rituals"
+icon = "🔥"
 level = 1
 type_flags = 8
 effects = Array[Dictionary]([{
