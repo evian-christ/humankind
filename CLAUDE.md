@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-This is a Godot 4.4.1 project implementing a civilization-themed symbol-slot resource optimization 4X deck-building roguelike. The game features a turn-based system where players spin slots to randomly place owned symbols on a 5x4 grid board, with symbols interacting based on their proximity to generate food and advance civilization.
+This is a Godot 4.4.1 project implementing an arcade-style roguelike with civilization themes. The game features a turn-based system where players spin slots to randomly place owned symbols on a 5x4 grid board, with symbols interacting to generate food for survival. The focus is on simple, arcade gameplay rather than complex simulation.
 
 ## Development Commands
 This project uses Godot Engine for development and does not require traditional build commands. The primary workflow involves:
@@ -14,10 +14,11 @@ This project uses Godot Engine for development and does not require traditional 
 ## Core Architecture
 
 ### Symbol System
-The game implements a three-tier symbol architecture:
+The game implements a simplified symbol architecture focused on arcade gameplay:
 
 1. **Symbol Resources (`Symbol.gd`)**: Template definitions stored as `.tres` files in `data/symbols/`
-   - Contains: `id`, `symbol_name`, `level`, `type_flags`, `effects`, `effect_text`
+   - Contains: `id`, `symbol_name`, `icon`, `rarity` (1-5), `effects`, `effect_text`
+   - Rarity levels: Common(1), Uncommon(2), Rare(3), Special(4), Historical(5)
    - Loaded and managed by `SymbolData` singleton
 
 2. **Player Symbol Instances (`PlayerSymbolInstance.gd`)**: Individual instances owned by player
@@ -36,12 +37,13 @@ The game implements a three-tier symbol architecture:
   - Manages `player_symbols` array of PlayerSymbolInstance objects
   - Implements random placement logic with overflow handling (>20 symbols)
   - Processes symbol interactions via proximity-based system
+  - Single resource focus: Food for survival
 
 ### Effect System Design
-The project implements a unified trigger-effect system (partially implemented):
-- **Effects**: Define what happens (food generation, resource modification)
-- **Triggers**: Define when effects activate (always, nearby symbols, counters)
-- Symbols contain `triggers` array; instances have `effect_counters` dictionary
+The project implements a simplified effect system focused on food production:
+- **Effects**: Primarily food generation with some special mechanics
+- **Rarity-based Selection**: Symbols selected based on rarity weights (Common: 100, Uncommon: 30, Rare: 10, Special: 3, Historical: 1)
+- Symbols contain `effects` array; instances have `state_data` dictionary
 
 ## File Structure
 ```
@@ -62,17 +64,21 @@ humankind/
 - Always use `SymbolData.get_symbol_by_id()` to access symbol definitions
 - Create player instances via `SymbolData.create_player_symbol_instance()`
 - The board works with PlayerSymbolInstance objects, not Symbol resources directly
+- Focus on simple, arcade-style effects rather than complex historical simulation
 
 ### Game Logic Flow
 1. Player owns symbols as PlayerSymbolInstance objects
 2. Spin button triggers `_place_symbols_on_board()` 
 3. Up to 20 symbols randomly placed on 5x4 grid
-4. `_process_symbol_interactions()` handles proximity-based effects
-5. Helper function `_get_nearby_coordinates()` provides 8-directional adjacency
+4. `_process_symbol_interactions()` handles proximity-based effects generating food
+5. `_start_selection_phase()` presents 3 symbols based on rarity weights
+6. Player selects 1 symbol to add to collection
+7. Helper function `_get_nearby_coordinates()` provides 8-directional adjacency
 
-### Language Requirements
-- All Korean documentation and commit messages must be preserved as-is
-- Korean development planning documents in `gemini.md` and `tasks.txt` contain critical project context
+### Design Philosophy  
+- **Arcade over Simulation**: Focus on immediate fun rather than historical accuracy
+- **Single Resource**: Food is the only resource - keep it simple
+- **Rarity-based Progression**: Use rarity system instead of complex level/tech trees
 - Incremental code guidance principle: explain step-by-step rather than providing complete code blocks
 
 ### Code Creation Policy
@@ -83,12 +89,15 @@ humankind/
 - The user will handle all actual coding and file creation directly
 
 ## Current Development State
-Based on recent commits and task documentation:
+Recent refactoring toward arcade-style gameplay:
 - ✅ Core spin mechanism and symbol placement implemented
-- ✅ PlayerSymbolInstance system with unique ID generation
-- ✅ Grid-based board with visual symbol display
-- 🔄 Effect/trigger system designed but not fully implemented
-- ❌ Symbol interaction effects not yet functional
+- ✅ PlayerSymbolInstance system with unique ID generation  
+- ✅ Grid-based board with emoji icon display
+- ✅ Rarity-based symbol selection system (Common to Historical)
+- ✅ Symbol interaction effects for food production
+- ✅ 3-choice selection phase after each spin
+- ✅ Tooltip system for symbol information
+- 🔄 Need new arcade-style symbol set (old symbols removed)
 
 ## Git Workflow
 - Commit functional changes incrementally per feature

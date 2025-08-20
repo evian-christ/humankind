@@ -13,9 +13,7 @@ var grid_container
 var player_symbols: Array[PlayerSymbolInstance] = []
 # Player stats
 var food_amount: int = 0
-var exp_amount: int = 0
 @onready var food_amount_label = $"../UI/PlayerStats/FoodLabel"
-var exp_amount_label: Label
 
 # Board grid
 var board_grid: Array = []
@@ -35,6 +33,9 @@ var current_symbol_choices: Array[int] = []
 	$"../UI/SymbolSelection/SymbolChoices/ChoiceButton3"
 ]
 
+# 툴팁 시스템
+var tooltip: SymbolTooltip
+
 func _ready() -> void:
 	_initialise_board_grid()
 	
@@ -52,25 +53,14 @@ func _ready() -> void:
 		grid_container.add_child(slot)
 	
 	# adding initial symbols to player symbols
-	addd(22)
-	addd(23)
-	addd(4)
-	addd(1)
+	#addd(22)
+	#addd(23)
+	#addd(4)
+	#addd(1)
 	
 	_place_symbols_on_board()
 	
-	# Create Experience Label dynamically
-	exp_amount_label = Label.new()
-	exp_amount_label.text = "Exp: 0"
-	exp_amount_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	exp_amount_label.offset_left = -56
-	exp_amount_label.offset_top = 30
-	exp_amount_label.offset_right = 0
-	exp_amount_label.offset_bottom = 53
-	$"../UI/PlayerStats".add_child(exp_amount_label)
-	
 	_update_food_display()
-	_update_exp_display()
 	
 	# 심볼 선택 풀 초기화
 	symbol_selection_pool = SymbolSelectionPool.new()
@@ -79,6 +69,10 @@ func _ready() -> void:
 	choice_buttons[0].pressed.connect(_on_symbol_choice_selected.bind(0))
 	choice_buttons[1].pressed.connect(_on_symbol_choice_selected.bind(1))
 	choice_buttons[2].pressed.connect(_on_symbol_choice_selected.bind(2))
+	
+	# 툴팁 초기화
+	tooltip = SymbolTooltip.new()
+	ui_node.add_child(tooltip)
 
 func addd(type_id: int) -> void:
 	player_symbols.append(symbol_data.create_player_symbol_instance(type_id))
@@ -176,10 +170,10 @@ func _place_symbols_on_board() -> void:
 			food_label.visible = false
 		
 		slot.add_child(food_label)
+		
+		# 슬롯에 마우스 이벤트 추가 (툴팁용)
+		_setup_slot_tooltip(slot, symbol_instance, symbol_definition)
 
-# 플레이어 레벨 계산
-func get_player_level() -> int:
-	return exp_amount / 100
 
 # 심볼 선택 단계 시작
 func _start_selection_phase() -> void:
@@ -187,14 +181,13 @@ func _start_selection_phase() -> void:
 		return
 	
 	is_selection_phase = true
-	var player_level = get_player_level()
-	current_symbol_choices = symbol_selection_pool.select_three_symbols(player_level, symbol_data)
+	current_symbol_choices = symbol_selection_pool.select_three_symbols(symbol_data)
 	
 	# UI 업데이트
 	_update_selection_ui()
 	symbol_selection_ui.visible = true
 	
-	print("Selection phase started. Player level: ", player_level)
+	print("Selection phase started.")
 
 # 심볼 선택 UI 업데이트
 func _update_selection_ui() -> void:
@@ -204,11 +197,17 @@ func _update_selection_ui() -> void:
 			var symbol_def = symbol_data.get_symbol_by_id(symbol_id)
 			if symbol_def:
 				var display_text = symbol_def.icon if symbol_def.icon != "" else symbol_def.symbol_name
-				choice_buttons[i].text = display_text + "\nLv." + str(symbol_def.level)
+				choice_buttons[i].text = display_text + "\n" + symbol_def.get_rarity_name()
 				choice_buttons[i].disabled = false
 				# 아이콘이 있을 때 선택 버튼 폰트 크기 증가
 				if symbol_def.icon != "":
 					choice_buttons[i].add_theme_font_size_override("font_size", 32)
+				
+				# Rarity에 따른 버튼 색상 설정
+				choice_buttons[i].modulate = symbol_def.get_rarity_color()
+				
+				# 선택 버튼에 툴팁 설정
+				_setup_choice_button_tooltip(choice_buttons[i], symbol_def)
 		else:
 			choice_buttons[i].text = "Empty"
 			choice_buttons[i].disabled = true
@@ -230,6 +229,52 @@ func _end_selection_phase() -> void:
 	current_symbol_choices.clear()
 	symbol_selection_ui.visible = false
 	print("Selection phase ended")
+
+# 슬롯 툴팁 설정
+func _setup_slot_tooltip(slot: Panel, symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol):
+	# 슬롯을 마우스 감지 가능하게 설정
+	slot.mouse_filter = Control.MOUSE_FILTER_PASS
+	
+	# 마우스 이벤트 연결
+	if not slot.mouse_entered.is_connected(_on_slot_mouse_entered):
+		slot.mouse_entered.connect(_on_slot_mouse_entered.bind(symbol_definition))
+	if not slot.mouse_exited.is_connected(_on_slot_mouse_exited):
+		slot.mouse_exited.connect(_on_slot_mouse_exited)
+
+# 슬롯에 마우스 진입 시
+func _on_slot_mouse_entered(symbol_definition: Symbol):
+	var mouse_pos = get_global_mouse_position()
+	tooltip.show_tooltip(symbol_definition.symbol_name, symbol_definition.effect_text, mouse_pos)
+
+# 슬롯에서 마우스 나갈 시
+func _on_slot_mouse_exited():
+	tooltip.hide_tooltip()
+
+# 마우스 움직임 추적 (툴팁 위치 업데이트)
+func _input(event):
+	if event is InputEventMouseMotion and tooltip.visible:
+		tooltip.update_position(get_global_mouse_position())
+
+# 선택 버튼 툴팁 설정
+func _setup_choice_button_tooltip(button: Button, symbol_definition: Symbol):
+	# 기존 연결 해제 (중복 방지)
+	if button.mouse_entered.is_connected(_on_choice_button_mouse_entered):
+		button.mouse_entered.disconnect(_on_choice_button_mouse_entered)
+	if button.mouse_exited.is_connected(_on_choice_button_mouse_exited):
+		button.mouse_exited.disconnect(_on_choice_button_mouse_exited)
+	
+	# 새로운 연결
+	button.mouse_entered.connect(_on_choice_button_mouse_entered.bind(symbol_definition))
+	button.mouse_exited.connect(_on_choice_button_mouse_exited)
+
+# 선택 버튼에 마우스 진입 시
+func _on_choice_button_mouse_entered(symbol_definition: Symbol):
+	var mouse_pos = get_global_mouse_position()
+	tooltip.show_tooltip(symbol_definition.symbol_name, symbol_definition.effect_text, mouse_pos)
+
+# 선택 버튼에서 마우스 나갈 시
+func _on_choice_button_mouse_exited():
+	tooltip.hide_tooltip()
 
 func _process_symbol_interactions() -> void:
 	var total_food_gained = 0
@@ -263,9 +308,7 @@ func _process_symbol_interactions() -> void:
 		remove_symbol_from_player(symbol_to_remove)
 	
 	food_amount += total_food_gained
-	exp_amount += total_exp_gained
 	_update_food_display()
-	_update_exp_display()
 	_update_counter_displays()
 				
 func _on_spin_button_pressed() -> void:
@@ -289,10 +332,6 @@ func _on_spin_button_pressed() -> void:
 func _update_food_display():
 	if food_amount_label:
 		food_amount_label.text = "Food: " + str(food_amount)
-
-func _update_exp_display():
-	if exp_amount_label:
-		exp_amount_label.text = "Exp: " + str(exp_amount)
 
 func add_symbol_to_player(symbol_id: int):
 	var new_symbol_instance = symbol_data.create_player_symbol_instance(symbol_id)

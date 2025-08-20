@@ -21,23 +21,21 @@ var symbol_data: SymbolData
 func _init():
 	symbol_data = null  # Will be set when needed
 
-## 플레이어 레벨에 따른 심볼 레벨별 가중치 계산
-## symbol_level: 심볼의 레벨
-## player_level: 현재 플레이어 레벨
-func calculate_symbol_weight(symbol_level: int, player_level: int) -> float:
-	var center = float(player_level)  # 정규분포의 중심점
-	var distance = abs(float(symbol_level) - center)
-	
-	# 정규분포 공식: e^(-(x-μ)²/(2σ²))
-	var weight = exp(-(distance * distance) / (2.0 * standard_deviation * standard_deviation))
-	
-	# 최소 가중치 보장
-	return max(weight, min_weight)
+## Rarity에 따른 심볼 가중치 계산 (로그라이크 스타일)
+## rarity: 심볼의 희귀도 (1=common, 5=historical)
+func calculate_symbol_weight(rarity: int) -> float:
+	# 희귀도가 높을수록 낮은 확률
+	match rarity:
+		1: return 100.0  # Common - 매우 높은 확률
+		2: return 30.0   # Uncommon - 높은 확률
+		3: return 10.0   # Rare - 보통 확률
+		4: return 3.0    # Special - 낮은 확률
+		5: return 1.0    # Historical - 매우 낮은 확률
+		_: return min_weight
 
 ## 모든 사용 가능한 심볼들의 가중치가 포함된 풀 생성
-## player_level: 현재 플레이어 레벨
 ## symbol_data_ref: SymbolData 싱글톤 참조
-func create_weighted_pool(player_level: int, symbol_data_ref: SymbolData) -> Array[Dictionary]:
+func create_weighted_pool(symbol_data_ref: SymbolData) -> Array[Dictionary]:
 	var weighted_pool: Array[Dictionary] = []
 	
 	if not symbol_data_ref:
@@ -48,22 +46,21 @@ func create_weighted_pool(player_level: int, symbol_data_ref: SymbolData) -> Arr
 	for symbol_id in symbol_data_ref.symbols.keys():
 		var symbol_resource = symbol_data_ref.symbols[symbol_id]
 		if symbol_resource:
-			var weight = calculate_symbol_weight(symbol_resource.level, player_level)
+			var weight = calculate_symbol_weight(symbol_resource.rarity)
 			
 			weighted_pool.append({
 				"symbol_id": symbol_id,
 				"weight": weight,
-				"level": symbol_resource.level,
+				"rarity": symbol_resource.rarity,
 				"name": symbol_resource.symbol_name
 			})
 	
 	return weighted_pool
 
 ## 가중치 기반으로 심볼 3개 선택 (중복 없음)
-## player_level: 현재 플레이어 레벨
 ## symbol_data_ref: SymbolData 싱글톤 참조
-func select_three_symbols(player_level: int, symbol_data_ref: SymbolData) -> Array[int]:
-	var weighted_pool = create_weighted_pool(player_level, symbol_data_ref)
+func select_three_symbols(symbol_data_ref: SymbolData) -> Array[int]:
+	var weighted_pool = create_weighted_pool(symbol_data_ref)
 	var selected_symbols: Array[int] = []
 	
 	if weighted_pool.is_empty():
@@ -110,15 +107,14 @@ func _select_weighted_random(pool: Array[Dictionary]) -> Dictionary:
 	# 예외 상황: 마지막 엔트리 반환
 	return pool.back()
 
-## 디버그용: 현재 플레이어 레벨에서의 확률 분포 출력
-## player_level: 현재 플레이어 레벨
+## 디버그용: 현재 확률 분포 출력
 ## symbol_data_ref: SymbolData 싱글톤 참조
-func debug_print_distribution(player_level: int, symbol_data_ref: SymbolData) -> void:
-	print("=== Symbol Distribution for Player Level ", player_level, " ===")
-	var weighted_pool = create_weighted_pool(player_level, symbol_data_ref)
+func debug_print_distribution(symbol_data_ref: SymbolData) -> void:
+	print("=== Symbol Rarity Distribution ===")
+	var weighted_pool = create_weighted_pool(symbol_data_ref)
 	
-	# 레벨별로 정렬
-	weighted_pool.sort_custom(func(a, b): return a["level"] < b["level"])
+	# Rarity별로 정렬
+	weighted_pool.sort_custom(func(a, b): return a["rarity"] < b["rarity"])
 	
 	var total_weight = 0.0
 	for entry in weighted_pool:
@@ -126,4 +122,5 @@ func debug_print_distribution(player_level: int, symbol_data_ref: SymbolData) ->
 	
 	for entry in weighted_pool:
 		var percentage = (entry["weight"] / total_weight) * 100
-		print("Level ", entry["level"], " (", entry["name"], "): ", "%.1f%%" % percentage)
+		var rarity_name = Symbol.Rarity.keys()[entry["rarity"] - 1]
+		print(rarity_name, " (", entry["name"], "): ", "%.1f%%" % percentage)

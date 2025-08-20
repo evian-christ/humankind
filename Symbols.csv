@@ -1,74 +1,74 @@
-id,Name,Level,Effect,Type
-1,River,0,,Terrain
-2,Mountain,0,,Terrain
-3,Grassland,0,,Terrain
-4,Woods,0,,Terrain
-5,Coast,0,,Terrain
-6,Desert,0,,Terrain
-7,Rainforest,0,,Terrain
-8,Tundra,0,,Terrain
-9,Wild berries,1,Produce 1 food. Produce 1 food for every nearby Woods.,Food
-10,Seeds,1,Produce 5 food every 4 turns,Food
-11,Wheat,1,Produce 10 food when nearby River every 3rd time,Food
-12,Rice,2,"Produce 15 food when nearby River, Mountain every 4th time",Food
-13,Fish,1,"Produce 3 food when nearby Coast, +2 food when nearby River",Food
-14,Crab,2,"Produce 3 food when nearby Coast, Produce +1 food when nearby Fish",Food
-15,Cow,1,Produce 1 food. The food produced is increased by 1 when nearby Grassland for 5th time,Food
-16,Sheep,1,"Produce 0 food. The food produced is increased by 1 when nearby Grassland, Mountain for 5th time",Food
-17,Horse,2,Produce 2 food when nearby Grassland. 20% chance of producing another Horse when nearby Grassland.,"Food, Resource"
-18,Banana,1,Produce 2 food for next 3 turns when nearby Rainforest.,Food
-19,Dates,1,Produce 3 food when nearby Desert.,Food
-20,Camel,2,Produce 2 food when nearby Desert.,"Food, Resource"
-21,Hunting,1,"Produce 10 food and is removed when nearby Woods, Rainforest, Tundra.",Event
-22,Fire rituals,1,Produce 5 exp when nearby any Terrain.,Event
-23,Harvest festivals,2,Produce 8 exp when nearby River,Event
-24,,,,
-25,,,,
-26,,,,
-27,,,,
-28,,,,
-29,,,,
-30,,,,
-31,,,,
-32,,,,
-33,,,,
-34,,,,
-35,,,,
-36,,,,
-37,,,,
-38,,,,
-39,,,,
-40,,,,
-41,,,,
-42,,,,
-43,,,,
-44,,,,
-45,,,,
-46,,,,
-47,,,,
-48,,,,
-49,,,,
-50,,,,
-51,,,,
-52,,,,
-53,,,,
-54,,,,
-55,,,,
-56,,,,
-57,,,,
-58,,,,
-59,,,,
-60,,,,
-61,,,,
-62,,,,
-63,,,,
-64,,,,
-65,,,,
-66,,,,
-67,,,,
-68,,,,
-69,,,,
-70,,,,
-71,,,,
-72,,,,
-73,,,,
+id,Name,Rarity,Effect,,,,,,,
+1,Wheat,1,Provide 1 food.,,,,,,Rarity chart,
+2,Rice,1,Provide 5 food every 4 turns.,,,,,,1,common
+3,,,,,,,,,2,uncommon
+4,,,,,,,,,3,rare
+5,,,,,,,,,4,special
+6,,,,,,,,,5,historical
+7,Mine,2,Provide 1 food. Provide Coal by 1%,,,,,,,
+8,Coal,3,Provide 2 food.,,,,,,,
+9,Industrial Revolution,5,Destroy nearby coal. Provide 50 food for every coal destroyed,,,,,,,
+10,,,,,,,,,,
+11,,,,,,,,,,
+12,,,,,,,,,,
+13,,,,,,,,,,
+14,,,,,,,,,,
+15,,,,,,,,,,
+16,,,,,,,,,,
+17,,,,,,,,,,
+18,,,,,,,,,,
+19,,,,,,,,,,
+20,,,,,,,,,,
+21,,,,,,,,,,
+22,,,,,,,,,,
+23,,,,,,,,,,
+24,,,,,,,,,,
+25,,,,,,,,,,
+26,,,,,,,,,,
+27,,,,,,,,,,
+28,,,,,,,,,,
+29,,,,,,,,,,
+30,,,,,,,,,,
+31,,,,,,,,,,
+32,,,,,,,,,,
+33,,,,,,,,,,
+34,,,,,,,,,,
+35,,,,,,,,,,
+36,,,,,,,,,,
+37,,,,,,,,,,
+38,,,,,,,,,,
+39,,,,,,,,,,
+40,,,,,,,,,,
+41,,,,,,,,,,
+42,,,,,,,,,,
+43,,,,,,,,,,
+44,,,,,,,,,,
+45,,,,,,,,,,
+46,,,,,,,,,,
+47,,,,,,,,,,
+48,,,,,,,,,,
+49,,,,,,,,,,
+50,,,,,,,,,,
+51,,,,,,,,,,
+52,,,,,,,,,,
+53,,,,,,,,,,
+54,,,,,,,,,,
+55,,,,,,,,,,
+56,,,,,,,,,,
+57,,,,,,,,,,
+58,,,,,,,,,,
+59,,,,,,,,,,
+60,,,,,,,,,,
+61,,,,,,,,,,
+62,,,,,,,,,,
+63,,,,,,,,,,
+64,,,,,,,,,,
+65,,,,,,,,,,
+66,,,,,,,,,,
+67,,,,,,,,,,
+68,,,,,,,,,,
+69,,,,,,,,,,
+70,,,,,,,,,,
+71,,,,,,,,,,
+72,,,,,,,,,,
+73,,,,,,,,,,
