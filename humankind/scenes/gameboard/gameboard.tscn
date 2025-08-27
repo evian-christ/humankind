@@ -43,18 +43,28 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -200.0
-offset_bottom = 30.0
+offset_bottom = 80.0
 grow_horizontal = 0
 
 [node name="FoodLabel" type="Label" parent="UI/PlayerStats"]
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -56.0
+offset_right = 56.0
 offset_bottom = 23.0
-grow_horizontal = 0
 text = "Food: 0"
+
+[node name="ExpLabel" type="Label" parent="UI/PlayerStats"]
+layout_mode = 1
+offset_top = 25.0
+offset_right = 80.0
+offset_bottom = 48.0
+text = "EXP: 0/50"
+
+[node name="LevelLabel" type="Label" parent="UI/PlayerStats"]
+layout_mode = 1
+offset_top = 50.0
+offset_right = 60.0
+offset_bottom = 73.0
+text = "Level: 1"
 
 [node name="SymbolSelection" type="Control" parent="UI"]
 layout_mode = 1
