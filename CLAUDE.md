@@ -18,7 +18,7 @@ The game implements a simplified symbol architecture focused on arcade gameplay:
 
 1. **Symbol Resources (`Symbol.gd`)**: Template definitions stored as `.tres` files in `data/symbols/`
    - Contains: `id`, `symbol_name`, `icon`, `rarity` (1-5), `effects`, `effect_text`
-   - Rarity levels: Common(1), Uncommon(2), Rare(3), Special(4), Historical(5)
+   - Era levels: Ancient(1), Classical(2), Medieval(3), Industrial(4), Modern(5)
    - Loaded and managed by `SymbolData` singleton
 
 2. **Player Symbol Instances (`PlayerSymbolInstance.gd`)**: Individual instances owned by player
@@ -42,7 +42,7 @@ The game implements a simplified symbol architecture focused on arcade gameplay:
 ### Effect System Design
 The project implements a simplified effect system focused on food production:
 - **Effects**: Primarily food generation with some special mechanics
-- **Rarity-based Selection**: Symbols selected based on rarity weights (Common: 100, Uncommon: 30, Rare: 10, Special: 3, Historical: 1)
+- **Era-based Selection**: Symbols selected based on era weights (Ancient: 100, Classical: 30, Medieval: 10, Industrial: 3, Modern: 1)
 - Symbols contain `effects` array; instances have `state_data` dictionary
 
 ## File Structure
@@ -78,7 +78,7 @@ humankind/
 ### Design Philosophy  
 - **Arcade over Simulation**: Focus on immediate fun rather than historical accuracy
 - **Single Resource**: Food is the only resource - keep it simple
-- **Rarity-based Progression**: Use rarity system instead of complex level/tech trees
+- **Era-based Progression**: Use civilization era system instead of complex level/tech trees
 - Incremental code guidance principle: explain step-by-step rather than providing complete code blocks
 
 ### Code Creation Policy
@@ -93,7 +93,7 @@ Recent refactoring toward arcade-style gameplay:
 - ✅ Core spin mechanism and symbol placement implemented
 - ✅ PlayerSymbolInstance system with unique ID generation  
 - ✅ Grid-based board with emoji icon display
-- ✅ Rarity-based symbol selection system (Common to Historical)
+- ✅ Era-based symbol selection system (Ancient to Modern)
 - ✅ Symbol interaction effects for food production
 - ✅ 3-choice selection phase after each spin
 - ✅ Tooltip system for symbol information
