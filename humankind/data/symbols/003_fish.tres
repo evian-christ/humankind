@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b3fish003"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 3
+symbol_name = "Fish"
+icon = "🐟"
+rarity = 1
+effects = Array[Dictionary]([])
+effect_text = "Destroy self after 5 turns. Provide 10 food when destroyed."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

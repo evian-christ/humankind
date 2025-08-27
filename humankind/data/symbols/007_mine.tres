@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b7mine007"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 7
+symbol_name = "Mine"
+icon = "⛏️"
+rarity = 2
+effects = Array[Dictionary]([])
+effect_text = "Provide 1 food. Provide Coal by 1%."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

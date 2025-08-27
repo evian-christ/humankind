@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(move symbol_2_rice.tres 002_rice.tres)",
+      "Bash(move symbol_3_fish.tres 003_fish.tres)",
+      "Bash(mv:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
