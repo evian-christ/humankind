@@ -59,17 +59,20 @@ func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_
 		3: # Fish - Destroy self after 5 turns. Provide 10 food when destroyed
 			var turn_count = symbol_instance.state_data.get("turn_count", 0)
 			if turn_count >= 5:
-				food_gained = 10
-				# Mark for destruction - will be handled by effects processor
-				board_grid[board_x][board_y] = null
-				symbols_destroyed_at_positions.emit([Vector2i(board_x, board_y)])
-				symbol_removed_from_player.emit(symbol_instance)
-				print("Fish destroyed after 5 turns, produced 10 food")
+				var destruction_result = destroy_symbol_at_position(board_x, board_y, board_grid)
+				food_gained = destruction_result.get("food", 0)
+				exp_gained += destruction_result.get("exp", 0)
+				print("Fish destroyed after 5 turns, produced ", food_gained, " food")
 		
 		4: # Fishing boat - Provide 1 food. Destroy nearby Fish
 			food_gained = 1
-			var destroyed_fish = destroy_nearby_symbol_by_name(board_x, board_y, "Fish", board_grid)
-			print("Fishing boat produced 1 food, destroyed ", destroyed_fish, " Fish")
+			var destruction_result = destroy_nearby_symbol_by_name_with_effects(board_x, board_y, "Fish", board_grid)
+			var destroyed_fish = destruction_result.count
+			var destruction_food = destruction_result.food
+			var destruction_exp = destruction_result.exp
+			food_gained += destruction_food
+			exp_gained += destruction_exp
+			print("Fishing boat produced ", 1 + destruction_food, " food (", destruction_food, " from destroying ", destroyed_fish, " Fish)")
 		
 		5: # Banana - Provide 1 food. Provide 1 more food if placed on slot for more than 10 times
 			food_gained = 1
@@ -110,28 +113,40 @@ func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_
 			if destroyed_coal > 0:
 				print("Industrial Revolution destroyed ", destroyed_coal, " Coal, total destroyed: ", total_coal_destroyed, ", gained ", food_gained, " food")
 		
-		10: # Revolution - Destroy nearby symbols and provide random symbols as much as destroyed
-			var destroyed_positions = []
+		10: # Revolution - Destroy self and nearby symbols and provide random symbols as much as destroyed
 			var nearby_coords = get_nearby_coordinates(board_x, board_y)
 			var destroyed_count = 0
+			var total_destruction_food = 0
+			var total_destruction_exp = 0
 			
+			# Destroy nearby symbols first
 			for coord in nearby_coords:
 				var x = coord.x
 				var y = coord.y
-				var nearby_instance = board_grid[x][y]
-				if nearby_instance != null:
-					board_grid[x][y] = null
-					destroyed_count += 1
-					destroyed_positions.append(Vector2i(x, y))
-					symbol_removed_from_player.emit(nearby_instance)
+				if board_grid[x][y] != null:
+					var destruction_result = destroy_symbol_at_position(x, y, board_grid)
+					if destruction_result.get("destroyed", false):
+						destroyed_count += 1
+						total_destruction_food += destruction_result.get("food", 0)
+						total_destruction_exp += destruction_result.get("exp", 0)
 			
-			if destroyed_positions.size() > 0:
-				symbols_destroyed_at_positions.emit(destroyed_positions)
-				# Add random symbols to player
-				for i in range(destroyed_count):
-					var random_symbol_id = randi() % 21 + 1 # Random symbol 1-21
-					symbol_added_to_player.emit(random_symbol_id)
-				print("Revolution destroyed ", destroyed_count, " symbols, added ", destroyed_count, " random symbols")
+			# Destroy self
+			var self_destruction = destroy_symbol_at_position(board_x, board_y, board_grid)
+			if self_destruction.get("destroyed", false):
+				destroyed_count += 1
+				total_destruction_food += self_destruction.get("food", 0)
+				total_destruction_exp += self_destruction.get("exp", 0)
+			
+			# Add destruction effects to total gains
+			food_gained += total_destruction_food
+			exp_gained += total_destruction_exp
+			
+			# Add random symbols to player
+			for i in range(destroyed_count):
+				var random_symbol_id = randi() % 21 + 1 # Random symbol 1-21
+				symbol_added_to_player.emit(random_symbol_id)
+			
+			print("Revolution destroyed ", destroyed_count, " symbols (including itself), gained ", total_destruction_food, " food from destruction effects, added ", destroyed_count, " random symbols")
 		
 		11: # Cow - Provide 1 food. Provide 1 food if nearby Cow
 			food_gained = 1
@@ -151,11 +166,10 @@ func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_
 		14: # Ritual - Destroy self after 3 turns. Provide 3 exp when destroyed
 			var turn_count = symbol_instance.state_data.get("turn_count", 0)
 			if turn_count >= 3:
-				exp_gained = 3
-				board_grid[board_x][board_y] = null
-				symbols_destroyed_at_positions.emit([Vector2i(board_x, board_y)])
-				symbol_removed_from_player.emit(symbol_instance)
-				print("Ritual destroyed after 3 turns, produced 3 exp")
+				var destruction_result = destroy_symbol_at_position(board_x, board_y, board_grid)
+				food_gained += destruction_result.get("food", 0)
+				exp_gained += destruction_result.get("exp", 0)
+				print("Ritual destroyed after 3 turns, produced ", destruction_result.get("exp", 0), " exp")
 		
 		15: # Protestantism - Provide 2 food for every nearby symbol. Provide 1 exp. -50 food for every nearby religion symbols
 			var nearby_coords = get_nearby_coordinates(board_x, board_y)
@@ -316,8 +330,6 @@ func count_nearby_symbol_by_name(board_x: int, board_y: int, symbol_name: String
 
 func destroy_nearby_symbol_by_name(board_x: int, board_y: int, symbol_name: String, board_grid: Array) -> int:
 	var destroyed = 0
-	var destroyed_positions = []
-	var destroyed_instances = []
 	var nearby_coords = get_nearby_coordinates(board_x, board_y)
 	
 	for coord in nearby_coords:
@@ -327,18 +339,78 @@ func destroy_nearby_symbol_by_name(board_x: int, board_y: int, symbol_name: Stri
 		if nearby_instance != null:
 			var nearby_symbol = symbol_data.get_symbol_by_id(nearby_instance.type_id)
 			if nearby_symbol != null and nearby_symbol.symbol_name == symbol_name:
-				board_grid[x][y] = null
-				destroyed += 1
-				destroyed_positions.append(Vector2i(x, y))
-				destroyed_instances.append(nearby_instance)
-	
-	if destroyed_positions.size() > 0:
-		symbols_destroyed_at_positions.emit(destroyed_positions)
-		# Also emit signal to remove from player_symbols array
-		for instance in destroyed_instances:
-			symbol_removed_from_player.emit(instance)
+				var destruction_result = destroy_symbol_at_position(x, y, board_grid)
+				if destruction_result.get("destroyed", false):
+					destroyed += 1
 	
 	return destroyed
+
+# Enhanced version that returns both count and food from destruction effects
+func destroy_nearby_symbol_by_name_with_effects(board_x: int, board_y: int, symbol_name: String, board_grid: Array) -> Dictionary:
+	var destroyed = 0
+	var total_food_from_destruction = 0
+	var total_exp_from_destruction = 0
+	var nearby_coords = get_nearby_coordinates(board_x, board_y)
+	
+	for coord in nearby_coords:
+		var x = coord.x
+		var y = coord.y
+		var nearby_instance = board_grid[x][y]
+		if nearby_instance != null:
+			var nearby_symbol = symbol_data.get_symbol_by_id(nearby_instance.type_id)
+			if nearby_symbol != null and nearby_symbol.symbol_name == symbol_name:
+				var destruction_result = destroy_symbol_at_position(x, y, board_grid)
+				if destruction_result.get("destroyed", false):
+					destroyed += 1
+					total_food_from_destruction += destruction_result.get("food", 0)
+					total_exp_from_destruction += destruction_result.get("exp", 0)
+	
+	return {"count": destroyed, "food": total_food_from_destruction, "exp": total_exp_from_destruction}
+
+# Centralized destruction system - handles all symbol destruction with effects
+func destroy_symbol_at_position(board_x: int, board_y: int, board_grid: Array) -> Dictionary:
+	var symbol_instance = board_grid[board_x][board_y]
+	if symbol_instance == null:
+		return {"destroyed": false, "food": 0, "exp": 0}
+	
+	var symbol_definition = symbol_data.get_symbol_by_id(symbol_instance.type_id)
+	var destruction_food = 0
+	var destruction_exp = 0
+	
+	# Handle destruction effects before removing the symbol
+	if symbol_definition != null:
+		var destruction_effects = handle_symbol_destruction_effects(symbol_instance, symbol_definition)
+		destruction_food = destruction_effects.get("food", 0)
+		destruction_exp = destruction_effects.get("exp", 0)
+	
+	# Remove symbol from board
+	board_grid[board_x][board_y] = null
+	
+	# Emit signals for UI updates and player symbol removal
+	symbols_destroyed_at_positions.emit([Vector2i(board_x, board_y)])
+	symbol_removed_from_player.emit(symbol_instance)
+	
+	return {"destroyed": true, "food": destruction_food, "exp": destruction_exp, "instance": symbol_instance}
+
+# Handle effects that trigger when a symbol is destroyed
+func handle_symbol_destruction_effects(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol) -> Dictionary:
+	var food_gained = 0
+	var exp_gained = 0
+	
+	match symbol_definition.id:
+		3: # Fish - Provide 10 food when destroyed (by any means)
+			food_gained = 10
+			print("Fish destroyed by external force, produced 10 food")
+		
+		14: # Ritual - Provide 3 exp when destroyed
+			exp_gained = 3
+			print("Ritual destroyed by external force, produced 3 exp")
+		
+		20, 21: # Sail & Compass - These have special destruction logic already handled elsewhere
+			# Their destruction effects are handled in handle_sail_compass_interaction
+			pass
+	
+	return {"food": food_gained, "exp": exp_gained}
 
 # Signal for UI updates needed after symbol destruction
 signal symbols_destroyed_at_positions(positions: Array)
@@ -363,6 +435,10 @@ func symbol_has_counter_effect(symbol_definition: Symbol) -> bool:
 	
 	# Symbols with turn_count counters: Wheat(1), Rice(2), Fish(3), Ritual(14)
 	if symbol_definition.id == 1 or symbol_definition.id == 2 or symbol_definition.id == 3 or symbol_definition.id == 14:
+		return true
+	
+	# Industrial Revolution (ID 9) has total_coal_destroyed counter
+	if symbol_definition.id == 9:
 		return true
 	
 	# Banana (ID 5) has placement_count counter
@@ -406,6 +482,11 @@ func get_symbol_counter_value(symbol_instance: PlayerSymbolInstance, symbol_defi
 	if symbol_definition.id == 5:
 		var placement_count = symbol_instance.state_data.get("placement_count", 0)
 		return min(placement_count, 10)
+	
+	# Industrial Revolution (ID 9) shows total_coal_destroyed
+	if symbol_definition.id == 9:
+		var total_coal_destroyed = symbol_instance.state_data.get("total_coal_destroyed", 0)
+		return total_coal_destroyed
 	
 	# Ritual (ID 14) shows turn_count up to 3
 	if symbol_definition.id == 14:

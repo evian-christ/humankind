@@ -73,11 +73,15 @@ func _ready() -> void:
 		grid_container.add_child(slot)
 	
 	# adding initial symbols to player symbols
-	addd(1)  # Wheat
-	addd(2)  # Rice
-	addd(3)  # Fish
-	addd(13) # Library
-	addd(14) # Ritual
+	#addd(4)
+	addd(10)
+	addd(3)
+	addd(3)
+	addd(3)
+	addd(3)
+	addd(3)
+	addd(3)
+	addd(3)
 	
 	_place_symbols_on_board()
 	_update_food_display()

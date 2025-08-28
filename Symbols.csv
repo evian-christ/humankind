@@ -1,14 +1,14 @@
 id,Name,Rarity,Effect,
-1,Wheat,1,Provide 8 food every 6 turns.,
-2,Rice,1,Provide 11 food every 8 turns.,
-3,Fish,1,Destroy self after 5 turns. Provide 10 food when destroyed.,
-4,Fishing boat,2,Provide 1 food. Destroy nearby Fish.,
+1,Wheat,1,Provide 8 food every 6 turns.,o
+2,Rice,1,Provide 11 food every 8 turns.,o
+3,Fish,1,Destroy self after 5 turns. Provide 10 food when destroyed.,o
+4,Fishing boat,2,Provide 1 food. Destroy nearby Fish.,o
 5,Banana,1,Provide 1 food. Provide 1 more food if placed on slot for more than 10 times,o
 6,Sugar,2,Provide 1 food. Provide 1 food for each nearby Sugar. ,o
 7,Mine,2,Provide 1 food. Provide Coal by 1%,o
 8,Coal,3,Provide 3 food.,o
-9,Industrial Revolution,4,Destroy nearby coal. Provide 1 food for every coal destroyed this game.,
-10,Revolution,4,Destroy nearby symbols and provide random symbols as much as destroyed.,
+9,Industrial Revolution,4,Destroy nearby coal. Provide 1 food for every coal destroyed this game.,o
+10,Revolution,4,Destroy self and nearby symbols and provide random symbols as much as destroyed.,
 11,Cow,1,Provide 1 food. Provide 1 food if nearby Cow.,
 12,Sheep,1,Provide 1 food.,
 13,Library,2,Provide 1 food & 1 exp.,
