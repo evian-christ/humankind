@@ -12,13 +12,15 @@ var grid_container
 # Player owned symbols
 var player_symbols: Array[PlayerSymbolInstance] = []
 # Player stats
-var food_amount: int = 0
+var food_amount: int = 200  # Start with enough food for first 2 payments
 var player_level: int = 1
 var current_exp: int = 0
 var exp_to_next_level: int = 50
+var current_turn: int = 0
 @onready var food_amount_label = $"../UI/PlayerStats/FoodLabel"
 @onready var exp_label = $"../UI/PlayerStats/ExpLabel"
 @onready var level_label = $"../UI/PlayerStats/LevelLabel"
+@onready var turn_label = $"../UI/PlayerStats/TurnLabel"
 
 # Board grid
 var board_grid: Array = []
@@ -73,19 +75,11 @@ func _ready() -> void:
 		grid_container.add_child(slot)
 	
 	# adding initial symbols to player symbols
-	#addd(4)
-	addd(10)
-	addd(3)
-	addd(3)
-	addd(3)
-	addd(3)
-	addd(3)
-	addd(3)
-	addd(3)
 	
 	_place_symbols_on_board()
 	_update_food_display()
 	_update_exp_display()
+	_update_turn_display()
 
 func addd(type_id: int) -> void:
 	player_symbols.append(symbol_data.create_player_symbol_instance(type_id))
@@ -194,18 +188,214 @@ func _input(event):
 		tooltip_manager.handle_mouse_motion(get_global_mouse_position())
 
 func _process_symbol_interactions() -> void:
-	var results = effects_processor.process_symbol_interactions(board_grid)
-	var total_food_gained = results.get("food", 0)
-	var total_exp_gained = results.get("exp", 0)
+	await _process_symbol_interactions_visual()
+
+# Visual feedback version of symbol interactions processing
+func _process_symbol_interactions_visual() -> void:
+	var total_food_gained = 0
+	var total_exp_gained = 0
 	
+	# Update turn counters for all symbols first
+	effects_processor.update_all_turn_counters(board_grid)
+	
+	# Process each symbol individually with visual feedback
+	for x in range(5):
+		for y in range(4):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null:
+				# Highlight current symbol being processed
+				_highlight_symbol_slot(x, y, true)
+				
+				# Process this symbol's effect
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null:
+					var results = effects_processor.process_single_symbol_effect(symbol_instance, symbol_definition, x, y, board_grid)
+					var food_gained = results.get("food", 0)
+					var exp_gained = results.get("exp", 0)
+					
+					total_food_gained += food_gained
+					total_exp_gained += exp_gained
+					
+					# Show effect feedback if there was any effect
+					if food_gained > 0 or exp_gained > 0:
+						_show_effect_feedback(x, y, food_gained, exp_gained)
+						await get_tree().create_timer(0.3).timeout
+				
+				# Remove highlight
+				_highlight_symbol_slot(x, y, false)
+				await get_tree().create_timer(0.1).timeout
+	
+	# Execute any delayed destructions (e.g., from Revolution)
+	var delayed_results = effects_processor.execute_delayed_destructions(board_grid)
+	total_food_gained += delayed_results.get("food", 0)
+	total_exp_gained += delayed_results.get("exp", 0)
+	
+	if delayed_results.get("destroyed", 0) > 0:
+		print("Delayed destructions completed: +", delayed_results.get("food", 0), " food, +", delayed_results.get("exp", 0), " exp from ", delayed_results.get("destroyed", 0), " destroyed symbols")
+		# Show floating text for each destroyed symbol at its position
+		var destruction_details = delayed_results.get("details", [])
+		for detail in destruction_details:
+			var x = detail.x
+			var y = detail.y
+			var food_gained = detail.food
+			var exp_gained = detail.exp
+			var symbol_name = detail.symbol_name
+			
+			# Show floating text at the destroyed symbol's position
+			if food_gained > 0 or exp_gained > 0:
+				print("Showing destruction effect for ", symbol_name, " at [", x, ",", y, "]: +", food_gained, " food, +", exp_gained, " exp")
+				_create_floating_text(x, y, food_gained, exp_gained)
+		
+		# Update visual board after destructions
+		_update_board_visuals()
+	
+	# Apply total gains
 	food_amount += total_food_gained
 	if total_exp_gained > 0:
 		add_exp(total_exp_gained)
 	
 	_update_food_display()
 	_update_counter_displays()
+
+# Highlight a symbol slot during processing
+func _highlight_symbol_slot(x: int, y: int, highlight: bool) -> void:
+	var slot_index = y * 5 + x
+	var slot = grid_container.get_child(slot_index)
+	if highlight:
+		slot.modulate = Color(1.5, 1.5, 1.0)  # Yellow tint
+	else:
+		slot.modulate = Color.WHITE
+
+# Show effect feedback for processed symbol
+func _show_effect_feedback(x: int, y: int, food: int, exp: int) -> void:
+	var feedback_text = ""
+	if food != 0:
+		var sign = "+" if food > 0 else ""
+		feedback_text += sign + str(food) + " Food"
+	if exp > 0:
+		if feedback_text != "":
+			feedback_text += ", "
+		feedback_text += "+" + str(exp) + " Exp"
+	
+	if feedback_text != "":
+		print("Position [", x, ",", y, "]: ", feedback_text)
+		_create_floating_text(x, y, food, exp)
+
+# Update visual board to match board_grid (remove destroyed symbols)
+func _update_board_visuals() -> void:
+	for x in range(5):
+		for y in range(4):
+			var slot_index = y * 5 + x
+			var slot = grid_container.get_child(slot_index)
+			
+			# If board_grid position is null, clear the visual slot
+			if board_grid[x][y] == null:
+				for child in slot.get_children():
+					child.queue_free()
+				# Clear tooltip
+				tooltip_manager.clear_slot_tooltip(slot)
+			# If there's a symbol in board_grid but not in visual slot, add it
+			elif slot.get_child_count() == 0 and board_grid[x][y] != null:
+				var symbol_instance = board_grid[x][y]
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null:
+					var symbol_label = _create_symbol_label(symbol_definition)
+					slot.add_child(symbol_label)
+					tooltip_manager.setup_slot_tooltip(slot, symbol_instance, symbol_definition)
+
+# Helper function to create symbol label (extracted from existing code)
+func _create_symbol_label(symbol_definition: Symbol) -> Label:
+	var label = Label.new()
+	# 아이콘이 있으면 아이콘 사용, 없으면 심볼 이름 사용
+	var display_text = symbol_definition.icon if symbol_definition.icon != "" else symbol_definition.symbol_name
+	label.text = display_text
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# 아이콘이 있을 때 폰트 크기 증가
+	if symbol_definition.icon != "":
+		label.add_theme_font_size_override("font_size", 48)
+	return label
+
+# Create floating text effect for symbol production
+func _create_floating_text(x: int, y: int, food: int, exp: int) -> void:
+	var slot_index = y * 5 + x
+	var slot = grid_container.get_child(slot_index)
+	
+	# Get slot's global position
+	var slot_global_pos = slot.global_position
+	var slot_center = slot_global_pos + SLOT_SIZE / 2
+	
+	# Create food floating text first if any
+	if food != 0:
+		var sign = "+" if food > 0 else ""
+		var color = Color.LIGHT_GREEN if food > 0 else Color.RED
+		_create_single_floating_text(slot_center, sign + str(food), color, Vector2(0, -60))
+	
+	# Create exp floating text with delay if any
+	if exp > 0:
+		var delay = 0.2 if food != 0 else 0.0  # Delay if food text is also shown
+		_create_single_floating_text_delayed(slot_center, "+" + str(exp) + " EXP", Color.CYAN, Vector2(0, -60), delay)
+
+# Create a single floating text with animation
+func _create_single_floating_text(start_pos: Vector2, text: String, color: Color, move_offset: Vector2) -> void:
+	var floating_label = Label.new()
+	floating_label.text = text
+	floating_label.position = start_pos
+	floating_label.modulate = color
+	floating_label.add_theme_font_size_override("font_size", 24)
+	floating_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	floating_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	floating_label.size = Vector2(100, 30)
+	floating_label.position.x -= floating_label.size.x / 2  # Center horizontally
+	floating_label.position.y -= floating_label.size.y / 2  # Center vertically
+	
+	# Add to UI node so it appears on top
+	ui_node.add_child(floating_label)
+	
+	# Create tween for animation
+	var tween = create_tween()
+	tween.set_parallel(true)  # Allow multiple animations simultaneously
+	
+	# Move upward
+	var end_pos = floating_label.position + move_offset
+	tween.tween_property(floating_label, "position", end_pos, 1.0).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUART)
+	
+	# Fade out
+	tween.tween_property(floating_label, "modulate:a", 0.0, 1.0).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUART).set_delay(0.3)
+	
+	# Scale effect (grow then shrink slightly)
+	floating_label.scale = Vector2(0.8, 0.8)
+	tween.tween_property(floating_label, "scale", Vector2(1.2, 1.2), 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(floating_label, "scale", Vector2(1.0, 1.0), 0.3).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_BACK).set_delay(0.2)
+	
+	# Remove label after animation
+	tween.tween_callback(floating_label.queue_free).set_delay(1.2)
+
+# Create a single floating text with delay
+func _create_single_floating_text_delayed(start_pos: Vector2, text: String, color: Color, move_offset: Vector2, delay: float) -> void:
+	# Wait for the delay, then create the floating text
+	await get_tree().create_timer(delay).timeout
+	_create_single_floating_text(start_pos, text, color, move_offset)
 				
 func _on_spin_button_pressed() -> void:
+	# Increment turn counter
+	current_turn += 1
+	_update_turn_display()
+	
+	# Check for food payment every 10 turns
+	if current_turn % 10 == 0:
+		var food_cost = calculate_food_cost(current_turn)
+		if food_amount >= food_cost:
+			food_amount -= food_cost
+			_update_food_display()
+			print("Turn ", current_turn, ": Paid ", food_cost, " food. Remaining: ", food_amount)
+		else:
+			# Game Over - not enough food
+			print("GAME OVER: Not enough food to pay upkeep cost of ", food_cost, ". You had ", food_amount, " food.")
+			_game_over()
+			return
+	
 	# remove symbols in slots and clear tooltips
 	for slot in grid_container.get_children():
 		# 툴팁 연결 해제
@@ -241,6 +431,24 @@ func _update_exp_display():
 		exp_label.text = "EXP: " + str(current_exp) + "/" + str(exp_to_next_level)
 	if level_label:
 		level_label.text = "Level: " + str(player_level)
+
+func _update_turn_display():
+	if turn_label:
+		var next_payment_turn = ((current_turn / 10) + 1) * 10
+		var turns_until_payment = next_payment_turn - current_turn
+		turn_label.text = "Turn: " + str(current_turn) + " (Payment in " + str(turns_until_payment) + " turns)"
+
+# Calculate food cost based on turn number
+func calculate_food_cost(turn: int) -> int:
+	var payment_cycle = turn / 10  # Which payment cycle (1st, 2nd, 3rd, etc.)
+	return 100 + (payment_cycle - 1) * 50  # 100, 150, 200, 250, 300...
+
+# Handle game over
+func _game_over():
+	print("Game Over! You survived ", current_turn, " turns.")
+	# Disable the spin button or show game over UI
+	# For now, just stop the game
+	get_tree().paused = true
 
 func get_exp_requirement(level: int) -> int:
 	return 50 + (level - 1) * 25  # 50, 75, 100, 125, 150...
