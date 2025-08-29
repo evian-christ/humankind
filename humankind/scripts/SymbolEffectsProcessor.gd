@@ -8,19 +8,14 @@ const BOARD_WIDTH = 5
 const BOARD_HEIGHT = 4
 
 var symbol_data: SymbolData
+var delayed_destructions: Array = []  # Array of {x, y, reason} for delayed destruction
 
 func _init(symbol_data_ref: SymbolData):
 	symbol_data = symbol_data_ref
 
 # 보드의 모든 심볼 상호작용 처리
 func process_symbol_interactions(board_grid: Array) -> Dictionary:
-	# Update turn counters for all symbols (for Rice effect)
-	for x in range(BOARD_WIDTH):
-		for y in range(BOARD_HEIGHT):
-			var symbol_instance = board_grid[x][y]
-			if symbol_instance != null:
-				var turn_count = symbol_instance.state_data.get("turn_count", 0)
-				symbol_instance.state_data["turn_count"] = turn_count + 1
+	update_all_turn_counters(board_grid)
 	
 	var total_food_gained = 0
 	var total_exp_gained = 0
@@ -37,6 +32,68 @@ func process_symbol_interactions(board_grid: Array) -> Dictionary:
 					total_exp_gained += results.get("exp", 0)
 	
 	return {"food": total_food_gained, "exp": total_exp_gained}
+
+# Update turn counters for all symbols (separated for visual processing)
+func update_all_turn_counters(board_grid: Array) -> void:
+	for x in range(BOARD_WIDTH):
+		for y in range(BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null:
+				var turn_count = symbol_instance.state_data.get("turn_count", 0)
+				symbol_instance.state_data["turn_count"] = turn_count + 1
+
+# Process a single symbol's effect (for visual processing)
+func process_single_symbol_effect(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol, x: int, y: int, board_grid: Array) -> Dictionary:
+	return process_symbol_simple_effect(symbol_instance, symbol_definition, x, y, board_grid)
+
+# Mark a position for delayed destruction
+func mark_for_delayed_destruction(x: int, y: int, reason: String) -> void:
+	delayed_destructions.append({"x": x, "y": y, "reason": reason})
+
+# Execute all delayed destructions and return total effects with position info
+func execute_delayed_destructions(board_grid: Array) -> Dictionary:
+	var total_food = 0
+	var total_exp = 0
+	var total_destroyed = 0
+	var destruction_details = []  # Array of {x, y, food, exp, symbol_name}
+	
+	for destruction in delayed_destructions:
+		var x = destruction.x
+		var y = destruction.y
+		var reason = destruction.reason
+		
+		if board_grid[x][y] != null:
+			var symbol_instance = board_grid[x][y]
+			var symbol_definition = symbol_data.get_symbol_by_id(symbol_instance.type_id)
+			var symbol_name = symbol_definition.symbol_name if symbol_definition else "Unknown"
+			
+			var destruction_result = destroy_symbol_at_position(x, y, board_grid)
+			if destruction_result.get("destroyed", false):
+				total_destroyed += 1
+				var food_gained = destruction_result.get("food", 0)
+				var exp_gained = destruction_result.get("exp", 0)
+				total_food += food_gained
+				total_exp += exp_gained
+				
+				# Store destruction details for individual display
+				if food_gained > 0 or exp_gained > 0:
+					destruction_details.append({
+						"x": x,
+						"y": y, 
+						"food": food_gained,
+						"exp": exp_gained,
+						"symbol_name": symbol_name
+					})
+				
+				print("Delayed destruction at [", x, ",", y, "] by ", reason, ": ", symbol_name, " provided +", food_gained, " food, +", exp_gained, " exp")
+	
+	delayed_destructions.clear()
+	return {
+		"food": total_food, 
+		"exp": total_exp, 
+		"destroyed": total_destroyed,
+		"details": destruction_details
+	}
 
 # Simple effect processing for CSV symbols
 func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol, board_x: int, board_y: int, board_grid: Array) -> Dictionary:
@@ -113,40 +170,28 @@ func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_
 			if destroyed_coal > 0:
 				print("Industrial Revolution destroyed ", destroyed_coal, " Coal, total destroyed: ", total_coal_destroyed, ", gained ", food_gained, " food")
 		
-		10: # Revolution - Destroy self and nearby symbols and provide random symbols as much as destroyed
+		10: # Revolution - Mark self and nearby symbols for delayed destruction
 			var nearby_coords = get_nearby_coordinates(board_x, board_y)
-			var destroyed_count = 0
-			var total_destruction_food = 0
-			var total_destruction_exp = 0
+			var marked_count = 0
 			
-			# Destroy nearby symbols first
+			# Mark nearby symbols for destruction
 			for coord in nearby_coords:
 				var x = coord.x
 				var y = coord.y
 				if board_grid[x][y] != null:
-					var destruction_result = destroy_symbol_at_position(x, y, board_grid)
-					if destruction_result.get("destroyed", false):
-						destroyed_count += 1
-						total_destruction_food += destruction_result.get("food", 0)
-						total_destruction_exp += destruction_result.get("exp", 0)
+					mark_for_delayed_destruction(x, y, "Revolution")
+					marked_count += 1
 			
-			# Destroy self
-			var self_destruction = destroy_symbol_at_position(board_x, board_y, board_grid)
-			if self_destruction.get("destroyed", false):
-				destroyed_count += 1
-				total_destruction_food += self_destruction.get("food", 0)
-				total_destruction_exp += self_destruction.get("exp", 0)
+			# Mark self for destruction
+			mark_for_delayed_destruction(board_x, board_y, "Revolution")
+			marked_count += 1
 			
-			# Add destruction effects to total gains
-			food_gained += total_destruction_food
-			exp_gained += total_destruction_exp
-			
-			# Add random symbols to player
-			for i in range(destroyed_count):
+			# Add random symbols to player immediately (based on expected destruction count)
+			for i in range(marked_count):
 				var random_symbol_id = randi() % 21 + 1 # Random symbol 1-21
 				symbol_added_to_player.emit(random_symbol_id)
 			
-			print("Revolution destroyed ", destroyed_count, " symbols (including itself), gained ", total_destruction_food, " food from destruction effects, added ", destroyed_count, " random symbols")
+			print("Revolution marked ", marked_count, " symbols for destruction (including itself), added ", marked_count, " random symbols")
 		
 		11: # Cow - Provide 1 food. Provide 1 food if nearby Cow
 			food_gained = 1
@@ -297,19 +342,18 @@ func handle_sail_compass_interaction(symbol_instance: PlayerSymbolInstance, symb
 		if nearby_instance != null:
 			var nearby_symbol = symbol_data.get_symbol_by_id(nearby_instance.type_id)
 			if nearby_symbol != null and nearby_symbol.symbol_name == target_name:
+				# Increment interaction count for THIS symbol only
 				interaction_count += 1
 				symbol_instance.state_data["interaction_count"] = interaction_count
+				
 				print(symbol_definition.symbol_name, " interacted with ", target_name, " (", interaction_count, "/5)")
 				
+				# Only THIS symbol is destroyed if it reaches 5
 				if interaction_count >= 5:
-					# Destroy both symbols and provide 25 food each
-					board_grid[board_x][board_y] = null
-					board_grid[x][y] = null
-					symbols_destroyed_at_positions.emit([Vector2i(board_x, board_y), Vector2i(x, y)])
-					symbol_removed_from_player.emit(symbol_instance)
-					symbol_removed_from_player.emit(nearby_instance)
-					print(symbol_definition.symbol_name, " and ", target_name, " destroyed after 5 interactions, each provided 25 food")
-					return {"food": 50, "exp": 0}  # Both symbols provide 25 food each
+					# Destroy only this symbol and provide 25 food
+					var destruction_result = destroy_symbol_at_position(board_x, board_y, board_grid)
+					print(symbol_definition.symbol_name, " destroyed after 5 interactions, provided 25 food")
+					return {"food": 25, "exp": 0}
 				break
 	
 	return {"food": 0, "exp": 0}
@@ -406,9 +450,9 @@ func handle_symbol_destruction_effects(symbol_instance: PlayerSymbolInstance, sy
 			exp_gained = 3
 			print("Ritual destroyed by external force, produced 3 exp")
 		
-		20, 21: # Sail & Compass - These have special destruction logic already handled elsewhere
-			# Their destruction effects are handled in handle_sail_compass_interaction
-			pass
+		20, 21: # Sail & Compass - Provide 25 food when destroyed (by any means)
+			food_gained = 25
+			print(symbol_definition.symbol_name, " destroyed, provided 25 food")
 	
 	return {"food": food_gained, "exp": exp_gained}
 
