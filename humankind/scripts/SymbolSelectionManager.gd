@@ -35,8 +35,7 @@ func setup_ui(selection_ui: Control, buttons: Array):
 
 # 심볼 선택 단계 시작
 func start_selection_phase() -> void:
-	if is_selection_phase:
-		return
+	# Remove the early return so we can refresh during selection phase
 	
 	is_selection_phase = true
 	current_symbol_choices = []
@@ -52,6 +51,24 @@ func start_selection_phase() -> void:
 	
 	print("Selection phase started.")
 
+# 심볼 선택지 새로고침 (디버그용)
+func refresh_symbol_choices() -> void:
+	if not is_selection_phase:
+		start_selection_phase()
+		return
+	
+	# 이미 선택 단계인 경우 선택지만 새로고침
+	current_symbol_choices = []
+	
+	# 확률 기반 심볼 선택 (3개)
+	for i in range(3):
+		var selected_symbol = _select_symbol_by_probability()
+		current_symbol_choices.append(selected_symbol.id)
+	
+	# UI 업데이트
+	_update_selection_ui()
+	print("Symbol choices refreshed.")
+
 # 확률 기반 심볼 선택
 func _select_symbol_by_probability() -> Symbol:
 	var probabilities = {}
@@ -65,7 +82,7 @@ func _select_symbol_by_probability() -> Symbol:
 	var era_symbols = {1: [], 2: [], 3: [], 4: [], 5: []}
 	for symbol_id in symbol_data.symbols.keys():
 		var symbol = symbol_data.get_symbol_by_id(symbol_id)
-		if symbol:
+		if symbol and symbol.rarity > 0:  # rarity 0인 심볼은 선택 풀에서 제외
 			era_symbols[symbol.rarity].append(symbol)
 	
 	# 확률에 따라 시대 선택
