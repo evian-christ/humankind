@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://ctsmwi0tsmvpn"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 24
+symbol_name = "Swordsman"
+icon = "⚔️"
+rarity = 2
+effects = Array[Dictionary]([])
+effect_text = "Classical melee combat symbol. -4 hp of nearby Barbarians."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"
