@@ -20,7 +20,7 @@ var current_turn: int = 0
 @onready var food_amount_label = $"../UI/PlayerStats/FoodLabel"
 @onready var exp_label = $"../UI/PlayerStats/ExpLabel"
 @onready var level_label = $"../UI/PlayerStats/LevelLabel"
-@onready var turn_label = $"../UI/PlayerStats/TurnLabel"
+var turn_label: Label
 
 # Board grid
 var board_grid: Array = []
@@ -45,8 +45,18 @@ var effects_processor: SymbolEffectsProcessor
 func _ready() -> void:
 	_initialise_board_grid()
 	
+	# Create TurnLabel dynamically
+	turn_label = Label.new()
+	turn_label.text = "Turn: 0"
+	turn_label.offset_top = 75.0
+	turn_label.offset_right = 100.0
+	turn_label.offset_bottom = 98.0
+	var player_stats = $"../UI/PlayerStats"
+	if player_stats:
+		player_stats.add_child(turn_label)
+	
 	# Initialize components
-	tooltip_manager = TooltipManager.new(ui_node)
+	tooltip_manager = TooltipManager.new(ui_node, self)
 	add_child(tooltip_manager)
 	
 	effects_processor = SymbolEffectsProcessor.new(symbol_data)
@@ -75,14 +85,13 @@ func _ready() -> void:
 		grid_container.add_child(slot)
 	
 	# adding initial symbols to player symbols
+	add_symbol_to_player(22)
 	
 	_place_symbols_on_board()
 	_update_food_display()
 	_update_exp_display()
 	_update_turn_display()
 
-func addd(type_id: int) -> void:
-	player_symbols.append(symbol_data.create_player_symbol_instance(type_id))
 
 # Initialise board grid	
 func _initialise_board_grid() -> void:
@@ -143,14 +152,23 @@ func _place_symbols_on_board() -> void:
 		counter_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		counter_label.custom_minimum_size = Vector2(20, 15)
 		
-		# Show counter for symbols that have counter-based effects
-		var has_counter = effects_processor.symbol_has_counter_effect(symbol_definition)
-		if has_counter:
-			var counter_value = effects_processor.get_symbol_counter_value(symbol_instance, symbol_definition)
-			counter_label.text = str(counter_value)
-			counter_label.visible = true
+		# Show HP for Barbarian, counter for other symbols
+		if symbol_definition.id == 22:  # Barbarian - show HP with heart
+			if symbol_instance.current_hp > 0:
+				counter_label.text = "❤️" + str(symbol_instance.current_hp)
+				counter_label.add_theme_font_size_override("font_size", 12)
+				counter_label.visible = true
+			else:
+				counter_label.visible = false
 		else:
-			counter_label.visible = false
+			# Show counter for symbols that have counter-based effects
+			var has_counter = effects_processor.symbol_has_counter_effect(symbol_definition)
+			if has_counter:
+				var counter_value = effects_processor.get_symbol_counter_value(symbol_instance, symbol_definition)
+				counter_label.text = str(counter_value)
+				counter_label.visible = true
+			else:
+				counter_label.visible = false
 		
 		slot.add_child(counter_label)
 		
@@ -182,10 +200,23 @@ func _place_symbols_on_board() -> void:
 		tooltip_manager.setup_slot_tooltip(slot, symbol_instance, symbol_definition)
 
 
-# 마우스 움직임 추적 (툴팁 위치 업데이트)
+# 마우스 움직임 추적 (툴팁 위치 업데이트) 및 디버그 키보드 입력
 func _input(event):
 	if event is InputEventMouseMotion:
 		tooltip_manager.handle_mouse_motion(get_global_mouse_position())
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_1:
+			# Debug: Add Barbarian
+			add_symbol_to_player(22)
+			print("Debug: Added Barbarian")
+		elif event.keycode == KEY_S:
+			# Debug: Refresh symbol selection (show 3 new choices)
+			symbol_selection_manager.refresh_symbol_choices()
+			print("Debug: Refreshed symbol selection")
+		elif event.keycode == KEY_2:
+			# Debug: Add Warrior
+			add_symbol_to_player(23)
+			print("Debug: Added Warrior")
 
 func _process_symbol_interactions() -> void:
 	await _process_symbol_interactions_visual()
@@ -209,7 +240,7 @@ func _process_symbol_interactions_visual() -> void:
 				# Process this symbol's effect
 				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
 				if symbol_definition != null:
-					var results = effects_processor.process_single_symbol_effect(symbol_instance, symbol_definition, x, y, board_grid)
+					var results = effects_processor.process_single_symbol_effect(symbol_instance, symbol_definition, x, y, board_grid, current_turn)
 					var food_gained = results.get("food", 0)
 					var exp_gained = results.get("exp", 0)
 					
@@ -219,11 +250,11 @@ func _process_symbol_interactions_visual() -> void:
 					# Show effect feedback if there was any effect
 					if food_gained > 0 or exp_gained > 0:
 						_show_effect_feedback(x, y, food_gained, exp_gained)
-						await get_tree().create_timer(0.3).timeout
+						await get_tree().create_timer(0.15).timeout
 				
 				# Remove highlight
 				_highlight_symbol_slot(x, y, false)
-				await get_tree().create_timer(0.1).timeout
+				await get_tree().create_timer(0.05).timeout
 	
 	# Execute any delayed destructions (e.g., from Revolution)
 	var delayed_results = effects_processor.execute_delayed_destructions(board_grid)
@@ -407,7 +438,7 @@ func _on_spin_button_pressed() -> void:
 	# reset board grid
 	_initialise_board_grid()
 	
-	await get_tree().create_timer(0.3).timeout
+	await get_tree().create_timer(0.15).timeout
 	# place new symbols on board grid and slots
 	_place_symbols_on_board()
 	
@@ -490,9 +521,9 @@ func get_symbol_probabilities() -> Dictionary:
 	return probabilities
 
 func add_symbol_to_player(symbol_id: int):
-	var new_symbol_instance = symbol_data.create_player_symbol_instance(symbol_id)
+	var new_symbol_instance = symbol_data.create_player_symbol_instance(symbol_id, current_turn)
 	player_symbols.append(new_symbol_instance)
-	print("Added new symbol to player: ", symbol_data.get_symbol_by_id(symbol_id).symbol_name)
+	print("Added new symbol to player: ", symbol_data.get_symbol_by_id(symbol_id).symbol_name, " at turn ", current_turn)
 
 func remove_symbol_from_player(symbol_instance: PlayerSymbolInstance):
 	var symbol_name = symbol_data.get_symbol_by_id(symbol_instance.type_id).symbol_name
@@ -554,13 +585,22 @@ func _update_counter_displays():
 				if slot.get_child_count() >= 2:
 					var counter_label = slot.get_child(1)
 					
-					var has_counter = effects_processor.symbol_has_counter_effect(symbol_definition)
-					if has_counter:
-						var counter_value = effects_processor.get_symbol_counter_value(symbol_instance, symbol_definition)
-						counter_label.text = str(counter_value)
-						counter_label.visible = true
+					# Update HP for Barbarian, counter for other symbols
+					if symbol_definition.id == 22:  # Barbarian - show HP with heart
+						if symbol_instance.current_hp > 0:
+							counter_label.text = "❤️" + str(symbol_instance.current_hp)
+							counter_label.add_theme_font_size_override("font_size", 12)
+							counter_label.visible = true
+						else:
+							counter_label.visible = false
 					else:
-						counter_label.visible = false
+						var has_counter = effects_processor.symbol_has_counter_effect(symbol_definition)
+						if has_counter:
+							var counter_value = effects_processor.get_symbol_counter_value(symbol_instance, symbol_definition)
+							counter_label.text = str(counter_value)
+							counter_label.visible = true
+						else:
+							counter_label.visible = false
 				
 				# Update food production label (should be the third child)
 				if slot.get_child_count() >= 3:
