@@ -14,7 +14,7 @@ func _init(symbol_data_ref: SymbolData):
 	symbol_data = symbol_data_ref
 
 # 보드의 모든 심볼 상호작용 처리
-func process_symbol_interactions(board_grid: Array) -> Dictionary:
+func process_symbol_interactions(board_grid: Array, current_turn: int = 0) -> Dictionary:
 	update_all_turn_counters(board_grid)
 	
 	var total_food_gained = 0
@@ -27,7 +27,7 @@ func process_symbol_interactions(board_grid: Array) -> Dictionary:
 				var symbol_definition = symbol_data.get_symbol_by_id(current_symbol_instance.type_id)
 				
 				if symbol_definition != null:
-					var results = process_symbol_simple_effect(current_symbol_instance, symbol_definition, x, y, board_grid)
+					var results = process_symbol_simple_effect(current_symbol_instance, symbol_definition, x, y, board_grid, current_turn)
 					total_food_gained += results.get("food", 0)
 					total_exp_gained += results.get("exp", 0)
 	
@@ -43,8 +43,8 @@ func update_all_turn_counters(board_grid: Array) -> void:
 				symbol_instance.state_data["turn_count"] = turn_count + 1
 
 # Process a single symbol's effect (for visual processing)
-func process_single_symbol_effect(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol, x: int, y: int, board_grid: Array) -> Dictionary:
-	return process_symbol_simple_effect(symbol_instance, symbol_definition, x, y, board_grid)
+func process_single_symbol_effect(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol, x: int, y: int, board_grid: Array, current_turn: int = 0) -> Dictionary:
+	return process_symbol_simple_effect(symbol_instance, symbol_definition, x, y, board_grid, current_turn)
 
 # Mark a position for delayed destruction
 func mark_for_delayed_destruction(x: int, y: int, reason: String) -> void:
@@ -96,7 +96,7 @@ func execute_delayed_destructions(board_grid: Array) -> Dictionary:
 	}
 
 # Simple effect processing for CSV symbols
-func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol, board_x: int, board_y: int, board_grid: Array) -> Dictionary:
+func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol, board_x: int, board_y: int, board_grid: Array, current_turn: int = 0) -> Dictionary:
 	var food_gained = 0
 	var exp_gained = 0
 	
@@ -323,6 +323,63 @@ func process_symbol_simple_effect(symbol_instance: PlayerSymbolInstance, symbol_
 			var interaction_result = handle_sail_compass_interaction(symbol_instance, symbol_definition, board_x, board_y, board_grid)
 			food_gained += interaction_result.get("food", 0)
 			exp_gained += interaction_result.get("exp", 0)
+		
+		22: # Barbarian - Food drain and HP system
+			# Food drain: -3(+0.5 * every 10 turns) food - fixed based on when added
+			var base_drain = 3
+			var additional_drain = (symbol_instance.added_turn / 10.0) * 0.5
+			var total_drain = base_drain + additional_drain
+			food_gained = -int(total_drain)
+			
+			# Debug logging
+			print("DEBUG Barbarian: added_turn=", symbol_instance.added_turn, " additional_drain=", additional_drain, " total_drain=", total_drain, " (fixed drain for this symbol)")
+			
+			# Update HP: Base 12 + 2 * (every 10 turns when added) - fixed max HP
+			var base_hp = 12
+			var bonus_hp = int(symbol_instance.added_turn / 10) * 2
+			var expected_max_hp = base_hp + bonus_hp
+			
+			# Update max HP if needed (should be fixed based on added_turn)
+			if symbol_instance.max_hp != expected_max_hp:
+				symbol_instance.max_hp = expected_max_hp
+				# If this is the first time setting HP properly, set current HP to max
+				if symbol_instance.current_hp == 12 and expected_max_hp > 12:
+					symbol_instance.current_hp = expected_max_hp
+			
+			# -1 HP every turn
+			symbol_instance.current_hp -= 1
+			
+			# Check if Barbarian dies (HP <= 0)
+			if symbol_instance.current_hp <= 0:
+				mark_for_delayed_destruction(board_x, board_y, "Barbarian died (HP <= 0)")
+				print("Barbarian died from HP loss")
+			else:
+				print("Barbarian: -", int(total_drain), " food, HP: ", symbol_instance.current_hp, "/", symbol_instance.max_hp)
+		
+		23: # Warrior - Damage nearby Barbarians (-2 HP)
+			food_gained = 0  # No food production
+			damage_nearby_barbarians(board_x, board_y, 2, board_grid)
+			print("Warrior dealt 2 damage to nearby Barbarians")
+		
+		24: # Swordsman - Damage nearby Barbarians (-4 HP)
+			food_gained = 0
+			damage_nearby_barbarians(board_x, board_y, 4, board_grid)
+			print("Swordsman dealt 4 damage to nearby Barbarians")
+		
+		25: # Knight - Damage nearby Barbarians (-7 HP)
+			food_gained = 0
+			damage_nearby_barbarians(board_x, board_y, 7, board_grid)
+			print("Knight dealt 7 damage to nearby Barbarians")
+		
+		26: # Cavalry - Damage nearby Barbarians (-11 HP)
+			food_gained = 0
+			damage_nearby_barbarians(board_x, board_y, 11, board_grid)
+			print("Cavalry dealt 11 damage to nearby Barbarians")
+		
+		27: # Infantry - Damage nearby Barbarians (-16 HP)
+			food_gained = 0
+			damage_nearby_barbarians(board_x, board_y, 16, board_grid)
+			print("Infantry dealt 16 damage to nearby Barbarians")
 	
 	return {"food": food_gained, "exp": exp_gained}
 
@@ -471,6 +528,26 @@ func get_nearby_coordinates(board_x: int, board_y: int) -> Array:
 			if nx >= 0 and nx < BOARD_WIDTH and ny >= 0 and ny < BOARD_HEIGHT:
 				nearby.append(Vector2i(nx, ny))
 	return nearby
+
+# Damage all nearby Barbarian symbols
+func damage_nearby_barbarians(board_x: int, board_y: int, damage: int, board_grid: Array) -> void:
+	var nearby_coords = get_nearby_coordinates(board_x, board_y)
+	
+	for coord in nearby_coords:
+		var x = coord.x
+		var y = coord.y
+		var symbol_instance = board_grid[x][y]
+		
+		if symbol_instance != null:
+			var symbol_definition = symbol_data.get_symbol_by_id(symbol_instance.type_id)
+			if symbol_definition != null and symbol_definition.id == 22:  # Barbarian
+				symbol_instance.current_hp -= damage
+				print("Barbarian at (", x, ",", y, ") took ", damage, " damage, HP: ", symbol_instance.current_hp, "/", symbol_instance.max_hp)
+				
+				# Check if Barbarian dies
+				if symbol_instance.current_hp <= 0:
+					mark_for_delayed_destruction(x, y, "Barbarian killed by combat unit")
+					print("Barbarian at (", x, ",", y, ") killed by combat damage")
 
 # 심볼에 카운터 효과가 있는지 확인
 func symbol_has_counter_effect(symbol_definition: Symbol) -> bool:
