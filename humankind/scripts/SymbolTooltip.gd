@@ -71,13 +71,21 @@ func show_tooltip(symbol_name: String, effect_text: String, mouse_position: Vect
 	# 텍스트 크기에 따라 툴팁 크기 조정
 	effect_label.custom_minimum_size.x = min(max_width, 200)
 	
-	# 크기 업데이트를 위해 한 프레임 기다림
-	await get_tree().process_frame
+	# Force immediate layout update without await
+	container.queue_redraw()
+	container.force_update_transform()
+	
+	# Call deferred to ensure layout is updated
+	call_deferred("_finalize_tooltip_size", mouse_position)
 	
 	# 툴팁 크기 설정
 	var content_size = container.get_combined_minimum_size()
 	var padding = Vector2(12, 10)  # 패딩 증가
 	var tooltip_size = content_size + padding * 2
+	
+	# Minimum size constraint to prevent weird sizing
+	tooltip_size.x = max(tooltip_size.x, 150)
+	tooltip_size.y = max(tooltip_size.y, 50)
 	
 	# 배경 크기 설정
 	background.size = tooltip_size
@@ -99,6 +107,38 @@ func show_tooltip(symbol_name: String, effect_text: String, mouse_position: Vect
 	position = final_position
 	size = tooltip_size
 	visible = true
+
+# Deferred function to finalize tooltip sizing after layout update
+func _finalize_tooltip_size(mouse_position: Vector2):
+	if not visible:
+		return
+		
+	# Recalculate size after layout update
+	var content_size = container.get_combined_minimum_size()
+	var padding = Vector2(12, 10)
+	var tooltip_size = content_size + padding * 2
+	
+	# Minimum size constraint to prevent weird sizing
+	tooltip_size.x = max(tooltip_size.x, 150)
+	tooltip_size.y = max(tooltip_size.y, 50)
+	
+	# Update sizes
+	background.size = tooltip_size
+	container.size = content_size
+	size = tooltip_size
+	
+	# Recalculate position with correct size
+	var screen_size = get_viewport().get_visible_rect().size
+	var final_position = mouse_position + margin_from_cursor
+	
+	# Screen boundary checks
+	if final_position.x + tooltip_size.x > screen_size.x:
+		final_position.x = mouse_position.x - tooltip_size.x - margin_from_cursor.x
+	
+	if final_position.y + tooltip_size.y > screen_size.y:
+		final_position.y = mouse_position.y - tooltip_size.y - margin_from_cursor.y
+	
+	position = final_position
 
 # 툴팁 숨김
 func hide_tooltip():
