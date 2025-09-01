@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b5banana005"]
+
+[ext_resource type="Script" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 5
+symbol_name = "Banana"
+icon = "🍌"
+rarity = 1
+passive_food = 1
+effects = Array[Dictionary]([])
+effect_text = "Provide 1 more food if placed on slot for more than 10 times."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

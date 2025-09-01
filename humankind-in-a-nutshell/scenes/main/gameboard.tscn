@@ -1,0 +1,93 @@
+[gd_scene load_steps=2 format=3 uid="uid://idr5e1op4wvl"]
+
+[ext_resource type="Script" uid="uid://dwll4il55cpqs" path="res://scenes/main/gameboard.gd" id="1_gameboard"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Gameboard" type="Node2D" parent="."]
+script = ExtResource("1_gameboard")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="StatBar" type="Panel" parent="UI"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -60.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="StatContainer" type="HBoxContainer" parent="UI/StatBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 15.0
+offset_right = -20.0
+offset_bottom = -15.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="FoodIcon" type="Label" parent="UI/StatBar/StatContainer"]
+layout_mode = 2
+text = "🍎"
+
+[node name="FoodLabel" type="Label" parent="UI/StatBar/StatContainer"]
+layout_mode = 2
+text = "200"
+
+[node name="Spacer1" type="Control" parent="UI/StatBar/StatContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+
+[node name="GoldIcon" type="Label" parent="UI/StatBar/StatContainer"]
+layout_mode = 2
+text = "🟡"
+
+[node name="GoldLabel" type="Label" parent="UI/StatBar/StatContainer"]
+layout_mode = 2
+text = "0"
+
+[node name="Spacer2" type="Control" parent="UI/StatBar/StatContainer"]
+custom_minimum_size = Vector2(30, 0)
+layout_mode = 2
+
+[node name="LevelLabel" type="Label" parent="UI/StatBar/StatContainer"]
+layout_mode = 2
+text = "LV. 1"
+
+[node name="ExpBar" type="ProgressBar" parent="UI/StatBar/StatContainer"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+max_value = 50.0
+step = 1.0
+
+[node name="ExpLabel" type="Label" parent="UI/StatBar/StatContainer"]
+layout_mode = 2
+text = "0/50"
+
+[node name="Spacer3" type="Control" parent="UI/StatBar/StatContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SpinButton" type="Button" parent="UI/StatBar/StatContainer"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Spin"
+
+[connection signal="pressed" from="UI/StatBar/StatContainer/SpinButton" to="Gameboard" method="_on_spin_button_pressed"]

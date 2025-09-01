@@ -1,0 +1,419 @@
+class_name GameController
+extends Node
+
+# Main game controller that coordinates all systems
+
+# Manager references
+var game_state_manager
+var board_renderer
+var ui_manager
+var effects_processor
+
+# Game flow state
+enum GamePhase {
+	IDLE,
+	PROCESSING_TURN,
+	SELECTION_PHASE,
+	GAME_OVER
+}
+
+var current_phase: GamePhase = GamePhase.IDLE
+
+func _ready() -> void:
+	_initialize_managers()
+	_setup_signal_connections()
+	_start_new_game()
+
+func _initialize_managers() -> void:
+	# Create managers
+	var GameStateManagerClass = load("res://scripts/core/GameStateManager.gd")
+	var BoardRendererClass = load("res://scripts/ui/BoardRenderer.gd")
+	var UIManagerClass = load("res://scripts/ui/UIManager.gd")
+	var SymbolEffectsProcessorClass = load("res://scripts/components/SymbolEffectsProcessor.gd")
+	
+	game_state_manager = GameStateManagerClass.new()
+	board_renderer = BoardRendererClass.new()
+	ui_manager = UIManagerClass.new()
+	effects_processor = SymbolEffectsProcessorClass.new(SymbolData)
+	
+	# Add as children
+	add_child(game_state_manager)
+	add_child(board_renderer)
+	add_child(ui_manager)
+	add_child(effects_processor)
+	
+	# Get UI parent reference - GameController -> Gameboard -> Main -> UI
+	var ui_parent = get_parent().get_parent().get_node("UI")
+	
+	# Setup managers
+	board_renderer.setup(ui_parent, game_state_manager)
+	ui_manager.setup(ui_parent)
+	game_state_manager.set_effects_processor(effects_processor)
+	
+	print("GameController: All managers initialized")
+
+func _setup_signal_connections() -> void:
+	# UI signals
+	ui_manager.spin_button_pressed.connect(_on_spin_button_pressed)
+	
+	# Game state signals
+	game_state_manager.food_changed.connect(_on_food_changed)
+	game_state_manager.exp_changed.connect(_on_exp_changed)
+	game_state_manager.level_changed.connect(_on_level_changed)
+	game_state_manager.turn_changed.connect(_on_turn_changed)
+	game_state_manager.game_over.connect(_on_game_over)
+	game_state_manager.effects_processed.connect(_on_effects_processed)
+	
+	# Selection signals  
+	ui_manager.selection_manager.symbol_selected.connect(_on_symbol_choice_made)
+	
+	# Effects processor signals
+	effects_processor.symbol_added_to_player.connect(_on_symbol_added_to_player)
+	
+	print("GameController: Signal connections established")
+
+func _start_new_game() -> void:
+	game_state_manager.initialize_new_game()
+	
+	# Add starting symbols (move this to configuration later)
+	game_state_manager.add_symbol_to_player(8)   # Banana
+	game_state_manager.add_symbol_to_player(8)  # Sheep
+	game_state_manager.add_symbol_to_player(8)  # Barbarian
+	game_state_manager.add_symbol_to_player(8)  # Barbarian
+	game_state_manager.add_symbol_to_player(8)  # Barbarian
+	game_state_manager.add_symbol_to_player(8)  # Barbarian
+	game_state_manager.add_symbol_to_player(9)  # Barbarian
+	game_state_manager.add_symbol_to_player(9)  # Barbarian
+	game_state_manager.add_symbol_to_player(8)  # Barbarian
+	
+	# Update UI to reflect initial state
+	var stats = game_state_manager.get_player_stats()
+	ui_manager.update_food_display(stats["food"])
+	ui_manager.update_gold_display(stats["gold"])
+	ui_manager.update_level_display(stats["level"])
+	ui_manager.update_exp_display(stats["exp"], stats["exp_to_next"])
+	
+	current_phase = GamePhase.IDLE
+	print("GameController: New game started")
+
+# Main game flow
+func _on_spin_button_pressed() -> void:
+	if current_phase != GamePhase.IDLE:
+		return
+	
+	current_phase = GamePhase.PROCESSING_TURN
+	ui_manager.set_spin_button_enabled(false)
+	
+	await _process_turn()
+
+func _process_turn() -> void:
+	print("GameController: Processing turn ", game_state_manager.current_turn + 1)
+	
+	# Process game state (this handles turn increment internally)
+	var success = game_state_manager.process_turn()
+	
+	if not success:
+		_on_game_over()
+		return
+	
+	# Clear board and render new state
+	board_renderer.clear_board()
+	board_renderer.render_board()
+	
+	# Process turn will emit effects_processed signal, wait for visual effects to complete
+	await _show_effects_processing()
+	
+	# Start selection phase
+	_start_selection_phase()
+
+
+var effects_display_completed: bool = false
+
+func _show_effects_processing() -> void:
+	# Effects will be shown when effects_processed signal is emitted
+	effects_display_completed = false
+	while not effects_display_completed:
+		await get_tree().process_frame
+
+func _on_effects_processed(effect_details: Array, total_food: int, total_exp: int) -> void:
+	print("GameController: Processing effects for ", effect_details.size(), " symbols")
+	
+	var total_food_gained = 0
+	var total_exp_gained = 0
+	
+	# Process each symbol individually - now with real-time counter and effects
+	for effect in effect_details:
+		var pos = effect["position"]
+		var symbol_name = effect["symbol_name"]
+		var symbol_instance = effect["symbol_instance"]
+		var symbol_definition = effect["symbol_definition"]
+		
+		# Check if symbol still exists on board (might have been destroyed by previous effects)
+		var board_state = game_state_manager.get_board_state()
+		var board_grid = board_state["board_grid"]
+		if board_grid[pos.x][pos.y] == null:
+			# Symbol was already destroyed, skip processing
+			continue
+		
+		# Highlight the symbol
+		board_renderer.highlight_slot(pos.x, pos.y, true)
+		
+		# Process this symbol's effects now (increment counter + calculate effects)
+		var symbol_passive_food = symbol_definition.passive_food
+		var special_results = game_state_manager.effects_processor.process_single_symbol_effects(symbol_instance, symbol_definition, pos.x, pos.y, game_state_manager.get_board_state()["board_grid"])
+		var symbol_special_food = special_results.get("food", 0)
+		var symbol_special_exp = special_results.get("exp", 0)
+		
+		# Update counter display (shows new counter after increment)
+		board_renderer.update_symbol_counter(pos.x, pos.y, symbol_instance, symbol_definition)
+		
+		# Build effect text with emojis - combine food sources
+		var symbol_total_food = symbol_passive_food + symbol_special_food
+		var effect_text = ""
+		
+		if symbol_total_food > 0:
+			effect_text += "+" + str(symbol_total_food) + " 🍎"
+		if symbol_special_exp > 0:
+			if effect_text != "":
+				effect_text += ", "
+			effect_text += "+" + str(symbol_special_exp) + " ⭐"
+		
+		# Show effects only if there are any
+		if symbol_total_food > 0 or symbol_special_exp > 0:
+			# Determine text color based on effect type
+			var text_color = Color.WHITE
+			if symbol_special_exp > 0:
+				text_color = Color.BLUE  # Experience = Blue
+			elif symbol_total_food > 0:
+				text_color = Color.GREEN  # Food = Green
+			
+			# Show floating text and apply effects simultaneously
+			board_renderer.show_floating_text(pos.x, pos.y, effect_text, text_color)
+			var total_food_gain = symbol_passive_food + symbol_special_food
+			var total_exp_gain = symbol_special_exp
+			game_state_manager.apply_symbol_effect(total_food_gain, total_exp_gain)
+			
+			total_food_gained += total_food_gain
+			total_exp_gained += total_exp_gain
+			
+			print("Position [", pos.x, ",", pos.y, "] ", symbol_name, ": ", effect_text)
+		
+		# Process any destroyed symbols by this symbol's effects
+		await _process_destroyed_fish()
+		await _process_destroyed_coal()
+		
+		# Handle symbol destruction or counter reset
+		if symbol_instance.is_marked_for_destruction:
+			# Fish and Coal destruction are handled by dedicated functions, skip here
+			if symbol_definition.id != 3 and symbol_definition.id != 8:  # Not Fish or Coal
+				# Remove destroyed symbol from board (reuse existing board_state)
+				board_grid[pos.x][pos.y] = null
+				# Clear visual representation
+				var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+				var slot = board_renderer.get_grid_container().get_child(slot_index)
+				for child in slot.get_children():
+					child.queue_free()
+				print("Position [", pos.x, ",", pos.y, "] ", symbol_name, " destroyed!")
+		else:
+			# Reset counter if effect was triggered, then update display again
+			game_state_manager.effects_processor.reset_symbol_counter_if_needed(symbol_instance, symbol_definition)
+			board_renderer.update_symbol_counter(pos.x, pos.y, symbol_instance, symbol_definition)
+		
+		# Brief pause to show the effect
+		await get_tree().create_timer(0.3).timeout
+		board_renderer.highlight_slot(pos.x, pos.y, false)
+		await get_tree().create_timer(0.1).timeout
+	
+	# Show total summary
+	if total_food_gained > 0 or total_exp_gained > 0:
+		var summary = "Total gained: "
+		if total_food_gained > 0:
+			summary += str(total_food_gained) + " Food"
+		if total_exp_gained > 0:
+			if total_food_gained > 0:
+				summary += ", "
+			summary += str(total_exp_gained) + " Exp"
+		print("GameController: ", summary)
+	
+	effects_display_completed = true
+
+func _process_destroyed_fish() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+	
+	# Find all Fish marked for destruction
+	var destroyed_fish = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null and symbol_instance.is_marked_for_destruction:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.id == 3:  # Fish
+					destroyed_fish.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance,
+						"definition": symbol_definition
+					})
+	
+	# Process each destroyed Fish with visual feedback
+	for fish_data in destroyed_fish:
+		var pos = fish_data["position"]
+		var symbol_instance = fish_data["instance"]
+		var symbol_definition = fish_data["definition"]
+		
+		# Show destruction effect with food reward (no highlight needed since Fish is already gone)
+		var effect_text = "+10 🍎"
+		board_renderer.show_floating_text(pos.x, pos.y, effect_text, Color.GREEN)
+		
+		# Apply food effect immediately (Fish destruction reward)
+		game_state_manager.apply_symbol_effect(10, 0)
+		
+		# Remove from board grid
+		board_grid[pos.x][pos.y] = null
+		
+		# Remove from player collection completely
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+		
+		# Clear visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+		
+		print("Position [", pos.x, ",", pos.y, "] Fish destroyed! +10 Food")
+		
+		# Brief pause for visual feedback (no highlight needed)
+		await get_tree().create_timer(0.4).timeout
+
+func _process_destroyed_coal() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+	
+	# Find all Coal marked for destruction
+	var destroyed_coal = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null and symbol_instance.is_marked_for_destruction:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.id == 8:  # Coal
+					destroyed_coal.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance,
+						"definition": symbol_definition
+					})
+	
+	# Process each destroyed Coal (no food reward, just removal)
+	for coal_data in destroyed_coal:
+		var pos = coal_data["position"]
+		var symbol_instance = coal_data["instance"]
+		
+		# Remove from board grid
+		board_grid[pos.x][pos.y] = null
+		
+		# Remove from player collection completely
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+		
+		# Clear visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+		
+		print("Position [", pos.x, ",", pos.y, "] Coal destroyed by Industrial Revolution!")
+		
+		# Brief pause for visual feedback
+		await get_tree().create_timer(0.2).timeout
+
+func _start_selection_phase() -> void:
+	current_phase = GamePhase.SELECTION_PHASE
+	
+	# Generate symbol choices based on current level
+	var probabilities = game_state_manager.get_symbol_probabilities()
+	var choices = _generate_symbol_choices(probabilities)
+	
+	# Show selection UI
+	var ui_parent = get_parent().get_parent().get_node("UI")
+	ui_manager.show_selection_ui(choices, ui_parent)
+	
+	print("GameController: Selection phase started")
+
+func _generate_symbol_choices(probabilities: Dictionary) -> Array:
+	var choices: Array = []
+	var symbol_data = SymbolData
+	
+	# Get all symbols grouped by rarity
+	var symbols_by_rarity = {}
+	for symbol_id in symbol_data.symbols.keys():
+		var symbol = symbol_data.get_symbol_by_id(symbol_id)
+		if symbol:
+			var rarity = symbol.rarity
+			if not symbols_by_rarity.has(rarity):
+				symbols_by_rarity[rarity] = []
+			symbols_by_rarity[rarity].append(symbol.id)
+	
+	# Generate 3 choices based on probabilities
+	for i in range(3):
+		var random_value = randi() % 100
+		var selected_rarity = 1
+		
+		var cumulative = 0
+		for rarity in probabilities.keys():
+			cumulative += probabilities[rarity]
+			if random_value < cumulative:
+				selected_rarity = rarity
+				break
+		
+		# Pick random symbol of selected rarity
+		if symbols_by_rarity.has(selected_rarity):
+			var available_symbols = symbols_by_rarity[selected_rarity]
+			var choice = available_symbols[randi() % available_symbols.size()]
+			choices.append(choice)
+		else:
+			choices.append(1)  # Fallback to Wheat
+	
+	return choices
+
+func _on_symbol_choice_made(symbol_id: int) -> void:
+	if current_phase != GamePhase.SELECTION_PHASE:
+		return
+	
+	print("GameController: Symbol choice made: ", symbol_id)
+	
+	# Add chosen symbol to player collection
+	game_state_manager.add_symbol_to_player(symbol_id)
+	
+	# Hide selection UI
+	ui_manager.hide_selection_ui()
+	
+	# Return to idle phase
+	current_phase = GamePhase.IDLE
+	ui_manager.set_spin_button_enabled(true)
+
+# Signal handlers
+func _on_food_changed(old_value: int, new_value: int) -> void:
+	ui_manager.update_food_display(new_value)
+
+func _on_exp_changed(old_value: int, new_value: int) -> void:
+	var stats = game_state_manager.get_player_stats()
+	ui_manager.update_exp_display(stats["exp"], stats["exp_to_next"])
+
+func _on_level_changed(old_level: int, new_level: int) -> void:
+	ui_manager.update_level_display(new_level)
+	var stats = game_state_manager.get_player_stats()
+	ui_manager.update_exp_display(stats["exp"], stats["exp_to_next"])
+
+func _on_turn_changed(new_turn: int) -> void:
+	print("GameController: Turn ", new_turn, " completed")
+
+func _on_game_over() -> void:
+	current_phase = GamePhase.GAME_OVER
+	ui_manager.show_game_over_ui()
+	ui_manager.hide_selection_ui()
+	
+	print("GameController: Game Over!")
+
+func _on_symbol_added_to_player(symbol_id: int) -> void:
+	game_state_manager.add_symbol_to_player(symbol_id)
+	var symbol_name = SymbolData.get_symbol_by_id(symbol_id).symbol_name
+	print("GameController: ", symbol_name, " added to player collection via effect!")

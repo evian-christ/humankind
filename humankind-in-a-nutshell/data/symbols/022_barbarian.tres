@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://cb5pgfypsmvpl"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 22
+symbol_name = "Barbarian"
+icon = "⚔️"
+rarity = 0
+passive_food = -3
+effects = Array[Dictionary]([])
+effect_text = "Has hp of 12(+2 * every 10 game turn). -1 hp every turn."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

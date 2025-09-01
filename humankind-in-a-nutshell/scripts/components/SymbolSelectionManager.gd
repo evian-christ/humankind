@@ -1,0 +1,253 @@
+class_name SymbolSelectionManager
+extends Node
+
+signal symbol_selected(symbol_id: int)
+
+var symbol_data: SymbolData
+var gameboard_ref: Node
+
+# Selection state
+var is_selection_phase: bool = false
+var current_symbol_choices: Array = []
+
+# UI components
+var selection_overlay: Control
+var card_container: HBoxContainer
+var choice_cards: Array = []
+
+func _init(symbol_data_ref: SymbolData):
+	symbol_data = symbol_data_ref
+
+func set_gameboard_reference(gb_ref: Node):
+	gameboard_ref = gb_ref
+
+func create_selection_ui(parent: Control):
+	# Create overlay that covers entire screen
+	selection_overlay = Control.new()
+	selection_overlay.name = "SymbolSelectionOverlay"
+	selection_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	selection_overlay.visible = false
+	selection_overlay.z_index = 4096  # Maximum allowed z-index
+	selection_overlay.mouse_filter = Control.MOUSE_FILTER_STOP  # Block mouse events to lower layers
+	
+	# Semi-transparent background
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.7)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP  # Also block mouse events
+	selection_overlay.add_child(bg)
+	
+	# Use CenterContainer for proper centering
+	var center_container = CenterContainer.new()
+	center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	
+	# Card container
+	card_container = HBoxContainer.new()
+	card_container.add_theme_constant_override("separation", 30)
+	
+	center_container.add_child(card_container)
+	selection_overlay.add_child(center_container)
+	parent.add_child(selection_overlay)
+
+func start_selection_phase() -> void:
+	if is_selection_phase:
+		return
+		
+	is_selection_phase = true
+	# Only clear choices if they haven't been set externally
+	if current_symbol_choices.is_empty():
+		current_symbol_choices = []
+	
+	# DEBUG: Print UI structure and positions
+	print("\n=== SELECTION PHASE START DEBUG ===")
+	print("Selection overlay position: ", selection_overlay.position)
+	print("Selection overlay size: ", selection_overlay.size)
+	print("Card container position: ", card_container.position if card_container else "null")
+	
+	print("Parent UI children count: ", selection_overlay.get_parent().get_children().size())
+	for i in range(selection_overlay.get_parent().get_children().size()):
+		var child = selection_overlay.get_parent().get_child(i)
+		var pos_str = "no position" if child is CanvasLayer else str(child.position)
+		print("  [", i, "] ", child.name, " - type: ", child.get_class(), " - pos: ", pos_str)
+	
+	# DEBUG: Check center container and its children
+	var center_container = card_container.get_parent()
+	print("CenterContainer children count: ", center_container.get_child_count())
+	for i in range(center_container.get_child_count()):
+		var child = center_container.get_child(i)
+		var pos_str = "no position" if child is CanvasLayer else str(child.position)
+		var size_str = "no size" if child is CanvasLayer else str(child.size)
+		print("  CenterContainer child [", i, "]: ", child.name, " - type: ", child.get_class(), " - pos: ", pos_str, " - size: ", size_str)
+	
+	# DEBUG: Check selection overlay children
+	print("Selection overlay children count: ", selection_overlay.get_child_count())
+	for i in range(selection_overlay.get_child_count()):
+		var child = selection_overlay.get_child(i)
+		var pos_str = "no position" if child is CanvasLayer else str(child.position)
+		var size_str = "no size" if child is CanvasLayer else str(child.size)
+		print("  Selection overlay child [", i, "]: ", child.name, " - type: ", child.get_class(), " - pos: ", pos_str, " - size: ", size_str)
+	
+	# Force set z_index again to ensure it's applied
+	selection_overlay.z_index = 4096
+	
+	# Generate symbol choices only if not set externally
+	if current_symbol_choices.is_empty():
+		# Select 3 random symbols based on level probabilities
+		var available_symbols = symbol_data.symbols.keys()
+		available_symbols.shuffle()
+		
+		for i in range(3):
+			if i < available_symbols.size():
+				current_symbol_choices.append(available_symbols[i])
+			else:
+				current_symbol_choices.append(1)  # Default to wheat
+	
+	_create_choice_cards()
+	selection_overlay.visible = true
+
+func _create_choice_cards():
+	# Clear existing cards IMMEDIATELY (not queue_free)
+	for card in choice_cards:
+		if card and card.get_parent():
+			card.get_parent().remove_child(card)
+			card.queue_free()
+	choice_cards.clear()
+	
+	# Also clear any remaining children in card_container
+	for child in card_container.get_children():
+		card_container.remove_child(child)
+		child.queue_free()
+	
+	# Create 3 cards
+	for i in range(3):
+		var symbol_id = current_symbol_choices[i]
+		var symbol_def = symbol_data.get_symbol_by_id(symbol_id)
+		
+		if symbol_def:
+			var card = _create_symbol_card(symbol_def, i)
+			choice_cards.append(card)
+			card_container.add_child(card)
+
+func _create_symbol_card(symbol: Symbol, index: int) -> Control:
+	# Create button as the main card
+	var card = Button.new()
+	card.custom_minimum_size = Vector2(280, 350)
+	card.pressed.connect(_on_symbol_choice_selected.bind(index))
+	
+	# Normal style - soft beige with DEBUG RED border
+	var normal_style = StyleBoxFlat.new()
+	normal_style.bg_color = Color(0.95, 0.93, 0.88, 1.0)
+	normal_style.corner_radius_top_left = 12
+	normal_style.corner_radius_top_right = 12
+	normal_style.corner_radius_bottom_left = 12
+	normal_style.corner_radius_bottom_right = 12
+	normal_style.border_width_left = 5
+	normal_style.border_width_right = 5
+	normal_style.border_width_top = 5
+	normal_style.border_width_bottom = 5
+	normal_style.border_color = Color(1.0, 0.0, 0.0, 1.0)  # DEBUG: Bright red border
+	normal_style.shadow_color = Color(0, 0, 0, 0.3)
+	normal_style.shadow_size = 8
+	normal_style.shadow_offset = Vector2(2, 4)
+	
+	# Hover style - darker beige with DEBUG GREEN border
+	var hover_style = StyleBoxFlat.new()
+	hover_style.bg_color = Color(0.85, 0.83, 0.78, 1.0)
+	hover_style.corner_radius_top_left = 12
+	hover_style.corner_radius_top_right = 12
+	hover_style.corner_radius_bottom_left = 12
+	hover_style.corner_radius_bottom_right = 12
+	hover_style.border_width_left = 5
+	hover_style.border_width_right = 5
+	hover_style.border_width_top = 5
+	hover_style.border_width_bottom = 5
+	hover_style.border_color = Color(0.0, 1.0, 0.0, 1.0)  # DEBUG: Bright green border
+	hover_style.shadow_color = Color(0, 0, 0, 0.3)
+	hover_style.shadow_size = 8
+	hover_style.shadow_offset = Vector2(2, 4)
+	
+	card.add_theme_stylebox_override("normal", normal_style)
+	card.add_theme_stylebox_override("hover", hover_style)
+	card.add_theme_stylebox_override("pressed", hover_style)
+	
+	# Create content container
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vbox.offset_left = 10
+	vbox.offset_top = 10
+	vbox.offset_right = -10
+	vbox.offset_bottom = -10
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	
+	# Create all labels
+	var icon_label = Label.new()
+	icon_label.text = symbol.icon if symbol.icon != "" else symbol.symbol_name
+	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon_label.add_theme_font_size_override("font_size", 64)
+	icon_label.add_theme_color_override("font_color", Color.BLACK)
+	
+	var name_label = Label.new()
+	name_label.text = symbol.symbol_name
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 18)
+	name_label.add_theme_color_override("font_color", Color.BLACK)
+	
+	var rarity_label = Label.new()
+	rarity_label.text = symbol.get_rarity_name()
+	rarity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rarity_label.add_theme_font_size_override("font_size", 14)
+	rarity_label.add_theme_color_override("font_color", _get_rarity_color(symbol.rarity))
+	
+	var passive_label = Label.new()
+	if symbol.passive_food > 0:
+		passive_label.text = "🍎 +" + str(symbol.passive_food) + " Food/turn"
+	elif symbol.passive_food < 0:
+		passive_label.text = "🍎 " + str(symbol.passive_food) + " Food/turn"
+	else:
+		passive_label.text = "🍎 No passive food"
+	passive_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	passive_label.add_theme_font_size_override("font_size", 12)
+	passive_label.add_theme_color_override("font_color", Color.BLACK)
+	
+	var effect_label = Label.new()
+	effect_label.text = symbol.effect_text if symbol.effect_text != "" else "No special effects"
+	effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	effect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	effect_label.custom_minimum_size = Vector2(0, 80)
+	effect_label.add_theme_font_size_override("font_size", 11)
+	effect_label.add_theme_color_override("font_color", Color.BLACK)
+	
+	vbox.add_child(icon_label)
+	vbox.add_child(name_label)
+	vbox.add_child(rarity_label)
+	vbox.add_child(passive_label)
+	vbox.add_child(effect_label)
+	
+	card.add_child(vbox)
+	return card
+
+func _get_rarity_color(rarity: int) -> Color:
+	match rarity:
+		1: return Color(0.5, 0.5, 0.5)  # Ancient - Gray
+		2: return Color(0.2, 0.8, 0.2)  # Classical - Green
+		3: return Color(0.2, 0.2, 1.0)  # Medieval - Blue
+		4: return Color(0.8, 0.2, 0.8)  # Industrial - Purple
+		5: return Color(1.0, 0.8, 0.0)  # Modern - Gold
+		_: return Color.BLACK
+
+func _on_card_gui_input(event: InputEvent, choice_index: int):
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_on_symbol_choice_selected(choice_index)
+
+func _on_symbol_choice_selected(choice_index: int):
+	if not is_selection_phase or choice_index >= current_symbol_choices.size():
+		return
+	
+	var selected_symbol_id = current_symbol_choices[choice_index]
+	symbol_selected.emit(selected_symbol_id)
+	
+	# Close selection UI
+	is_selection_phase = false
+	selection_overlay.visible = false
+	current_symbol_choices.clear()  # Clear choices for next time

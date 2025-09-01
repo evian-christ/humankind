@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://c66siioqclvop"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 16
+symbol_name = "Buddhism"
+icon = "☸️"
+rarity = 3
+passive_food = 0
+effects = Array[Dictionary]([])
+effect_text = "Provide 3 food for every empty slots. Provide 1 exp. -50 food for every nearby religion symbols."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

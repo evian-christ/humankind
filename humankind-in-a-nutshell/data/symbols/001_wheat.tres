@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b1wheat001"]
+
+[ext_resource type="Script" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 1
+symbol_name = "Wheat"
+icon = "🌾"
+rarity = 1
+passive_food = 0
+effects = Array[Dictionary]([])
+effect_text = "Provide 8 food every 6 turns."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"
