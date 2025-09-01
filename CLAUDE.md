@@ -81,23 +81,62 @@ humankind/
 - **Era-based Progression**: Use civilization era system instead of complex level/tech trees
 - Incremental code guidance principle: explain step-by-step rather than providing complete code blocks
 
-### Code Creation Policy
-**CRITICAL**: Claude Code must NEVER directly write, create, or modify code files. Instead:
-- Provide step-by-step guidance for the user to implement in Godot Editor
-- Explain what needs to be created and how to do it through the IDE
-- Give specific instructions for node creation, property settings, and file creation
-- The user will handle all actual coding and file creation directly
+### Critical Development Guidelines
+- **No Animation Policy**: Use minimal approach - no animations, immediate visual feedback only
+- **Unified Food Display**: Never separate passive food and effect food in floating text - always show combined total
+- **Real-time Effect Processing**: Apply effects during visual processing, not before - each symbol shows effects as it's highlighted
+- **Counter Systems**: Use `effect_counter` in PlayerSymbolInstance for turn-based mechanics
+- **Symbol Destruction**: Mark symbols with `is_marked_for_destruction`, handle in dedicated functions
+- **Type Hint Compatibility**: Avoid `Array[Type]` syntax - use plain `Array` for Godot 4 compatibility
+- **Runtime Loading**: Load classes with `load()` instead of direct class references to avoid parser errors
+
+## Implemented Symbol Effects System
+
+### Current Symbol Mechanics
+1. **Wheat (ID 1)**: Counter system - 6 turns → +8 food total, resets
+2. **Rice (ID 2)**: Counter system - 8 turns → +11 food total, resets  
+3. **Fish (ID 3)**: Counter system - 5 turns → destroyed + 10 food, removed from game
+4. **Fishing Boat (ID 4)**: Destroys nearby Fish (triggers Fish food effect)
+5. **Banana (ID 5)**: Placement counter - after 10 placements → permanent +2 food total
+6. **Sugar (ID 6)**: Provides +1 food per adjacent Sugar (synergy effect)
+7. **Mine (ID 7)**: 1% chance per turn to add Coal to player collection
+8. **Coal (ID 8)**: Passive food only, exists to be destroyed by Industrial Revolution
+9. **Industrial Revolution (ID 9)**: Destroys nearby Coal, +1 food per Coal destroyed (cumulative)
+
+### Effect Processing Flow
+1. Increment counters for applicable symbols
+2. Process special effects (mark symbols for destruction, calculate bonuses)
+3. Handle Fish destruction (show +10 food, remove from game)
+4. Handle Coal destruction (remove from game, no food reward)
+5. Apply all effects and show unified floating text
+6. Reset counters for triggered effects (except Banana - permanent upgrade)
+
+## Current Architecture (Post-Refactoring)
+
+### Refactored Component System
+- **GameController.gd**: Main orchestrator, coordinates all systems, handles game phases
+- **GameStateManager.gd**: Manages player stats, board state, turn progression, food payments
+- **BoardRenderer.gd**: Visual board representation, floating text, counter displays
+- **UIManager.gd**: UI interactions, selection system, stat displays
+- **SymbolEffectsProcessor.gd**: Individual symbol effect processing, destruction mechanics
+
+### Game Flow Architecture
+1. **Spin Phase**: GameController → GameStateManager processes turn
+2. **Visual Effects**: Real-time symbol processing with highlighting and floating text
+3. **Selection Phase**: Present 3 symbol choices based on rarity weights
+4. **Food Payment**: Deduct survival costs (100, 150, 200, 250... every 10 turns)
 
 ## Current Development State
-Recent refactoring toward arcade-style gameplay:
-- ✅ Core spin mechanism and symbol placement implemented
-- ✅ PlayerSymbolInstance system with unique ID generation  
-- ✅ Grid-based board with emoji icon display
-- ✅ Era-based symbol selection system (Ancient to Modern)
-- ✅ Symbol interaction effects for food production
-- ✅ 3-choice selection phase after each spin
-- ✅ Tooltip system for symbol information
-- 🔄 Need new arcade-style symbol set (old symbols removed)
+Recent complete refactoring and effect implementations:
+- ✅ Complete gameboard.gd refactoring with component separation
+- ✅ Real-time visual feedback system with floating text
+- ✅ Counter-based symbol mechanics (Wheat, Rice, Fish, Banana)
+- ✅ Symbol destruction system (Fish, Coal)
+- ✅ Symbol synergy effects (Sugar, Industrial Revolution)
+- ✅ Probability-based symbol generation (Mine → Coal)
+- ✅ Unified food display system (no separate passive/effect text)
+- ✅ Parser error resolution (removed type hints, runtime class loading)
+- 🔄 Testing and balancing symbol interactions
 
 ## Git Workflow
 - Commit functional changes incrementally per feature
