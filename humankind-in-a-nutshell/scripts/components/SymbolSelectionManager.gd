@@ -37,15 +37,30 @@ func create_selection_ui(parent: Control):
 	bg.mouse_filter = Control.MOUSE_FILTER_STOP  # Also block mouse events
 	selection_overlay.add_child(bg)
 	
-	# Use CenterContainer for proper centering
+	# Use CenterContainer to properly center everything
 	var center_container = CenterContainer.new()
 	center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	
+
+	# Main VBox to hold skip button and cards
+	var main_vbox = VBoxContainer.new()
+	main_vbox.add_theme_constant_override("separation", 20)
+
+	# Skip button (DEBUG)
+	var skip_button = Button.new()
+	skip_button.text = "SKIP (DEBUG)"
+	skip_button.custom_minimum_size = Vector2(200, 40)
+	skip_button.pressed.connect(_on_skip_button_pressed)
+
+	var skip_button_container = CenterContainer.new()
+	skip_button_container.add_child(skip_button)
+
 	# Card container
 	card_container = HBoxContainer.new()
 	card_container.add_theme_constant_override("separation", 30)
-	
-	center_container.add_child(card_container)
+
+	main_vbox.add_child(skip_button_container)
+	main_vbox.add_child(card_container)
+	center_container.add_child(main_vbox)
 	selection_overlay.add_child(center_container)
 	parent.add_child(selection_overlay)
 
@@ -63,29 +78,6 @@ func start_selection_phase() -> void:
 	print("Selection overlay position: ", selection_overlay.position)
 	print("Selection overlay size: ", selection_overlay.size)
 	print("Card container position: ", card_container.position if card_container else "null")
-	
-	print("Parent UI children count: ", selection_overlay.get_parent().get_children().size())
-	for i in range(selection_overlay.get_parent().get_children().size()):
-		var child = selection_overlay.get_parent().get_child(i)
-		var pos_str = "no position" if child is CanvasLayer else str(child.position)
-		print("  [", i, "] ", child.name, " - type: ", child.get_class(), " - pos: ", pos_str)
-	
-	# DEBUG: Check center container and its children
-	var center_container = card_container.get_parent()
-	print("CenterContainer children count: ", center_container.get_child_count())
-	for i in range(center_container.get_child_count()):
-		var child = center_container.get_child(i)
-		var pos_str = "no position" if child is CanvasLayer else str(child.position)
-		var size_str = "no size" if child is CanvasLayer else str(child.size)
-		print("  CenterContainer child [", i, "]: ", child.name, " - type: ", child.get_class(), " - pos: ", pos_str, " - size: ", size_str)
-	
-	# DEBUG: Check selection overlay children
-	print("Selection overlay children count: ", selection_overlay.get_child_count())
-	for i in range(selection_overlay.get_child_count()):
-		var child = selection_overlay.get_child(i)
-		var pos_str = "no position" if child is CanvasLayer else str(child.position)
-		var size_str = "no size" if child is CanvasLayer else str(child.size)
-		print("  Selection overlay child [", i, "]: ", child.name, " - type: ", child.get_class(), " - pos: ", pos_str, " - size: ", size_str)
 	
 	# Force set z_index again to ensure it's applied
 	selection_overlay.z_index = 4096
@@ -243,11 +235,24 @@ func _on_card_gui_input(event: InputEvent, choice_index: int):
 func _on_symbol_choice_selected(choice_index: int):
 	if not is_selection_phase or choice_index >= current_symbol_choices.size():
 		return
-	
+
 	var selected_symbol_id = current_symbol_choices[choice_index]
 	symbol_selected.emit(selected_symbol_id)
-	
+
 	# Close selection UI
 	is_selection_phase = false
 	selection_overlay.visible = false
 	current_symbol_choices.clear()  # Clear choices for next time
+
+func _on_skip_button_pressed():
+	if not is_selection_phase:
+		return
+
+	print("DEBUG: Skip button pressed - skipping selection (no symbol added)")
+	# Skip without selecting - emit signal with -1 to indicate skip
+	symbol_selected.emit(-1)
+
+	# Close selection UI
+	is_selection_phase = false
+	selection_overlay.visible = false
+	current_symbol_choices.clear()

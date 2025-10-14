@@ -18,14 +18,18 @@ var spin_button: Button
 var selection_ui: Control
 var selection_manager: SymbolSelectionManager
 
+# Debug UI
+var debug_phase_label: Label
+
 func setup(ui_parent: Control) -> void:
 	_find_ui_components(ui_parent)
 	_setup_ui_connections()
-	
+	_create_debug_ui(ui_parent)
+
 	# Initialize selection manager
 	selection_manager = SymbolSelectionManager.new(SymbolData)
 	selection_manager.symbol_selected.connect(_on_symbol_choice_made)
-	
+
 	print("UIManager: Setup complete")
 
 func _find_ui_components(ui_parent: Control) -> void:
@@ -41,6 +45,19 @@ func _find_ui_components(ui_parent: Control) -> void:
 
 func _setup_ui_connections() -> void:
 	spin_button.pressed.connect(_on_spin_button_pressed)
+
+func _create_debug_ui(ui_parent: Control) -> void:
+	# Create debug phase label on the left side
+	debug_phase_label = Label.new()
+	debug_phase_label.text = ""
+	debug_phase_label.position = Vector2(10, 100)
+	debug_phase_label.size = Vector2(200, 100)
+	debug_phase_label.add_theme_font_size_override("font_size", 20)
+	debug_phase_label.add_theme_color_override("font_color", Color.YELLOW)
+	debug_phase_label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	debug_phase_label.add_theme_constant_override("shadow_offset_x", 2)
+	debug_phase_label.add_theme_constant_override("shadow_offset_y", 2)
+	ui_parent.add_child(debug_phase_label)
 
 func _on_spin_button_pressed() -> void:
 	spin_button_pressed.emit()
@@ -99,3 +116,12 @@ func reset_ui_for_new_game() -> void:
 	set_spin_button_text("Spin")
 	set_spin_button_enabled(true)
 	hide_selection_ui()
+
+# Debug functions
+func show_debug_phase(phase_name: String) -> void:
+	if debug_phase_label:
+		debug_phase_label.text = phase_name
+
+func hide_debug_phase() -> void:
+	if debug_phase_label:
+		debug_phase_label.text = ""
