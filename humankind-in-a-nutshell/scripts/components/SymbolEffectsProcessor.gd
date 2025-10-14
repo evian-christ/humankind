@@ -26,11 +26,70 @@ func _get_nearby_coordinates(x: int, y: int) -> Array:
 				nearby.append(Vector2i(nx, ny))
 	return nearby
 
+# Combat processing - happens before effects
+func process_combat(board_grid: Array) -> Dictionary:
+	var total_kills = 0
+	var combat_results = []
+
+	# Process all combat units attacking adjacent enemies
+	for x in range(BOARD_WIDTH):
+		for y in range(BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance == null:
+				continue
+
+			var symbol_def = symbol_data.get_symbol_by_id(symbol_instance.type_id)
+			if symbol_def == null or symbol_def.symbol_type != Symbol.SymbolType.COMBAT:
+				continue
+
+			# Check if combat unit has attacks remaining
+			if symbol_instance.remaining_attacks <= 0:
+				continue
+
+			# This is a combat unit - find adjacent enemies
+			var nearby_coords = _get_nearby_coordinates(x, y)
+			for coord in nearby_coords:
+				var target = board_grid[coord.x][coord.y]
+				if target == null:
+					continue
+
+				var target_def = symbol_data.get_symbol_by_id(target.type_id)
+				if target_def == null or target_def.symbol_type != Symbol.SymbolType.ENEMY:
+					continue
+
+				# Attack the enemy
+				if target.enemy_hp > 0 and symbol_instance.remaining_attacks > 0:
+					var damage = symbol_instance.attack_power
+					target.enemy_hp -= damage
+
+					# Decrease remaining attacks
+					symbol_instance.remaining_attacks -= 1
+
+					combat_results.append({
+						"attacker_pos": Vector2i(x, y),
+						"target_pos": coord,
+						"damage": damage,
+						"target_killed": target.enemy_hp <= 0,
+						"attacker_exhausted": symbol_instance.remaining_attacks <= 0
+					})
+
+					if target.enemy_hp <= 0:
+						target.is_marked_for_destruction = true
+						total_kills += 1
+
+					# If combat unit exhausted, mark for destruction
+					if symbol_instance.remaining_attacks <= 0:
+						symbol_instance.is_marked_for_destruction = true
+						print("Combat unit exhausted all attacks!")
+						break  # Stop attacking
+
+	return {"kills": total_kills, "combat_results": combat_results}
+
 # Process all symbol interactions - basic version for now
 func process_symbol_interactions(board_grid: Array, current_turn: int = 0) -> Dictionary:
 	var total_food_gained = 0
 	var total_exp_gained = 0
-	
+
 	# Process special effects for each symbol
 	for x in range(BOARD_WIDTH):
 		for y in range(BOARD_HEIGHT):
@@ -41,7 +100,7 @@ func process_symbol_interactions(board_grid: Array, current_turn: int = 0) -> Di
 					var results = process_single_symbol_effects(symbol_instance, symbol_definition, x, y, board_grid)
 					total_food_gained += results.get("food", 0)
 					total_exp_gained += results.get("exp", 0)
-	
+
 	return {"food": total_food_gained, "exp": total_exp_gained}
 
 # Process effects for a single symbol
@@ -165,16 +224,7 @@ func process_single_symbol_effects(symbol_instance: PlayerSymbolInstance, symbol
 	# Example: Library provides 1 exp
 	elif symbol_definition.id == 13:  # Library
 		exp_gained += 1
-	
-	# Example: Barbarian causes -3 food (already handled in passive_food)
-	# But also loses 1 HP per turn
-	elif symbol_definition.id == 22:  # Barbarian
-		if symbol_instance.current_hp > 0:
-			symbol_instance.current_hp -= 1
-			if symbol_instance.current_hp <= 0:
-				print("Barbarian died!")
-				# Could emit signal to remove from board
-	
+
 	return {"food": food_gained, "exp": exp_gained}
 
 # Reset counter for symbols that triggered effects

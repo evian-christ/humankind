@@ -49,15 +49,21 @@ func _create_slots() -> void:
 
 func render_board() -> void:
 	_clear_all_slots()
-	
+
 	var board_state = game_state_manager.get_board_state()
 	var board_grid = board_state["board_grid"]
-	
+
 	for x in range(board_state["width"]):
 		for y in range(board_state["height"]):
 			var symbol_instance = board_grid[x][y]
 			if symbol_instance != null:
 				_render_symbol_at_position(x, y, symbol_instance)
+				# Briefly highlight newly placed symbols
+				highlight_slot(x, y, true)
+
+	# Remove highlights after a moment
+	await get_tree().create_timer(0.3).timeout
+	clear_all_highlights()
 
 func _clear_all_slots() -> void:
 	for slot in grid_container.get_children():
@@ -105,30 +111,50 @@ func _create_symbol_label(symbol_definition: Symbol) -> Label:
 	return label
 
 func _add_counter_display(slot: Panel, symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol) -> void:
-	# Only show counter for symbols that need it
-	var needs_counter = false
-	var counter_max = 0
-	
-	match symbol_definition.id:
-		1:  # Wheat
-			needs_counter = true
-			counter_max = 6
-		2:  # Rice
-			needs_counter = true
-			counter_max = 8
-		3:  # Fish
-			needs_counter = true
-			counter_max = 5
-		5:  # Banana
-			needs_counter = true
-			counter_max = 10
-	
-	if needs_counter:
+	var counter_text = ""
+	var show_counter = false
+
+	# Combat stats display
+	if symbol_definition.symbol_type == Symbol.SymbolType.ENEMY:
+		# Show enemy HP
+		if symbol_instance.enemy_hp > 0:
+			counter_text = "HP: " + str(symbol_instance.enemy_hp)
+			show_counter = true
+	elif symbol_definition.symbol_type == Symbol.SymbolType.COMBAT:
+		# Show remaining attacks × attack power
+		if symbol_instance.remaining_attacks > 0:
+			counter_text = str(symbol_instance.remaining_attacks) + "×" + str(symbol_instance.attack_power)
+			show_counter = true
+
+	# Regular counter for special symbols
+	if not show_counter:
+		var needs_counter = false
+		var counter_max = 0
+
+		match symbol_definition.id:
+			1:  # Wheat
+				needs_counter = true
+				counter_max = 6
+			2:  # Rice
+				needs_counter = true
+				counter_max = 8
+			3:  # Fish
+				needs_counter = true
+				counter_max = 5
+			5:  # Banana
+				needs_counter = true
+				counter_max = 10
+
+		if needs_counter:
+			counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
+			show_counter = true
+
+	if show_counter:
 		var counter_label = Label.new()
-		counter_label.text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
+		counter_label.text = counter_text
 		counter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		counter_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		
+
 		# Position in bottom-right corner
 		counter_label.anchors_preset = Control.PRESET_BOTTOM_RIGHT
 		counter_label.anchor_left = 0.6
@@ -139,7 +165,7 @@ func _add_counter_display(slot: Panel, symbol_instance: PlayerSymbolInstance, sy
 		counter_label.offset_top = 0
 		counter_label.offset_right = 0
 		counter_label.offset_bottom = 0
-		
+
 		# Style the counter
 		counter_label.add_theme_font_size_override("font_size", 12)
 		counter_label.add_theme_color_override("font_color", Color.WHITE)
@@ -147,39 +173,54 @@ func _add_counter_display(slot: Panel, symbol_instance: PlayerSymbolInstance, sy
 		counter_label.add_theme_constant_override("shadow_offset_x", 1)
 		counter_label.add_theme_constant_override("shadow_offset_y", 1)
 		counter_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		
+
 		slot.add_child(counter_label)
 
 func update_symbol_counter(x: int, y: int, symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol) -> void:
 	var slot_index = y * game_state_manager.BOARD_WIDTH + x
 	var slot = grid_container.get_child(slot_index)
-	
+
 	# Find the counter label (should be the second child after symbol label)
 	if slot.get_child_count() > 1:
 		for child in slot.get_children():
 			if child is Label and child != slot.get_child(0):  # Not the main symbol label
-				# Update counter text
-				var counter_max = 0
-				match symbol_definition.id:
-					1:  # Wheat
-						counter_max = 6
-					2:  # Rice
-						counter_max = 8
-					3:  # Fish
-						counter_max = 5
-					5:  # Banana
-						counter_max = 10
-				
-				if counter_max > 0:
-					child.text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
+				# Update counter text based on symbol type
+				var counter_text = ""
+
+				if symbol_definition.symbol_type == Symbol.SymbolType.ENEMY:
+					# Update enemy HP
+					if symbol_instance.enemy_hp > 0:
+						counter_text = "HP: " + str(symbol_instance.enemy_hp)
+				elif symbol_definition.symbol_type == Symbol.SymbolType.COMBAT:
+					# Update combat unit attacks
+					if symbol_instance.remaining_attacks > 0:
+						counter_text = str(symbol_instance.remaining_attacks) + "×" + str(symbol_instance.attack_power)
+				else:
+					# Regular counter
+					var counter_max = 0
+					match symbol_definition.id:
+						1:  # Wheat
+							counter_max = 6
+						2:  # Rice
+							counter_max = 8
+						3:  # Fish
+							counter_max = 5
+						5:  # Banana
+							counter_max = 10
+
+					if counter_max > 0:
+						counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
+
+				if counter_text != "":
+					child.text = counter_text
 
 # Animation functions
-func highlight_slot(x: int, y: int, highlighted: bool) -> void:
+func highlight_slot(x: int, y: int, highlighted: bool, color: Color = Color(1.5, 1.5, 1.0)) -> void:
 	var slot_index = y * game_state_manager.BOARD_WIDTH + x
 	var slot = grid_container.get_child(slot_index)
-	
+
 	if highlighted:
-		slot.modulate = Color(1.5, 1.5, 1.0)  # Yellow tint
+		slot.modulate = color
 		highlighted_slots[slot_index] = true
 	else:
 		slot.modulate = Color.WHITE

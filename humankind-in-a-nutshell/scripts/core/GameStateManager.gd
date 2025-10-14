@@ -83,8 +83,32 @@ func set_effects_processor(processor) -> void:
 func add_symbol_to_player(symbol_id: int) -> bool:
 	var new_symbol_instance = symbol_data.create_player_symbol_instance(symbol_id, current_turn)
 	if new_symbol_instance:
+		var symbol_def = symbol_data.get_symbol_by_id(symbol_id)
+
+		# Initialize combat stats based on symbol type
+		if symbol_def.symbol_type == Symbol.SymbolType.ENEMY:
+			# Enemy: Initialize HP with scaling based on turn
+			var turn_multiplier = current_turn / 10
+			new_symbol_instance.enemy_hp = symbol_def.base_hp + (2 * turn_multiplier)
+		elif symbol_def.symbol_type == Symbol.SymbolType.COMBAT:
+			# Combat unit: Initialize attack power and remaining attacks
+			new_symbol_instance.attack_power = symbol_def.base_attack
+
+			# Set initial attack count based on unit type
+			match symbol_id:
+				23:  # Warrior
+					new_symbol_instance.remaining_attacks = 5
+				24:  # Swordsman
+					new_symbol_instance.remaining_attacks = 4
+				25:  # Knight
+					new_symbol_instance.remaining_attacks = 3
+				26:  # Cavalry
+					new_symbol_instance.remaining_attacks = 3
+				27:  # Infantry
+					new_symbol_instance.remaining_attacks = 2
+
 		player_symbols.append(new_symbol_instance)
-		print("GameStateManager: Added symbol ", symbol_data.get_symbol_by_id(symbol_id).symbol_name)
+		print("GameStateManager: Added symbol ", symbol_def.symbol_name)
 		return true
 	return false
 
@@ -110,13 +134,34 @@ func clear_board() -> void:
 
 func place_symbols_on_board() -> void:
 	clear_board()
-	
+
 	var symbols_to_place = get_symbols_for_board()
+
+	# TEST MODE: Fixed placement for combat testing
+	if symbols_to_place.size() == 2:
+		# Place Barbarian at (0, 0) and Warrior at (1, 0) - adjacent horizontally
+		var barbarian_instance = null
+		var warrior_instance = null
+
+		for symbol in symbols_to_place:
+			var symbol_def = symbol_data.get_symbol_by_id(symbol.type_id)
+			if symbol_def.id == 22:  # Barbarian
+				barbarian_instance = symbol
+			elif symbol_def.id == 23:  # Warrior
+				warrior_instance = symbol
+
+		if barbarian_instance and warrior_instance:
+			board_grid[0][0] = barbarian_instance
+			board_grid[1][0] = warrior_instance
+			print("GameStateManager: TEST MODE - Fixed placement: Barbarian at (0,0), Warrior at (1,0)")
+			return
+
+	# Normal random placement
 	var available_slots = []
 	for i in range(BOARD_WIDTH * BOARD_HEIGHT):
 		available_slots.append(i)
 	available_slots.shuffle()
-	
+
 	for i in range(symbols_to_place.size()):
 		var symbol_instance = symbols_to_place[i]
 		var slot_index = available_slots[i]
@@ -195,20 +240,38 @@ func add_exp(amount: int) -> void:
 func get_exp_requirement(level: int) -> int:
 	return 50 + (level - 1) * 25  # 50, 75, 100, 125, 150...
 
+# Enemy invasion system
+func spawn_enemy_symbols() -> void:
+	# Chance increases with level: 20% + 5% per level
+	var spawn_chance = 20 + (player_level * 5)
+
+	# Spawn 1-2 enemies based on luck
+	var spawn_count = 1
+	if randi() % 100 < 30:  # 30% chance for 2 enemies
+		spawn_count = 2
+
+	for i in range(spawn_count):
+		if randi() % 100 < spawn_chance:
+			# For now only Barbarian (ID 22) exists
+			add_symbol_to_player(22)
+			print("GameStateManager: Barbarian invaded! HP: ", player_symbols[-1].enemy_hp)
+
 # Turn processing
 func process_turn() -> bool:
 	current_turn += 1
-	
-	# Process game mechanics first
+
+	# TEST MODE: Skip enemy spawning during testing
+	# spawn_enemy_symbols()
+
+	# Process game mechanics - only place symbols, effects will be processed by GameController
 	place_symbols_on_board()
-	process_all_symbol_effects()  # Combined passive food + special effects
 	add_exp(1)  # Basic EXP per turn
-	
+
 	# Check for food payment every 10 turns AFTER all effects are processed
 	if current_turn % 10 == 0:
 		if not pay_food_cost(current_turn):
 			return false  # Game over
-	
+
 	print("GameStateManager: Turn ", current_turn, " processed successfully")
 	return true
 

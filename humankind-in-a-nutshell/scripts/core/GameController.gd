@@ -74,27 +74,20 @@ func _setup_signal_connections() -> void:
 
 func _start_new_game() -> void:
 	game_state_manager.initialize_new_game()
-	
-	# Add starting symbols (move this to configuration later)
-	game_state_manager.add_symbol_to_player(8)   # Banana
-	game_state_manager.add_symbol_to_player(8)  # Sheep
-	game_state_manager.add_symbol_to_player(8)  # Barbarian
-	game_state_manager.add_symbol_to_player(8)  # Barbarian
-	game_state_manager.add_symbol_to_player(8)  # Barbarian
-	game_state_manager.add_symbol_to_player(8)  # Barbarian
-	game_state_manager.add_symbol_to_player(9)  # Barbarian
-	game_state_manager.add_symbol_to_player(9)  # Barbarian
-	game_state_manager.add_symbol_to_player(8)  # Barbarian
-	
+
+	# TEST: Add combat test symbols
+	game_state_manager.add_symbol_to_player(22)  # Barbarian (enemy)
+	game_state_manager.add_symbol_to_player(23)  # Warrior (combat unit)
+
 	# Update UI to reflect initial state
 	var stats = game_state_manager.get_player_stats()
 	ui_manager.update_food_display(stats["food"])
 	ui_manager.update_gold_display(stats["gold"])
 	ui_manager.update_level_display(stats["level"])
 	ui_manager.update_exp_display(stats["exp"], stats["exp_to_next"])
-	
+
 	current_phase = GamePhase.IDLE
-	print("GameController: New game started")
+	print("GameController: New game started with TEST combat symbols")
 
 # Main game flow
 func _on_spin_button_pressed() -> void:
@@ -108,26 +101,175 @@ func _on_spin_button_pressed() -> void:
 
 func _process_turn() -> void:
 	print("GameController: Processing turn ", game_state_manager.current_turn + 1)
-	
+
 	# Process game state (this handles turn increment internally)
 	var success = game_state_manager.process_turn()
-	
+
 	if not success:
 		_on_game_over()
 		return
-	
+
 	# Clear board and render new state
+	ui_manager.show_debug_phase("Rendering Board...")
 	board_renderer.clear_board()
-	board_renderer.render_board()
-	
+	await board_renderer.render_board()
+
+	# Wait a moment to show initial state before combat
+	await get_tree().create_timer(0.2).timeout
+
+	# Combat phase - process combat before effects
+	ui_manager.show_debug_phase("COMBAT PHASE")
+	await _show_combat_phase()
+
 	# Process turn will emit effects_processed signal, wait for visual effects to complete
+	ui_manager.show_debug_phase("EFFECTS PHASE")
+	# Trigger effects processing now (after combat)
+	game_state_manager.process_all_symbol_effects()
 	await _show_effects_processing()
-	
+
 	# Start selection phase
+	ui_manager.show_debug_phase("SELECTION PHASE")
 	_start_selection_phase()
 
 
 var effects_display_completed: bool = false
+var combat_display_completed: bool = false
+
+func _show_combat_phase() -> void:
+	print("GameController: Starting combat phase")
+	combat_display_completed = false
+
+	# Process combat
+	var board_state = game_state_manager.get_board_state()
+	var combat_results = effects_processor.process_combat(board_state["board_grid"])
+
+	# Show combat animations if any attacks happened
+	if combat_results["combat_results"].size() > 0:
+		print("GameController: ", combat_results["combat_results"].size(), " attacks, ", combat_results["kills"], " enemies killed")
+
+		# Show combat animations
+		for result in combat_results["combat_results"]:
+			var attacker_pos = result["attacker_pos"]
+			var target_pos = result["target_pos"]
+			var damage = result["damage"]
+			var killed = result["target_killed"]
+			var attacker_exhausted = result["attacker_exhausted"]
+
+			# Highlight attacker with red color
+			board_renderer.highlight_slot(attacker_pos.x, attacker_pos.y, true, Color(1.8, 0.7, 0.7))
+
+			# Show damage on target
+			var damage_text = "-" + str(damage) + " HP"
+			if killed:
+				damage_text += " ☠"
+			board_renderer.show_floating_text(target_pos.x, target_pos.y, damage_text, Color.RED)
+
+			# Update combat unit and enemy counters
+			var board_grid = board_state["board_grid"]
+			var attacker = board_grid[attacker_pos.x][attacker_pos.y]
+			var target = board_grid[target_pos.x][target_pos.y]
+
+			if attacker:
+				var attacker_def = SymbolData.get_symbol_by_id(attacker.type_id)
+				if attacker_def:
+					board_renderer.update_symbol_counter(attacker_pos.x, attacker_pos.y, attacker, attacker_def)
+
+			if target:
+				var target_def = SymbolData.get_symbol_by_id(target.type_id)
+				if target_def:
+					board_renderer.update_symbol_counter(target_pos.x, target_pos.y, target, target_def)
+
+			await get_tree().create_timer(0.2).timeout
+			board_renderer.highlight_slot(attacker_pos.x, attacker_pos.y, false)
+			await get_tree().create_timer(0.1).timeout
+
+		# Remove killed enemies from board
+		await _process_destroyed_enemies()
+
+		# Remove exhausted combat units
+		await _process_destroyed_combat_units()
+
+	combat_display_completed = true
+
+func _process_destroyed_enemies() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	# Find all enemies marked for destruction
+	var destroyed_enemies = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null and symbol_instance.is_marked_for_destruction:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.symbol_type == Symbol.SymbolType.ENEMY:
+					destroyed_enemies.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance,
+						"definition": symbol_definition
+					})
+
+	# Process each destroyed enemy
+	for enemy_data in destroyed_enemies:
+		var pos = enemy_data["position"]
+		var symbol_instance = enemy_data["instance"]
+
+		# Remove from board grid
+		board_grid[pos.x][pos.y] = null
+
+		# Remove from player collection completely
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+
+		# Clear visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+
+		print("Position [", pos.x, ",", pos.y, "] Enemy destroyed!")
+
+		# Brief pause for visual feedback
+		await get_tree().create_timer(0.2).timeout
+
+func _process_destroyed_combat_units() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	# Find all combat units marked for destruction (exhausted attacks)
+	var destroyed_units = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null and symbol_instance.is_marked_for_destruction:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.symbol_type == Symbol.SymbolType.COMBAT:
+					destroyed_units.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance,
+						"definition": symbol_definition
+					})
+
+	# Process each destroyed combat unit
+	for unit_data in destroyed_units:
+		var pos = unit_data["position"]
+		var symbol_instance = unit_data["instance"]
+
+		# Remove from board grid
+		board_grid[pos.x][pos.y] = null
+
+		# Remove from player collection completely
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+
+		# Clear visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+
+		print("Position [", pos.x, ",", pos.y, "] Combat unit exhausted!")
+
+		# Brief pause for visual feedback
+		await get_tree().create_timer(0.2).timeout
 
 func _show_effects_processing() -> void:
 	# Effects will be shown when effects_processed signal is emitted
@@ -163,21 +305,21 @@ func _on_effects_processed(effect_details: Array, total_food: int, total_exp: in
 		var special_results = game_state_manager.effects_processor.process_single_symbol_effects(symbol_instance, symbol_definition, pos.x, pos.y, game_state_manager.get_board_state()["board_grid"])
 		var symbol_special_food = special_results.get("food", 0)
 		var symbol_special_exp = special_results.get("exp", 0)
-		
+
 		# Update counter display (shows new counter after increment)
 		board_renderer.update_symbol_counter(pos.x, pos.y, symbol_instance, symbol_definition)
-		
+
 		# Build effect text with emojis - combine food sources
 		var symbol_total_food = symbol_passive_food + symbol_special_food
 		var effect_text = ""
-		
+
 		if symbol_total_food > 0:
 			effect_text += "+" + str(symbol_total_food) + " 🍎"
 		if symbol_special_exp > 0:
 			if effect_text != "":
 				effect_text += ", "
 			effect_text += "+" + str(symbol_special_exp) + " ⭐"
-		
+
 		# Show effects only if there are any
 		if symbol_total_food > 0 or symbol_special_exp > 0:
 			# Determine text color based on effect type
@@ -377,15 +519,21 @@ func _generate_symbol_choices(probabilities: Dictionary) -> Array:
 func _on_symbol_choice_made(symbol_id: int) -> void:
 	if current_phase != GamePhase.SELECTION_PHASE:
 		return
-	
+
 	print("GameController: Symbol choice made: ", symbol_id)
-	
-	# Add chosen symbol to player collection
-	game_state_manager.add_symbol_to_player(symbol_id)
-	
+
+	# Add chosen symbol to player collection (if not skipped)
+	if symbol_id >= 0:
+		game_state_manager.add_symbol_to_player(symbol_id)
+	else:
+		print("GameController: Selection skipped - no symbol added")
+
 	# Hide selection UI
 	ui_manager.hide_selection_ui()
-	
+
+	# Clear debug phase
+	ui_manager.hide_debug_phase()
+
 	# Return to idle phase
 	current_phase = GamePhase.IDLE
 	ui_manager.set_spin_button_enabled(true)

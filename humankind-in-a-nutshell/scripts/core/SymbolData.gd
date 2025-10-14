@@ -53,14 +53,7 @@ func create_player_symbol_instance(type_id: int, current_turn: int = 0) -> Playe
 	new_instance.type_id = type_id
 	new_instance.added_turn = current_turn
 	next_instance_id += 1
-	
-	# Initialize HP for Barbarian (ID 22)
-	if type_id == 22:
-		# HP = 12 + 2 * (every 10 turns when added) - fixed based on added_turn
-		var base_hp = 12
-		var bonus_hp = int(current_turn / 10) * 2
-		var max_hp = base_hp + bonus_hp
-		new_instance.current_hp = max_hp
-		new_instance.max_hp = max_hp
-	
+
+	# Combat stats are initialized in GameStateManager.add_symbol_to_player()
+
 	return new_instance
