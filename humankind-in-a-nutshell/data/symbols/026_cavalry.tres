@@ -11,7 +11,7 @@ rarity = 4
 symbol_type = 2
 passive_food = 0
 effects = Array[Dictionary]([])
-effect_text = "Industrial melee combat symbol. -11 hp of nearby Barbarians."
-base_attack = 11
+effect_text = "Combat unit with 6 attack × 3 hits = 18 total damage."
+base_attack = 6
 base_hp = 0
 metadata/_custom_type_script = "uid://iq1tqrrt731u"
