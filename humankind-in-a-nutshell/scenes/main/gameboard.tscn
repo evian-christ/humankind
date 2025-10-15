@@ -21,6 +21,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="TopBar" type="Panel" parent="UI"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+
 [node name="StatBar" type="Panel" parent="UI"]
 layout_mode = 1
 anchors_preset = 12
