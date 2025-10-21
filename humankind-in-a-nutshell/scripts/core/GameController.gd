@@ -355,16 +355,11 @@ func _on_effects_processed(effect_details: Array, total_food: int, total_exp: in
 			total_exp_gained += total_exp_gain
 
 			print("Position [", pos.x, ",", pos.y, "] ", symbol_name, ": ", effect_text)
-		
-		# Process any destroyed symbols by this symbol's effects
-		await _process_destroyed_fish()
-		await _process_destroyed_coal()
-		await _process_destroyed_forest()
-		
+
 		# Handle symbol destruction or counter reset
 		if symbol_instance.is_marked_for_destruction:
-			# Fish, Coal, and Forest destruction are handled by dedicated functions, skip here
-			if symbol_definition.id != 3 and symbol_definition.id != 8 and symbol_definition.id != 36:  # Not Fish, Coal, or Forest
+			# Fish, Sail, Compass, Coal, and Forest destruction are handled by dedicated functions, skip here
+			if symbol_definition.id != 3 and symbol_definition.id != 20 and symbol_definition.id != 21 and symbol_definition.id != 8 and symbol_definition.id != 36:  # Not Fish, Sail, Compass, Coal, or Forest
 				# Remove destroyed symbol from board (reuse existing board_state)
 				board_grid[pos.x][pos.y] = null
 				# Remove from player collection
@@ -384,7 +379,14 @@ func _on_effects_processed(effect_details: Array, total_food: int, total_exp: in
 		await get_tree().create_timer(0.3).timeout
 		board_renderer.highlight_slot(pos.x, pos.y, false)
 		await get_tree().create_timer(0.1).timeout
-	
+
+	# Process all destroyed symbols after all effects are calculated
+	await _process_destroyed_fish()
+	await _process_destroyed_sail()
+	await _process_destroyed_compass()
+	await _process_destroyed_coal()
+	await _process_destroyed_forest()
+
 	# Show total summary
 	if total_food_gained > 0 or total_exp_gained > 0:
 		var summary = "Total gained: "
@@ -442,8 +444,104 @@ func _process_destroyed_fish() -> void:
 			child.queue_free()
 		
 		print("Position [", pos.x, ",", pos.y, "] Fish destroyed! +10 Food")
-		
+
 		# Brief pause for visual feedback (no highlight needed)
+		await get_tree().create_timer(0.4).timeout
+
+func _process_destroyed_sail() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	# Find all Sail marked for destruction
+	var destroyed_sail = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null and symbol_instance.is_marked_for_destruction:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.id == 20:  # Sail
+					destroyed_sail.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance,
+						"definition": symbol_definition
+					})
+
+	# Process each destroyed Sail with visual feedback
+	for sail_data in destroyed_sail:
+		var pos = sail_data["position"]
+		var symbol_instance = sail_data["instance"]
+		var symbol_definition = sail_data["definition"]
+
+		# Show destruction effect with food reward
+		var effect_text = "+25 🍎"
+		board_renderer.show_floating_text(pos.x, pos.y, effect_text, Color.GREEN)
+
+		# Apply food effect immediately (Sail destruction reward)
+		game_state_manager.apply_symbol_effect(25, 0)
+
+		# Remove from board grid
+		board_grid[pos.x][pos.y] = null
+
+		# Remove from player collection completely
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+
+		# Clear visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+
+		print("Position [", pos.x, ",", pos.y, "] Sail destroyed! +25 Food")
+
+		# Brief pause for visual feedback
+		await get_tree().create_timer(0.4).timeout
+
+func _process_destroyed_compass() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	# Find all Compass marked for destruction
+	var destroyed_compass = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null and symbol_instance.is_marked_for_destruction:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.id == 21:  # Compass
+					destroyed_compass.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance,
+						"definition": symbol_definition
+					})
+
+	# Process each destroyed Compass with visual feedback
+	for compass_data in destroyed_compass:
+		var pos = compass_data["position"]
+		var symbol_instance = compass_data["instance"]
+		var symbol_definition = compass_data["definition"]
+
+		# Show destruction effect with food reward
+		var effect_text = "+25 🍎"
+		board_renderer.show_floating_text(pos.x, pos.y, effect_text, Color.GREEN)
+
+		# Apply food effect immediately (Compass destruction reward)
+		game_state_manager.apply_symbol_effect(25, 0)
+
+		# Remove from board grid
+		board_grid[pos.x][pos.y] = null
+
+		# Remove from player collection completely
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+
+		# Clear visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+
+		print("Position [", pos.x, ",", pos.y, "] Compass destroyed! +25 Food")
+
+		# Brief pause for visual feedback
 		await get_tree().create_timer(0.4).timeout
 
 func _process_destroyed_coal() -> void:
