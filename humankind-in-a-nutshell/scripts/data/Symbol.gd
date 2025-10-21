@@ -17,7 +17,7 @@ enum SymbolType {
 
 @export var id: int
 @export var symbol_name: String
-@export var icon: String  # 이모지나 간단한 아이콘
+@export var icon: Texture2D  # 심볼 아이콘 이미지
 @export var rarity: int  # 1=ancient, 2=classical, 3=medieval, 4=industrial, 5=modern (0=enemy special)
 @export var symbol_type: int = SymbolType.FRIENDLY  # Default to friendly
 @export var passive_food: int  # 매턴 기본 식량 생산량
