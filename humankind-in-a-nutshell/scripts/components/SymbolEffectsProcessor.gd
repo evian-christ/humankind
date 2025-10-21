@@ -4,6 +4,7 @@ extends Node
 signal symbol_added_to_player(symbol_id: int)
 signal symbols_destroyed_at_positions(positions: Array)
 signal symbol_removed_from_player(instance: PlayerSymbolInstance)
+signal symbol_evolved(old_instance: PlayerSymbolInstance, new_type_id: int, pos_x: int, pos_y: int)
 
 const BOARD_WIDTH = 5
 const BOARD_HEIGHT = 4
@@ -25,6 +26,10 @@ func _get_nearby_coordinates(x: int, y: int) -> Array:
 			if nx >= 0 and nx < BOARD_WIDTH and ny >= 0 and ny < BOARD_HEIGHT:
 				nearby.append(Vector2i(nx, ny))
 	return nearby
+
+# Check if a symbol is a religion symbol (IDs 15-18)
+func _is_religion_symbol(symbol_id: int) -> bool:
+	return symbol_id >= 15 and symbol_id <= 18
 
 # Combat processing - happens before effects
 func process_combat(board_grid: Array) -> Dictionary:
@@ -107,6 +112,7 @@ func process_symbol_interactions(board_grid: Array, current_turn: int = 0) -> Di
 func process_single_symbol_effects(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol, x: int, y: int, board_grid: Array) -> Dictionary:
 	var food_gained = 0
 	var exp_gained = 0
+	var gold_gained = 0
 	
 	# Wheat counter system: Every 6 turns, provides 8 food
 	if symbol_definition.id == 1:  # Wheat
@@ -209,7 +215,7 @@ func process_single_symbol_effects(symbol_instance: PlayerSymbolInstance, symbol
 	elif symbol_definition.id == 11:  # Cow
 		var nearby_coords = _get_nearby_coordinates(x, y)
 		var has_nearby_cow = false
-		
+
 		for coord in nearby_coords:
 			var nearby_symbol = board_grid[coord.x][coord.y]
 			if nearby_symbol != null:
@@ -217,21 +223,209 @@ func process_single_symbol_effects(symbol_instance: PlayerSymbolInstance, symbol
 				if nearby_def != null and nearby_def.id == 11:  # Another Cow
 					has_nearby_cow = true
 					break
-		
+
 		if has_nearby_cow:
 			food_gained += 1
-	
+
+	# Sheep: Provides 1 gold every 10 turns
+	elif symbol_definition.id == 12:  # Sheep
+		symbol_instance.effect_counter += 1
+		# Check if counter reached 10 (reset happens in GameController)
+		if symbol_instance.effect_counter >= 10:
+			gold_gained += 1
+
 	# Example: Library provides 1 exp
 	elif symbol_definition.id == 13:  # Library
 		exp_gained += 1
 
-	return {"food": food_gained, "exp": exp_gained}
+	# Ritual: Destroy self after 3 turns, provide 3 exp when destroyed
+	elif symbol_definition.id == 14:  # Ritual
+		symbol_instance.effect_counter += 1
+		# Destroy after 3 turns (exp reward handled when destroyed)
+		if symbol_instance.effect_counter >= 3:
+			symbol_instance.is_marked_for_destruction = true
+			exp_gained += 3
+
+	# Protestantism: 2 food per nearby symbol, 1 exp, -50 food per nearby religion
+	elif symbol_definition.id == 15:  # Protestantism
+		exp_gained += 1  # Base exp
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var nearby_symbol_count = 0
+		var nearby_religion_count = 0
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				nearby_symbol_count += 1
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and _is_religion_symbol(nearby_def.id):
+					nearby_religion_count += 1
+
+		food_gained += nearby_symbol_count * 2  # 2 food per nearby symbol
+		food_gained -= nearby_religion_count * 50  # -50 food per nearby religion
+
+	# Buddhism: 3 food per empty slot, 1 exp, -50 food per nearby religion
+	elif symbol_definition.id == 16:  # Buddhism
+		exp_gained += 1  # Base exp
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var empty_slot_count = 0
+		var nearby_religion_count = 0
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol == null:
+				empty_slot_count += 1
+			elif nearby_symbol != null:
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and _is_religion_symbol(nearby_def.id):
+					nearby_religion_count += 1
+
+		food_gained += empty_slot_count * 3  # 3 food per empty slot
+		food_gained -= nearby_religion_count * 50  # -50 food per nearby religion
+
+	# Hinduism: 5 food (passive), 1 exp, -50 food per nearby religion
+	elif symbol_definition.id == 17:  # Hinduism
+		exp_gained += 1  # Base exp
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var nearby_religion_count = 0
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and _is_religion_symbol(nearby_def.id):
+					nearby_religion_count += 1
+
+		food_gained -= nearby_religion_count * 50  # -50 food per nearby religion
+
+	# Islam: 2 exp, -50 food per nearby religion
+	elif symbol_definition.id == 18:  # Islam
+		exp_gained += 2  # Base exp
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var nearby_religion_count = 0
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and _is_religion_symbol(nearby_def.id):
+					nearby_religion_count += 1
+
+		food_gained -= nearby_religion_count * 50  # -50 food per nearby religion
+
+	# Temple: 1 food, +5 food if no nearby symbols, +2 food if nearby any religion
+	elif symbol_definition.id == 19:  # Temple
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var has_nearby_symbol = false
+		var has_nearby_religion = false
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				has_nearby_symbol = true
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and _is_religion_symbol(nearby_def.id):
+					has_nearby_religion = true
+
+		# Passive 1 food already counted
+		if not has_nearby_symbol:
+			food_gained += 5  # +5 food if isolated
+		if has_nearby_religion:
+			food_gained += 2  # +2 food if near religion
+
+	# Campfire: +5 food every 5 turns, evolves to Town after 25 turns
+	elif symbol_definition.id == 29:  # Campfire
+		symbol_instance.effect_counter += 1
+
+		# Provide food every 5 turns
+		if symbol_instance.effect_counter % 5 == 0:
+			food_gained += 5
+
+		# Evolve to Town after 25 turns
+		if symbol_instance.effect_counter >= 25:
+			symbol_evolved.emit(symbol_instance, 30, x, y)  # 30 = Town ID
+
+	# Town: +5 food every 3 turns, evolves to City after 25 turns
+	elif symbol_definition.id == 30:  # Town
+		symbol_instance.effect_counter += 1
+
+		# Provide food every 3 turns
+		if symbol_instance.effect_counter % 3 == 0:
+			food_gained += 5
+
+		# Evolve to City after 25 turns
+		if symbol_instance.effect_counter >= 25:
+			symbol_evolved.emit(symbol_instance, 31, x, y)  # 31 = City ID
+
+	# City: Passive +5 food per turn (no counter needed)
+	elif symbol_definition.id == 31:  # City
+		# City provides passive food only (already handled by passive_food = 5)
+		pass
+
+	# Wine: Destroy self after 3 turns, provide 5 food and -1 exp every turn
+	elif symbol_definition.id == 32:  # Wine
+		symbol_instance.effect_counter += 1
+		# Provide -1 exp every turn (food is passive +5)
+		exp_gained -= 1
+		# Destroy after 3 turns
+		if symbol_instance.effect_counter >= 3:
+			symbol_instance.is_marked_for_destruction = true
+
+	# Taxation: +2 gold for 3 turns and destroy self
+	elif symbol_definition.id == 33:  # Taxation
+		symbol_instance.effect_counter += 1
+		# Provide gold while counter < 3
+		if symbol_instance.effect_counter <= 3:
+			gold_gained += 2
+		# Destroy after 3 turns
+		if symbol_instance.effect_counter >= 3:
+			symbol_instance.is_marked_for_destruction = true
+
+	# Merchant: -3 food (passive), +1 gold for every nearby symbol
+	elif symbol_definition.id == 34:  # Merchant
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var nearby_symbol_count = 0
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				nearby_symbol_count += 1
+		gold_gained += nearby_symbol_count
+
+	# Guild: -5 food (passive), +5 gold for every nearby empty slot
+	elif symbol_definition.id == 35:  # Guild
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var empty_slot_count = 0
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol == null:
+				empty_slot_count += 1
+		gold_gained += empty_slot_count * 5
+
+	# Forest: +1 food (passive), +30 food when destroyed
+	elif symbol_definition.id == 36:  # Forest
+		# Passive food only, destruction reward handled in GameController
+		pass
+
+	# Forest Clearing: +1 food (passive), destroy nearby Forest
+	elif symbol_definition.id == 37:  # Forest Clearing
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and nearby_def.id == 36:  # Forest
+					# Mark Forest for destruction (will trigger its food effect)
+					destroy_symbol(nearby_symbol)
+
+	return {"food": food_gained, "exp": exp_gained, "gold": gold_gained}
 
 # Reset counter for symbols that triggered effects
 func reset_symbol_counter_if_needed(symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol) -> void:
 	if symbol_definition.id == 1 and symbol_instance.effect_counter >= 6:  # Wheat
 		symbol_instance.effect_counter = 0
 	elif symbol_definition.id == 2 and symbol_instance.effect_counter >= 8:  # Rice
+		symbol_instance.effect_counter = 0
+	elif symbol_definition.id == 12 and symbol_instance.effect_counter >= 10:  # Sheep
 		symbol_instance.effect_counter = 0
 	# Banana counter never resets - it's a permanent upgrade after 10 placements
 

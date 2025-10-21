@@ -166,29 +166,51 @@ func _render_symbol_at_position(x: int, y: int, symbol_instance: PlayerSymbolIns
 	# Add counter display if needed
 	_add_counter_display(slot, symbol_instance, symbol_definition)
 
-func _create_symbol_label(symbol_definition: Symbol) -> Label:
-	var label = Label.new()
-	var display_text = symbol_definition.icon if symbol_definition.icon != "" else symbol_definition.symbol_name
-	label.text = display_text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	
-	# Center the label in the slot
-	label.anchors_preset = Control.PRESET_FULL_RECT
-	label.anchor_left = 0
-	label.anchor_top = 0
-	label.anchor_right = 1
-	label.anchor_bottom = 1
-	label.offset_left = 0
-	label.offset_top = 0
-	label.offset_right = 0
-	label.offset_bottom = 0
-	
-	# Make emoji larger
-	label.add_theme_font_size_override("font_size", 48)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
-	return label
+func _create_symbol_label(symbol_definition: Symbol) -> Control:
+	if symbol_definition.icon != null:
+		# Use TextureRect for image icons
+		var texture_rect = TextureRect.new()
+		texture_rect.texture = symbol_definition.icon
+		texture_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		texture_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # Sharp, no blur
+
+		# Center the texture in the slot with padding
+		texture_rect.anchors_preset = Control.PRESET_FULL_RECT
+		texture_rect.anchor_left = 0
+		texture_rect.anchor_top = 0
+		texture_rect.anchor_right = 1
+		texture_rect.anchor_bottom = 1
+		texture_rect.offset_left = 15
+		texture_rect.offset_top = 15
+		texture_rect.offset_right = -15
+		texture_rect.offset_bottom = -15
+		texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		return texture_rect
+	else:
+		# Fallback to text label if no icon
+		var label = Label.new()
+		label.text = symbol_definition.symbol_name
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+		# Center the label in the slot
+		label.anchors_preset = Control.PRESET_FULL_RECT
+		label.anchor_left = 0
+		label.anchor_top = 0
+		label.anchor_right = 1
+		label.anchor_bottom = 1
+		label.offset_left = 0
+		label.offset_top = 0
+		label.offset_right = 0
+		label.offset_bottom = 0
+
+		# Make text larger
+		label.add_theme_font_size_override("font_size", 48)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		return label
 
 func _add_counter_display(slot: Panel, symbol_instance: PlayerSymbolInstance, symbol_definition: Symbol) -> void:
 	var counter_text = ""
@@ -224,6 +246,12 @@ func _add_counter_display(slot: Panel, symbol_instance: PlayerSymbolInstance, sy
 			5:  # Banana
 				needs_counter = true
 				counter_max = 10
+			12:  # Sheep
+				needs_counter = true
+				counter_max = 10
+			14:  # Ritual
+				needs_counter = true
+				counter_max = 3
 
 		if needs_counter:
 			counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
@@ -287,6 +315,10 @@ func update_symbol_counter(x: int, y: int, symbol_instance: PlayerSymbolInstance
 							counter_max = 5
 						5:  # Banana
 							counter_max = 10
+						12:  # Sheep
+							counter_max = 10
+						14:  # Ritual
+							counter_max = 3
 
 					if counter_max > 0:
 						counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)

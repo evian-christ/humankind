@@ -1,14 +1,15 @@
-[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b12sheep012"]
+[gd_resource type="Resource" script_class="Symbol" load_steps=3 format=3 uid="uid://b12sheep012"]
 
 [ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+[ext_resource type="Texture2D" path="res://assets/sprites/Symbols/012.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_j0c5b")
 id = 12
 symbol_name = "Sheep"
-icon = "🐑"
+icon = ExtResource("2_icon")
 rarity = 1
 passive_food = 1
 effects = Array[Dictionary]([])
-effect_text = ""
+effect_text = "Provide 1 food. Provide 1 gold every 10 turns."
 metadata/_custom_type_script = "uid://iq1tqrrt731u"
