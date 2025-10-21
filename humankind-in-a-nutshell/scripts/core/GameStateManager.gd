@@ -81,7 +81,8 @@ func initialize_new_game() -> void:
 	_initialize_board_grid()
 
 	# Add initial symbols
-	add_symbol_to_player(18)  # Islam
+	add_symbol_to_player(20)  # Sail
+	add_symbol_to_player(21)  # Compass
 
 	print("GameStateManager: New game initialized")
 
