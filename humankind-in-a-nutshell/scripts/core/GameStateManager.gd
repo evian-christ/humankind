@@ -4,7 +4,8 @@ extends Node
 # Game state management - handles all core game logic and state
 
 signal food_changed(old_value: int, new_value: int)
-signal exp_changed(old_value: int, new_value: int)  
+signal gold_changed(old_value: int, new_value: int)
+signal exp_changed(old_value: int, new_value: int)
 signal level_changed(old_level: int, new_level: int)
 signal turn_changed(new_turn: int)
 signal game_over
@@ -12,7 +13,7 @@ signal effects_processed(effect_details: Array, total_food: int, total_exp: int)
 
 # Player stats
 var food_amount: int = 200 : set = _set_food_amount
-var gold_amount: int = 0
+var gold_amount: int = 0 : set = _set_gold_amount
 var player_level: int = 1 : set = _set_player_level
 var current_exp: int = 0 : set = _set_current_exp
 var exp_to_next_level: int = 50
@@ -49,6 +50,11 @@ func _set_food_amount(new_value: int) -> void:
 	food_amount = new_value
 	food_changed.emit(old_value, new_value)
 
+func _set_gold_amount(new_value: int) -> void:
+	var old_value = gold_amount
+	gold_amount = new_value
+	gold_changed.emit(old_value, new_value)
+
 func _set_current_exp(new_value: int) -> void:
 	var old_value = current_exp
 	current_exp = new_value
@@ -73,7 +79,10 @@ func initialize_new_game() -> void:
 	current_turn = 0
 	player_symbols.clear()
 	_initialize_board_grid()
-	
+
+	# Add initial symbols
+	add_symbol_to_player(18)  # Islam
+
 	print("GameStateManager: New game initialized")
 
 func set_effects_processor(processor) -> void:
@@ -214,11 +223,13 @@ func process_all_symbol_effects() -> void:
 	effects_processed.emit(effect_details, 0, 0)  # No totals since effects not processed yet
 
 # Apply individual symbol effects (called by GameController for real-time updates)
-func apply_symbol_effect(food_gain: int, exp_gain: int) -> void:
+func apply_symbol_effect(food_gain: int, exp_gain: int, gold_gain: int = 0) -> void:
 	if food_gain != 0:
 		food_amount = food_amount + food_gain
 	if exp_gain != 0:
 		add_exp(exp_gain)
+	if gold_gain != 0:
+		gold_amount = gold_amount + gold_gain
 
 # Legacy functions for backward compatibility
 func process_passive_food() -> void:
