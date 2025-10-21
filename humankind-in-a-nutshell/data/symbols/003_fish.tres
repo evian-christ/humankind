@@ -1,12 +1,13 @@
-[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b3fish003"]
+[gd_resource type="Resource" script_class="Symbol" load_steps=3 format=3 uid="uid://b3fish003"]
 
 [ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+[ext_resource type="Texture2D" path="res://assets/sprites/Symbols/003.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_j0c5b")
 id = 3
 symbol_name = "Fish"
-icon = "🐟"
+icon = ExtResource("2_icon")
 rarity = 1
 passive_food = 0
 effects = Array[Dictionary]([])
