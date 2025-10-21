@@ -58,6 +58,7 @@ func _setup_signal_connections() -> void:
 	
 	# Game state signals
 	game_state_manager.food_changed.connect(_on_food_changed)
+	game_state_manager.gold_changed.connect(_on_gold_changed)
 	game_state_manager.exp_changed.connect(_on_exp_changed)
 	game_state_manager.level_changed.connect(_on_level_changed)
 	game_state_manager.turn_changed.connect(_on_turn_changed)
@@ -69,15 +70,12 @@ func _setup_signal_connections() -> void:
 	
 	# Effects processor signals
 	effects_processor.symbol_added_to_player.connect(_on_symbol_added_to_player)
-	
+	effects_processor.symbol_evolved.connect(_on_symbol_evolved)
+
 	print("GameController: Signal connections established")
 
 func _start_new_game() -> void:
 	game_state_manager.initialize_new_game()
-
-	# TEST: Add combat test symbols
-	game_state_manager.add_symbol_to_player(22)  # Barbarian (enemy)
-	game_state_manager.add_symbol_to_player(23)  # Warrior (combat unit)
 
 	# Update UI to reflect initial state
 	var stats = game_state_manager.get_player_stats()
@@ -305,6 +303,7 @@ func _on_effects_processed(effect_details: Array, total_food: int, total_exp: in
 		var special_results = game_state_manager.effects_processor.process_single_symbol_effects(symbol_instance, symbol_definition, pos.x, pos.y, game_state_manager.get_board_state()["board_grid"])
 		var symbol_special_food = special_results.get("food", 0)
 		var symbol_special_exp = special_results.get("exp", 0)
+		var symbol_special_gold = special_results.get("gold", 0)
 
 		# Update counter display (shows new counter after increment)
 		board_renderer.update_symbol_counter(pos.x, pos.y, symbol_instance, symbol_definition)
@@ -315,41 +314,61 @@ func _on_effects_processed(effect_details: Array, total_food: int, total_exp: in
 
 		if symbol_total_food > 0:
 			effect_text += "+" + str(symbol_total_food) + " 🍎"
+		elif symbol_total_food < 0:
+			effect_text += str(symbol_total_food) + " 🍎"
+
 		if symbol_special_exp > 0:
 			if effect_text != "":
 				effect_text += ", "
 			effect_text += "+" + str(symbol_special_exp) + " ⭐"
+		elif symbol_special_exp < 0:
+			if effect_text != "":
+				effect_text += ", "
+			effect_text += str(symbol_special_exp) + " ⭐"
+
+		if symbol_special_gold > 0:
+			if effect_text != "":
+				effect_text += ", "
+			effect_text += "+" + str(symbol_special_gold) + " 💰"
 
 		# Show effects only if there are any
-		if symbol_total_food > 0 or symbol_special_exp > 0:
+		if symbol_total_food != 0 or symbol_special_exp != 0 or symbol_special_gold > 0:
 			# Determine text color based on effect type
 			var text_color = Color.WHITE
-			if symbol_special_exp > 0:
+			if symbol_special_gold > 0:
+				text_color = Color.YELLOW  # Gold = Yellow
+			elif symbol_special_exp > 0:
 				text_color = Color.BLUE  # Experience = Blue
 			elif symbol_total_food > 0:
 				text_color = Color.GREEN  # Food = Green
-			
+			elif symbol_total_food < 0:
+				text_color = Color.RED  # Negative food = Red
+
 			# Show floating text and apply effects simultaneously
 			board_renderer.show_floating_text(pos.x, pos.y, effect_text, text_color)
 			var total_food_gain = symbol_passive_food + symbol_special_food
 			var total_exp_gain = symbol_special_exp
-			game_state_manager.apply_symbol_effect(total_food_gain, total_exp_gain)
-			
+			var total_gold_gain = symbol_special_gold
+			game_state_manager.apply_symbol_effect(total_food_gain, total_exp_gain, total_gold_gain)
+
 			total_food_gained += total_food_gain
 			total_exp_gained += total_exp_gain
-			
+
 			print("Position [", pos.x, ",", pos.y, "] ", symbol_name, ": ", effect_text)
 		
 		# Process any destroyed symbols by this symbol's effects
 		await _process_destroyed_fish()
 		await _process_destroyed_coal()
+		await _process_destroyed_forest()
 		
 		# Handle symbol destruction or counter reset
 		if symbol_instance.is_marked_for_destruction:
-			# Fish and Coal destruction are handled by dedicated functions, skip here
-			if symbol_definition.id != 3 and symbol_definition.id != 8:  # Not Fish or Coal
+			# Fish, Coal, and Forest destruction are handled by dedicated functions, skip here
+			if symbol_definition.id != 3 and symbol_definition.id != 8 and symbol_definition.id != 36:  # Not Fish, Coal, or Forest
 				# Remove destroyed symbol from board (reuse existing board_state)
 				board_grid[pos.x][pos.y] = null
+				# Remove from player collection
+				game_state_manager.remove_symbol_from_player(symbol_instance)
 				# Clear visual representation
 				var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
 				var slot = board_renderer.get_grid_container().get_child(slot_index)
@@ -467,6 +486,53 @@ func _process_destroyed_coal() -> void:
 		# Brief pause for visual feedback
 		await get_tree().create_timer(0.2).timeout
 
+func _process_destroyed_forest() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	# Find all Forest marked for destruction
+	var destroyed_forest = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null and symbol_instance.is_marked_for_destruction:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.id == 36:  # Forest
+					destroyed_forest.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance,
+						"definition": symbol_definition
+					})
+
+	# Process each destroyed Forest with food reward
+	for forest_data in destroyed_forest:
+		var pos = forest_data["position"]
+		var symbol_instance = forest_data["instance"]
+
+		# Show destruction effect with food reward
+		var effect_text = "+30 🍎"
+		board_renderer.show_floating_text(pos.x, pos.y, effect_text, Color.GREEN)
+
+		# Apply food effect immediately (Forest destruction reward)
+		game_state_manager.apply_symbol_effect(30, 0, 0)
+
+		# Remove from board grid
+		board_grid[pos.x][pos.y] = null
+
+		# Remove from player collection completely
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+
+		# Clear visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+
+		print("Position [", pos.x, ",", pos.y, "] Forest destroyed! +30 Food")
+
+		# Brief pause for visual feedback
+		await get_tree().create_timer(0.4).timeout
+
 func _start_selection_phase() -> void:
 	current_phase = GamePhase.SELECTION_PHASE
 	
@@ -542,6 +608,9 @@ func _on_symbol_choice_made(symbol_id: int) -> void:
 func _on_food_changed(old_value: int, new_value: int) -> void:
 	ui_manager.update_food_display(new_value)
 
+func _on_gold_changed(old_value: int, new_value: int) -> void:
+	ui_manager.update_gold_display(new_value)
+
 func _on_exp_changed(old_value: int, new_value: int) -> void:
 	var stats = game_state_manager.get_player_stats()
 	ui_manager.update_exp_display(stats["exp"], stats["exp_to_next"])
@@ -565,3 +634,44 @@ func _on_symbol_added_to_player(symbol_id: int) -> void:
 	game_state_manager.add_symbol_to_player(symbol_id)
 	var symbol_name = SymbolData.get_symbol_by_id(symbol_id).symbol_name
 	print("GameController: ", symbol_name, " added to player collection via effect!")
+
+func _on_symbol_evolved(old_instance: PlayerSymbolInstance, new_type_id: int, pos_x: int, pos_y: int) -> void:
+	# Get board state
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	# Get symbol definitions
+	var old_symbol = SymbolData.get_symbol_by_id(old_instance.type_id)
+	var new_symbol = SymbolData.get_symbol_by_id(new_type_id)
+
+	if old_symbol == null or new_symbol == null:
+		print("ERROR: Failed to find symbol definitions for evolution")
+		return
+
+	print("GameController: ", old_symbol.symbol_name, " evolving to ", new_symbol.symbol_name, " at [", pos_x, ",", pos_y, "]")
+
+	# Show evolution visual effect
+	board_renderer.show_floating_text(pos_x, pos_y, "⬆ " + new_symbol.symbol_name, Color.YELLOW)
+
+	# Create new symbol instance
+	var new_instance = SymbolData.create_player_symbol_instance(new_type_id)
+
+	# Remove old instance from player collection
+	game_state_manager.remove_symbol_from_player(old_instance)
+
+	# Add new instance to player collection
+	game_state_manager.player_symbols.append(new_instance)
+
+	# Replace on board grid
+	board_grid[pos_x][pos_y] = new_instance
+
+	# Update visual representation
+	var slot_index = pos_y * game_state_manager.BOARD_WIDTH + pos_x
+	var slot = board_renderer.get_grid_container().get_child(slot_index)
+
+	# Clear old visual
+	for child in slot.get_children():
+		child.queue_free()
+
+	# Render new symbol
+	board_renderer.render_symbol_at_slot(slot, new_instance, new_symbol)
