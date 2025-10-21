@@ -171,12 +171,25 @@ func _create_symbol_card(symbol: Symbol, index: int) -> Control:
 	vbox.offset_bottom = -10
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	
-	# Create all labels
-	var icon_label = Label.new()
-	icon_label.text = symbol.icon if symbol.icon != "" else symbol.symbol_name
-	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.add_theme_font_size_override("font_size", 64)
-	icon_label.add_theme_color_override("font_color", Color.BLACK)
+	# Create icon display (image or text)
+	var icon_container: Control
+	if symbol.icon != null:
+		# Use TextureRect for image icons
+		var texture_rect = TextureRect.new()
+		texture_rect.texture = symbol.icon
+		texture_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		texture_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # Sharp, no blur
+		texture_rect.custom_minimum_size = Vector2(100, 100)
+		icon_container = texture_rect
+	else:
+		# Use Label for text fallback
+		var icon_label = Label.new()
+		icon_label.text = symbol.symbol_name
+		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon_label.add_theme_font_size_override("font_size", 64)
+		icon_label.add_theme_color_override("font_color", Color.BLACK)
+		icon_container = icon_label
 	
 	var name_label = Label.new()
 	name_label.text = symbol.symbol_name
@@ -210,7 +223,7 @@ func _create_symbol_card(symbol: Symbol, index: int) -> Control:
 	effect_label.add_theme_font_size_override("font_size", 11)
 	effect_label.add_theme_color_override("font_color", Color.BLACK)
 	
-	vbox.add_child(icon_label)
+	vbox.add_child(icon_container)
 	vbox.add_child(name_label)
 	vbox.add_child(rarity_label)
 	vbox.add_child(passive_label)
