@@ -333,6 +333,60 @@ func process_single_symbol_effects(symbol_instance: PlayerSymbolInstance, symbol
 		if has_nearby_religion:
 			food_gained += 2  # +2 food if near religion
 
+	# Sail: Destroyed after being nearby Compass 5 times (food reward handled when destroyed)
+	elif symbol_definition.id == 20:  # Sail
+		# Initialize counter if needed
+		if not symbol_instance.state_data.has("compass_nearby_count"):
+			symbol_instance.state_data["compass_nearby_count"] = 0
+
+		# Check if Compass is nearby
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var has_nearby_compass = false
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and nearby_def.id == 21:  # Compass
+					has_nearby_compass = true
+					break
+
+		# Increment counter if Compass is nearby
+		if has_nearby_compass:
+			symbol_instance.state_data["compass_nearby_count"] += 1
+			print("Sail: Compass nearby count: ", symbol_instance.state_data["compass_nearby_count"])
+
+		# Mark for destruction if counter reached 5 (food reward happens in destruction handler)
+		if symbol_instance.state_data["compass_nearby_count"] >= 5:
+			symbol_instance.is_marked_for_destruction = true
+
+	# Compass: Destroyed after being nearby Sail 5 times (food reward handled when destroyed)
+	elif symbol_definition.id == 21:  # Compass
+		# Initialize counter if needed
+		if not symbol_instance.state_data.has("sail_nearby_count"):
+			symbol_instance.state_data["sail_nearby_count"] = 0
+
+		# Check if Sail is nearby
+		var nearby_coords = _get_nearby_coordinates(x, y)
+		var has_nearby_sail = false
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				var nearby_def = symbol_data.get_symbol_by_id(nearby_symbol.type_id)
+				if nearby_def != null and nearby_def.id == 20:  # Sail
+					has_nearby_sail = true
+					break
+
+		# Increment counter if Sail is nearby
+		if has_nearby_sail:
+			symbol_instance.state_data["sail_nearby_count"] += 1
+			print("Compass: Sail nearby count: ", symbol_instance.state_data["sail_nearby_count"])
+
+		# Mark for destruction if counter reached 5 (food reward happens in destruction handler)
+		if symbol_instance.state_data["sail_nearby_count"] >= 5:
+			symbol_instance.is_marked_for_destruction = true
+
 	# Campfire: +5 food every 5 turns, evolves to Town after 25 turns
 	elif symbol_definition.id == 29:  # Campfire
 		symbol_instance.effect_counter += 1

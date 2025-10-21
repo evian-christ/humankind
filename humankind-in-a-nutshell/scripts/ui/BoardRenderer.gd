@@ -252,9 +252,23 @@ func _add_counter_display(slot: Panel, symbol_instance: PlayerSymbolInstance, sy
 			14:  # Ritual
 				needs_counter = true
 				counter_max = 3
+			20:  # Sail
+				needs_counter = true
+				counter_max = 5
+			21:  # Compass
+				needs_counter = true
+				counter_max = 5
 
 		if needs_counter:
-			counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
+			# Special handling for Sail/Compass using state_data
+			if symbol_definition.id == 20:  # Sail
+				var count = symbol_instance.state_data.get("compass_nearby_count", 0)
+				counter_text = str(count) + "/" + str(counter_max)
+			elif symbol_definition.id == 21:  # Compass
+				var count = symbol_instance.state_data.get("sail_nearby_count", 0)
+				counter_text = str(count) + "/" + str(counter_max)
+			else:
+				counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
 			show_counter = true
 
 	if show_counter:
@@ -319,9 +333,21 @@ func update_symbol_counter(x: int, y: int, symbol_instance: PlayerSymbolInstance
 							counter_max = 10
 						14:  # Ritual
 							counter_max = 3
+						20:  # Sail
+							counter_max = 5
+						21:  # Compass
+							counter_max = 5
 
 					if counter_max > 0:
-						counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
+						# Special handling for Sail/Compass using state_data
+						if symbol_definition.id == 20:  # Sail
+							var count = symbol_instance.state_data.get("compass_nearby_count", 0)
+							counter_text = str(count) + "/" + str(counter_max)
+						elif symbol_definition.id == 21:  # Compass
+							var count = symbol_instance.state_data.get("sail_nearby_count", 0)
+							counter_text = str(count) + "/" + str(counter_max)
+						else:
+							counter_text = str(symbol_instance.effect_counter) + "/" + str(counter_max)
 
 				if counter_text != "":
 					child.text = counter_text
