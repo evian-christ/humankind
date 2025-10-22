@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b35guild035"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 35
+symbol_name = "Guild"
+icon = "🏛️"
+rarity = 3
+passive_food = -5
+effects = Array[Dictionary]([])
+effect_text = "-5 food. +5 gold for every nearby empty slot."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

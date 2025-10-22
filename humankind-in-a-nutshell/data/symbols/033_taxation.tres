@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://babdid4hnf0yu"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 33
+symbol_name = "Taxation"
+icon = "💰"
+rarity = 3
+passive_food = 0
+effects = Array[Dictionary]([])
+effect_text = "+2 gold for 3 turns and destroy self."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"

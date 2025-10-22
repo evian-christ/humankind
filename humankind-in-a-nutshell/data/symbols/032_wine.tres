@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b32wine032"]
+
+[ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+
+[resource]
+script = ExtResource("1_j0c5b")
+id = 32
+symbol_name = "Wine"
+icon = "🍷"
+rarity = 2
+passive_food = 5
+effects = Array[Dictionary]([])
+effect_text = "Destroy self after 3 turns. Provide 5 food and -1 exp every turn."
+metadata/_custom_type_script = "uid://iq1tqrrt731u"
