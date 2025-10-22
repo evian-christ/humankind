@@ -16,7 +16,7 @@
 - ✅ 경험치(EXP) 처리 로직
 - ✅ 골드(Gold) 처리 로직
 
-### 구현된 심볼 효과 (19/37)
+### 구현된 심볼 효과 (35/37)
 
 #### 식량 생산 심볼
 1. ✅ **Wheat (ID 1)** - 6턴마다 8 식량
@@ -42,6 +42,7 @@
 32. ✅ **Wine (ID 32)** - 매턴 5 식량 - 1 경험치, 3턴 후 파괴
 
 #### 경제 심볼
+12. ✅ **Sheep (ID 12)** - 매턴 1 식량, 10턴마다 1 골드
 33. ✅ **Taxation (ID 33)** - 3턴간 +2 골드, 이후 파괴
 34. ✅ **Merchant (ID 34)** - -3 식량, 인근 심볼당 +1 골드
 35. ✅ **Guild (ID 35)** - -5 식량, 인근 빈칸당 +5 골드
@@ -50,31 +51,31 @@
 36. ✅ **Forest (ID 36)** - 매턴 +1 식량, 파괴 시 +30 식량
 37. ✅ **Forest Clearing (ID 37)** - 매턴 +1 식량, 인근 Forest 파괴
 
-### 미구현 심볼 (18/37)
+#### 종교 시스템
+14. ✅ **Ritual (ID 14)** - 3턴 후 파괴, 3 경험치
+15. ✅ **Protestantism (ID 15)** - 인근 심볼당 +2 식량, +1 경험치, 인근 종교당 -50 식량
+16. ✅ **Buddhism (ID 16)** - 빈칸당 +3 식량, +1 경험치, 인근 종교당 -50 식량
+17. ✅ **Hinduism (ID 17)** - +5 식량, +1 경험치, 인근 종교당 -50 식량
+18. ✅ **Islam (ID 18)** - +2 경험치, 인근 종교당 -50 식량
+19. ✅ **Temple (ID 19)** - 기본 1 식량, 인근 심볼 없으면 +5 식량, 인근 종교 있으면 +2 식량
+
+#### 탐험 시스템
+20. ✅ **Sail (ID 20)** - Compass 인근 5회 후 파괴, 25 식량
+21. ✅ **Compass (ID 21)** - Sail 인근 5회 후 파괴, 25 식량
+
+#### 전투 시스템
+22. ✅ **Barbarian (ID 22)** - -3 식량, HP 10
+23. ✅ **Warrior (ID 23)** - 공격력 2 × 5회 = 10 총 데미지
+24. ✅ **Swordsman (ID 24)** - 공격력 4 × 4회 = 16 총 데미지
+25. ✅ **Knight (ID 25)** - 공격력 7 × 3회 = 21 총 데미지
+26. ✅ **Cavalry (ID 26)** - 공격력 11 × 3회 = 33 총 데미지
+27. ✅ **Infantry (ID 27)** - 공격력 16 × 2회 = 32 총 데미지
+
+### 미구현 심볼 (2/37)
 
 #### 기본 심볼
 - [ ] **Revolution (ID 10)** - 자신과 인근 파괴, 파괴 수만큼 랜덤 심볼 제공
-- [ ] **Sheep (ID 12)** - 매턴 1 식량
-
-#### 종교 시스템 (6개)
-- [ ] **Ritual (ID 14)** - 3턴 후 파괴, 3 경험치
-- [ ] **Protestantism (ID 15)** - 인근 심볼당 +2 식량, +1 경험치, 인근 종교당 -50 식량
-- [ ] **Buddhism (ID 16)** - 빈칸당 +3 식량, +1 경험치, 인근 종교당 -50 식량
-- [ ] **Hinduism (ID 17)** - +5 식량, +1 경험치, 인근 종교당 -50 식량
-- [ ] **Islam (ID 18)** - +2 경험치, 인근 종교당 -50 식량
-- [ ] **Temple (ID 19)** - 기본 1 식량, 인근 심볼 없으면 +5 식량, 인근 종교 있으면 +2 식량
-
-#### 탐험 시스템 (2개)
-- [ ] **Sail (ID 20)** - Compass 인근 5회 후 파괴, 25 식량
-- [ ] **Compass (ID 21)** - Sail 인근 5회 후 파괴, 25 식량
-
-#### 전투 시스템 (6개)
-- [ ] **Barbarian (ID 22)** - -3 식량, HP 10
-- [ ] **Warrior (ID 23)** - 인근 Barbarian -2 HP (고대)
-- [ ] **Swordsman (ID 24)** - 인근 Barbarian -4 HP (고전)
-- [ ] **Knight (ID 25)** - 인근 Barbarian -7 HP (중세)
-- [ ] **Cavalry (ID 26)** - 인근 Barbarian -11 HP (산업)
-- [ ] **Infantry (ID 27)** - 인근 Barbarian -16 HP (현대)
+- [ ] **Infantry (ID 28)** - (CSV에만 존재, 구현 여부 확인 필요)
 
 ---
 
@@ -113,51 +114,55 @@
 6. [x] **Temple (ID 19)** - 기본 1 식량, 인근 심볼 없으면 +5 식량, 인근 종교 있으면 +2 식량
    - 복잡한 조건부 로직
 
-### 1.3 탐험 시스템 (우선순위: 중간)
+### 1.3 탐험 시스템 (우선순위: 중간) ✅ **완료**
 **예상 작업 시간: 1-2일**
 
-- [ ] **Sail (ID 20)** - Compass 인근 5회 후 파괴, 25 식량
-  - `state_data.compass_nearby_count` 추가
+- [x] **Sail (ID 20)** - Compass 인근 5회 후 파괴, 25 식량
+  - `state_data.compass_nearby_count` 구현 완료
 
-- [ ] **Compass (ID 21)** - Sail 인근 5회 후 파괴, 25 식량
-  - `state_data.sail_nearby_count` 추가
+- [x] **Compass (ID 21)** - Sail 인근 5회 후 파괴, 25 식량
+  - `state_data.sail_nearby_count` 구현 완료
 
 **구현 요구사항:**
-- 특정 심볼 인근 횟수 카운터
-- 상호 의존적 파괴 로직
+- [x] 특정 심볼 인근 횟수 카운터 (state_data 사용)
+- [x] 상호 의존적 파괴 로직
+- [x] 파괴 타이밍 일관성 (모든 심볼 처리 후 파괴)
+- [x] 전용 파괴 처리 함수 (_process_destroyed_sail/compass)
 
-### 1.4 전투 시스템 완성 (우선순위: 높음)
+### 1.4 전투 시스템 완성 (우선순위: 높음) ✅ **완료**
 **예상 작업 시간: 2-3일**
 
-**현재 상태:** 전투 프레임워크는 구현되어 있음 (process_combat 함수)
+**현재 상태:** 전투 시스템 완전 구현 완료
 
-**필요 작업:**
-1. [ ] Symbol.gd에 전투 관련 속성 추가
+**완료된 작업:**
+1. [x] Symbol.gd에 전투 관련 속성 추가
    - `symbol_type` (ENEMY, COMBAT 등)
-   - `attack_power`
-   - `max_hp`
+   - `base_attack`
+   - `base_hp`
 
-2. [ ] PlayerSymbolInstance에 전투 속성 추가
+2. [x] PlayerSymbolInstance에 전투 속성 추가
    - `enemy_hp` (현재 HP)
    - `remaining_attacks` (남은 공격 횟수)
    - `attack_power` (공격력)
 
-3. [ ] 심볼 데이터 파일(.tres)에 속성 설정
-   - [ ] **Barbarian (ID 22)** - symbol_type: ENEMY, passive_food: -3, max_hp: 10
-   - [ ] **Warrior (ID 23)** - symbol_type: COMBAT, attack_power: 2
-   - [ ] **Swordsman (ID 24)** - symbol_type: COMBAT, attack_power: 4
-   - [ ] **Knight (ID 25)** - symbol_type: COMBAT, attack_power: 7
-   - [ ] **Cavalry (ID 26)** - symbol_type: COMBAT, attack_power: 11
-   - [ ] **Infantry (ID 27)** - symbol_type: COMBAT, attack_power: 16
+3. [x] 심볼 데이터 파일(.tres)에 속성 설정 및 스프라이트 적용
+   - [x] **Barbarian (ID 22)** - symbol_type: ENEMY, passive_food: -3, base_hp: 10
+   - [x] **Warrior (ID 23)** - symbol_type: COMBAT, base_attack: 2
+   - [x] **Swordsman (ID 24)** - symbol_type: COMBAT, base_attack: 4
+   - [x] **Knight (ID 25)** - symbol_type: COMBAT, base_attack: 7
+   - [x] **Cavalry (ID 26)** - symbol_type: COMBAT, base_attack: 11
+   - [x] **Infantry (ID 27)** - symbol_type: COMBAT, base_attack: 16
 
-4. [ ] UI 개선
+4. [x] UI 구현 완료
    - HP 표시 (Barbarian)
-   - 공격 횟수 표시 (전투 유닛)
-   - 전투 결과 플로팅 텍스트
+   - 공격 횟수 × 공격력 표시 (전투 유닛)
+   - 전투 결과 플로팅 텍스트 (-X HP ☠)
 
-5. [ ] Barbarian 생성 시스템
-   - 특정 턴마다 플레이어 컬렉션에 Barbarian 추가
-   - 난이도별 생성 확률 조정
+5. [x] 전투 처리 로직 완료
+   - process_combat 함수로 모든 전투 처리
+   - 전투 유닛이 인접 적 공격
+   - 공격 소진 시 자동 파괴
+   - 적 HP 0 시 자동 파괴
 
 ### 1.5 복잡한 메카닉 (우선순위: 낮음)
 **예상 작업 시간: 1-2일**
