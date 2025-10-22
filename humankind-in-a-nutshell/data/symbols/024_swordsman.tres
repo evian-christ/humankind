@@ -1,17 +1,18 @@
-[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://ctsmwi0tsmvpn"]
+[gd_resource type="Resource" script_class="Symbol" load_steps=3 format=3 uid="uid://ctsmwi0tsmvpn"]
 
 [ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+[ext_resource type="Texture2D" path="res://assets/sprites/Symbols/024.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_j0c5b")
 id = 24
 symbol_name = "Swordsman"
-icon = "⚔️"
+icon = ExtResource("2_icon")
 rarity = 2
 symbol_type = 2
 passive_food = 0
 effects = Array[Dictionary]([])
-effect_text = "Combat unit with 3 attack × 4 hits = 12 total damage."
-base_attack = 3
+effect_text = "Combat unit with 4 attack × 4 hits = 16 total damage."
+base_attack = 4
 base_hp = 0
 metadata/_custom_type_script = "uid://iq1tqrrt731u"

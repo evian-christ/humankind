@@ -1,17 +1,18 @@
-[gd_resource type="Resource" script_class="Symbol" load_steps=2 format=3 uid="uid://b1cavalry026"]
+[gd_resource type="Resource" script_class="Symbol" load_steps=3 format=3 uid="uid://b1cavalry026"]
 
 [ext_resource type="Script" uid="uid://iq1tqrrt731u" path="res://scripts/data/Symbol.gd" id="1_j0c5b"]
+[ext_resource type="Texture2D" path="res://assets/sprites/Symbols/026.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_j0c5b")
 id = 26
 symbol_name = "Cavalry"
-icon = "🏇"
+icon = ExtResource("2_icon")
 rarity = 4
 symbol_type = 2
 passive_food = 0
 effects = Array[Dictionary]([])
-effect_text = "Combat unit with 6 attack × 3 hits = 18 total damage."
-base_attack = 6
+effect_text = "Combat unit with 11 attack × 3 hits = 33 total damage."
+base_attack = 11
 base_hp = 0
 metadata/_custom_type_script = "uid://iq1tqrrt731u"

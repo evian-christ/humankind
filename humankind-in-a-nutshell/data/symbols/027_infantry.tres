@@ -11,7 +11,7 @@ rarity = 5
 symbol_type = 2
 passive_food = 0
 effects = Array[Dictionary]([])
-effect_text = "Combat unit with 10 attack × 2 hits = 20 total damage."
-base_attack = 10
+effect_text = "Combat unit with 16 attack × 2 hits = 32 total damage."
+base_attack = 16
 base_hp = 0
 metadata/_custom_type_script = "uid://iq1tqrrt731u"
