@@ -386,6 +386,7 @@ func _on_effects_processed(effect_details: Array, total_food: int, total_exp: in
 	await _process_destroyed_compass()
 	await _process_destroyed_coal()
 	await _process_destroyed_forest()
+	await _process_destroyed_revolution()
 
 	# Show total summary
 	if total_food_gained > 0 or total_exp_gained > 0:
@@ -630,6 +631,118 @@ func _process_destroyed_forest() -> void:
 
 		# Brief pause for visual feedback
 		await get_tree().create_timer(0.4).timeout
+
+func _process_destroyed_revolution() -> void:
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	# Find all Revolution symbols on the board (even if already processed)
+	var revolution_list = []
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null:
+				var symbol_definition = SymbolData.get_symbol_by_id(symbol_instance.type_id)
+				if symbol_definition != null and symbol_definition.id == 10:  # Revolution
+					revolution_list.append({
+						"position": Vector2i(x, y),
+						"instance": symbol_instance
+					})
+
+	# Process each Revolution
+	for revolution_data in revolution_list:
+		var pos = revolution_data["position"]
+		var symbol_instance = revolution_data["instance"]
+
+		# Count and collect all nearby symbols to destroy (재수집)
+		var destroyed_symbols_positions = []
+		var nearby_coords = _get_nearby_coordinates(pos.x, pos.y)
+
+		for coord in nearby_coords:
+			var nearby_symbol = board_grid[coord.x][coord.y]
+			if nearby_symbol != null:
+				destroyed_symbols_positions.append({
+					"x": coord.x,
+					"y": coord.y,
+					"instance": nearby_symbol
+				})
+
+		var symbols_destroyed = 1 + destroyed_symbols_positions.size()  # Include Revolution itself
+
+		# First, remove all nearby symbols
+		for symbol_data in destroyed_symbols_positions:
+			var sx = symbol_data["x"]
+			var sy = symbol_data["y"]
+			var destroyed_instance = symbol_data["instance"]
+
+			# Remove from board grid
+			board_grid[sx][sy] = null
+
+			# Remove from player collection
+			game_state_manager.remove_symbol_from_player(destroyed_instance)
+
+			# Clear visual representation
+			var slot_index = sy * game_state_manager.BOARD_WIDTH + sx
+			var slot = board_renderer.get_grid_container().get_child(slot_index)
+			for child in slot.get_children():
+				child.queue_free()
+
+			var destroyed_def = SymbolData.get_symbol_by_id(destroyed_instance.type_id)
+			var destroyed_name = destroyed_def.symbol_name if destroyed_def else "Unknown"
+			print("Revolution destroyed ", destroyed_name, " at [", sx, ",", sy, "]")
+
+		# Show destruction effect on Revolution position
+		var effect_text = "+" + str(symbols_destroyed) + " 🎲"
+		board_renderer.show_floating_text(pos.x, pos.y, effect_text, Color.YELLOW)
+
+		# Add random symbols to player collection (uniform probability, no rarity)
+		var all_symbol_ids = SymbolData.symbols.keys()
+		var valid_symbol_ids = []
+
+		# Filter out ENEMY type symbols (like Barbarian)
+		for symbol_id in all_symbol_ids:
+			var symbol_def = SymbolData.get_symbol_by_id(symbol_id)
+			if symbol_def != null and symbol_def.symbol_type != Symbol.SymbolType.ENEMY:
+				valid_symbol_ids.append(symbol_id)
+
+		# Add random symbols
+		for i in range(symbols_destroyed):
+			if valid_symbol_ids.size() > 0:
+				var random_index = randi() % valid_symbol_ids.size()
+				var random_symbol_id = valid_symbol_ids[random_index]
+				game_state_manager.add_symbol_to_player(random_symbol_id)
+				var symbol_name = SymbolData.get_symbol_by_id(random_symbol_id).symbol_name
+				print("Revolution added: ", symbol_name, " (ID: ", random_symbol_id, ")")
+
+		# Remove Revolution from board grid
+		board_grid[pos.x][pos.y] = null
+
+		# Remove Revolution from player collection
+		game_state_manager.remove_symbol_from_player(symbol_instance)
+
+		# Clear Revolution visual representation
+		var slot_index = pos.y * game_state_manager.BOARD_WIDTH + pos.x
+		var slot = board_renderer.get_grid_container().get_child(slot_index)
+		for child in slot.get_children():
+			child.queue_free()
+
+		print("Position [", pos.x, ",", pos.y, "] Revolution destroyed ", symbols_destroyed, " symbol(s) total!")
+
+		# Brief pause for visual feedback
+		await get_tree().create_timer(0.4).timeout
+
+# Helper function to get nearby coordinates (8 directions)
+func _get_nearby_coordinates(x: int, y: int) -> Array:
+	var nearby = []
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			if dx == 0 and dy == 0:
+				continue  # Skip center
+			var nx = x + dx
+			var ny = y + dy
+			if nx >= 0 and nx < game_state_manager.BOARD_WIDTH and ny >= 0 and ny < game_state_manager.BOARD_HEIGHT:
+				nearby.append(Vector2i(nx, ny))
+	return nearby
 
 func _start_selection_phase() -> void:
 	current_phase = GamePhase.SELECTION_PHASE

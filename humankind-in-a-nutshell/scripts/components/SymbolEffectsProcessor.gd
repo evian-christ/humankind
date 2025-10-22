@@ -191,7 +191,7 @@ func process_single_symbol_effects(symbol_instance: PlayerSymbolInstance, symbol
 	elif symbol_definition.id == 9:  # Industrial Revolution
 		var nearby_coords = _get_nearby_coordinates(x, y)
 		var coals_destroyed_this_turn = 0
-		
+
 		for coord in nearby_coords:
 			var nearby_symbol = board_grid[coord.x][coord.y]
 			if nearby_symbol != null:
@@ -200,17 +200,22 @@ func process_single_symbol_effects(symbol_instance: PlayerSymbolInstance, symbol
 					# Mark Coal for destruction
 					destroy_symbol(nearby_symbol)
 					coals_destroyed_this_turn += 1
-		
+
 		# Add destroyed coals to the cumulative count (stored in effect_counter)
 		symbol_instance.effect_counter += coals_destroyed_this_turn
-		
+
 		# Provide food equal to total coals destroyed this game
 		if symbol_instance.effect_counter > 0:
 			food_gained += symbol_instance.effect_counter
-		
+
 		if coals_destroyed_this_turn > 0:
 			print("Industrial Revolution destroyed ", coals_destroyed_this_turn, " coal(s). Total: ", symbol_instance.effect_counter)
-	
+
+	# Revolution: Will be processed in GameController._process_destroyed_revolution()
+	elif symbol_definition.id == 10:  # Revolution
+		# No effects during normal processing - all handled in destruction phase
+		pass
+
 	# Example: Cow provides 1 food if nearby Cow exists
 	elif symbol_definition.id == 11:  # Cow
 		var nearby_coords = _get_nearby_coordinates(x, y)
