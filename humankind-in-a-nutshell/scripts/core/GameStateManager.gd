@@ -80,7 +80,26 @@ func initialize_new_game() -> void:
 	player_symbols.clear()
 	_initialize_board_grid()
 
-	# Add initial symbols
+	# Add initial symbols - TEST MODE: Revolution testing (sprites 001-026 only)
+	add_symbol_to_player(10)  # Revolution
+	add_symbol_to_player(1)   # Wheat
+	add_symbol_to_player(2)   # Rice
+	add_symbol_to_player(3)   # Fish
+	add_symbol_to_player(4)   # Fishing Boat
+	add_symbol_to_player(5)   # Banana
+	add_symbol_to_player(6)   # Sugar
+	add_symbol_to_player(7)   # Mine
+	add_symbol_to_player(8)   # Coal
+	add_symbol_to_player(9)   # Industrial Revolution
+	add_symbol_to_player(11)  # Cow
+	add_symbol_to_player(12)  # Sheep
+	add_symbol_to_player(13)  # Library
+	add_symbol_to_player(14)  # Ritual
+	add_symbol_to_player(15)  # Protestantism
+	add_symbol_to_player(16)  # Buddhism
+	add_symbol_to_player(17)  # Hinduism
+	add_symbol_to_player(18)  # Islam
+	add_symbol_to_player(19)  # Temple
 	add_symbol_to_player(20)  # Sail
 	add_symbol_to_player(21)  # Compass
 
