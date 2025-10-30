@@ -14,7 +14,8 @@ enum GamePhase {
 	IDLE,
 	PROCESSING_TURN,
 	SELECTION_PHASE,
-	GAME_OVER
+	GAME_OVER,
+	VICTORY
 }
 
 var current_phase: GamePhase = GamePhase.IDLE
@@ -111,6 +112,11 @@ func _process_turn() -> void:
 	ui_manager.show_debug_phase("Rendering Board...")
 	board_renderer.clear_board()
 	await board_renderer.render_board()
+
+	# Check for AGI victory condition (ID 28)
+	if _check_agi_victory():
+		_on_victory()
+		return
 
 	# Wait a moment to show initial state before combat
 	await get_tree().create_timer(0.2).timeout
@@ -760,29 +766,33 @@ func _start_selection_phase() -> void:
 func _generate_symbol_choices(probabilities: Dictionary) -> Array:
 	var choices: Array = []
 	var symbol_data = SymbolData
-	
-	# Get all symbols grouped by rarity
+
+	# Get all symbols grouped by rarity (excluding AGI if level < 10)
 	var symbols_by_rarity = {}
 	for symbol_id in symbol_data.symbols.keys():
 		var symbol = symbol_data.get_symbol_by_id(symbol_id)
 		if symbol:
+			# Exclude AGI (ID 28) if player level is below 10
+			if symbol.id == 28 and game_state_manager.player_level < 10:
+				continue
+
 			var rarity = symbol.rarity
 			if not symbols_by_rarity.has(rarity):
 				symbols_by_rarity[rarity] = []
 			symbols_by_rarity[rarity].append(symbol.id)
-	
+
 	# Generate 3 choices based on probabilities
 	for i in range(3):
 		var random_value = randi() % 100
 		var selected_rarity = 1
-		
+
 		var cumulative = 0
 		for rarity in probabilities.keys():
 			cumulative += probabilities[rarity]
 			if random_value < cumulative:
 				selected_rarity = rarity
 				break
-		
+
 		# Pick random symbol of selected rarity
 		if symbols_by_rarity.has(selected_rarity):
 			var available_symbols = symbols_by_rarity[selected_rarity]
@@ -790,7 +800,7 @@ func _generate_symbol_choices(probabilities: Dictionary) -> Array:
 			choices.append(choice)
 		else:
 			choices.append(1)  # Fallback to Wheat
-	
+
 	return choices
 
 func _on_symbol_choice_made(symbol_id: int) -> void:
@@ -838,8 +848,28 @@ func _on_game_over() -> void:
 	current_phase = GamePhase.GAME_OVER
 	ui_manager.show_game_over_ui()
 	ui_manager.hide_selection_ui()
-	
+
 	print("GameController: Game Over!")
+
+func _check_agi_victory() -> bool:
+	# Check if AGI symbol (ID 28) is on the board
+	var board_state = game_state_manager.get_board_state()
+	var board_grid = board_state["board_grid"]
+
+	for x in range(game_state_manager.BOARD_WIDTH):
+		for y in range(game_state_manager.BOARD_HEIGHT):
+			var symbol_instance = board_grid[x][y]
+			if symbol_instance != null:
+				if symbol_instance.type_id == 28:  # AGI symbol
+					return true
+	return false
+
+func _on_victory() -> void:
+	current_phase = GamePhase.VICTORY
+	ui_manager.show_victory_ui()
+	ui_manager.hide_selection_ui()
+
+	print("GameController: VICTORY! AGI has been achieved!")
 
 func _on_symbol_added_to_player(symbol_id: int) -> void:
 	game_state_manager.add_symbol_to_player(symbol_id)

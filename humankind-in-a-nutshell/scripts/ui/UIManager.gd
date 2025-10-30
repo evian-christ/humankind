@@ -112,6 +112,10 @@ func show_game_over_ui() -> void:
 	set_spin_button_text("Game Over")
 	set_spin_button_enabled(false)
 
+func show_victory_ui() -> void:
+	set_spin_button_text("VICTORY!")
+	set_spin_button_enabled(false)
+
 func reset_ui_for_new_game() -> void:
 	set_spin_button_text("Spin")
 	set_spin_button_enabled(true)

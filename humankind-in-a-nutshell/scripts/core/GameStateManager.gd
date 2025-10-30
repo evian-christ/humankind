@@ -73,9 +73,9 @@ func _set_current_turn(new_value: int) -> void:
 func initialize_new_game() -> void:
 	food_amount = 200
 	gold_amount = 0
-	player_level = 1
+	player_level = 10  # TEST MODE: Start at level 10 for AGI testing
 	current_exp = 0
-	exp_to_next_level = 50
+	exp_to_next_level = get_exp_requirement(10)
 	current_turn = 0
 	player_symbols.clear()
 	_initialize_board_grid()
