@@ -5,7 +5,9 @@
       "Bash(move symbol_3_fish.tres 003_fish.tres)",
       "Bash(mv:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
