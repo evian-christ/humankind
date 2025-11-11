@@ -27,6 +27,18 @@ const BOARD_WIDTH = 5
 const BOARD_HEIGHT = 4
 var board_grid: Array = []
 
+# Default starting deck (low-era economy symbols)
+const DEFAULT_STARTING_SYMBOLS: Array = [
+	1,  # Wheat
+	2,  # Rice
+	3,  # Fish
+	4,  # Fishing Boat
+	5,  # Banana
+	6,  # Sugar
+	11, # Cow
+	12  # Sheep
+]
+
 # Component references
 var symbol_data: SymbolData
 var effects_processor
@@ -73,35 +85,15 @@ func _set_current_turn(new_value: int) -> void:
 func initialize_new_game() -> void:
 	food_amount = 200
 	gold_amount = 0
-	player_level = 10  # TEST MODE: Start at level 10 for AGI testing
+	player_level = 1
 	current_exp = 0
-	exp_to_next_level = get_exp_requirement(10)
+	exp_to_next_level = get_exp_requirement(player_level)
 	current_turn = 0
 	player_symbols.clear()
 	_initialize_board_grid()
 
-	# Add initial symbols - TEST MODE: Revolution testing (sprites 001-026 only)
-	add_symbol_to_player(10)  # Revolution
-	add_symbol_to_player(1)   # Wheat
-	add_symbol_to_player(2)   # Rice
-	add_symbol_to_player(3)   # Fish
-	add_symbol_to_player(4)   # Fishing Boat
-	add_symbol_to_player(5)   # Banana
-	add_symbol_to_player(6)   # Sugar
-	add_symbol_to_player(7)   # Mine
-	add_symbol_to_player(8)   # Coal
-	add_symbol_to_player(9)   # Industrial Revolution
-	add_symbol_to_player(11)  # Cow
-	add_symbol_to_player(12)  # Sheep
-	add_symbol_to_player(13)  # Library
-	add_symbol_to_player(14)  # Ritual
-	add_symbol_to_player(15)  # Protestantism
-	add_symbol_to_player(16)  # Buddhism
-	add_symbol_to_player(17)  # Hinduism
-	add_symbol_to_player(18)  # Islam
-	add_symbol_to_player(19)  # Temple
-	add_symbol_to_player(20)  # Sail
-	add_symbol_to_player(21)  # Compass
+	for symbol_id in DEFAULT_STARTING_SYMBOLS:
+		add_symbol_to_player(symbol_id)
 
 	print("GameStateManager: New game initialized")
 
@@ -165,25 +157,6 @@ func place_symbols_on_board() -> void:
 	clear_board()
 
 	var symbols_to_place = get_symbols_for_board()
-
-	# TEST MODE: Fixed placement for combat testing
-	if symbols_to_place.size() == 2:
-		# Place Barbarian at (0, 0) and Warrior at (1, 0) - adjacent horizontally
-		var barbarian_instance = null
-		var warrior_instance = null
-
-		for symbol in symbols_to_place:
-			var symbol_def = symbol_data.get_symbol_by_id(symbol.type_id)
-			if symbol_def.id == 22:  # Barbarian
-				barbarian_instance = symbol
-			elif symbol_def.id == 23:  # Warrior
-				warrior_instance = symbol
-
-		if barbarian_instance and warrior_instance:
-			board_grid[0][0] = barbarian_instance
-			board_grid[1][0] = warrior_instance
-			print("GameStateManager: TEST MODE - Fixed placement: Barbarian at (0,0), Warrior at (1,0)")
-			return
 
 	# Normal random placement
 	var available_slots = []
@@ -271,28 +244,9 @@ func add_exp(amount: int) -> void:
 func get_exp_requirement(level: int) -> int:
 	return 50 + (level - 1) * 25  # 50, 75, 100, 125, 150...
 
-# Enemy invasion system
-func spawn_enemy_symbols() -> void:
-	# Chance increases with level: 20% + 5% per level
-	var spawn_chance = 20 + (player_level * 5)
-
-	# Spawn 1-2 enemies based on luck
-	var spawn_count = 1
-	if randi() % 100 < 30:  # 30% chance for 2 enemies
-		spawn_count = 2
-
-	for i in range(spawn_count):
-		if randi() % 100 < spawn_chance:
-			# For now only Barbarian (ID 22) exists
-			add_symbol_to_player(22)
-			print("GameStateManager: Barbarian invaded! HP: ", player_symbols[-1].enemy_hp)
-
 # Turn processing
 func process_turn() -> bool:
 	current_turn += 1
-
-	# TEST MODE: Skip enemy spawning during testing
-	# spawn_enemy_symbols()
 
 	# Process game mechanics - only place symbols, effects will be processed by GameController
 	place_symbols_on_board()

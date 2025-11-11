@@ -86,7 +86,7 @@ func _start_new_game() -> void:
 	ui_manager.update_exp_display(stats["exp"], stats["exp_to_next"])
 
 	current_phase = GamePhase.IDLE
-	print("GameController: New game started with TEST combat symbols")
+	print("GameController: New game started")
 
 # Main game flow
 func _on_spin_button_pressed() -> void:
@@ -660,7 +660,7 @@ func _process_destroyed_revolution() -> void:
 		var pos = revolution_data["position"]
 		var symbol_instance = revolution_data["instance"]
 
-		# Count and collect all nearby symbols to destroy (재수집)
+		# Count and collect all nearby symbols that need to be destroyed
 		var destroyed_symbols_positions = []
 		var nearby_coords = _get_nearby_coordinates(pos.x, pos.y)
 
