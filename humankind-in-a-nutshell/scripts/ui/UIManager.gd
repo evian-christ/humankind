@@ -6,13 +6,18 @@ extends Node
 signal spin_button_pressed
 
 # UI component references
-var stat_bar: Panel
+var top_bar: Panel
+var bottom_bar: Panel
+var turn_era_label: Label
 var food_label: Label
+var next_requirement_label: Label
+var turns_remaining_label: Label
 var gold_label: Label
 var level_label: Label
 var exp_bar: ProgressBar
 var exp_label: Label
 var spin_button: Button
+var spin_status_label: Label
 
 # Selection UI components
 var selection_ui: Control
@@ -33,15 +38,24 @@ func setup(ui_parent: Control) -> void:
 	print("UIManager: Setup complete")
 
 func _find_ui_components(ui_parent: Control) -> void:
-	stat_bar = ui_parent.get_node("StatBar")
-	var stat_container = stat_bar.get_node("StatContainer")
+	top_bar = ui_parent.get_node("TopBar")
+	var top_content: HBoxContainer = top_bar.get_node("TopContent")
+	turn_era_label = top_content.get_node("TurnEraLabel")
+	next_requirement_label = top_content.get_node("NextRequirementLabel")
+	turns_remaining_label = top_content.get_node("TurnsRemainingLabel")
 	
-	food_label = stat_container.get_node("FoodLabel")
-	gold_label = stat_container.get_node("GoldLabel")
-	level_label = stat_container.get_node("LevelLabel")
-	exp_bar = stat_container.get_node("ExpBar")
-	exp_label = stat_container.get_node("ExpLabel")
-	spin_button = stat_container.get_node("SpinButton")
+	bottom_bar = ui_parent.get_node("BottomBar")
+	var bottom_content: HBoxContainer = bottom_bar.get_node("BottomContent")
+	var stats_section: HBoxContainer = bottom_content.get_node("StatsSection")
+	food_label = stats_section.get_node("FoodLabel")
+	gold_label = stats_section.get_node("GoldLabel")
+	var level_container: HBoxContainer = stats_section.get_node("LevelInfoContainer")
+	level_label = level_container.get_node("LevelLabel")
+	exp_bar = level_container.get_node("ExpBar")
+	exp_label = level_container.get_node("ExpLabel")
+	var spin_section: VBoxContainer = bottom_content.get_node("SpinSection")
+	spin_button = spin_section.get_node("SpinButton")
+	spin_status_label = spin_section.get_node("SpinStatusLabel")
 
 func _setup_ui_connections() -> void:
 	spin_button.pressed.connect(_on_spin_button_pressed)
@@ -67,10 +81,10 @@ func _on_symbol_choice_made(symbol_id: int) -> void:
 
 # Stat display updates
 func update_food_display(food_amount: int) -> void:
-	food_label.text = str(food_amount)
+	food_label.text = "Food: " + str(food_amount)
 
 func update_gold_display(gold_amount: int) -> void:
-	gold_label.text = str(gold_amount)
+	gold_label.text = "Gold: " + str(gold_amount)
 
 func update_level_display(level: int) -> void:
 	level_label.text = "LV. " + str(level)
@@ -79,6 +93,18 @@ func update_exp_display(current_exp: int, exp_to_next: int) -> void:
 	exp_bar.value = current_exp
 	exp_bar.max_value = exp_to_next
 	exp_label.text = str(current_exp) + "/" + str(exp_to_next)
+
+func update_turn_and_era(turn_number: int, era_name: String) -> void:
+	if turn_era_label:
+		turn_era_label.text = "Turn " + str(turn_number) + " / " + era_name
+
+func update_next_requirement(required_food: int) -> void:
+	if next_requirement_label:
+		next_requirement_label.text = "Next Requirement: " + str(required_food)
+
+func update_turns_until_payment(turns_remaining: int) -> void:
+	if turns_remaining_label:
+		turns_remaining_label.text = str(turns_remaining) + " Turns Until Payment"
 
 # Button state management
 func set_spin_button_enabled(enabled: bool) -> void:

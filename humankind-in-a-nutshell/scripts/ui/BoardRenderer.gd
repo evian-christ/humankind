@@ -6,7 +6,7 @@ extends Node
 const SLOT_SIZE = Vector2(120, 120)
 const SLOT_GAP_HORIZONTAL = 12
 const SLOT_GAP_VERTICAL = 0
-const BORDER_OFFSET = 20  # 배경 이미지 테두리 두께
+const BORDER_OFFSET = 20  # Background border thickness
 
 var grid_container: GridContainer
 var background_sprite: Sprite2D
@@ -33,6 +33,7 @@ func _create_background_sprite(parent: Control) -> void:
 	# Load the background image
 	var texture = load("res://assets/sprites/slot_bg.png")
 	background_sprite.texture = texture
+	background_sprite.visible = true
 
 	print("=== BACKGROUND DEBUG ===")
 	print("Texture size: ", texture.get_size())

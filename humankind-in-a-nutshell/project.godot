@@ -15,13 +15,13 @@ run/main_scene="res://scenes/main/gameboard.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
 
-[gui]
-
-theme/custom="res://assets/default_theme.tres"
-
 [autoload]
 
 SymbolData="*res://scripts/core/SymbolData.gd"
+
+[gui]
+
+theme/custom="res://assets/default_theme.tres"
 
 [rendering]
 
