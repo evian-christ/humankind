@@ -1,0 +1,54 @@
+.resource-display {
+    background-color: #2a2a2a;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    display: flex;
+    gap: 32px;
+    align-items: center;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.resource-icon {
+    font-size: 24px;
+}
+
+.resource-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.resource-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.resource-value {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.resource-value.food {
+    color: #fbbf24;
+}
+
+.resource-value.gold {
+    color: #fbbf24;
+}
+
+.resource-value.exp {
+    color: #60a5fa;
+}
+
+.resource-value.level {
+    color: #a78bfa;
+}
+
+.resource-value.turn {
+    color: #34d399;
+}
