@@ -68,6 +68,7 @@ func _setup_signal_connections() -> void:
 	
 	# Selection signals  
 	ui_manager.selection_manager.symbol_selected.connect(_on_symbol_choice_made)
+	ui_manager.selection_manager.reroll_requested.connect(_on_reroll_requested)
 	
 	# Effects processor signals
 	effects_processor.symbol_added_to_player.connect(_on_symbol_added_to_player)
@@ -761,7 +762,33 @@ func _start_selection_phase() -> void:
 	var ui_parent = get_parent().get_parent().get_node("UI")
 	ui_manager.show_selection_ui(choices, ui_parent)
 	
+	# Update reroll button state
+	ui_manager.selection_manager.update_reroll_button(game_state_manager.gold_amount)
+	
 	print("GameController: Selection phase started")
+
+func _on_reroll_requested() -> void:
+	var reroll_cost = ui_manager.selection_manager.reroll_cost
+	if game_state_manager.gold_amount >= reroll_cost:
+		# Deduct gold
+		game_state_manager.gold_amount -= reroll_cost
+		ui_manager.update_gold_display(game_state_manager.gold_amount)
+		
+		# Generate new choices
+		var probabilities = game_state_manager.get_symbol_probabilities()
+		var choices = _generate_symbol_choices(probabilities)
+		
+		# Update UI with new choices
+		# We need to tell the manager to rebuild the cards
+		ui_manager.selection_manager.current_symbol_choices = choices
+		ui_manager.selection_manager.start_selection_phase()
+		
+		# Update reroll button again (it might be disabled now if gold is too low)
+		ui_manager.selection_manager.update_reroll_button(game_state_manager.gold_amount)
+		
+		print("GameController: Reroll performed, cost: ", reroll_cost)
+	else:
+		print("GameController: Not enough gold for reroll")
 
 func _generate_symbol_choices(probabilities: Dictionary) -> Array:
 	var choices: Array = []

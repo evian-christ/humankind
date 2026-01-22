@@ -2,6 +2,7 @@ class_name SymbolSelectionManager
 extends Node
 
 signal symbol_selected(symbol_id: int)
+signal reroll_requested()
 
 var symbol_data: SymbolData
 var gameboard_ref: Node
@@ -9,11 +10,13 @@ var gameboard_ref: Node
 # Selection state
 var is_selection_phase: bool = false
 var current_symbol_choices: Array = []
+var reroll_cost: int = 5
 
 # UI components
 var selection_overlay: Control
 var card_container: HBoxContainer
 var choice_cards: Array = []
+var reroll_button: Button
 
 func _init(symbol_data_ref: SymbolData):
 	symbol_data = symbol_data_ref
@@ -41,9 +44,14 @@ func create_selection_ui(parent: Control):
 	var center_container = CenterContainer.new()
 	center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
-	# Main VBox to hold skip button and cards
+	# Main VBox to hold skip button, cards, and reroll
 	var main_vbox = VBoxContainer.new()
 	main_vbox.add_theme_constant_override("separation", 20)
+
+	# Buttons container (Skip & Reroll)
+	var buttons_hbox = HBoxContainer.new()
+	buttons_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons_hbox.add_theme_constant_override("separation", 50)
 
 	# Skip button (DEBUG)
 	var skip_button = Button.new()
@@ -51,14 +59,20 @@ func create_selection_ui(parent: Control):
 	skip_button.custom_minimum_size = Vector2(200, 40)
 	skip_button.pressed.connect(_on_skip_button_pressed)
 
-	var skip_button_container = CenterContainer.new()
-	skip_button_container.add_child(skip_button)
+	# Reroll button
+	reroll_button = Button.new()
+	reroll_button.text = "REROLL (" + str(reroll_cost) + " Gold)"
+	reroll_button.custom_minimum_size = Vector2(200, 40)
+	reroll_button.pressed.connect(_on_reroll_button_pressed)
+
+	buttons_hbox.add_child(skip_button)
+	buttons_hbox.add_child(reroll_button)
 
 	# Card container
 	card_container = HBoxContainer.new()
 	card_container.add_theme_constant_override("separation", 30)
 
-	main_vbox.add_child(skip_button_container)
+	main_vbox.add_child(buttons_hbox)
 	main_vbox.add_child(card_container)
 	center_container.add_child(main_vbox)
 	selection_overlay.add_child(center_container)
@@ -66,7 +80,11 @@ func create_selection_ui(parent: Control):
 
 func start_selection_phase() -> void:
 	if is_selection_phase:
-		return
+		# If already in phase, this might be a reroll - clear existing cards
+		for card in choice_cards:
+			if card: card.queue_free()
+		choice_cards.clear()
+		# DON'T clear current_symbol_choices here, as it might have been set externally for reroll
 		
 	is_selection_phase = true
 	# Only clear choices if they haven't been set externally
@@ -82,20 +100,30 @@ func start_selection_phase() -> void:
 	# Force set z_index again to ensure it's applied
 	selection_overlay.z_index = 4096
 	
-	# Generate symbol choices only if not set externally
+	# Generate symbol choices
 	if current_symbol_choices.is_empty():
-		# Select 3 random symbols based on level probabilities
-		var available_symbols = symbol_data.symbols.keys()
-		available_symbols.shuffle()
-		
-		for i in range(3):
-			if i < available_symbols.size():
-				current_symbol_choices.append(available_symbols[i])
-			else:
-				current_symbol_choices.append(1)  # Default to wheat
+		# Use specialized probability logic if GameStateManager is available, 
+		# otherwise fallback to random
+		_generate_random_choices()
 	
 	_create_choice_cards()
 	selection_overlay.visible = true
+
+func _generate_random_choices():
+	current_symbol_choices = []
+	var available_symbols = symbol_data.symbols.keys()
+	available_symbols.shuffle()
+	
+	for i in range(3):
+		if i < available_symbols.size():
+			current_symbol_choices.append(available_symbols[i])
+		else:
+			current_symbol_choices.append(1)  # Default to wheat
+
+func update_reroll_button(player_gold: int):
+	if reroll_button:
+		reroll_button.disabled = player_gold < reroll_cost
+		reroll_button.text = "REROLL (" + str(reroll_cost) + " Gold)"
 
 func _create_choice_cards():
 	# Clear existing cards IMMEDIATELY (not queue_free)
@@ -257,6 +285,9 @@ func _on_symbol_choice_selected(choice_index: int):
 	selection_overlay.visible = false
 	current_symbol_choices.clear()  # Clear choices for next time
 
+func _on_reroll_button_pressed():
+	reroll_requested.emit()
+
 func _on_skip_button_pressed():
 	if not is_selection_phase:
 		return
@@ -269,3 +300,9 @@ func _on_skip_button_pressed():
 	is_selection_phase = false
 	selection_overlay.visible = false
 	current_symbol_choices.clear()
+
+func _on_choice_selected(symbol_id: int):
+	is_selection_phase = false
+	selection_overlay.visible = false
+	current_symbol_choices.clear()
+	symbol_selected.emit(symbol_id)

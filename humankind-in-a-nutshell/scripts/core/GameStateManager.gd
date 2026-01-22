@@ -84,7 +84,7 @@ func _set_current_turn(new_value: int) -> void:
 # Game initialization
 func initialize_new_game() -> void:
 	food_amount = 200
-	gold_amount = 0
+	gold_amount = 100
 	player_level = 1
 	current_exp = 0
 	exp_to_next_level = get_exp_requirement(player_level)
