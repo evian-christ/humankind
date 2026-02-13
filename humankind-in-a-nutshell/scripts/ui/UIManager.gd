@@ -19,6 +19,12 @@ var exp_label: Label
 var spin_button: Button
 var spin_status_label: Label
 
+# Relic Panel Toggle
+var relic_panel: Control
+var scroll_handle: TextureButton
+var relic_panel_original_x: float
+var is_relic_panel_visible: bool = true
+
 # Selection UI components
 var selection_ui: Control
 var selection_manager: SymbolSelectionManager
@@ -56,9 +62,29 @@ func _find_ui_components(ui_parent: Control) -> void:
 	var spin_section: VBoxContainer = bottom_content.get_node("SpinSection")
 	spin_button = spin_section.get_node("SpinButton")
 	spin_status_label = spin_section.get_node("SpinStatusLabel")
+	
+	relic_panel = ui_parent.get_node("RelicPanel")
+	scroll_handle = relic_panel.get_node("ScrollHandle")
+	relic_panel_original_x = relic_panel.position.x
 
 func _setup_ui_connections() -> void:
 	spin_button.pressed.connect(_on_spin_button_pressed)
+	scroll_handle.pressed.connect(_on_scroll_handle_pressed)
+
+func _on_scroll_handle_pressed() -> void:
+	var tween = create_tween()
+	var target_x: float
+	
+	if is_relic_panel_visible:
+		# Hide to the left (Width of panel is 284, leave 60px for handle area)
+		target_x = relic_panel_original_x - 224
+		is_relic_panel_visible = false
+	else:
+		# Show again
+		target_x = relic_panel_original_x
+		is_relic_panel_visible = true
+		
+	tween.tween_property(relic_panel, "position:x", target_x, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func _create_debug_ui(ui_parent: Control) -> void:
 	# Create debug phase label on the left side
