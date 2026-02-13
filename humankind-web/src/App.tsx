@@ -1,239 +1,99 @@
-import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT } from './game/state/gameStore';
-import { getRarityColor, getRarityName } from './game/symbols/symbolDefinitions';
+import { useGameStore } from './game/state/gameStore';
+import { getSymbolColorHex } from './game/data/symbolDefinitions';
+import GameCanvas from './components/GameCanvas';
 
 function App() {
-  const {
-    food, gold, exp, level, turn,
-    board, playerSymbols,
-    spinBoard, initializeGame
-  } = useGameStore();
-
-  const handleSpin = () => {
-    spinBoard();
-    useGameStore.getState().incrementTurn();
-  };
-
-  const handleReset = () => {
-    initializeGame();
-  };
-
-  // Symbol emoji mapping
-  const getSymbolEmoji = (name: string): string => {
-    const emojiMap: Record<string, string> = {
-      'Wheat': '🌾',
-      'Rice': '🍚',
-      'Fish': '🐟',
-      'Cow': '🐄',
-      'Sheep': '🐑',
-    };
-    return emojiMap[name] || '📦';
-  };
+  const { food, gold, exp, level, turn, playerSymbols, spinBoard, initializeGame, isProcessing } = useGameStore();
+  const expToNext = 50 + (level - 1) * 25;
+  const expPercent = Math.min((exp / expToNext) * 100, 100);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(to bottom right, #1a1a1a, #2a2a2a)',
-      padding: '20px',
-      color: 'white',
-      fontFamily: 'system-ui, sans-serif'
-    }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '20px', fontSize: '28px' }}>
-        🎮 Humankind - Phase 2 Complete
-      </h1>
+    <>
+      {/* ===== GAME TITLE ===== */}
+      <div className="game-title">HUMANKIND</div>
 
-      {/* Resource Display */}
-      <div style={{
-        background: '#2a2a2a',
-        padding: '20px',
-        borderRadius: '12px',
-        marginBottom: '20px',
-        display: 'flex',
-        gap: '30px',
-        justifyContent: 'center',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px' }}>🍞</div>
-          <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>Food</div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24' }}>{food}</div>
+      {/* ===== TURN COUNTER ===== */}
+      <div className="turn-counter">TURN {turn}</div>
+
+      {/* ===== TOP HUD BAR ===== */}
+      <div className="hud-top">
+        <div className="resource-group">
+          <span className="resource-icon">🍎</span>
+          <div>
+            <div className="resource-value" style={{ color: food >= 0 ? '#6ee77a' : '#e74c4c' }}>{food}</div>
+            <div className="resource-label">Food</div>
+          </div>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px' }}>💰</div>
-          <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>Gold</div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#fbbf24' }}>{gold}</div>
+
+        <div className="resource-group">
+          <span className="resource-icon">💰</span>
+          <div>
+            <div className="resource-value" style={{ color: '#f0d060' }}>{gold}</div>
+            <div className="resource-label">Gold</div>
+          </div>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px' }}>⭐</div>
-          <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>EXP</div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#60a5fa' }}>{exp}</div>
+
+        <div className="resource-group level-badge">
+          <span className="resource-icon">⚔️</span>
+          <div>
+            <div className="level-num">{level}</div>
+            <div className="resource-label">Level</div>
+          </div>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px' }}>📊</div>
-          <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>Level</div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#a78bfa' }}>{level}</div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px' }}>🔄</div>
-          <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>Turn</div>
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#34d399' }}>{turn}</div>
+
+        <div className="resource-group">
+          <span className="resource-icon">⭐</span>
+          <div>
+            <div className="resource-value" style={{ color: '#a78bfa' }}>{exp}<span style={{ fontSize: 11, opacity: 0.4 }}>/{expToNext}</span></div>
+            <div className="resource-label">EXP</div>
+          </div>
         </div>
       </div>
 
-      {/* Game Board */}
-      <div style={{
-        background: '#1a1a1a',
-        borderRadius: '12px',
-        padding: '20px',
-        marginBottom: '20px',
-        border: '2px solid #374151'
-      }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '15px', fontSize: '18px' }}>
-          Game Board (5×4)
-        </h2>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`,
-          gap: '10px',
-          maxWidth: '600px',
-          margin: '0 auto'
-        }}>
-          {Array.from({ length: BOARD_WIDTH }).map((_, x) => (
-            Array.from({ length: BOARD_HEIGHT }).map((_, y) => {
-              const symbol = board[x][y];
-              return (
-                <div
-                  key={`${x}-${y}`}
-                  style={{
-                    background: symbol ? '#2a2a2a' : '#1a1a1a',
-                    border: `2px solid ${symbol ? getRarityColor(symbol.definition.rarity) : '#444'}`,
-                    borderRadius: '8px',
-                    padding: '10px',
-                    minHeight: '80px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center'
-                  }}
-                >
-                  {symbol ? (
-                    <>
-                      <div style={{ fontSize: '24px', marginBottom: '5px' }}>
-                        {getSymbolEmoji(symbol.definition.name)}
-                      </div>
-                      <div style={{
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        color: getRarityColor(symbol.definition.rarity)
-                      }}>
-                        {symbol.definition.name}
-                      </div>
-                      <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
-                        {getRarityName(symbol.definition.rarity)}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: '24px', opacity: 0.3 }}>⬜</div>
-                  )}
-                </div>
-              );
-            })
-          ))}
-        </div>
+      {/* ===== EXP BAR ===== */}
+      <div className="exp-bar-container">
+        <div className="exp-bar-fill" style={{ width: `${expPercent}%` }} />
       </div>
 
-      {/* Player Symbols Collection */}
-      <div style={{
-        background: '#2a2a2a',
-        borderRadius: '12px',
-        padding: '15px',
-        marginBottom: '20px'
-      }}>
-        <h3 style={{ fontSize: '16px', marginBottom: '10px' }}>
-          Your Symbols ({playerSymbols.length})
-        </h3>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {playerSymbols.map((symbol, idx) => (
+      {/* ===== GAME BOARD ===== */}
+      <div className="game-area">
+        <GameCanvas />
+      </div>
+
+      {/* ===== BOTTOM PANEL ===== */}
+      <div className="bottom-panel">
+        {/* Symbol Collection */}
+        <div className="collection-strip">
+          {playerSymbols.map((s, idx) => (
             <div
               key={idx}
-              style={{
-                background: '#1a1a1a',
-                border: `2px solid ${getRarityColor(symbol.rarity)}`,
-                borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: '12px',
-                color: getRarityColor(symbol.rarity)
-              }}
+              className="collection-item"
+              style={{ borderColor: `${getSymbolColorHex(s.rarity)}33` }}
             >
-              {getSymbolEmoji(symbol.name)} {symbol.name}
+              <img src={`/assets/sprites/${s.sprite}`} alt={s.name} />
+              <div className="tooltip" style={{ color: getSymbolColorHex(s.rarity) }}>
+                {s.name}
+              </div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Controls */}
-      <div style={{ textAlign: 'center', display: 'flex', gap: '15px', justifyContent: 'center' }}>
-        <button
-          onClick={handleSpin}
-          style={{
-            padding: '16px 48px',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            background: 'linear-gradient(to right, #2563eb, #7c3aed)',
-            border: 'none',
-            borderRadius: '12px',
-            color: 'white',
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-            transition: 'transform 0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          🎰 SPIN
-        </button>
-
-        <button
-          onClick={handleReset}
-          style={{
-            padding: '16px 32px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            background: '#dc2626',
-            border: 'none',
-            borderRadius: '12px',
-            color: 'white',
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-            transition: 'transform 0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          🔄 Reset
-        </button>
-      </div>
-
-      {/* Test Results */}
-      <div style={{
-        marginTop: '20px',
-        padding: '15px',
-        background: '#111',
-        borderRadius: '8px',
-        fontSize: '12px',
-        color: '#666'
-      }}>
-        <div style={{ color: '#22c55e', marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
-          ✅ Phase 2 Complete - Test Results
+        {/* Spin Area */}
+        <div className="spin-area">
+          <button
+            className="spin-btn"
+            onClick={spinBoard}
+            disabled={isProcessing}
+          >
+            <span className="spin-icon">⚡</span>
+            {isProcessing ? '...' : 'SPIN'}
+          </button>
+          <button className="reset-btn" onClick={initializeGame}>
+            RESTART
+          </button>
         </div>
-        <div>✅ Zustand Store: Working</div>
-        <div>✅ Symbol Data: 37 symbols loaded</div>
-        <div>✅ Board State: 5×4 grid ({BOARD_WIDTH}×{BOARD_HEIGHT})</div>
-        <div>✅ Player Collection: {playerSymbols.length} starting symbols</div>
-        <div>✅ Spin Mechanism: Shuffle and place symbols</div>
-        <div>✅ Reset Function: Reinitialize game state</div>
       </div>
-    </div>
+    </>
   );
 }
 
