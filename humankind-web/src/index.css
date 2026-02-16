@@ -31,6 +31,18 @@ body {
   cursor: default;
 }
 
+/* Fixed resolution for Steam game development */
+#root {
+  width: 1920px;
+  height: 1080px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1a1a1a;
+  border: 2px solid #ff0000;
+}
+
 /* ===== GAME HUD TOP BAR ===== */
 .hud-top {
   position: fixed;
@@ -107,10 +119,10 @@ body {
 /* ===== GAME BOARD AREA ===== */
 .game-area {
   position: fixed;
-  top: 56px;
+  top: 0;
   left: 0;
   right: 0;
-  bottom: 140px;
+  bottom: 0;
 }
 
 /* ===== BOTTOM PANEL ===== */
@@ -120,12 +132,10 @@ body {
   left: 0;
   right: 0;
   height: 140px;
-  background: var(--panel-bg);
-  border-top: 1px solid var(--hud-border);
+  background: url('/assets/ui/stonearea_1920x140.png') no-repeat center / 1920px 140px;
   display: flex;
   align-items: center;
   z-index: 100;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== COLLECTION STRIP ===== */
@@ -200,7 +210,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 0 24px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  margin-left: auto;
 }
 
 .spin-btn {
@@ -278,4 +288,247 @@ body {
   font-size: 22px;
   font-weight: 900;
   color: #ffffff;
+}
+
+/* ===== SYMBOL SELECTION OVERLAY ===== */
+.selection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+.selection-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.selection-title {
+  font-family: 'MiniPixel', sans-serif;
+  font-size: 48px;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.selection-cards {
+  display: flex;
+  gap: 30px;
+}
+
+.selection-card {
+  width: 400px;
+  height: 773px;
+  background: url('/assets/ui/cards_300x580.png') no-repeat center / 400px 773px;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120px 24px 24px;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'MiniPixel', sans-serif;
+  color: #1a1a1a;
+  image-rendering: pixelated;
+}
+
+.selection-card:hover {
+  transform: translateY(-8px);
+  filter: brightness(1.15);
+}
+
+.selection-card-sprite {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.selection-card-sprite-placeholder {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #888;
+  border: 1px dashed #999;
+  border-radius: 4px;
+  text-align: center;
+  padding: 4px;
+}
+
+.selection-card-name {
+  font-size: 40px;
+  color: #1a1a1a;
+  letter-spacing: 1px;
+}
+
+.selection-card-rarity {
+  font-size: 28px;
+  letter-spacing: 1px;
+}
+
+.selection-card-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.selection-card-desc-line {
+  font-size: 22px;
+  color: #444;
+  line-height: 1.4;
+}
+
+.selection-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.selection-reroll-btn,
+.selection-skip-btn {
+  font-family: 'MiniPixel', sans-serif;
+  font-size: 24px;
+  padding: 10px 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 1px;
+}
+
+.selection-reroll-btn {
+  background: rgba(251, 191, 36, 0.2);
+  border: 2px solid #fbbf24;
+  color: #fbbf24;
+}
+
+.selection-reroll-btn:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.35);
+}
+
+.selection-reroll-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.selection-skip-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #555;
+  color: #888;
+}
+
+.selection-skip-btn:hover {
+  border-color: #888;
+  color: #bbb;
+}
+
+/* ===== ENDGAME OVERLAY (Game Over / Victory) ===== */
+.endgame-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 600;
+}
+
+.endgame-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.endgame-title {
+  font-family: 'MiniPixel', sans-serif;
+  font-size: 80px;
+  letter-spacing: 4px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.endgame-defeat {
+  color: #ef4444;
+}
+
+.endgame-victory {
+  color: #eab308;
+}
+
+.endgame-subtitle {
+  font-family: 'MiniPixel', sans-serif;
+  font-size: 32px;
+  color: #aaa;
+  letter-spacing: 1px;
+}
+
+.endgame-btn {
+  font-family: 'MiniPixel', sans-serif;
+  font-size: 32px;
+  padding: 14px 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid #666;
+  color: #eee;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 2px;
+}
+
+.endgame-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #aaa;
+}
+
+/* ===== SYMBOL HOVER TOOLTIP ===== */
+.symbol-tooltip {
+  position: absolute;
+  width: 280px;
+  background: rgba(15, 15, 15, 0.95);
+  border: 2px solid #555;
+  padding: 14px 16px;
+  pointer-events: none;
+  z-index: 300;
+  font-family: 'MiniPixel', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.symbol-tooltip-name {
+  font-size: 28px;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.symbol-tooltip-rarity {
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+
+.symbol-tooltip-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.symbol-tooltip-desc-line {
+  font-size: 18px;
+  color: #cccccc;
+  line-height: 1.4;
 }
