@@ -35,7 +35,7 @@ export const processSingleSymbolEffects = (
     y: number
 ): EffectResult => {
     const definition = symbolInstance.definition;
-    let food = definition.passive_food;
+    let food = 0;
     let exp = 0;
     let gold = 0;
 
@@ -58,6 +58,7 @@ export const processSingleSymbolEffects = (
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 5) {
                 symbolInstance.is_marked_for_destruction = true;
+                food += 10;
             }
             break;
         case 4: { // Fishing Boat
@@ -70,11 +71,11 @@ export const processSingleSymbolEffects = (
             break;
         }
         case 5: // Banana
-            if (symbolInstance.effect_counter < 10) {
-                symbolInstance.effect_counter++;
-                food += (1 - definition.passive_food);
+            symbolInstance.effect_counter++;
+            if (symbolInstance.effect_counter >= 10) {
+                food += 2;
             } else {
-                food += (2 - definition.passive_food);
+                food += 1;
             }
             break;
         case 6: { // Sugar
@@ -86,7 +87,14 @@ export const processSingleSymbolEffects = (
             food += sugarCount;
             break;
         }
+        case 7: // Mine
+            food += 1;
+            break;
+        case 8: // Coal
+            food += 1;
+            break;
         case 11: { // Cow
+            food += 1; // base passive
             let hasCow = false;
             getNearbyCoordinates(x, y).forEach(pos => {
                 const target = boardGrid[pos.x][pos.y];
@@ -96,6 +104,7 @@ export const processSingleSymbolEffects = (
             break;
         }
         case 12: // Sheep
+            food += 1; // base passive
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 10) {
                 gold += 1;
@@ -111,45 +120,58 @@ export const processSingleSymbolEffects = (
                 exp += 3;
             }
             break;
-        case 15: // Protestantism
+        case 15: { // Protestantism
+            let nearReligion15 = 0;
+            getNearbyCoordinates(x, y).forEach(pos => {
+                const target = boardGrid[pos.x][pos.y];
+                if (target && isReligionSymbol(target.definition.id)) nearReligion15++;
+            });
+            if (nearReligion15 > 0) food -= 50 * nearReligion15;
+            let nearSymbols = 0;
+            getNearbyCoordinates(x, y).forEach(pos => {
+                if (boardGrid[pos.x][pos.y]) nearSymbols++;
+            });
+            food += nearSymbols * 2;
+            exp += 1;
+            break;
+        }
         case 16: // Buddhism
         case 17: // Hinduism
         case 18: { // Islam
+            if (definition.id === 17) food += 5; // Hinduism base passive
             let nearReligion = 0;
             getNearbyCoordinates(x, y).forEach(pos => {
                 const target = boardGrid[pos.x][pos.y];
                 if (target && isReligionSymbol(target.definition.id)) nearReligion++;
             });
             if (nearReligion > 0) food -= 50 * nearReligion;
-
-            if (definition.id === 15) {
-                let nearSymbols = 0;
-                getNearbyCoordinates(x, y).forEach(pos => {
-                    if (boardGrid[pos.x][pos.y]) nearSymbols++;
-                });
-                food += nearSymbols * 2;
-                exp += 1;
-            }
+            if (definition.id === 17) exp += 1;  // Hinduism EXP
+            if (definition.id === 18) exp += 2;  // Islam EXP
             break;
         }
+        case 19: // Temple
+            food += 1; // base passive
+            break;
         case 29: // Campfire
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter % 5 === 0) food += 5;
             break;
-
+        case 31: // City
+            food += 5;
+            break;
         case 32: // Wine
+            food += 5;
             symbolInstance.effect_counter++;
             exp -= 1;
             if (symbolInstance.effect_counter >= 3) symbolInstance.is_marked_for_destruction = true;
             break;
-
         case 33: // Taxation
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter <= 3) gold += 2;
             if (symbolInstance.effect_counter >= 3) symbolInstance.is_marked_for_destruction = true;
             break;
-
         case 34: { // Merchant
+            food -= 3; // cost
             let nearbyCount = 0;
             getNearbyCoordinates(x, y).forEach(pos => {
                 if (boardGrid[pos.x][pos.y]) nearbyCount++;
@@ -157,8 +179,8 @@ export const processSingleSymbolEffects = (
             gold += nearbyCount;
             break;
         }
-
         case 35: { // Guild
+            food -= 5; // cost
             let emptyCount = 0;
             getNearbyCoordinates(x, y).forEach(pos => {
                 if (!boardGrid[pos.x][pos.y]) emptyCount++;
@@ -166,6 +188,12 @@ export const processSingleSymbolEffects = (
             gold += emptyCount * 5;
             break;
         }
+        case 36: // Forest
+            food += 1;
+            break;
+        case 37: // Forest Clearing
+            food += 1;
+            break;
     }
 
     return { food, exp, gold };
