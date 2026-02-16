@@ -7,7 +7,17 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run dev)",
+      "Bash(npm install:*)",
+      "Bash(npx tauri:*)",
+      "Bash(rustc:*)",
+      "Bash(curl:*)",
+      "Bash(sh -s -- -y)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")",
+      "Bash(npm run tauri:build:*)",
+      "Bash(npx @tauri-apps/cli icon:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []
