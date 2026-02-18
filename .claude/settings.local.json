@@ -20,7 +20,12 @@
       "Bash(npx tsc:*)",
       "Bash(git push:*)",
       "Bash(git filter-branch:*)",
-      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)"
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)",
+      "Bash(cmd /c:*)",
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public'' -Recurse | Select-Object FullName\")",
+      "Bash(powershell -Command \"Copy-Item ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\Assets\\\\Symbols\\\\pasture.png'' ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public\\\\assets\\\\sprites\\\\pasture.png''\")",
+      "Bash(powershell -Command \"Copy-Item ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\Assets\\\\Symbols\\\\pasture.png'' ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public\\\\assets\\\\sprites\\\\pasture.png'' -Force; Write-Host ''done''\")",
+      "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public\\\\assets\\\\sprites\\\\pasture.png''\")"
     ],
     "deny": [],
     "ask": []

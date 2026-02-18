@@ -1,51 +1,65 @@
-id,Name,Era,Effect
-1,Wheat,1,"Every spin: +2 Food."
-2,Rice,1,"Every 4 spins: +10 Food."
-3,Cattle,1,"Every spin: +1 Food. +2 Food per adjacent Cattle."
-4,Banana,1,"Every spin: +3 Food. Destroyed after 6 spins."
-5,Fish,1,"Every spin: +1 Food. +3 Food if adjacent to Coast."
-6,Coast,1,"Every spin: +1 Food. +1 Gold per adjacent Coast."
-7,Stone,1,"Every spin: +1 Food, +1 Gold."
-8,Copper,1,"Every spin: +2 Gold. If exactly 3 Copper on the board: all Copper produce ×3."
-9,Granary,1,"Every spin: +2 Food. Adjacent Wheat and Rice produce double."
-10,Monument,1,"Every spin: +2 Knowledge. +1 Food per adjacent symbol."
-11,Warrior,1,"Every spin: +1 Food. Destroys adjacent Barbarian. +8 Food per Barbarian destroyed."
-12,Barbarian,1,"Every spin: -3 Food. Every 12 spins: adds another Barbarian to the board. Cannot be destroyed except by combat symbols."
-13,Scout,1,"Every spin: +1 Food, +1 Knowledge. Every 8 spins: adds a random Era 1 symbol to your collection."
-14,Settler,1,"Every spin: +2 Food. After 12 spins: destroyed and replaced by City."
-15,Palace,1,"Every spin: +3 Food, +1 Gold. +1 Food per City on the board."
-16,Shrine,1,"Every spin: +1 Food, +1 Knowledge. +2 Food if adjacent to any Religion symbol."
-17,Plantation,1,"Every spin: +2 Food. If adjacent to Banana: +4 Food and Banana's destroy timer resets."
-18,Pasture,1,"Every spin: +1 Food. Adjacent Cattle and Horse produce +2 extra Food."
-19,Quarry,1,"Every spin: +1 Food. If adjacent to Stone: +3 Gold. If adjacent to Copper: +2 Gold."
-20,Totem,1,"Every spin: +1 Food per Religion symbol anywhere on the board."
-21,Offering,1,"Every spin: sacrifice 5 Food → +4 Knowledge. If you can't pay: does nothing."
-22,Omen,1,"Every spin: 50% chance +6 Food, 50% chance -2 Food."
-23,Campfire,1,"Every spin: +2 Food. Destroyed after 10 spins. All symbols that were ever adjacent gain permanent +1 Food."
-24,Pottery,1,"Every spin: stores +2 Food internally (shown on counter). On destroy: releases stored Food ×2."
-25,Hunting Ground,1,"Every spin: +2 Food. If adjacent to Forest: +3 Food. Destroys adjacent Deer and gains +6 Food per Deer."
-26,Forest,1,"+1 Food. On destroy: +20 Food."
-27,Deer,1,"Every spin: +2 Food. Every 10 spins: adds another Deer to a random empty slot on the board."
-28,Oasis,1,"Every spin: +3 Food. +2 Food per adjacent empty slot."
-29,Flood Plain,1,"Every spin: +3 Food. 20% chance each spin: adjacent symbols produce double this spin."
-30,Tribal Village,1,"On appear: immediately adds 2 random Era 1 symbols to your collection. Then destroys self."
-31,Horse,2,"Every spin: +2 Food, +1 Gold. If adjacent to Pasture: +4 Food extra."
-32,Iron,2,"Every spin: +2 Food, +2 Gold. If adjacent to Warrior: Warrior is upgraded to Swordsman."
-33,Swordsman,2,"Every spin: +2 Food. Destroys adjacent Barbarian. +12 Food per Barbarian destroyed. Attacks twice."
-34,Galley,2,"Every spin: +2 Gold. +2 Food per adjacent Coast. Every 8 spins: adds a random symbol from any unlocked Era."
-35,Library,2,"Every spin: +3 Knowledge. +2 Knowledge if adjacent to Scroll."
-36,Scroll,2,"Every spin: +2 Knowledge. +1 Knowledge per adjacent symbol that produces Knowledge."
-37,Market,2,"Every spin: +1 Gold per adjacent symbol. Every 5 spins: converts 8 Gold into a random Era 2 symbol added to collection."
-38,Tax Collector,2,"Every spin: +3 Gold. Adjacent symbols produce -1 Food this spin."
-39,Merchant,2,"Every spin: +2 Gold. +1 Gold per unique resource-producing symbol type adjacent (Food, Gold, Knowledge count separately)."
-40,Vineyard,2,"Every spin: +2 Food, +2 Gold. Every 6 spins: produces a Wine symbol on the board. Wine gives +5 Gold then destroys self."
-41,Oracle,2,"Every spin: +2 Knowledge. Reveals the next symbol choices before spinning. Pay 3 Gold to replace one choice."
-42,Colosseum,2,"Every spin: +3 Food. If adjacent to Warrior or Swordsman: +4 Food extra. -2 Food per adjacent empty slot."
-43,Aqueduct,2,"Every spin: +2 Food. Adjacent food-producing symbols produce +2 extra Food."
-44,Forge,2,"Every spin: +2 Food, +1 Gold. If adjacent to Copper or Iron: +4 Gold. If adjacent to Stone: +2 Food."
-45,Great Wall,2,"Every spin: +4 Food, +2 Knowledge. Prevents all symbols in the same row from being destroyed."
-46,Caravan,2,"Every spin: +1 Gold per symbol on the entire board that produces Gold."
-47,Pantheon,2,"Every spin: +2 Food, +2 Knowledge. If you have no Religion symbol on the board: +5 Food extra."
-48,Harbor,2,"Every spin: +2 Gold. Every 6 spins: adds a random symbol from any unlocked Era to your collection."
-49,Siege Tower,2,"Every spin: +2 Food. If adjacent to a symbol that produces 0 or negative Food: destroys it and gives +15 Food."
-50,Arena,2,"Every spin: +2 Food. Whenever any symbol is destroyed this spin: +4 Food, +2 Gold."
+id,Name,Era,Effect,Remark
+1,Wheat,1,Every spin: +2 Food.,
+2,Rice,1,Every 4 spins: +10 Food.,
+3,Cattle,1,Every spin: +1 Food. +2 Food per adjacent Cattle.,
+4,Banana,1,Every spin: +3 Food. Destroyed after 6 spins.,
+5,Fish,1,Every spin: +1 Food. +3 Food if adjacent to Coast.,
+6,Coast,1,Every spin: +1 Food. +1 Gold per adjacent Coast.,
+7,Stone,1,"Every spin: +1 Food, +1 Gold.",
+8,Copper,1,Every spin: +2 Gold. If exactly 3 Copper on the board: all Copper produce ×3.,
+9,Granary,1,Every spin: +2 Food. Adjacent Wheat and Rice produce double.,
+10,Monument,1,Every spin: +2 Knowledge. +1 Food per adjacent symbol.,
+11,Barbarian,1,,
+12,Flood,1,,
+13,,,,
+14,,,,
+15,Palace,1,"Every spin: +3 Food, +1 Gold. +1 Food per City on the board.",
+16,Shrine,1,"Every spin: +1 Food, +1 Knowledge. +2 Food if adjacent to any Religion symbol.",
+17,Plantation,1,Every spin: +2 Food. If adjacent to Banana: +4 Food and Banana's destroy timer resets.,
+18,Pasture,1,Every spin: +1 Food. Adjacent Cattle and Horse produce +2 extra Food.,
+19,Quarry,1,Every spin: +1 Food. If adjacent to Stone: +3 Gold. If adjacent to Copper: +2 Gold.,
+20,Totem,1,Every spin: +1 Food per Religion symbol anywhere on the board.,
+21,Offering,1,Every spin: sacrifice 5 Food → +4 Knowledge. If you can't pay: does nothing.,
+22,Omen,1,"Every spin: 50% chance +6 Food, 50% chance -2 Food.",
+23,Campfire,1,Every spin: +2 Food. Destroyed after 10 spins. All symbols that were ever adjacent gain permanent +1 Food.,
+24,Pottery,1,Every spin: stores +2 Food internally (shown on counter). On destroy: releases stored Food ×2.,
+25,Hunting Ground,1,Every spin: +2 Food. If adjacent to Forest: +3 Food. Destroys adjacent Deer and gains +6 Food per Deer.,
+26,Forest,1,Every spin: +1 Food. On destroy: +20 Food.,
+27,Deer,1,Every spin: +2 Food. Every 10 spins: adds another Deer to a random empty slot on the board.,
+28,Oasis,1,Every spin: +3 Food. +2 Food per adjacent empty slot.,
+29,Flood Plain,1,Every spin: +3 Food. 20% chance each spin: adjacent symbols produce double this spin.,
+30,Tribal Village,1,On appear: immediately adds 2 random Era 1 symbols to your collection. Then destroys self.,
+31,Horse,2,"Every spin: +2 Food, +1 Gold. If adjacent to Pasture: +4 Food extra.",
+32,Iron,2,"Every spin: +2 Food, +2 Gold.",
+33,,,,
+34,Galley,2,Every spin: +2 Gold. +2 Food per adjacent Coast. Every 8 spins: adds a random symbol from any unlocked Era.,
+35,Library,2,Every spin: +3 Knowledge. +2 Knowledge if adjacent to Scroll.,
+36,Scroll,2,Every spin: +2 Knowledge. +1 Knowledge per adjacent symbol that produces Knowledge.,
+37,Market,2,Every spin: +1 Gold per adjacent symbol. Every 5 spins: converts 8 Gold into a random Era 2 symbol added to collection.,
+38,Tax Collector,2,Every spin: +3 Gold. Adjacent symbols produce -1 Food this spin.,
+39,Merchant,2,"Every spin: +2 Gold. +1 Gold per unique resource-producing symbol type adjacent (Food, Gold, Knowledge count separately).",
+40,Vineyard,2,"Every spin: +2 Food, +2 Gold. Every 6 spins: produces a Wine symbol on the board. Wine gives +5 Gold then destroys self.",
+41,Oracle,2,Every spin: +2 Knowledge. Reveals the next symbol choices before spinning. Pay 3 Gold to replace one choice.,
+42,,,,
+43,Aqueduct,2,Every spin: +2 Food. Adjacent food-producing symbols produce +2 extra Food.,
+44,Forge,2,"Every spin: +2 Food, +1 Gold. If adjacent to Copper or Iron: +4 Gold. If adjacent to Stone: +2 Food.",
+45,Great Wall,2,"Every spin: +4 Food, +2 Knowledge. Prevents all symbols in the same row from being destroyed.",
+46,Caravan,2,Every spin: +1 Gold per symbol on the entire board that produces Gold.,
+47,Pantheon,2,"Every spin: +2 Food, +2 Knowledge. If you have no Religion symbol on the board: +5 Food extra.",
+48,Harbor,2,Every spin: +2 Gold. Every 6 spins: adds a random symbol from any unlocked Era to your collection.,
+49,,,,
+50,Arena,2,"Every spin: +2 Food. Whenever any symbol is destroyed this spin: +4 Food, +2 Gold.",
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,Warrior,1,Every spin: +1 Food. Destroys adjacent Barbarian. +8 Food per Barbarian destroyed.,
+,Barbarian,1,Every spin: -3 Food. Every 12 spins: adds another Barbarian to the board. Cannot be destroyed except by combat symbols.,
+,Scout,1,"Every spin: +1 Food, +1 Knowledge. Every 8 spins: adds a random Era 1 symbol to your collection.",
+,Settler,1,Every spin: +2 Food. After 12 spins: destroyed and replaced by City.,
+,Swordsman,2,Every spin: +2 Food. Destroys adjacent Barbarian. +12 Food per Barbarian destroyed. Attacks twice.,
+,Colosseum,2,Every spin: +3 Food. If adjacent to Warrior or Swordsman: +4 Food extra. -2 Food per adjacent empty slot.,
+,Siege Tower,2,Every spin: +2 Food. If adjacent to a symbol that produces 0 or negative Food: destroys it and gives +15 Food.,
