@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as PIXI from 'pixi.js';
-import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT, calculateFoodCost } from '../game/state/gameStore';
+import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT, EVENT_SLOT_COUNT, calculateFoodCost, type EventSlotInstance } from '../game/state/gameStore';
 import { useSettingsStore, SPIN_SPEED_CONFIG } from '../game/state/settingsStore';
 import { getSymbolColor, getSymbolColorHex, Era, SYMBOLS, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { EVENT_SYMBOLS, type EventSymbolDefinition } from '../game/data/eventSymbolDefinitions';
 import { t } from '../i18n';
 
 interface HoveredSymbol {
@@ -108,6 +109,7 @@ const GameCanvas = () => {
                 await PIXI.Assets.load([
                     'Mulmaru',
                     '/assets/sprites/slot_bg.png',
+                    '/assets/sprites/pasture.png',
                     '/assets/ui/stonebar_1880x82.png',
                     '/assets/ui/buttons/menu0.png',
                     '/assets/ui/buttons/menu1.png',
@@ -471,6 +473,86 @@ const GameCanvas = () => {
                     });
                 }
 
+                // ── 미니 이벤트 릴 (1열, EVENT_SLOT_COUNT행) ──
+                const miniScale = 0.8;
+                const miniCellW = cellWidth * miniScale;
+                const miniCellH = cellHeight * miniScale;
+                const miniStartX = startX + boardW + spritePaddingX + 20 * scale;
+                const miniStartY = startY + gridOffsetY;
+                const miniVisibleH = miniCellH * EVENT_SLOT_COUNT;
+
+                const miniMask = new PIXI.Graphics();
+                miniMask.rect(miniStartX, miniStartY, miniCellW, miniVisibleH);
+                miniMask.fill({ color: 0xffffff });
+                spinCont.addChild(miniMask);
+
+                const miniStrip = new PIXI.Container();
+                miniStrip.mask = miniMask;
+                spinCont.addChild(miniStrip);
+
+                const miniRandomCount = RANDOM_COUNT + BOARD_WIDTH + 1;
+                const miniStripOffsetY = -(EVENT_SLOT_COUNT + miniRandomCount) * miniCellH;
+
+                const createMiniSymbolGroup = (evtDef: EventSymbolDefinition | null, yPos: number) => {
+                    const group = new PIXI.Container();
+                    group.x = miniStartX;
+                    group.y = yPos;
+                    if (evtDef) {
+                        const evtName = t(`event.${evtDef.id}.name`, lang);
+                        const txt = new PIXI.Text({
+                            text: evtName,
+                            style: new PIXI.TextStyle({
+                                fill: '#ff6b6b',
+                                fontSize: 24 * fs * miniScale,
+                                fontFamily,
+                                stroke: { color: '#000000', width: 2 },
+                            }),
+                        });
+                        txt.anchor.set(0.5);
+                        txt.x = miniCellW / 2;
+                        txt.y = miniCellH / 2;
+                        group.addChild(txt);
+                    }
+                    return group;
+                };
+
+                // 실제 배치될 이벤트 심볼 (최종 도착점)
+                for (let row = 0; row < EVENT_SLOT_COUNT; row++) {
+                    const slot = state.eventSlots[row];
+                    miniStrip.addChild(createMiniSymbolGroup(slot ? slot.definition : null, miniStartY + row * miniCellH));
+                }
+
+                // 중간 랜덤 이벤트 심볼
+                for (let i = 0; i < miniRandomCount; i++) {
+                    const randEvt = EVENT_SYMBOLS[Math.floor(Math.random() * EVENT_SYMBOLS.length)];
+                    miniStrip.addChild(createMiniSymbolGroup(randEvt, miniStartY + (EVENT_SLOT_COUNT + i) * miniCellH));
+                }
+
+                // 이전 이벤트 슬롯 (릴 시작점)
+                for (let i = 0; i < EVENT_SLOT_COUNT; i++) {
+                    const prevSlot = state.prevEventSlots[i];
+                    miniStrip.addChild(createMiniSymbolGroup(prevSlot ? prevSlot.definition : null, miniStartY + (EVENT_SLOT_COUNT + miniRandomCount + i) * miniCellH));
+                }
+
+                miniStrip.y = miniStripOffsetY;
+                const miniTargetScrollY = (EVENT_SLOT_COUNT + miniRandomCount) * miniCellH;
+                const miniStartDelay = BOARD_WIDTH * currentSpinConfig.stopInterval;
+
+                reelsRef.current.push({
+                    container: miniStrip,
+                    mask: miniMask,
+                    scrollY: 0,
+                    speed: 0,
+                    started: false,
+                    stopped: false,
+                    decelerating: false,
+                    startDelay: miniStartDelay,
+                    targetScrollY: miniTargetScrollY,
+                    cellHeight: miniCellH,
+                    stripInitialY: miniStripOffsetY,
+                    reelContainer: miniStrip,
+                });
+
                 spinActiveRef.current = true;
             }
         }
@@ -599,6 +681,115 @@ const GameCanvas = () => {
                     destroyOverlay.lineTo(cellX + margin, cellY + cellHeight - margin);
                     destroyOverlay.stroke({ color: 0xef4444, width: 3, alpha: 0.7 });
                     boardContainer.addChild(destroyOverlay);
+                }
+            }
+        }
+
+        // ── 미니 이벤트 슬롯 렌더링 (non-spinning) ──
+        {
+            const miniScale = 0.8;
+            const miniCellW = cellWidth * miniScale;
+            const miniCellH = cellHeight * miniScale;
+            const miniStartX = startX + boardW + spritePaddingX + 20 * scale;
+            const miniStartY = startY + gridOffsetY;
+
+            // 미니 슬롯 배경
+            const miniBgW = miniCellW + spritePaddingX * 2;
+            const miniBgH = miniCellH * EVENT_SLOT_COUNT + spritePaddingY * 2;
+            const miniBg = new PIXI.Graphics();
+            miniBg.roundRect(miniStartX - spritePaddingX, miniStartY - spritePaddingY, miniBgW, miniBgH, 8 * scale);
+            miniBg.fill({ color: 0x2a2a3e, alpha: 0.85 });
+            miniBg.stroke({ color: 0x4a4a6a, width: 2, alpha: 0.6 });
+            boardContainer.addChild(miniBg);
+
+            // "EVENT" 라벨
+            const eventLabel = new PIXI.Text({
+                text: t('event.label', lang),
+                style: new PIXI.TextStyle({
+                    fill: '#ff6b6b',
+                    fontSize: 22 * fs,
+                    fontWeight: 'bold',
+                    fontFamily,
+                    stroke: { color: '#000000', width: 2 },
+                }),
+            });
+            eventLabel.anchor.set(0.5, 1);
+            eventLabel.x = miniStartX + miniCellW / 2;
+            eventLabel.y = miniStartY - spritePaddingY - 4 * scale;
+            boardContainer.addChild(eventLabel);
+
+            // 각 미니 슬롯
+            if (state.phase !== 'spinning') {
+                for (let row = 0; row < EVENT_SLOT_COUNT; row++) {
+                    const slotX = miniStartX;
+                    const slotY = miniStartY + row * miniCellH;
+                    const slot = state.eventSlots[row];
+
+                    // 슬롯 구분선
+                    if (row > 0) {
+                        const divider = new PIXI.Graphics();
+                        divider.moveTo(slotX, slotY);
+                        divider.lineTo(slotX + miniCellW, slotY);
+                        divider.stroke({ color: 0x4a4a6a, width: 1, alpha: 0.4 });
+                        boardContainer.addChild(divider);
+                    }
+
+                    if (!slot) {
+                        // 빈 슬롯: 연한 물음표
+                        const emptyText = new PIXI.Text({
+                            text: '?',
+                            style: new PIXI.TextStyle({
+                                fill: '#555555',
+                                fontSize: 36 * fs * miniScale,
+                                fontFamily,
+                            }),
+                        });
+                        emptyText.anchor.set(0.5);
+                        emptyText.x = slotX + miniCellW / 2;
+                        emptyText.y = slotY + miniCellH / 2;
+                        boardContainer.addChild(emptyText);
+                        continue;
+                    }
+
+                    // 이벤트 심볼 이름
+                    const evtName = t(`event.${slot.definition.id}.name`, lang);
+                    const nameText = new PIXI.Text({
+                        text: evtName,
+                        style: new PIXI.TextStyle({
+                            fill: '#ff6b6b',
+                            fontSize: 24 * fs * miniScale,
+                            fontFamily,
+                            stroke: { color: '#000000', width: 2 },
+                        }),
+                    });
+                    nameText.anchor.set(0.5);
+                    nameText.x = slotX + miniCellW / 2;
+                    nameText.y = slotY + miniCellH * 0.4;
+                    boardContainer.addChild(nameText);
+
+                    // 카운터 배지
+                    const badgeRadius = 14 * scale * miniScale;
+                    const badgeX = slotX + miniCellW - badgeRadius - 4 * scale;
+                    const badgeY = slotY + miniCellH - badgeRadius - 4 * scale;
+
+                    const badge = new PIXI.Graphics();
+                    badge.circle(badgeX, badgeY, badgeRadius);
+                    badge.fill({ color: 0xef4444, alpha: 0.9 });
+                    boardContainer.addChild(badge);
+
+                    const counterText = new PIXI.Text({
+                        text: String(slot.counter),
+                        style: new PIXI.TextStyle({
+                            fill: '#ffffff',
+                            fontSize: 20 * fs * miniScale,
+                            fontWeight: 'bold',
+                            fontFamily,
+                        }),
+                    });
+                    counterText.anchor.set(0.5);
+                    counterText.x = badgeX;
+                    counterText.y = badgeY;
+                    boardContainer.addChild(counterText);
                 }
             }
         }
