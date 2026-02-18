@@ -1,37 +1,42 @@
 import { useGameStore, REROLL_COST } from '../game/state/gameStore';
-import { Rarity, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { useSettingsStore } from '../game/state/settingsStore';
+import { Era, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { t } from '../i18n';
 
-const RARITY_NAMES: Record<number, string> = {
-    [Rarity.ANCIENT]: 'Ancient',
-    [Rarity.CLASSICAL]: 'Classical',
-    [Rarity.MEDIEVAL]: 'Medieval',
-    [Rarity.INDUSTRIAL]: 'Industrial',
-    [Rarity.MODERN]: 'Modern',
+const ERA_NAME_KEYS: Record<number, string> = {
+    [Era.ANCIENT]: 'era.ancient',
+    [Era.CLASSICAL]: 'era.classical',
+    [Era.MEDIEVAL]: 'era.medieval',
+    [Era.INDUSTRIAL]: 'era.industrial',
+    [Era.MODERN]: 'era.modern',
 };
 
 const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: () => void }) => {
-    const rarityColor = getSymbolColorHex(symbol.rarity);
-    const rarityName = RARITY_NAMES[symbol.rarity] ?? 'Unknown';
+    const language = useSettingsStore((s) => s.language);
+    const eraColor = getSymbolColorHex(symbol.era);
+    const eraName = t(ERA_NAME_KEYS[symbol.era] ?? 'era.ancient', language);
+    const symName = t(`symbol.${symbol.id}.name`, language);
+    const symDesc = t(`symbol.${symbol.id}.desc`, language);
 
     return (
         <button className="selection-card" onClick={onClick}>
             {symbol.sprite ? (
                 <img
                     src={`/assets/sprites/${symbol.sprite}`}
-                    alt={symbol.name}
+                    alt={symName}
                     className="selection-card-sprite"
                 />
             ) : (
                 <div className="selection-card-sprite-placeholder">
-                    {symbol.name}
+                    {symName}
                 </div>
             )}
-            <div className="selection-card-name">{symbol.name}</div>
-            <div className="selection-card-rarity" style={{ color: rarityColor }}>
-                ── {rarityName} ──
+            <div className="selection-card-name">{symName}</div>
+            <div className="selection-card-rarity" style={{ color: eraColor }}>
+                ── {eraName} ──
             </div>
             <div className="selection-card-desc">
-                {symbol.description.split('\n').map((line, i) => (
+                {symDesc.split('\n').map((line, i) => (
                     <div key={i} className="selection-card-desc-line">{line}</div>
                 ))}
             </div>
@@ -41,13 +46,14 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
 
 const SymbolSelection = () => {
     const { phase, symbolChoices, gold, selectSymbol, skipSelection, rerollSymbols } = useGameStore();
+    const language = useSettingsStore((s) => s.language);
 
     if (phase !== 'selection') return null;
 
     return (
         <div className="selection-overlay">
             <div className="selection-panel">
-                <div className="selection-title">Choose a Symbol</div>
+                <div className="selection-title">{t('game.chooseSymbol', language)}</div>
                 <div className="selection-cards">
                     {symbolChoices.map((sym, i) => (
                         <SymbolCard
@@ -63,10 +69,10 @@ const SymbolSelection = () => {
                         onClick={rerollSymbols}
                         disabled={gold < REROLL_COST}
                     >
-                        Reroll ({REROLL_COST}G)
+                        {t('game.reroll', language)} ({REROLL_COST}G)
                     </button>
                     <button className="selection-skip-btn" onClick={skipSelection}>
-                        Skip
+                        {t('game.skip', language)}
                     </button>
                 </div>
             </div>
