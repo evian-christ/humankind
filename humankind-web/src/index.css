@@ -7,6 +7,13 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Mulmaru';
+  src: url('/Mulmaru.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --hud-bg: rgba(25, 25, 25, 0.9);
   --hud-border: rgba(80, 80, 80, 0.4);
@@ -27,9 +34,11 @@ body {
   overflow: hidden;
   background: #1a1a1a;
   color: #e0e0e0;
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   cursor: default;
 }
+
+
 
 /* Fixed resolution for Steam game development */
 #root {
@@ -125,18 +134,7 @@ body {
   bottom: 0;
 }
 
-/* ===== BOTTOM PANEL ===== */
-.bottom-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 140px;
-  background: url('/assets/ui/stonearea_1920x140.png') no-repeat center / 1920px 140px;
-  display: flex;
-  align-items: center;
-  z-index: 100;
-}
+/* ===== BOTTOM PANEL (removed) ===== */
 
 /* ===== COLLECTION STRIP ===== */
 .collection-strip {
@@ -205,12 +203,13 @@ body {
 
 /* ===== SPIN BUTTON ===== */
 .spin-area {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 0 24px;
-  margin-left: auto;
+  z-index: 100;
 }
 
 .spin-btn {
@@ -220,7 +219,7 @@ body {
   border: 2px solid #666;
   background: radial-gradient(circle at 35% 35%, #444, #222);
   color: #eee;
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   font-size: 24px;
   /* Increased base size */
   font-weight: normal;
@@ -252,7 +251,7 @@ body {
 }
 
 .reset-btn {
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   font-size: 9px;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -312,7 +311,7 @@ body {
 }
 
 .selection-title {
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   font-size: 48px;
   color: #ffffff;
   letter-spacing: 2px;
@@ -337,7 +336,7 @@ body {
   gap: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   color: #1a1a1a;
   image-rendering: pixelated;
 }
@@ -384,12 +383,12 @@ body {
   flex-direction: column;
   gap: 4px;
   text-align: center;
-  padding: 0 8px;
+  padding: 0 32px;
 }
 
 .selection-card-desc-line {
   font-size: 22px;
-  color: #444;
+  color: #1a1a1a;
   line-height: 1.4;
 }
 
@@ -400,7 +399,7 @@ body {
 
 .selection-reroll-btn,
 .selection-skip-btn {
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   font-size: 24px;
   padding: 10px 28px;
   border-radius: 6px;
@@ -457,7 +456,7 @@ body {
 }
 
 .endgame-title {
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   font-size: 80px;
   letter-spacing: 4px;
   text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
@@ -472,14 +471,14 @@ body {
 }
 
 .endgame-subtitle {
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   font-size: 32px;
   color: #aaa;
   letter-spacing: 1px;
 }
 
 .endgame-btn {
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   font-size: 32px;
   padding: 14px 48px;
   background: rgba(255, 255, 255, 0.1);
@@ -504,7 +503,7 @@ body {
   padding: 14px 16px;
   pointer-events: none;
   z-index: 300;
-  font-family: 'MiniPixel', sans-serif;
+  font-family: 'Mulmaru', sans-serif;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -531,4 +530,277 @@ body {
   font-size: 18px;
   color: #cccccc;
   line-height: 1.4;
+}
+
+/* ===== MENU BUTTON (top-right) ===== */
+.menu-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  background: rgba(30, 30, 30, 0.85);
+  border: 2px solid #555;
+  color: #ccc;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.menu-btn:hover {
+  background: rgba(60, 60, 60, 0.95);
+  border-color: #888;
+  color: #fff;
+}
+
+/* ===== PAUSE MENU OVERLAY ===== */
+.pause-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+}
+
+.pause-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.pause-title {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 72px;
+  color: #ffffff;
+  letter-spacing: 6px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.pause-menu-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pause-menu-btn {
+  width: 320px;
+  padding: 16px 0;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 36px;
+  letter-spacing: 3px;
+  color: #ddd;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #555;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pause-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #aaa;
+  color: #fff;
+}
+
+.pause-menu-btn-disabled {
+  color: #555;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ===== SETTINGS PANEL ===== */
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 640px;
+  max-height: 900px;
+}
+
+.settings-title {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 56px;
+  color: #ffffff;
+  letter-spacing: 4px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+/* ── Tab Bar ── */
+.settings-tabs {
+  display: flex;
+  width: 100%;
+  border-bottom: 2px solid #444;
+  flex-shrink: 0;
+}
+
+.settings-tab {
+  flex: 1;
+  padding: 12px 0;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: #777;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -2px;
+}
+
+.settings-tab:hover {
+  color: #bbb;
+}
+
+.settings-tab.active {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+/* ── Tab Content ── */
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+  min-height: 160px;
+}
+
+/* ── Setting Row (label left, controls right) ── */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+.settings-row-label {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 28px;
+  color: #bbb;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.settings-row-controls {
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+/* ── Segmented Button Group (for speed options) ── */
+.settings-seg-btn {
+  padding: 8px 22px;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 24px;
+  letter-spacing: 1px;
+  color: #888;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid #444;
+  margin-left: -2px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-seg-btn:first-child {
+  border-radius: 6px 0 0 6px;
+  margin-left: 0;
+}
+
+.settings-seg-btn:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.settings-seg-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ccc;
+  z-index: 1;
+}
+
+.settings-seg-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #aaa;
+  color: #fff;
+  z-index: 2;
+}
+
+/* ── Dropdown ── */
+.settings-dropdown-wrap {
+  position: relative;
+}
+
+.settings-dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 280px;
+  padding: 8px 44px 8px 18px;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 24px;
+  letter-spacing: 1px;
+  color: #ddd;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+.settings-dropdown:hover {
+  border-color: #888;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.settings-dropdown:focus {
+  outline: none;
+  border-color: #aaa;
+}
+
+.settings-dropdown option {
+  background: #1a1a1a;
+  color: #ddd;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 20px;
+}
+
+/* ── Back Button ── */
+.settings-back-btn {
+  width: 200px;
+  padding: 14px 0;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 32px;
+  letter-spacing: 3px;
+  color: #ddd;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #555;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.settings-back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #aaa;
+  color: #fff;
 }
