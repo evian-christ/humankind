@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { SYMBOLS, type SymbolDefinition } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects } from '../logic/symbolEffects';
+import { useSettingsStore, EFFECT_SPEED_DELAY } from './settingsStore';
 import type { PlayerSymbolInstance } from '../types';
 
 export { type PlayerSymbolInstance } from '../types';
@@ -9,56 +10,61 @@ export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 export const REROLL_COST = 5;
 
-// Godot 원본과 동일한 레벨별 희귀도 확률 테이블 (키: rarity, 값: %)
-const LEVEL_PROBABILITIES: Record<number, Record<number, number>> = {
-    1:  { 1: 100, 2: 0,  3: 0,  4: 0,  5: 0  },
-    2:  { 1: 85,  2: 15, 3: 0,  4: 0,  5: 0  },
-    3:  { 1: 70,  2: 30, 3: 0,  4: 0,  5: 0  },
-    4:  { 1: 55,  2: 35, 3: 10, 4: 0,  5: 0  },
-    5:  { 1: 45,  2: 35, 3: 20, 4: 0,  5: 0  },
-    6:  { 1: 35,  2: 35, 3: 25, 4: 5,  5: 0  },
-    7:  { 1: 25,  2: 35, 3: 30, 4: 10, 5: 0  },
-    8:  { 1: 20,  2: 30, 3: 35, 4: 15, 5: 0  },
-    9:  { 1: 15,  2: 25, 3: 35, 4: 22, 5: 3  },
-    10: { 1: 10,  2: 20, 3: 30, 4: 20, 5: 20 },
+// 시대별 심볼 등장 확률 테이블 (키: era, 값: %)
+const ERA_PROBABILITIES: Record<number, Record<number, number>> = {
+    1: { 1: 100, 2: 0,   3: 0,   4: 0,   5: 0  },
+    2: { 1: 55,  2: 45,  3: 0,   4: 0,   5: 0  },
+    3: { 1: 30,  2: 35,  3: 35,  4: 0,   5: 0  },
+    4: { 1: 15,  2: 25,  3: 30,  4: 30,  5: 0  },
+    5: { 1: 10,  2: 15,  3: 25,  4: 25,  5: 25 },
 };
 
-type GamePhase = 'idle' | 'processing' | 'selection' | 'game_over' | 'victory';
+// 시대 전환에 필요한 Knowledge
+const ERA_KNOWLEDGE_REQUIRED: Record<number, number> = {
+    1: 50,
+    2: 100,
+    3: 175,
+    4: 275,
+};
+
+type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'game_over' | 'victory';
 
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250...) */
-const calculateFoodCost = (turn: number): number => {
+export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
     return 100 + (paymentCycle - 1) * 50;
-};
-
-/** 보드에 AGI(ID 28)가 있는지 체크 */
-const checkAgiVictory = (board: (PlayerSymbolInstance | null)[][]): boolean => {
-    for (let x = 0; x < BOARD_WIDTH; x++) {
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            if (board[x][y]?.definition.id === 28) return true;
-        }
-    }
-    return false;
 };
 
 interface GameState {
     food: number;
     gold: number;
-    exp: number;
-    level: number;
+    knowledge: number;
+    era: number;
     turn: number;
     board: (PlayerSymbolInstance | null)[][];
     playerSymbols: PlayerSymbolInstance[];
     phase: GamePhase;
     symbolChoices: SymbolDefinition[];
-    lastEffects: Array<{ x: number, y: number, text: string, color: string }>;
+    lastEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>;
+    /** processing 중 누적 합산 (food, gold, knowledge) */
+    runningTotals: { food: number; gold: number; knowledge: number };
+    /** 현재 처리 중인 슬롯 좌표 (null이면 하이라이트 없음) */
+    activeSlot: { x: number; y: number } | null;
+    /** 현재 슬롯의 효과에 기여한 인접 심볼 좌표 */
+    activeContributors: { x: number; y: number }[];
+    /** spinning 시작 직전의 보드 (릴 시작점용) */
+    prevBoard: (PlayerSymbolInstance | null)[][];
 
     // Actions
     spinBoard: () => void;
+    /** spinning 애니메이션이 끝난 후 호출 — processing 시작 */
+    startProcessing: () => void;
     selectSymbol: (symbolId: number) => void;
     skipSelection: () => void;
     rerollSymbols: () => void;
     initializeGame: () => void;
+    devAddSymbol: (symbolId: number) => void;
+    devRemoveSymbol: (instanceId: string) => void;
 }
 
 const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => {
@@ -77,51 +83,54 @@ const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => ({
     enemy_hp: def.base_hp
 });
 
+/** CSV v4 기준 시작 심볼 */
 const getStartingSymbols = (): PlayerSymbolInstance[] => {
     return [
         SYMBOLS[1],  // Wheat
         SYMBOLS[2],  // Rice
-        SYMBOLS[3],  // Fish
-        SYMBOLS[11], // Cow
-        SYMBOLS[12], // Sheep
-        SYMBOLS[5],  // Banana
-        SYMBOLS[29], // Campfire
+        SYMBOLS[3],  // Cattle
+        SYMBOLS[5],  // Fish
+        SYMBOLS[4],  // Banana
+        SYMBOLS[7],  // Stone
+        SYMBOLS[23], // Campfire
     ].map(createInstance);
 };
 
-/** 심볼을 희귀도별로 그룹화 (Godot 원본 로직) */
-const getSymbolsByRarity = (level: number): Record<number, SymbolDefinition[]> => {
+/** 선택 풀에서 제외할 심볼 (Swordsman은 Iron 업그레이드로만 획득) */
+const EXCLUDED_FROM_CHOICES = new Set([33]);
+
+/** 심볼을 시대별로 그룹화 */
+const getSymbolsByEra = (_era: number): Record<number, SymbolDefinition[]> => {
     const result: Record<number, SymbolDefinition[]> = {};
     for (const sym of Object.values(SYMBOLS)) {
-        // AGI(ID 28)는 레벨 10 미만이면 제외
-        if (sym.id === 28 && level < 10) continue;
-        const r = sym.rarity as number;
-        if (!result[r]) result[r] = [];
-        result[r].push(sym);
+        if (EXCLUDED_FROM_CHOICES.has(sym.id)) continue;
+        const e = sym.era as number;
+        if (!result[e]) result[e] = [];
+        result[e].push(sym);
     }
     return result;
 };
 
-/** 레벨 기반 가중치로 심볼 3개 생성 (Godot 원본 로직, 중복 가능) */
-const generateChoices = (level: number): SymbolDefinition[] => {
-    const probs = LEVEL_PROBABILITIES[level] ?? LEVEL_PROBABILITIES[1];
-    const symbolsByRarity = getSymbolsByRarity(level);
+/** 시대 기반 가중치로 심볼 3개 생성 (중복 가능) */
+const generateChoices = (era: number): SymbolDefinition[] => {
+    const probs = ERA_PROBABILITIES[era] ?? ERA_PROBABILITIES[1];
+    const symbolsByEra = getSymbolsByEra(era);
     const choices: SymbolDefinition[] = [];
 
     for (let i = 0; i < 3; i++) {
         const roll = Math.floor(Math.random() * 100);
         let cumulative = 0;
-        let selectedRarity = 1;
+        let selectedEra = 1;
 
-        for (const [rarity, prob] of Object.entries(probs)) {
+        for (const [eraKey, prob] of Object.entries(probs)) {
             cumulative += prob;
             if (roll < cumulative) {
-                selectedRarity = Number(rarity);
+                selectedEra = Number(eraKey);
                 break;
             }
         }
 
-        const pool = symbolsByRarity[selectedRarity];
+        const pool = symbolsByEra[selectedEra];
         if (pool && pool.length > 0) {
             choices.push(pool[Math.floor(Math.random() * pool.length)]);
         } else {
@@ -133,22 +142,24 @@ const generateChoices = (level: number): SymbolDefinition[] => {
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
-    food: 200,
+    food: 0,
     gold: 0,
-    exp: 0,
-    level: 1,
+    knowledge: 0,
+    era: 1,
     turn: 0,
     board: createEmptyBoard(),
     playerSymbols: getStartingSymbols(),
     phase: 'idle' as GamePhase,
     symbolChoices: [],
     lastEffects: [],
+    runningTotals: { food: 0, gold: 0, knowledge: 0 },
+    activeSlot: null,
+    activeContributors: [],
+    prevBoard: createEmptyBoard(),
 
     spinBoard: () => {
         const state = get();
         if (state.phase !== 'idle') return;
-
-        set({ phase: 'processing', lastEffects: [] });
 
         // 1. Clear Board & Place Symbols (reuse existing instances to preserve counters)
         const newBoard = createEmptyBoard();
@@ -182,87 +193,247 @@ export const useGameStore = create<GameState>((set, get) => ({
             currentFood -= cost;
         }
 
-        set({ board: newBoard, turn: newTurn, food: currentFood });
+        // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
+        // prevBoard: 스핀 전 보드를 저장 (릴 시작점용)
+        set({
+            prevBoard: state.board,
+            board: newBoard,
+            turn: newTurn,
+            food: currentFood,
+            phase: 'spinning',
+            lastEffects: [],
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            activeSlot: null,
+            activeContributors: [],
+        });
 
-        // 2. Process Effects after a delay
-        setTimeout(() => {
+        // spinning 애니메이션은 GameCanvas ticker가 처리하고,
+        // 모든 열이 멈추면 startProcessing()을 호출함
+    },
+
+    startProcessing: () => {
+        const state = get();
+        if (state.phase !== 'spinning') return;
+
+        set({ phase: 'processing' });
+
+        // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
+        const slotOrder: { x: number; y: number }[] = [];
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                slotOrder.push({ x, y });
+            }
+        }
+
+        let totalFood = 0;
+        let totalKnowledge = 0;
+        let totalGold = 0;
+        const symbolsToAdd: number[] = [];
+        const symbolsToSpawnOnBoard: number[] = [];
+        const accumulatedEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }> = [];
+
+        const processSlot = (slotIdx: number) => {
+            if (slotIdx >= slotOrder.length) {
+                // 마지막 효과 후 0.5초 대기 → 스탯 합산
+                set({ activeSlot: null, activeContributors: [] });
+                setTimeout(() => {
+                    finishProcessing(totalFood, totalKnowledge, totalGold, symbolsToAdd, symbolsToSpawnOnBoard, accumulatedEffects);
+                }, 500);
+                return;
+            }
+
+            const { x, y } = slotOrder[slotIdx];
+            const currentState = get();
+            const currentBoard = currentState.board;
+            const symbol = currentBoard[x][y];
+
+            if (!symbol) {
+                processSlot(slotIdx + 1);
+                return;
+            }
+
+            const result = processSingleSymbolEffects(
+                symbol, currentBoard, x, y, currentState.food + totalFood
+            );
+
+            if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
+            if (result.spawnOnBoard) symbolsToSpawnOnBoard.push(...result.spawnOnBoard);
+
+            if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
+                accumulatedEffects.push({ x, y, food: result.food, gold: result.gold, knowledge: result.knowledge });
+                totalFood += result.food;
+                totalKnowledge += result.knowledge;
+                totalGold += result.gold;
+            }
+
+            set({
+                activeSlot: { x, y },
+                activeContributors: result.contributors ?? [],
+                lastEffects: [...accumulatedEffects],
+                runningTotals: { food: totalFood, gold: totalGold, knowledge: totalKnowledge },
+            });
+
+            const delay = EFFECT_SPEED_DELAY[useSettingsStore.getState().effectSpeed];
+            if (delay === 0) {
+                processSlot(slotIdx + 1);
+            } else {
+                setTimeout(() => processSlot(slotIdx + 1), delay);
+            }
+        };
+
+        const finishProcessing = (
+            tFood: number, tKnowledge: number, tGold: number,
+            toAdd: number[], toSpawn: number[],
+            effects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>
+        ) => {
             const currentBoard = get().board;
-            const newEffects: Array<{ x: number, y: number, text: string, color: string }> = [];
-            let totalFood = 0;
-            let totalExp = 0;
-            let totalGold = 0;
+
+            let destroyedCount = 0;
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    if (currentBoard[x][y]?.is_marked_for_destruction) destroyedCount++;
+                }
+            }
+            let bonusFood = 0;
+            let bonusGold = 0;
+            if (destroyedCount > 0) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    for (let y = 0; y < BOARD_HEIGHT; y++) {
+                        const s = currentBoard[x][y];
+                        if (s && s.definition.id === 50 && !s.is_marked_for_destruction) {
+                            const arenaFood = destroyedCount * 4;
+                            const arenaGold = destroyedCount * 2;
+                            bonusFood += arenaFood;
+                            bonusGold += arenaGold;
+                            effects.push({ x, y, food: arenaFood, gold: arenaGold, knowledge: 0 });
+                        }
+                    }
+                }
+            }
 
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
-                    const symbol = currentBoard[x][y];
-                    if (symbol) {
-                        const result = processSingleSymbolEffects(symbol, currentBoard, x, y);
+                    const s = currentBoard[x][y];
+                    if (s && s.definition.id === 26 && s.is_marked_for_destruction) {
+                        bonusFood += 20;
+                    }
+                }
+            }
 
-                        if (result.food !== 0 || result.exp !== 0 || result.gold !== 0) {
-                            const textParts = [];
-                            if (result.food !== 0) textParts.push(`${result.food > 0 ? '+' : ''}${result.food}`);
-                            if (result.gold !== 0) textParts.push(`${result.gold > 0 ? '+' : ''}${result.gold}G`);
-                            if (result.exp !== 0) textParts.push(`${result.exp > 0 ? '+' : ''}${result.exp}XP`);
-
-                            newEffects.push({
-                                x, y,
-                                text: textParts.join(' '),
-                                color: result.gold > 0 ? '#fbbf24' : (result.food > 0 ? '#4ade80' : '#ffffff')
-                            });
-
-                            totalFood += result.food;
-                            totalExp += result.exp;
-                            totalGold += result.gold;
-                        }
-
-                        // Reset counters
-                        if (symbol.definition.id === 1 && symbol.effect_counter >= 6) symbol.effect_counter = 0;
-                        if (symbol.definition.id === 2 && symbol.effect_counter >= 8) symbol.effect_counter = 0;
-                        if (symbol.definition.id === 12 && symbol.effect_counter >= 10) symbol.effect_counter = 0;
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    const s = currentBoard[x][y];
+                    if (s && s.definition.id === 24 && s.is_marked_for_destruction) {
+                        bonusFood += (s.effect_counter || 0) * 2;
                     }
                 }
             }
 
             set((prev) => {
-                let newLevel = prev.level;
-                let newExp = prev.exp + totalExp;
-                const expToNext = 50 + (prev.level - 1) * 25;
+                let newEra = prev.era;
+                let newKnowledge = prev.knowledge + tKnowledge;
 
-                if (newExp >= expToNext && prev.level < 10) {
-                    newExp -= expToNext;
-                    newLevel++;
+                while (newEra < 5) {
+                    const required = ERA_KNOWLEDGE_REQUIRED[newEra];
+                    if (required === undefined || newKnowledge < required) break;
+                    newKnowledge -= required;
+                    newEra++;
                 }
 
-                const cleanBoard = prev.board.map(col => col.map(s => (s?.is_marked_for_destruction ? null : s)));
-
-                // AGI 승리 체크 (이펙트 처리 후)
-                if (checkAgiVictory(cleanBoard)) {
-                    return {
-                        food: prev.food + totalFood,
-                        gold: prev.gold + totalGold,
-                        exp: newExp,
-                        level: newLevel,
-                        board: cleanBoard,
-                        lastEffects: newEffects,
-                        phase: 'victory' as GamePhase,
-                        symbolChoices: [],
-                    };
+                const protectedRows = new Set<number>();
+                for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+                    for (let by = 0; by < BOARD_HEIGHT; by++) {
+                        const s = prev.board[bx][by];
+                        if (s && s.definition.id === 45 && !s.is_marked_for_destruction) {
+                            protectedRows.add(by);
+                        }
+                    }
                 }
 
-                const choices = generateChoices(newLevel);
+                const cleanBoard = prev.board.map((col) =>
+                    col.map((s, cy) => {
+                        if (!s) return null;
+                        if (s.is_marked_for_destruction) {
+                            if (protectedRows.has(cy)) {
+                                s.is_marked_for_destruction = false;
+                                return s;
+                            }
+                            return null;
+                        }
+                        return s;
+                    })
+                );
+
+                const newPlayerSymbols = [...prev.playerSymbols];
+
+                for (const symId of toSpawn) {
+                    const def = SYMBOLS[symId];
+                    if (def) {
+                        let placed = false;
+                        for (let bx = 0; bx < BOARD_WIDTH && !placed; bx++) {
+                            for (let by = 0; by < BOARD_HEIGHT && !placed; by++) {
+                                if (!cleanBoard[bx][by]) {
+                                    const inst = createInstance(def);
+                                    cleanBoard[bx][by] = inst;
+                                    newPlayerSymbols.push(inst);
+                                    placed = true;
+                                }
+                            }
+                        }
+                        if (!placed) {
+                            newPlayerSymbols.push(createInstance(def));
+                        }
+                    }
+                }
+
+                for (const symId of toAdd) {
+                    const def = SYMBOLS[symId];
+                    if (def) {
+                        newPlayerSymbols.push(createInstance(def));
+                    }
+                }
+
+                const destroyedIds = new Set<string>();
+                for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+                    for (let by = 0; by < BOARD_HEIGHT; by++) {
+                        const prevSym = prev.board[bx][by];
+                        if (prevSym && !cleanBoard[bx][by]) {
+                            destroyedIds.add(prevSym.instanceId);
+                        }
+                    }
+                }
+
+                const filteredSymbols = newPlayerSymbols.filter(s => !destroyedIds.has(s.instanceId));
+                const choices = generateChoices(newEra);
 
                 return {
-                    food: prev.food + totalFood,
-                    gold: prev.gold + totalGold,
-                    exp: newExp,
-                    level: newLevel,
+                    food: prev.food + tFood + bonusFood,
+                    gold: prev.gold + tGold + bonusGold,
+                    knowledge: newKnowledge,
+                    runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                    activeSlot: null,
+                    activeContributors: [],
+                    era: newEra,
                     board: cleanBoard,
-                    lastEffects: newEffects,
-                    phase: 'selection' as GamePhase,
+                    playerSymbols: filteredSymbols,
+                    lastEffects: [...effects],
+                    phase: 'processing' as GamePhase,
                     symbolChoices: choices,
                 };
             });
-        }, 500);
+
+            // 결과 확인 시간을 준 후 selection으로 전환
+            setTimeout(() => {
+                set({ phase: 'selection' as GamePhase });
+            }, 500);
+        };
+
+        const initialDelay = EFFECT_SPEED_DELAY[useSettingsStore.getState().effectSpeed];
+        if (initialDelay === 0) {
+            processSlot(0);
+        } else {
+            setTimeout(() => processSlot(0), Math.max(initialDelay, 300));
+        }
     },
 
     selectSymbol: (symbolId: number) => {
@@ -291,22 +462,40 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         set({
             gold: state.gold - REROLL_COST,
-            symbolChoices: generateChoices(state.level),
+            symbolChoices: generateChoices(state.era),
         });
     },
 
     initializeGame: () => {
         set({
-            food: 200,
+            food: 0,
             gold: 0,
-            exp: 0,
-            level: 1,
+            knowledge: 0,
+            era: 1,
             turn: 0,
             board: createEmptyBoard(),
             playerSymbols: getStartingSymbols(),
             phase: 'idle' as GamePhase,
             symbolChoices: [],
-            lastEffects: []
+            lastEffects: [],
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            activeSlot: null,
+            activeContributors: [],
+            prevBoard: createEmptyBoard(),
         });
+    },
+
+    devAddSymbol: (symbolId: number) => {
+        const def = SYMBOLS[symbolId];
+        if (!def) return;
+        set((prev) => ({
+            playerSymbols: [...prev.playerSymbols, createInstance(def)],
+        }));
+    },
+
+    devRemoveSymbol: (instanceId: string) => {
+        set((prev) => ({
+            playerSymbols: prev.playerSymbols.filter(s => s.instanceId !== instanceId),
+        }));
     },
 }));
