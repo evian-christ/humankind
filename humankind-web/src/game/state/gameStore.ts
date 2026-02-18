@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SYMBOLS, type SymbolDefinition } from '../data/symbolDefinitions';
+import { EVENT_SYMBOLS, type EventSymbolDefinition } from '../data/eventSymbolDefinitions';
 import { processSingleSymbolEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY } from './settingsStore';
 import type { PlayerSymbolInstance } from '../types';
@@ -9,6 +10,9 @@ export { type PlayerSymbolInstance } from '../types';
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 export const REROLL_COST = 5;
+export const EVENT_SLOT_COUNT = 3;
+
+export type EventSlotInstance = { definition: EventSymbolDefinition; counter: number } | null;
 
 // 시대별 심볼 등장 확률 테이블 (키: era, 값: %)
 const ERA_PROBABILITIES: Record<number, Record<number, number>> = {
@@ -54,6 +58,10 @@ interface GameState {
     activeContributors: { x: number; y: number }[];
     /** spinning 시작 직전의 보드 (릴 시작점용) */
     prevBoard: (PlayerSymbolInstance | null)[][];
+    /** 이벤트 슬롯 (길이 3) */
+    eventSlots: EventSlotInstance[];
+    /** spinning 시작 직전의 이벤트 슬롯 (릴 시작점용) */
+    prevEventSlots: EventSlotInstance[];
 
     // Actions
     spinBoard: () => void;
@@ -156,6 +164,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     activeSlot: null,
     activeContributors: [],
     prevBoard: createEmptyBoard(),
+    eventSlots: [null, null, null] as EventSlotInstance[],
+    prevEventSlots: [null, null, null] as EventSlotInstance[],
 
     spinBoard: () => {
         const state = get();
@@ -193,11 +203,22 @@ export const useGameStore = create<GameState>((set, get) => ({
             currentFood -= cost;
         }
 
+        // 이벤트 슬롯: 빈 슬롯에 확률적으로 이벤트 심볼 배치
+        const newEventSlots: EventSlotInstance[] = [...state.eventSlots];
+        for (let i = 0; i < EVENT_SLOT_COUNT; i++) {
+            if (newEventSlots[i] === null && Math.random() < 0.4) {
+                const randomEvent = EVENT_SYMBOLS[Math.floor(Math.random() * EVENT_SYMBOLS.length)];
+                newEventSlots[i] = { definition: randomEvent, counter: randomEvent.counter };
+            }
+        }
+
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
         // prevBoard: 스핀 전 보드를 저장 (릴 시작점용)
         set({
             prevBoard: state.board,
+            prevEventSlots: state.eventSlots,
             board: newBoard,
+            eventSlots: newEventSlots,
             turn: newTurn,
             food: currentFood,
             phase: 'spinning',
@@ -406,6 +427,17 @@ export const useGameStore = create<GameState>((set, get) => ({
                 const filteredSymbols = newPlayerSymbols.filter(s => !destroyedIds.has(s.instanceId));
                 const choices = generateChoices(newEra);
 
+                // 이벤트 슬롯 카운터 감소
+                const updatedEventSlots: EventSlotInstance[] = prev.eventSlots.map(slot => {
+                    if (!slot) return null;
+                    const newCounter = slot.counter - 1;
+                    if (newCounter <= 0) {
+                        // 카운터 0 → 이벤트 발동 (효과는 추후 구현) → 슬롯 비움
+                        return null;
+                    }
+                    return { ...slot, counter: newCounter };
+                });
+
                 return {
                     food: prev.food + tFood + bonusFood,
                     gold: prev.gold + tGold + bonusGold,
@@ -419,6 +451,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     lastEffects: [...effects],
                     phase: 'processing' as GamePhase,
                     symbolChoices: choices,
+                    eventSlots: updatedEventSlots,
                 };
             });
 
@@ -482,6 +515,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             activeSlot: null,
             activeContributors: [],
             prevBoard: createEmptyBoard(),
+            eventSlots: [null, null, null] as EventSlotInstance[],
+            prevEventSlots: [null, null, null] as EventSlotInstance[],
         });
     },
 
