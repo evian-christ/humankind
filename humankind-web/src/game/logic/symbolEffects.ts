@@ -159,45 +159,6 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 11: { // Warrior: Every spin: +1 Food. Destroys adjacent Barbarian. +8 Food per Barbarian
-            food += 1;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id === 12) {
-                    t.is_marked_for_destruction = true;
-                    food += 8;
-                    contributors.push(pos);
-                }
-            });
-            break;
-        }
-
-        case 12: // Barbarian: Every spin: -3 Food. Every 12 spins: adds another Barbarian
-            food -= 3;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 12) {
-                spawnOnBoard.push(12);
-                symbolInstance.effect_counter = 0;
-            }
-            break;
-
-        case 13: // Scout: Every spin: +1 Food, +1 Knowledge. Every 8 spins: +1 random Era 1 symbol
-            food += 1;
-            knowledge += 1;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 8) {
-                addSymbolIds.push(randomEra1SymbolId());
-                symbolInstance.effect_counter = 0;
-            }
-            break;
-
-        case 14: // Settler: Every spin: +2 Food. After 12 spins: destroyed (replaced by City - placeholder)
-            food += 2;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 12) {
-                symbolInstance.is_marked_for_destruction = true;
-            }
-            break;
 
         case 15: { // Palace: Every spin: +3 Food, +1 Gold. +1 Food per City on board
             food += 3;
@@ -338,24 +299,9 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 32: { // Iron: +2 Food, +2 Gold. Adjacent Warrior → upgrade to Swordsman
+        case 32: { // Iron: +2 Food, +2 Gold
             food += 2;
             gold += 2;
-            break;
-        }
-
-        case 33: { // Swordsman: +2 Food. Destroys adjacent Barbarian. +12 Food per Barbarian. Attacks twice
-            food += 2;
-            let attacks = 0;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id === 12 && attacks < 2) {
-                    t.is_marked_for_destruction = true;
-                    food += 12;
-                    attacks++;
-                    contributors.push(pos);
-                }
-            });
             break;
         }
 
@@ -441,24 +387,11 @@ export const processSingleSymbolEffects = (
             knowledge += 2;
             break;
 
-        case 42: { // Colosseum: +3 Food. Adjacent Warrior/Swordsman: +4 Food. -2 Food per adjacent empty
-            food += 3;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t && (t.definition.id === 11 || t.definition.id === 33)) {
-                    food += 4;
-                    contributors.push(pos);
-                }
-                if (!t) food -= 2;
-            });
-            break;
-        }
-
         case 43: // Aqueduct: +2 Food. Adjacent food-producing symbols +2 extra Food
             food += 2;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id !== 12 && t.definition.id !== 38) {
+                if (t && t.definition.id !== 38) {
                     food += 2;
                     contributors.push(pos);
                 }
@@ -505,19 +438,6 @@ export const processSingleSymbolEffects = (
                 symbolInstance.effect_counter = 0;
             }
             break;
-
-        case 49: { // Siege Tower: +2 Food. Adjacent 0-or-negative Food producer: destroy & +15 Food
-            food += 2;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id === 12) {
-                    t.is_marked_for_destruction = true;
-                    food += 15;
-                    contributors.push(pos);
-                }
-            });
-            break;
-        }
 
         case 50: // Arena: +2 Food. (Destruction bonus handled in store's destruction pass)
             food += 2;
