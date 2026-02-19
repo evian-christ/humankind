@@ -1,5 +1,5 @@
 import type { PlayerSymbolInstance } from '../types';
-import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, GOLD_PRODUCING_IDS } from '../data/symbolDefinitions';
+import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS } from '../data/symbolDefinitions';
 
 export interface EffectResult {
     food: number;
@@ -54,21 +54,29 @@ const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Se
     return count;
 };
 
-/** Era 1 심볼 중 랜덤 하나 반환 */
+/** 심볼별 기본 식량 생산량 추정치 (Christianity 효과 계산용) */
+const SYMBOL_BASE_FOOD: Record<number, number> = {
+    1: 2, 2: 2, 3: 1, 4: 3, 5: 1, 6: 1, 7: 1, 8: 0, 9: 2, 10: 0,
+    11: 3, 12: 1, 13: 2, 14: 1, 15: 1, 16: 1, 17: -5, 18: 1, 19: 1, 20: 0,
+    21: 0, 22: 2, 23: 2, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 2, 30: 2,
+};
+
+/** 심볼별 기본 지식 생산량 추정치 (Islam 효과 계산용) */
+const SYMBOL_BASE_KNOWLEDGE: Record<number, number> = {
+    10: 1,  // Monument
+    17: 3,  // Offering
+    25: 2,  // Library
+    26: 1,  // Scroll
+};
+
+/** Era 1 심볼 중 랜덤 하나 반환 (ID 1~21) */
 const randomEra1SymbolId = (): number => {
-    // Era 1 심볼: id 1~30
-    return Math.floor(Math.random() * 30) + 1;
+    return Math.floor(Math.random() * 21) + 1;
 };
 
-/** Era 2 심볼 중 랜덤 하나 반환 */
+/** Era 2 심볼 중 랜덤 하나 반환 (ID 22~30) */
 const randomEra2SymbolId = (): number => {
-    // Era 2 심볼: id 31~50
-    return Math.floor(Math.random() * 20) + 31;
-};
-
-/** 아무 심볼 랜덤 */
-const randomAnySymbolId = (): number => {
-    return Math.floor(Math.random() * 50) + 1;
+    return Math.floor(Math.random() * 9) + 22;
 };
 
 export const processSingleSymbolEffects = (
@@ -76,7 +84,7 @@ export const processSingleSymbolEffects = (
     boardGrid: (PlayerSymbolInstance | null)[][],
     x: number,
     y: number,
-    currentFood?: number
+    _currentFood?: number
 ): EffectResult => {
     const id = symbolInstance.definition.id;
     let food = 0;
@@ -147,28 +155,24 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 9: // Granary: Every spin: +2 Food. Adjacent Wheat/Rice produce double (handled as buff marker)
+        case 9: // Granary: Every spin: +2 Food. (Adjacent Wheat/Rice double handled below)
             food += 2;
             break;
 
-        case 10: { // Monument: Every spin: +2 Knowledge. +1 Food per adjacent symbol
-            knowledge += 2;
+        case 10: // Monument: Every spin: +1 Knowledge
+            knowledge += 1;
+            break;
+
+        case 11: { // Oasis: Every spin: +3 Food. +2 Food per adjacent empty slot
+            food += 3;
             adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]) { food += 1; contributors.push(pos); }
+                if (!boardGrid[pos.x][pos.y]) food += 2;
             });
             break;
         }
 
-
-        case 15: { // Palace: Every spin: +3 Food, +1 Gold. +1 Food per City on board
-            food += 3;
-            gold += 1;
-            break;
-        }
-
-        case 16: { // Shrine: Every spin: +1 Food, +1 Knowledge. +2 Food if adjacent to Religion
+        case 12: { // Shrine: Every spin: +1 Food. +2 Food if adjacent to Religion symbol
             food += 1;
-            knowledge += 1;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t && RELIGION_SYMBOL_IDS.has(t.definition.id)) {
@@ -179,7 +183,7 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 17: { // Plantation: Every spin: +2 Food. If adjacent to Banana: +4 Food & reset Banana timer
+        case 13: { // Plantation: Every spin: +2 Food. Adjacent Banana: +4 Food & reset timer
             food += 2;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -192,11 +196,11 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 18: // Pasture: Every spin: +1 Food. Adjacent Cattle/Horse +2 extra (handled as buff)
+        case 14: // Pasture: Every spin: +1 Food. (Adjacent Cattle/Horse buff handled below)
             food += 1;
             break;
 
-        case 19: { // Quarry: Every spin: +1 Food. Adjacent Stone: +3 Gold. Adjacent Copper: +2 Gold
+        case 15: { // Quarry: Every spin: +1 Food. Adjacent Stone: +3 Gold. Adjacent Copper: +2 Gold
             food += 1;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -208,126 +212,77 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 20: { // Totem: +1 Food per Religion symbol anywhere on the board
+        case 16: { // Totem: +1 Food per Religion symbol anywhere on the board
             const religionCount = countOnBoardBySet(boardGrid, RELIGION_SYMBOL_IDS);
             food += religionCount;
             break;
         }
 
-        case 21: // Offering: sacrifice 5 Food → +4 Knowledge
-            if (currentFood !== undefined && currentFood >= 5) {
-                food -= 5;
-                knowledge += 4;
-            }
+        case 17: // Offering: Every spin: -5 Food, +3 Knowledge
+            food -= 5;
+            knowledge += 3;
             break;
 
-        case 22: // Omen: 50% chance +6 Food, 50% chance -2 Food
+        case 18: // Omen: 50% chance +5 Food, 50% chance -3 Food
             if (Math.random() < 0.5) {
-                food += 6;
+                food += 5;
             } else {
-                food -= 2;
+                food -= 3;
             }
             break;
 
-        case 23: // Campfire: Every spin: +2 Food. Destroyed after 10 spins
-            food += 2;
+        case 19: // Campfire: Every spin: +1 Food. After 10 spins: destroyed
+            food += 1;
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 10) {
                 symbolInstance.is_marked_for_destruction = true;
             }
             break;
 
-        case 24: // Pottery: stores +2 Food internally. On destroy: releases stored Food ×2
+        case 20: // Pottery: stores +2 Food internally. On destroy: releases stored Food ×2
             symbolInstance.effect_counter += 2;
             break;
 
-        case 25: { // Hunting Ground: +2 Food. Adjacent Forest: +3 Food. Destroys adjacent Deer: +6 Food each
-            food += 2;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t) {
-                    if (t.definition.id === 26) { food += 3; contributors.push(pos); }
-                    if (t.definition.id === 27) {
-                        t.is_marked_for_destruction = true;
-                        food += 6;
-                        contributors.push(pos);
-                    }
-                }
-            });
-            break;
-        }
-
-        case 26: // Forest: +1 Food. (On destroy: +20 Food handled in destruction)
-            food += 1;
-            break;
-
-        case 27: // Deer: +2 Food. Every 10 spins: adds another Deer to board
-            food += 2;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 10) {
-                spawnOnBoard.push(27);
-                symbolInstance.effect_counter = 0;
-            }
-            break;
-
-        case 28: { // Oasis: +3 Food. +2 Food per adjacent empty slot
-            food += 3;
-            // 빈 슬롯은 심볼이 없으므로 contributor 불필요
-            adj.forEach(pos => {
-                if (!boardGrid[pos.x][pos.y]) food += 2;
-            });
-            break;
-        }
-
-        case 29: // Flood Plain: +3 Food. 20% chance adjacent symbols produce double
-            food += 3;
-            break;
-
-        case 30: // Tribal Village: On appear: adds 2 random Era 1 symbols. Destroys self
+        case 21: // Tribal Village: After 1 spin: adds 2 random Ancient symbols. Destroys self
             addSymbolIds.push(randomEra1SymbolId(), randomEra1SymbolId());
             symbolInstance.is_marked_for_destruction = true;
             break;
 
         // ── Era 2: Classical ──
 
-        case 31: { // Horse: +2 Food, +1 Gold. Adjacent Pasture: +4 Food extra
+        case 22: // Horse: Every spin: +2 Food, +1 Gold
             food += 2;
             gold += 1;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 18) { food += 4; contributors.push(pos); }
-            });
             break;
-        }
 
-        case 32: { // Iron: +2 Food, +2 Gold
+        case 23: // Iron: Every spin: +2 Food, +2 Gold
             food += 2;
             gold += 2;
             break;
-        }
 
-        case 34: { // Galley: +2 Gold. +2 Food per adjacent Coast. Every 8 spins: add random symbol
+        case 24: { // Galley: +2 Gold. +2 Food per adjacent Coast. Every 8 spins: add random Ancient symbol
             gold += 2;
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 6) { food += 2; contributors.push(pos); }
             });
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 8) {
-                addSymbolIds.push(randomAnySymbolId());
+                addSymbolIds.push(randomEra1SymbolId());
                 symbolInstance.effect_counter = 0;
             }
             break;
         }
 
-        case 35: { // Library: +3 Knowledge. +2 Knowledge if adjacent to Scroll
-            knowledge += 3;
+        case 25: { // Library: +2 Knowledge. +2 Knowledge if adjacent to Scroll
+            knowledge += 2;
             adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 36) { knowledge += 2; contributors.push(pos); }
+                if (boardGrid[pos.x][pos.y]?.definition.id === 26) { knowledge += 2; contributors.push(pos); }
             });
             break;
         }
 
-        case 36: { // Scroll: +2 Knowledge. +1 Knowledge per adjacent Knowledge-producing symbol
-            knowledge += 2;
+        case 26: { // Scroll: +1 Knowledge. +1 Knowledge per adjacent Knowledge-producing symbol
+            knowledge += 1;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t && KNOWLEDGE_PRODUCING_IDS.has(t.definition.id)) { knowledge += 1; contributors.push(pos); }
@@ -335,19 +290,14 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 37: { // Market: +1 Gold per adjacent symbol. Every 5 spins: convert 8 Gold → random Era 2 symbol
+        case 27: { // Market: +1 Gold per adjacent symbol
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]) { gold += 1; contributors.push(pos); }
             });
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 5) {
-                addSymbolIds.push(randomEra2SymbolId());
-                symbolInstance.effect_counter = 0;
-            }
             break;
         }
 
-        case 38: { // Tax Collector: +3 Gold. Adjacent symbols produce -1 Food (simplified)
+        case 28: { // Tax Collector: +3 Gold. Adjacent symbols produce -1 Food
             gold += 3;
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]) { food -= 1; contributors.push(pos); }
@@ -355,96 +305,82 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 39: { // Merchant: +2 Gold. +1 Gold per unique resource type adjacent
-            gold += 2;
-            let hasFood = false, hasGold = false, hasKnowledge = false;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t) {
-                    const tid = t.definition.id;
-                    if (!hasFood && ![8, 34, 38, 46, 48].includes(tid)) { hasFood = true; contributors.push(pos); }
-                    if (!hasGold && GOLD_PRODUCING_IDS.has(tid)) { hasGold = true; contributors.push(pos); }
-                    if (!hasKnowledge && KNOWLEDGE_PRODUCING_IDS.has(tid)) { hasKnowledge = true; contributors.push(pos); }
-                }
-            });
-            if (hasFood) gold += 1;
-            if (hasGold) gold += 1;
-            if (hasKnowledge) gold += 1;
-            break;
-        }
-
-        case 40: // Vineyard: +2 Food, +2 Gold. Every 6 spins: produce Wine
-            food += 2;
-            gold += 2;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 6) {
-                gold += 5;
-                symbolInstance.effect_counter = 0;
-            }
-            break;
-
-        case 41: // Oracle: +2 Knowledge. (Reveal next choices - UI feature, TODO)
-            knowledge += 2;
-            break;
-
-        case 43: // Aqueduct: +2 Food. Adjacent food-producing symbols +2 extra Food
-            food += 2;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id !== 38) {
-                    food += 2;
-                    contributors.push(pos);
-                }
-            });
-            break;
-
-        case 44: { // Forge: +2 Food, +1 Gold. Adjacent Copper/Iron: +4 Gold. Adjacent Stone: +2 Food
+        case 29: { // Forge: +2 Food, +1 Gold. Adjacent Copper/Iron: +4 Gold. Adjacent Stone: +2 Food
             food += 2;
             gold += 1;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t) {
-                    if (t.definition.id === 8 || t.definition.id === 32) { gold += 4; contributors.push(pos); }
+                    if (t.definition.id === 8 || t.definition.id === 23) { gold += 4; contributors.push(pos); }
                     if (t.definition.id === 7) { food += 2; contributors.push(pos); }
                 }
             });
             break;
         }
 
-        case 45: // Great Wall: +4 Food, +2 Knowledge. Prevents row destruction (handled in store)
-            food += 4;
-            knowledge += 2;
-            break;
-
-        case 46: { // Caravan: +1 Gold per Gold-producing symbol on entire board
-            const goldProducers = countOnBoardBySet(boardGrid, GOLD_PRODUCING_IDS);
-            gold += goldProducers;
-            break;
-        }
-
-        case 47: { // Pantheon: +2 Food, +2 Knowledge. No Religion on board: +5 Food extra
+        case 30: // Arena: +2 Food. (Destruction bonus handled in store)
             food += 2;
-            knowledge += 2;
-            const religionOnBoard = countOnBoardBySet(boardGrid, RELIGION_SYMBOL_IDS);
-            if (religionOnBoard === 0) food += 5;
+            break;
+
+        // ── Religion Doctrine Symbols ──
+
+        case 31: { // Christianity: Food = highest adjacent food. Gold = 3× adjacent knowledge.
+            let maxAdjFood = 0;
+            let adjKnowledge = 0;
+            adj.forEach(pos => {
+                const t = boardGrid[pos.x][pos.y];
+                if (t) {
+                    const baseFood = SYMBOL_BASE_FOOD[t.definition.id] ?? 0;
+                    if (baseFood > maxAdjFood) maxAdjFood = baseFood;
+                    adjKnowledge += SYMBOL_BASE_KNOWLEDGE[t.definition.id] ?? 0;
+                    contributors.push(pos);
+                }
+            });
+            food += maxAdjFood;
+            gold += adjKnowledge * 3;
             break;
         }
 
-        case 48: // Harbor: +2 Gold. Every 6 spins: add random symbol
-            gold += 2;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 6) {
-                addSymbolIds.push(randomAnySymbolId());
-                symbolInstance.effect_counter = 0;
+        case 32: { // Islam: Gold = 3× total knowledge produced by adjacent symbols
+            let adjKnowledge = 0;
+            adj.forEach(pos => {
+                const t = boardGrid[pos.x][pos.y];
+                if (t) {
+                    adjKnowledge += SYMBOL_BASE_KNOWLEDGE[t.definition.id] ?? 0;
+                    if (KNOWLEDGE_PRODUCING_IDS.has(t.definition.id)) contributors.push(pos);
+                }
+            });
+            gold += adjKnowledge * 3;
+            break;
+        }
+
+        case 33: { // Buddhism: +2 Food per empty slot on the board
+            let emptySlots = 0;
+            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+                for (let by = 0; by < BOARD_HEIGHT; by++) {
+                    if (!boardGrid[bx][by]) emptySlots++;
+                }
             }
+            food += emptySlots * 2;
             break;
+        }
 
-        case 50: // Arena: +2 Food. (Destruction bonus handled in store's destruction pass)
-            food += 2;
+        case 34: // Hinduism: destruction bonus handled in gameStore finishProcessing
             break;
     }
 
-    // ── Granary 인접 버프 체크: Wheat(1) 또는 Rice(2)가 인접 Granary(9)가 있으면 2배 ──
+    // ── 교리 패널티: 다른 교리 심볼에 인접 시 -50 Food ──
+    if (RELIGION_DOCTRINE_IDS.has(id)) {
+        const hasAdjacentDoctrine = adj.some(pos => {
+            const t = boardGrid[pos.x][pos.y];
+            return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
+        });
+        if (hasAdjacentDoctrine) {
+            food -= 50;
+        }
+    }
+
+    // ── Granary(9) 인접 버프: 인접 Wheat(1) 또는 Rice(2)가 있으면 해당 심볼 food 2배 ──
     if (id === 1 || id === 2) {
         adj.forEach(pos => {
             if (boardGrid[pos.x][pos.y]?.definition.id === 9) {
@@ -456,12 +392,12 @@ export const processSingleSymbolEffects = (
         }
     }
 
-    // ── Pasture 인접 버프 체크: Cattle(3) 또는 Horse(31)이 인접 Pasture(18)가 있으면 +2 Food ──
-    if (id === 3 || id === 31) {
+    // ── Pasture(14) 인접 버프: 인접 Cattle(3) 또는 Horse(22)가 있으면 +2 Food ──
+    if (id === 3 || id === 22) {
         adj.forEach(pos => {
-            if (boardGrid[pos.x][pos.y]?.definition.id === 18) {
-                if (id === 3) { food += 2; contributors.push(pos); }
-                // Horse(31)은 이미 자체 로직에서 처리
+            if (boardGrid[pos.x][pos.y]?.definition.id === 14) {
+                food += 2;
+                contributors.push(pos);
             }
         });
     }

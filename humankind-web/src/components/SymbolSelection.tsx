@@ -4,6 +4,7 @@ import { Era, getSymbolColorHex, type SymbolDefinition } from '../game/data/symb
 import { t } from '../i18n';
 
 const ERA_NAME_KEYS: Record<number, string> = {
+    [Era.RELIGION]: 'era.religion',
     [Era.ANCIENT]: 'era.ancient',
     [Era.CLASSICAL]: 'era.classical',
     [Era.MEDIEVAL]: 'era.medieval',
