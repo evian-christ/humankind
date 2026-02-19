@@ -4,10 +4,68 @@ import { SYMBOLS } from '../game/data/symbolDefinitions';
 
 const allSymbolsList = Object.values(SYMBOLS).sort((a, b) => a.era - b.era || a.id - b.id);
 
+const btnStyle = (color: string): React.CSSProperties => ({
+    background: color,
+    color: '#fff',
+    border: 'none',
+    padding: '2px 7px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    borderRadius: '2px',
+});
+
+const StatRow = ({
+    label,
+    value,
+    onAdjust,
+    onSet,
+}: {
+    label: string;
+    value: number;
+    onAdjust: (delta: number) => void;
+    onSet: (v: number) => void;
+}) => {
+    const [inputVal, setInputVal] = useState(String(value));
+
+    useEffect(() => {
+        setInputVal(String(value));
+    }, [value]);
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 0' }}>
+            <span style={{ width: '70px', color: '#aaa', fontSize: '12px' }}>{label}</span>
+            <input
+                type="number"
+                value={inputVal}
+                onChange={e => setInputVal(e.target.value)}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                        const n = parseInt(inputVal, 10);
+                        if (!isNaN(n)) onSet(n);
+                    }
+                }}
+                style={{
+                    width: '64px',
+                    background: '#1a1a1a',
+                    color: '#e0e0e0',
+                    border: '1px solid #444',
+                    padding: '2px 4px',
+                    fontSize: '12px',
+                    textAlign: 'right',
+                }}
+            />
+            <button style={btnStyle('#374151')} onClick={() => onAdjust(-100)}>-100</button>
+            <button style={btnStyle('#374151')} onClick={() => onAdjust(-10)}>-10</button>
+            <button style={btnStyle('#166534')} onClick={() => onAdjust(10)}>+10</button>
+            <button style={btnStyle('#166534')} onClick={() => onAdjust(100)}>+100</button>
+        </div>
+    );
+};
+
 const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
-    const { playerSymbols, devAddSymbol, devRemoveSymbol } = useGameStore();
+    const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat } = useGameStore();
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -27,7 +85,7 @@ const DevOverlay = () => {
             position: 'fixed',
             top: 0,
             right: 0,
-            width: '360px',
+            width: '380px',
             height: '100%',
             background: 'rgba(0,0,0,0.92)',
             color: '#e0e0e0',
@@ -58,6 +116,32 @@ const DevOverlay = () => {
                         fontSize: '14px',
                     }}
                 >X</button>
+            </div>
+
+            {/* Stats */}
+            <div style={{
+                padding: '8px 14px',
+                borderBottom: '1px solid #333',
+            }}>
+                <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>STATS</div>
+                <StatRow
+                    label="Food"
+                    value={food}
+                    onAdjust={d => devSetStat('food', food + d)}
+                    onSet={v => devSetStat('food', v)}
+                />
+                <StatRow
+                    label="Gold"
+                    value={gold}
+                    onAdjust={d => devSetStat('gold', gold + d)}
+                    onSet={v => devSetStat('gold', v)}
+                />
+                <StatRow
+                    label="Knowledge"
+                    value={knowledge}
+                    onAdjust={d => devSetStat('knowledge', knowledge + d)}
+                    onSet={v => devSetStat('knowledge', v)}
+                />
             </div>
 
             {/* Add Symbol */}
@@ -101,7 +185,7 @@ const DevOverlay = () => {
 
             {/* Symbol Count */}
             <div style={{ padding: '6px 14px', color: '#888', fontSize: '12px' }}>
-                {playerSymbols.length}
+                심볼 {playerSymbols.length}개
             </div>
 
             {/* Player Symbols List */}
