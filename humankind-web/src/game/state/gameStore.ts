@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { SYMBOLS, type SymbolDefinition } from '../data/symbolDefinitions';
-import { EVENT_SYMBOLS, type EventSymbolDefinition } from '../data/eventSymbolDefinitions';
 import { processSingleSymbolEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY } from './settingsStore';
 import type { PlayerSymbolInstance } from '../types';
@@ -10,17 +9,23 @@ export { type PlayerSymbolInstance } from '../types';
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 export const REROLL_COST = 5;
-export const EVENT_SLOT_COUNT = 3;
 
-export type EventSlotInstance = { definition: EventSymbolDefinition; counter: number } | null;
-
-// 시대별 심볼 등장 확률 테이블 (키: era, 값: %)
-const ERA_PROBABILITIES: Record<number, Record<number, number>> = {
+// 시대별 심볼 등장 확률 테이블 (종교 미해금)
+const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
     1: { 1: 100, 2: 0,   3: 0,   4: 0,   5: 0  },
     2: { 1: 55,  2: 45,  3: 0,   4: 0,   5: 0  },
     3: { 1: 30,  2: 35,  3: 35,  4: 0,   5: 0  },
     4: { 1: 15,  2: 25,  3: 30,  4: 30,  5: 0  },
     5: { 1: 10,  2: 15,  3: 25,  4: 25,  5: 25 },
+};
+
+// 시대별 심볼 등장 확률 테이블 (종교 해금 후, 0 = Religion)
+const ERA_PROBABILITIES_WITH_RELIGION: Record<number, Record<number, number>> = {
+    1: { 0: 0,  1: 100, 2: 0,  3: 0,  4: 0,  5: 0  },
+    2: { 0: 10, 1: 50,  2: 40, 3: 0,  4: 0,  5: 0  },
+    3: { 0: 10, 1: 25,  2: 30, 3: 35, 4: 0,  5: 0  },
+    4: { 0: 5,  1: 13,  2: 22, 3: 30, 4: 30, 5: 0  },
+    5: { 0: 0,  1: 10,  2: 15, 3: 25, 4: 25, 5: 25 },
 };
 
 // 시대 전환에 필요한 Knowledge
@@ -31,7 +36,7 @@ const ERA_KNOWLEDGE_REQUIRED: Record<number, number> = {
     4: 275,
 };
 
-type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'game_over' | 'victory';
+type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'era_unlock' | 'game_over' | 'victory';
 
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250...) */
 export const calculateFoodCost = (turn: number): number => {
@@ -58,10 +63,12 @@ interface GameState {
     activeContributors: { x: number; y: number }[];
     /** spinning 시작 직전의 보드 (릴 시작점용) */
     prevBoard: (PlayerSymbolInstance | null)[][];
-    /** 이벤트 슬롯 (길이 3) */
-    eventSlots: EventSlotInstance[];
-    /** spinning 시작 직전의 이벤트 슬롯 (릴 시작점용) */
-    prevEventSlots: EventSlotInstance[];
+    /** 종교 심볼이 선택 풀에 해금되었는지 */
+    religionUnlocked: boolean;
+    /** 매 턴 영구 지식 보너스 */
+    bonusKnowledgePerTurn: number;
+    /** 고전 시대 진입 시 선택 대기 중 */
+    pendingEraUnlock: boolean;
 
     // Actions
     spinBoard: () => void;
@@ -70,9 +77,11 @@ interface GameState {
     selectSymbol: (symbolId: number) => void;
     skipSelection: () => void;
     rerollSymbols: () => void;
+    resolveEraUnlock: (choice: 'religion' | 'knowledge') => void;
     initializeGame: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => void;
 }
 
 const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => {
@@ -100,15 +109,15 @@ const getStartingSymbols = (): PlayerSymbolInstance[] => {
         SYMBOLS[5],  // Fish
         SYMBOLS[4],  // Banana
         SYMBOLS[7],  // Stone
-        SYMBOLS[23], // Campfire
+        SYMBOLS[19], // Campfire
     ].map(createInstance);
 };
 
-/** 선택 풀에서 제외할 심볼 (Swordsman은 Iron 업그레이드로만 획득) */
-const EXCLUDED_FROM_CHOICES = new Set([33]);
+/** 선택 풀에서 제외할 심볼 */
+const EXCLUDED_FROM_CHOICES = new Set<number>();
 
 /** 심볼을 시대별로 그룹화 */
-const getSymbolsByEra = (_era: number): Record<number, SymbolDefinition[]> => {
+const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
     const result: Record<number, SymbolDefinition[]> = {};
     for (const sym of Object.values(SYMBOLS)) {
         if (EXCLUDED_FROM_CHOICES.has(sym.id)) continue;
@@ -120,9 +129,10 @@ const getSymbolsByEra = (_era: number): Record<number, SymbolDefinition[]> => {
 };
 
 /** 시대 기반 가중치로 심볼 3개 생성 (중복 가능) */
-const generateChoices = (era: number): SymbolDefinition[] => {
-    const probs = ERA_PROBABILITIES[era] ?? ERA_PROBABILITIES[1];
-    const symbolsByEra = getSymbolsByEra(era);
+const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
+    const probTable = religionUnlocked ? ERA_PROBABILITIES_WITH_RELIGION : ERA_PROBABILITIES_BASE;
+    const probs = probTable[era] ?? probTable[1];
+    const symbolsByEra = getSymbolsByEra();
     const choices: SymbolDefinition[] = [];
 
     for (let i = 0; i < 3; i++) {
@@ -164,8 +174,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     activeSlot: null,
     activeContributors: [],
     prevBoard: createEmptyBoard(),
-    eventSlots: [null, null, null] as EventSlotInstance[],
-    prevEventSlots: [null, null, null] as EventSlotInstance[],
+    religionUnlocked: false,
+    bonusKnowledgePerTurn: 0,
+    pendingEraUnlock: false,
 
     spinBoard: () => {
         const state = get();
@@ -203,22 +214,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             currentFood -= cost;
         }
 
-        // 이벤트 슬롯: 빈 슬롯에 확률적으로 이벤트 심볼 배치
-        const newEventSlots: EventSlotInstance[] = [...state.eventSlots];
-        for (let i = 0; i < EVENT_SLOT_COUNT; i++) {
-            if (newEventSlots[i] === null && Math.random() < 0.4) {
-                const randomEvent = EVENT_SYMBOLS[Math.floor(Math.random() * EVENT_SYMBOLS.length)];
-                newEventSlots[i] = { definition: randomEvent, counter: randomEvent.counter };
-            }
-        }
-
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
         // prevBoard: 스핀 전 보드를 저장 (릴 시작점용)
         set({
             prevBoard: state.board,
-            prevEventSlots: state.eventSlots,
             board: newBoard,
-            eventSlots: newEventSlots,
             turn: newTurn,
             food: currentFood,
             phase: 'spinning',
@@ -247,7 +247,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         let totalFood = 0;
-        let totalKnowledge = 0;
+        let totalKnowledge = get().bonusKnowledgePerTurn;
         let totalGold = 0;
         const symbolsToAdd: number[] = [];
         const symbolsToSpawnOnBoard: number[] = [];
@@ -321,7 +321,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (let x = 0; x < BOARD_WIDTH; x++) {
                     for (let y = 0; y < BOARD_HEIGHT; y++) {
                         const s = currentBoard[x][y];
-                        if (s && s.definition.id === 50 && !s.is_marked_for_destruction) {
+                        if (s && s.definition.id === 30 && !s.is_marked_for_destruction) {
                             const arenaFood = destroyedCount * 4;
                             const arenaGold = destroyedCount * 2;
                             bonusFood += arenaFood;
@@ -335,24 +335,38 @@ export const useGameStore = create<GameState>((set, get) => ({
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
-                    if (s && s.definition.id === 26 && s.is_marked_for_destruction) {
-                        bonusFood += 20;
+                    if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
+                        bonusFood += (s.effect_counter || 0) * 2;
                     }
                 }
             }
 
+            // Hinduism (34): 인접 심볼이 파괴되면 +5 Knowledge + 복사본 컬렉션 추가
+            let bonusKnowledge = 0;
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
-                    if (s && s.definition.id === 24 && s.is_marked_for_destruction) {
-                        bonusFood += (s.effect_counter || 0) * 2;
+                    if (s && s.definition.id === 34 && !s.is_marked_for_destruction) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            for (let dy = -1; dy <= 1; dy++) {
+                                if (dx === 0 && dy === 0) continue;
+                                const nx = x + dx, ny = y + dy;
+                                if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+                                const adjSym = currentBoard[nx][ny];
+                                if (adjSym && adjSym.is_marked_for_destruction) {
+                                    bonusKnowledge += 5;
+                                    toAdd.push(adjSym.definition.id);
+                                    effects.push({ x, y, food: 0, gold: 0, knowledge: 5 });
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             set((prev) => {
                 let newEra = prev.era;
-                let newKnowledge = prev.knowledge + tKnowledge;
+                let newKnowledge = prev.knowledge + tKnowledge + bonusKnowledge;
 
                 while (newEra < 5) {
                     const required = ERA_KNOWLEDGE_REQUIRED[newEra];
@@ -361,26 +375,10 @@ export const useGameStore = create<GameState>((set, get) => ({
                     newEra++;
                 }
 
-                const protectedRows = new Set<number>();
-                for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-                    for (let by = 0; by < BOARD_HEIGHT; by++) {
-                        const s = prev.board[bx][by];
-                        if (s && s.definition.id === 45 && !s.is_marked_for_destruction) {
-                            protectedRows.add(by);
-                        }
-                    }
-                }
-
                 const cleanBoard = prev.board.map((col) =>
-                    col.map((s, cy) => {
+                    col.map((s) => {
                         if (!s) return null;
-                        if (s.is_marked_for_destruction) {
-                            if (protectedRows.has(cy)) {
-                                s.is_marked_for_destruction = false;
-                                return s;
-                            }
-                            return null;
-                        }
+                        if (s.is_marked_for_destruction) return null;
                         return s;
                     })
                 );
@@ -425,18 +423,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
 
                 const filteredSymbols = newPlayerSymbols.filter(s => !destroyedIds.has(s.instanceId));
-                const choices = generateChoices(newEra);
-
-                // 이벤트 슬롯 카운터 감소
-                const updatedEventSlots: EventSlotInstance[] = prev.eventSlots.map(slot => {
-                    if (!slot) return null;
-                    const newCounter = slot.counter - 1;
-                    if (newCounter <= 0) {
-                        // 카운터 0 → 이벤트 발동 (효과는 추후 구현) → 슬롯 비움
-                        return null;
-                    }
-                    return { ...slot, counter: newCounter };
-                });
+                const choices = generateChoices(newEra, prev.religionUnlocked);
+                const crossedToClassical = prev.era === 1 && newEra === 2;
 
                 return {
                     food: prev.food + tFood + bonusFood,
@@ -451,7 +439,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     lastEffects: [...effects],
                     phase: 'processing' as GamePhase,
                     symbolChoices: choices,
-                    eventSlots: updatedEventSlots,
+                    pendingEraUnlock: crossedToClassical,
                 };
             });
 
@@ -478,14 +466,15 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         set({
             playerSymbols: [...state.playerSymbols, createInstance(def)],
-            phase: 'idle',
+            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
             symbolChoices: [],
         });
     },
 
     skipSelection: () => {
-        if (get().phase !== 'selection') return;
-        set({ phase: 'idle', symbolChoices: [] });
+        const state = get();
+        if (state.phase !== 'selection') return;
+        set({ phase: state.pendingEraUnlock ? 'era_unlock' : 'idle', symbolChoices: [] });
     },
 
     rerollSymbols: () => {
@@ -495,8 +484,17 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         set({
             gold: state.gold - REROLL_COST,
-            symbolChoices: generateChoices(state.era),
+            symbolChoices: generateChoices(state.era, state.religionUnlocked),
         });
+    },
+
+    resolveEraUnlock: (choice: 'religion' | 'knowledge') => {
+        set(prev => ({
+            religionUnlocked: choice === 'religion' ? true : prev.religionUnlocked,
+            bonusKnowledgePerTurn: choice === 'knowledge' ? prev.bonusKnowledgePerTurn + 1 : prev.bonusKnowledgePerTurn,
+            pendingEraUnlock: false,
+            phase: 'idle' as GamePhase,
+        }));
     },
 
     initializeGame: () => {
@@ -515,8 +513,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             activeSlot: null,
             activeContributors: [],
             prevBoard: createEmptyBoard(),
-            eventSlots: [null, null, null] as EventSlotInstance[],
-            prevEventSlots: [null, null, null] as EventSlotInstance[],
+            religionUnlocked: false,
+            bonusKnowledgePerTurn: 0,
+            pendingEraUnlock: false,
         });
     },
 
@@ -532,5 +531,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         set((prev) => ({
             playerSymbols: prev.playerSymbols.filter(s => s.instanceId !== instanceId),
         }));
+    },
+
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => {
+        set({ [stat]: Math.max(0, value) });
     },
 }));

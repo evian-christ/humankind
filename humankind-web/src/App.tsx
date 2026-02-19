@@ -1,16 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useSettingsStore } from './game/state/settingsStore';
 import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
+import EraUnlockModal from './components/EraUnlockModal';
 import PauseMenu from './components/PauseMenu';
 import DevOverlay from './components/DevOverlay';
 
 function App() {
   const { phase, turn, spinBoard, initializeGame } = useGameStore();
   const language = useSettingsStore((s) => s.language);
+  const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // 앱 최초 로드 시 저장된 해상도를 DOM에 적용
+  useEffect(() => {
+    setResolution(resolutionWidth, resolutionHeight);
+  }, []);
 
   return (
     <>
@@ -32,6 +39,9 @@ function App() {
 
       {/* ===== SYMBOL SELECTION OVERLAY ===== */}
       <SymbolSelection />
+
+      {/* ===== ERA UNLOCK MODAL ===== */}
+      <EraUnlockModal />
 
       {/* ===== GAME OVER OVERLAY ===== */}
       {phase === 'game_over' && (
@@ -66,7 +76,7 @@ function App() {
           disabled={phase !== 'idle'}
         >
           <span className="spin-icon">⚡</span>
-          {phase === 'spinning' || phase === 'processing' ? '...' : t('game.spin', language)}
+          {phase === 'spinning' || phase === 'processing' || phase === 'era_unlock' ? '...' : t('game.spin', language)}
         </button>
       </div>
     </>
