@@ -25,7 +25,14 @@
       "Bash(powershell -Command \"Get-ChildItem ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public'' -Recurse | Select-Object FullName\")",
       "Bash(powershell -Command \"Copy-Item ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\Assets\\\\Symbols\\\\pasture.png'' ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public\\\\assets\\\\sprites\\\\pasture.png''\")",
       "Bash(powershell -Command \"Copy-Item ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\Assets\\\\Symbols\\\\pasture.png'' ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public\\\\assets\\\\sprites\\\\pasture.png'' -Force; Write-Host ''done''\")",
-      "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public\\\\assets\\\\sprites\\\\pasture.png''\")"
+      "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\chank\\\\Desktop\\\\humankind\\\\humankind-web\\\\public\\\\assets\\\\sprites\\\\pasture.png''\")",
+      "Bash(npm install)",
+      "Bash(npx:*)",
+      "Bash(git -C /Users/chan/Documents/projects/humankind status)",
+      "Bash(git -C /Users/chan/Documents/projects/humankind log --oneline -5)",
+      "Bash(git -C /Users/chan/Documents/projects/humankind diff --stat)",
+      "Bash(git -C /Users/chan/Documents/projects/humankind add AGENTS.md CLAUDE.md DESIGN_REFERENCE.md EARLY_ACCESS_PLAN.md EventSymbols.csv README.md SYSTEM_OVERVIEW.md Symbols_v4.csv .claude/settings.local.json)",
+      "Bash(git -C:*)"
     ],
     "deny": [],
     "ask": []
