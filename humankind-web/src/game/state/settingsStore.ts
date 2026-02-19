@@ -12,12 +12,12 @@ export const EFFECT_SPEED_DELAY: Record<EffectSpeed, number> = {
     'instant': 0,
 };
 
-/** 스핀 속도 설정: { speed 배수, baseTime(ms), stopInterval(ms) } */
-export const SPIN_SPEED_CONFIG: Record<SpinSpeed, { speedMul: number; baseTime: number; stopInterval: number }> = {
-    '1x': { speedMul: 1, baseTime: 800, stopInterval: 80 },
-    '2x': { speedMul: 1.8, baseTime: 500, stopInterval: 50 },
-    '4x': { speedMul: 3, baseTime: 300, stopInterval: 25 },
-    'instant': { speedMul: 0, baseTime: 0, stopInterval: 0 },
+/** 스핀 속도 설정: { speed 배수, stopInterval(ms) } */
+export const SPIN_SPEED_CONFIG: Record<SpinSpeed, { speedMul: number; stopInterval: number }> = {
+    '1x': { speedMul: 3.6, stopInterval: 50 },
+    '2x': { speedMul: 6, stopInterval: 50 },
+    '4x': { speedMul: 10, stopInterval: 50 },
+    'instant': { speedMul: 0, stopInterval: 0 },
 };
 
 export interface ResolutionOption {
@@ -52,11 +52,11 @@ interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-    resolutionWidth: 1920,
-    resolutionHeight: 1080,
+    resolutionWidth: 1280,
+    resolutionHeight: 720,
     language: 'ko',
-    effectSpeed: '1x',
-    spinSpeed: '1x',
+    effectSpeed: '4x',
+    spinSpeed: '4x',
 
     setResolution: (width, height) => {
         set({ resolutionWidth: width, resolutionHeight: height });
