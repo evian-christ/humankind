@@ -251,10 +251,30 @@ func _create_symbol_card(symbol: Symbol, index: int) -> Control:
 	effect_label.add_theme_font_size_override("font_size", 11)
 	effect_label.add_theme_color_override("font_color", Color.BLACK)
 	
+	var stats_container = HBoxContainer.new()
+	stats_container.alignment = BoxContainer.ALIGNMENT_CENTER
+	stats_container.add_theme_constant_override("separation", 15)
+	
+	if symbol.base_attack > 0:
+		var atk_label = Label.new()
+		atk_label.text = "⚔ " + str(symbol.base_attack)
+		atk_label.add_theme_font_size_override("font_size", 16)
+		atk_label.add_theme_color_override("font_color", Color.BLACK)
+		stats_container.add_child(atk_label)
+		
+	if symbol.base_hp > 0:
+		var def_label = Label.new()
+		def_label.text = "♥ " + str(symbol.base_hp)
+		def_label.add_theme_font_size_override("font_size", 16)
+		def_label.add_theme_color_override("font_color", Color.BLACK)
+		stats_container.add_child(def_label)
+	
 	vbox.add_child(icon_container)
 	vbox.add_child(name_label)
 	vbox.add_child(rarity_label)
 	vbox.add_child(passive_label)
+	if symbol.base_attack > 0 or symbol.base_hp > 0:
+		vbox.add_child(stats_container)
 	vbox.add_child(effect_label)
 	
 	card.add_child(vbox)

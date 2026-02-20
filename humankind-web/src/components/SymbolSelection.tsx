@@ -36,6 +36,12 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
             <div className="selection-card-rarity" style={{ color: eraColor }}>
                 ── {eraName} ──
             </div>
+            {(symbol.base_attack !== undefined || symbol.base_hp !== undefined) && (
+                <div className="selection-card-stats" style={{ display: 'flex', gap: '16px', fontSize: '24px', margin: '8px 0', fontWeight: 'bold', color: '#1a1a1a' }}>
+                    {symbol.base_attack !== undefined && <span>⚔ {symbol.base_attack}</span>}
+                    {symbol.base_hp !== undefined && <span>♥ {symbol.base_hp}</span>}
+                </div>
+            )}
             <div className="selection-card-desc">
                 {symDesc.split('\n').map((line, i) => (
                     <div key={i} className="selection-card-desc-line">{line}</div>

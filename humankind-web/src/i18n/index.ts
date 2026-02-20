@@ -36,6 +36,8 @@ const translations: Record<Language, Record<string, string>> = {
         'game.chooseSymbol': 'Choose a Symbol',
         'game.reroll': 'Reroll',
         'game.skip': 'Skip',
+        'game.attack': 'Attack',
+        'game.defense': 'Defense',
 
         // Era Unlock
         'eraUnlock.title': 'Classical Era Begins',
@@ -88,6 +90,8 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.name': 'Islam',
         'symbol.33.name': 'Buddhism',
         'symbol.34.name': 'Hinduism',
+        'symbol.35.name': 'Barbarian',
+        'symbol.36.name': 'Warrior',
 
         // ── Symbol Descriptions ──
         'symbol.1.desc': 'Every spin: +2 Food.',
@@ -124,6 +128,8 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.desc': 'Every spin: +Gold equal to 3× total Knowledge produced by adjacent symbols.\nAdjacent to a Religion symbol: -50 Food.',
         'symbol.33.desc': 'Every spin: +2 Food per empty slot on the board.\nAdjacent to a Religion symbol: -50 Food.',
         'symbol.34.desc': 'When an adjacent symbol is destroyed: +5 Knowledge and adds a copy to your collection.\nAdjacent to a Religion symbol: -50 Food.',
+        'symbol.35.desc': 'Every spin: 50% chance −3 Food, 50% chance −1 Gold.',
+        'symbol.36.desc': 'Every 10 spins: -3 Food.',
     },
     ko: {
         // Pause Menu
@@ -160,6 +166,8 @@ const translations: Record<Language, Record<string, string>> = {
         'game.chooseSymbol': '심볼을 선택하세요',
         'game.reroll': '리롤',
         'game.skip': '건너뛰기',
+        'game.attack': '공격력',
+        'game.defense': '방어력',
 
         // Era Unlock
         'eraUnlock.title': '고전 시대가 열립니다',
@@ -212,6 +220,8 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.name': '이슬람',
         'symbol.33.name': '불교',
         'symbol.34.name': '힌두교',
+        'symbol.35.name': '야만인',
+        'symbol.36.name': '전사',
 
         // ── Symbol Descriptions ──
         'symbol.1.desc': '매 스핀: 식량 +2.',
@@ -248,6 +258,8 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.desc': '매 스핀: 인접 심볼의 지식 생산 합계 x3만큼 골드 획득.\n종교 심볼에 인접 시: 식량 -50.',
         'symbol.33.desc': '매 스핀: 빈 슬롯 하나당 식량 +2.\n종교 심볼에 인접 시: 식량 -50.',
         'symbol.34.desc': '인접 심볼이 파괴되면: 지식 +5, 같은 심볼 컬렉션에 추가.\n종교 심볼에 인접 시: 식량 -50.',
+        'symbol.35.desc': '매 스핀: 50% 확률로 식량 -3, 50% 확률로 골드 -1.',
+        'symbol.36.desc': '10스핀마다: 식량 -3.',
     },
 };
 
