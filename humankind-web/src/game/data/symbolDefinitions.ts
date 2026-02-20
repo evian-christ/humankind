@@ -25,9 +25,10 @@ export interface SymbolDefinition {
 }
 
 /**
- * Symbols_v4.csv 기반 심볼 정의 (30개, ID 1~30)
- * Era 1 (Ancient): ID 1~21
+ * Symbols_v4.csv 기반 심볼 정의 (ID 1~36)
+ * Era 1 (Ancient): ID 1~21, 35~36
  * Era 2 (Classical): ID 22~30
+ * Religion: ID 31~34
  */
 export const SYMBOLS: Record<number, SymbolDefinition> = {
     // ── Era 1: Ancient ──
@@ -54,10 +55,16 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     21: { id: 21, name: "Tribal Village",era: Era.ANCIENT,   symbol_type: SymbolType.FRIENDLY, description: "After 1 spin: immediately adds 2 random Ancient symbols. Then destroys self.",                sprite: "" },
 
     // ── Religion (era-agnostic, first appears in Classical era) ──
-    31: { id: 31, name: "Christianity", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: produces Food equal to the highest Food produced by an adjacent symbol this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "" },
-    32: { id: 32, name: "Islam",        era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: gains Gold equal to 3× the total Knowledge produced by adjacent symbols this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "" },
-    33: { id: 33, name: "Buddhism",     era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food per empty slot on the board. Adjacent to a Religion symbol: -50 Food.", sprite: "" },
-    34: { id: 34, name: "Hinduism",     era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "When an adjacent symbol is destroyed: +5 Knowledge and adds a copy of that symbol to your collection. Adjacent to a Religion symbol: -50 Food.", sprite: "" },
+    31: { id: 31, name: "Christianity", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: produces Food equal to the highest Food produced by an adjacent symbol this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "015.png" },
+    32: { id: 32, name: "Islam",        era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: gains Gold equal to 3× the total Knowledge produced by adjacent symbols this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "018.png" },
+    33: { id: 33, name: "Buddhism",     era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food per empty slot on the board. Adjacent to a Religion symbol: -50 Food.", sprite: "016.png" },
+    34: { id: 34, name: "Hinduism",     era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "When an adjacent symbol is destroyed: +5 Knowledge and adds a copy of that symbol to your collection. Adjacent to a Religion symbol: -50 Food.", sprite: "017.png" },
+
+    // ── Enemy Symbols ──
+    35: { id: 35, name: "Barbarian",  era: Era.ANCIENT, symbol_type: SymbolType.ENEMY,  description: "Every spin: 50% chance −3 Food, 50% chance −1 Gold.", base_attack: 5, base_hp: 10, sprite: "022.png" },
+
+    // ── Combat Symbols ──
+    36: { id: 36, name: "Warrior",    era: Era.ANCIENT, symbol_type: SymbolType.COMBAT, description: "Every 10 spins: -3 Food.", base_attack: 5, base_hp: 10, sprite: "" },
 
     // ── Era 2: Classical ──
     22: { id: 22, name: "Horse",         era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food, +1 Gold.",                                                               sprite: "" },
