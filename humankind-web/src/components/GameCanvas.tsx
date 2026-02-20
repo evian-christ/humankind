@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as PIXI from 'pixi.js';
 import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT, calculateFoodCost } from '../game/state/gameStore';
-import { useSettingsStore, SPIN_SPEED_CONFIG } from '../game/state/settingsStore';
-import { getSymbolColor, getSymbolColorHex, Era, SYMBOLS, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { useSettingsStore, SPIN_SPEED_CONFIG, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from '../game/state/settingsStore';
+import { getSymbolColor, getSymbolColorHex, Era, SymbolType, SYMBOLS, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 
 interface HoveredSymbol {
@@ -16,6 +16,26 @@ interface FloatingEffect {
     texts: PIXI.Text[];
     startY: number;
     elapsed: number; // ms
+}
+
+/** 전투 바운스 애니메이션 상태 */
+interface CombatBounce {
+    sprite: PIXI.Container;
+    fromX: number; fromY: number;
+    toX: number; toY: number;
+    elapsed: number;
+    duration: number;
+    hitSpawned: boolean;
+    atkDmg: number;
+    targetHpX: number; targetHpY: number;
+}
+
+/** 셀 레이아웃 정보 (renderBoard에서 저장) */
+interface CellLayout {
+    startX: number; startY: number;
+    cellWidth: number; cellHeight: number;
+    gridOffsetX: number; gridOffsetY: number;
+    colGap: number;
 }
 
 const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
@@ -73,6 +93,12 @@ const GameCanvas = () => {
     const reelsRef = useRef<ReelState[]>([]);
     const spinElapsedRef = useRef<number>(0);
     const spinActiveRef = useRef<boolean>(false);
+
+    // 전투 바운스 애니메이션
+    const combatContainerRef = useRef<PIXI.Container | null>(null);
+    const cellLayoutRef = useRef<CellLayout | null>(null);
+    const combatBounceRef = useRef<CombatBounce | null>(null);
+    const combatShakingRef = useRef<boolean>(false);
 
     // Initialize Pixi Application
     useEffect(() => {
@@ -139,6 +165,11 @@ const GameCanvas = () => {
             app.stage.addChild(spinContainer);
             spinContainerRef.current = spinContainer;
 
+            // Combat bounce layer (above spin, below effects)
+            const combatContainer = new PIXI.Container();
+            app.stage.addChild(combatContainer);
+            combatContainerRef.current = combatContainer;
+
             // Effects layer (running totals, static)
             const effectsContainer = new PIXI.Container();
             app.stage.addChild(effectsContainer);
@@ -178,6 +209,72 @@ const GameCanvas = () => {
                             txt.destroy();
                         }
                         floats.splice(i, 1);
+                    }
+                }
+
+                // --- Combat bounce ---
+                const bounce = combatBounceRef.current;
+                if (bounce) {
+                    bounce.elapsed += dt;
+                    const halfDur = bounce.duration / 2;
+                    const easeInOut = (t: number) =>
+                        t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+                    if (bounce.elapsed < halfDur) {
+                        // 공격자 → 대상 방향 이동
+                        const progress = bounce.elapsed / halfDur;
+                        const ease = easeInOut(Math.min(progress, 1));
+                        bounce.sprite.x = bounce.fromX + (bounce.toX - bounce.fromX) * ease;
+                        bounce.sprite.y = bounce.fromY + (bounce.toY - bounce.fromY) * ease;
+
+                        // 충돌 직전(70%)에 데미지 텍스트 생성
+                        if (!bounce.hitSpawned && progress >= 0.7 && bounce.atkDmg > 0) {
+                            bounce.hitSpawned = true;
+                            const floatCont = floatContainerRef.current;
+                            if (floatCont) {
+                                const dmgTxt = new PIXI.Text({
+                                    text: `-${bounce.atkDmg}`,
+                                    style: new PIXI.TextStyle({
+                                        fill: '#ef4444',
+                                        fontSize: 34,
+                                        fontWeight: 'bold',
+                                        fontFamily: 'Mulmaru',
+                                        stroke: { color: '#000000', width: 3 },
+                                    }),
+                                });
+                                dmgTxt.anchor.set(1, 1);
+                                dmgTxt.x = bounce.targetHpX;
+                                dmgTxt.y = bounce.targetHpY;
+                                (dmgTxt as unknown as { _baseOffsetY: number })._baseOffsetY = 0;
+                                floatCont.addChild(dmgTxt);
+                                floatingEffectsRef.current.push({
+                                    texts: [dmgTxt],
+                                    startY: bounce.targetHpY,
+                                    elapsed: 0,
+                                });
+                            }
+                        }
+                    } else if (bounce.elapsed < bounce.duration) {
+                        // 원위치로 복귀
+                        const progress = (bounce.elapsed - halfDur) / halfDur;
+                        const ease = easeInOut(Math.min(progress, 1));
+                        bounce.sprite.x = bounce.toX + (bounce.fromX - bounce.toX) * ease;
+                        bounce.sprite.y = bounce.toY + (bounce.fromY - bounce.toY) * ease;
+                    } else {
+                        // 완료 — 스프라이트 제거
+                        if (bounce.sprite.parent) {
+                            bounce.sprite.parent.removeChild(bounce.sprite);
+                        }
+                        bounce.sprite.destroy();
+                        combatBounceRef.current = null;
+                    }
+                }
+
+                // --- Combat shake (삭제 전 진동) ---
+                if (combatShakingRef.current) {
+                    const shakeCont = combatContainerRef.current;
+                    if (shakeCont) {
+                        shakeCont.x = Math.sin(Date.now() / 20) * 6;
                     }
                 }
 
@@ -288,11 +385,18 @@ const GameCanvas = () => {
         const state = useGameStore.getState();
         const { board, lastEffects } = state;
 
+        const combatContainer = combatContainerRef.current;
+
         boardContainer.removeChildren();
         effectsContainer.removeChildren();
         // floatContainer는 ticker가 관리하므로 건드리지 않음
         hitContainer.removeChildren();
         bgContainer.removeChildren();
+        // combatContainer: bounce/shake 없을 때만 정리 (bounce 중엔 triggerCombatAnimation이 관리)
+        if (combatContainer && !state.combatAnimation) {
+            combatContainer.removeChildren();
+            combatContainer.x = 0;
+        }
 
         const w = app.screen.width;
         const h = app.screen.height;
@@ -355,6 +459,9 @@ const GameCanvas = () => {
         // Center board horizontally and vertically
         const startX = (w - boardW) / 2;
         const startY = (h - boardH) / 2;
+
+        // 전투 바운스 애니메이션용 셀 레이아웃 저장
+        cellLayoutRef.current = { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
 
         // Draw board background (single sprite for entire board)
         const boardBg = PIXI.Sprite.from('/assets/sprites/slot_bg.png');
@@ -489,6 +596,15 @@ const GameCanvas = () => {
                 const symbol = board[x][y];
                 if (!symbol) continue;
 
+                // 전투 바운스 중인 공격자 셀은 보드에서 숨김 (combatContainer에서 표시)
+                if (state.combatAnimation && state.combatAnimation.ax === x && state.combatAnimation.ay === y) {
+                    continue;
+                }
+
+                // 전투 후 삭제 대기 심볼 → combatContainer에 그려서 진동 효과
+                const isShakingDeath = state.combatShaking && symbol.is_marked_for_destruction && combatContainer;
+                const drawTarget = isShakingDeath ? combatContainer : boardContainer;
+
                 // Hit area for hover tooltip
                 const hitArea = new PIXI.Graphics();
                 hitArea.rect(cellX, cellY, cellWidth, cellHeight);
@@ -523,7 +639,7 @@ const GameCanvas = () => {
                     sprite.anchor.set(0.5);
                     sprite.width = spriteSize;
                     sprite.height = spriteSize;
-                    boardContainer.addChild(sprite);
+                    drawTarget.addChild(sprite);
                 } else {
                     // No sprite: show symbol name as fallback
                     const symName = t(`symbol.${symbol.definition.id}.name`, lang);
@@ -539,11 +655,11 @@ const GameCanvas = () => {
                     nameText.anchor.set(0.5);
                     nameText.x = cellX + cellWidth / 2;
                     nameText.y = cellY + cellHeight / 2;
-                    boardContainer.addChild(nameText);
+                    drawTarget.addChild(nameText);
                 }
 
-                // Counter badge
-                if (symbol.effect_counter > 0) {
+                // Counter badge (friendly symbols only)
+                if (symbol.effect_counter > 0 && symbol.definition.symbol_type === SymbolType.FRIENDLY) {
                     const badgeX = cellX + cellWidth - 8;
                     const badgeY = cellY + cellHeight - 8;
 
@@ -556,10 +672,46 @@ const GameCanvas = () => {
                             fontFamily,
                         }),
                     });
-                    counterText.anchor.set(1, 1); // Bottom-right anchor
+                    counterText.anchor.set(1, 1);
                     counterText.x = badgeX;
                     counterText.y = badgeY;
-                    boardContainer.addChild(counterText);
+                    drawTarget.addChild(counterText);
+                }
+
+                // ATK / HP 배지 (전투·적 심볼)
+                const def = symbol.definition;
+                if (def.base_attack !== undefined && def.base_attack > 0) {
+                    const atkText = new PIXI.Text({
+                        text: `⚔${def.base_attack}`,
+                        style: new PIXI.TextStyle({
+                            fill: '#ff8c42',
+                            fontSize: 30 * fs,
+                            fontWeight: 'bold',
+                            fontFamily,
+                            stroke: { color: '#000000', width: 3 },
+                        }),
+                    });
+                    atkText.anchor.set(0, 1); // 왼쪽 하단
+                    atkText.x = cellX + 6;
+                    atkText.y = cellY + cellHeight - 5;
+                    drawTarget.addChild(atkText);
+                }
+                if (def.base_hp !== undefined && def.base_hp > 0) {
+                    const currentHp = symbol.enemy_hp ?? def.base_hp;
+                    const hpText = new PIXI.Text({
+                        text: `♥${currentHp}`,
+                        style: new PIXI.TextStyle({
+                            fill: '#4ade80',
+                            fontSize: 30 * fs,
+                            fontWeight: 'bold',
+                            fontFamily,
+                            stroke: { color: '#000000', width: 3 },
+                        }),
+                    });
+                    hpText.anchor.set(1, 1); // 오른쪽 하단
+                    hpText.x = cellX + cellWidth - 5;
+                    hpText.y = cellY + cellHeight - 5;
+                    drawTarget.addChild(hpText);
                 }
 
                 // Active slot highlight
@@ -571,7 +723,7 @@ const GameCanvas = () => {
                     // 안쪽 밝은 오버레이
                     highlight.rect(cellX, cellY, cellWidth, cellHeight);
                     highlight.fill({ color: 0xfbbf24, alpha: 0.2 });
-                    boardContainer.addChild(highlight);
+                    drawTarget.addChild(highlight);
                 }
 
                 // Contributor highlight (인접 기여 심볼)
@@ -581,7 +733,7 @@ const GameCanvas = () => {
                     contrib.stroke({ color: 0x60a5fa, width: 3, alpha: 0.8 });
                     contrib.rect(cellX, cellY, cellWidth, cellHeight);
                     contrib.fill({ color: 0x60a5fa, alpha: 0.15 });
-                    boardContainer.addChild(contrib);
+                    drawTarget.addChild(contrib);
                 }
 
                 // 파괴 예고 (processing 중 is_marked_for_destruction인 심볼)
@@ -600,7 +752,7 @@ const GameCanvas = () => {
                     destroyOverlay.moveTo(cellX + cellWidth - margin, cellY + margin);
                     destroyOverlay.lineTo(cellX + margin, cellY + cellHeight - margin);
                     destroyOverlay.stroke({ color: 0xef4444, width: 3, alpha: 0.7 });
-                    boardContainer.addChild(destroyOverlay);
+                    drawTarget.addChild(destroyOverlay);
                 }
             }
         }
@@ -750,6 +902,122 @@ const GameCanvas = () => {
             }
         }
     };
+
+    // 전투 바운스 애니메이션 트리거
+    const triggerCombatAnimation = useCallback((anim: {
+        ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number;
+    }) => {
+        const layout = cellLayoutRef.current;
+        const combatContainer = combatContainerRef.current;
+        if (!layout || !combatContainer) return;
+
+        // instant 모드는 애니메이션 스킵
+        const effectSpeed = useSettingsStore.getState().effectSpeed;
+        const bounceDuration = COMBAT_BOUNCE_DURATION[effectSpeed];
+        if (bounceDuration === 0) return;
+
+        // 이전 bounce가 남아 있으면 제거
+        if (combatBounceRef.current) {
+            const prev = combatBounceRef.current;
+            if (prev.sprite.parent) prev.sprite.parent.removeChild(prev.sprite);
+            prev.sprite.destroy();
+            combatBounceRef.current = null;
+        }
+
+        const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = layout;
+        const { ax, ay, tx, ty, atkDmg } = anim;
+
+        // 공격자/대상 셀 중심 좌표
+        const aCX = startX + gridOffsetX + ax * (cellWidth + colGap) + cellWidth / 2;
+        const aCY = startY + gridOffsetY + ay * cellHeight + cellHeight / 2;
+        const tCX = startX + gridOffsetX + tx * (cellWidth + colGap) + cellWidth / 2;
+        const tCY = startY + gridOffsetY + ty * cellHeight + cellHeight / 2;
+
+        // 이동 목표: 대상 방향으로 55% 거리
+        const moveToX = aCX + (tCX - aCX) * 0.55;
+        const moveToY = aCY + (tCY - aCY) * 0.55;
+
+        // 공격자 심볼 복제 — 실제 보드에 그려진 것과 동일하게 재현
+        const board = useGameStore.getState().board;
+        const attackerDef = board[ax]?.[ay]?.definition;
+        let bounceSprite: PIXI.Container;
+        if (attackerDef?.sprite) {
+            const spriteSize = Math.min(cellWidth - 6, cellHeight) * 0.7;
+            const sp = PIXI.Sprite.from(`/assets/sprites/${attackerDef.sprite}`);
+            sp.anchor.set(0.5);
+            sp.width = spriteSize;
+            sp.height = spriteSize;
+            bounceSprite = sp;
+        } else {
+            // sprite 없는 심볼 → 이름 텍스트 (보드와 동일)
+            const lang = useSettingsStore.getState().language;
+            const symName = t(`symbol.${attackerDef?.id ?? 0}.name`, lang);
+            const rarityColor = attackerDef ? getSymbolColor(attackerDef.era) : 0xffffff;
+            const container = new PIXI.Container();
+            const txt = new PIXI.Text({
+                text: symName,
+                style: new PIXI.TextStyle({
+                    fill: rarityColor,
+                    fontSize: 32,
+                    fontFamily: 'Mulmaru',
+                    stroke: { color: '#000000', width: 2 },
+                }),
+            });
+            txt.anchor.set(0.5);
+            container.addChild(txt);
+            bounceSprite = container;
+        }
+        bounceSprite.x = aCX;
+        bounceSprite.y = aCY;
+        combatContainer.addChild(bounceSprite);
+
+        // HP 텍스트 위치 (대상 셀 오른쪽 하단 — HP 배지 위치)
+        const targetHpX = startX + gridOffsetX + tx * (cellWidth + colGap) + cellWidth - 5;
+        const targetHpY = startY + gridOffsetY + ty * cellHeight + cellHeight - 5;
+
+        combatBounceRef.current = {
+            sprite: bounceSprite,
+            fromX: aCX, fromY: aCY,
+            toX: moveToX, toY: moveToY,
+            elapsed: 0,
+            duration: bounceDuration,
+            hitSpawned: false,
+            atkDmg,
+            targetHpX,
+            targetHpY,
+        };
+    }, []);
+
+    // combatAnimation 구독 (bounce 트리거)
+    useEffect(() => {
+        let prev = useGameStore.getState().combatAnimation;
+        const unsub = useGameStore.subscribe((state) => {
+            if (state.combatAnimation !== prev) {
+                prev = state.combatAnimation;
+                if (state.combatAnimation) {
+                    triggerCombatAnimation(state.combatAnimation);
+                } else {
+                    // 효과 페이즈 시작 — 잔여 bounce 정리
+                    if (combatBounceRef.current) {
+                        const b = combatBounceRef.current;
+                        if (b.sprite.parent) b.sprite.parent.removeChild(b.sprite);
+                        b.sprite.destroy();
+                        combatBounceRef.current = null;
+                    }
+                    combatContainerRef.current?.removeChildren();
+                }
+            }
+        });
+        return () => unsub();
+    }, [triggerCombatAnimation]);
+
+    // combatShaking 구독 (진동 ref 동기화)
+    useEffect(() => {
+        const unsub = useGameStore.subscribe((state) => {
+            combatShakingRef.current = state.combatShaking;
+        });
+        return () => unsub();
+    }, []);
 
     // Subscribe to store changes (game + settings)
     useEffect(() => {

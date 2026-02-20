@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { SYMBOLS, type SymbolDefinition } from '../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects } from '../logic/symbolEffects';
-import { useSettingsStore, EFFECT_SPEED_DELAY } from './settingsStore';
+import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
 import type { PlayerSymbolInstance } from '../types';
 
 export { type PlayerSymbolInstance } from '../types';
@@ -63,6 +63,10 @@ interface GameState {
     activeContributors: { x: number; y: number }[];
     /** spinning 시작 직전의 보드 (릴 시작점용) */
     prevBoard: (PlayerSymbolInstance | null)[][];
+    /** 전투 애니메이션 트리거 (공격자 → 대상 좌표 + 피해량) */
+    combatAnimation: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number } | null;
+    /** 전투 후 삭제 직전 진동 표시 */
+    combatShaking: boolean;
     /** 종교 심볼이 선택 풀에 해금되었는지 */
     religionUnlocked: boolean;
     /** 매 턴 영구 지식 보너스 */
@@ -83,6 +87,18 @@ interface GameState {
     devRemoveSymbol: (instanceId: string) => void;
     devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => void;
 }
+
+const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => {
+    const adj: { x: number; y: number }[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT) adj.push({ x: nx, y: ny });
+        }
+    }
+    return adj;
+};
 
 const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => {
     return Array(BOARD_WIDTH).fill(null).map(() => Array(BOARD_HEIGHT).fill(null));
@@ -116,11 +132,12 @@ const getStartingSymbols = (): PlayerSymbolInstance[] => {
 /** 선택 풀에서 제외할 심볼 */
 const EXCLUDED_FROM_CHOICES = new Set<number>();
 
-/** 심볼을 시대별로 그룹화 */
+/** 심볼을 시대별로 그룹화 (적 심볼은 이벤트로만 등장하므로 선택 풀에서 제외) */
 const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
     const result: Record<number, SymbolDefinition[]> = {};
     for (const sym of Object.values(SYMBOLS)) {
         if (EXCLUDED_FROM_CHOICES.has(sym.id)) continue;
+        if (sym.symbol_type === SymbolType.ENEMY) continue;
         const e = sym.era as number;
         if (!result[e]) result[e] = [];
         result[e].push(sym);
@@ -174,6 +191,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     activeSlot: null,
     activeContributors: [],
     prevBoard: createEmptyBoard(),
+    combatAnimation: null,
+    combatShaking: false,
     religionUnlocked: false,
     bonusKnowledgePerTurn: 0,
     pendingEraUnlock: false,
@@ -184,9 +203,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 1. Clear Board & Place Symbols (reuse existing instances to preserve counters)
         const newBoard = createEmptyBoard();
-        const shuffledSymbols = [...state.playerSymbols]
-            .sort(() => Math.random() - 0.5)
-            .slice(0, BOARD_WIDTH * BOARD_HEIGHT);
+        // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
+        const combatAndEnemy = [...state.playerSymbols]
+            .filter(s => s.definition.symbol_type === SymbolType.ENEMY || s.definition.symbol_type === SymbolType.COMBAT)
+            .sort(() => Math.random() - 0.5);
+        const friendly = [...state.playerSymbols]
+            .filter(s => s.definition.symbol_type === SymbolType.FRIENDLY)
+            .sort(() => Math.random() - 0.5);
+        const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
 
         const positions: { x: number, y: number }[] = [];
         for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -238,6 +262,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         set({ phase: 'processing' });
 
+        // ── 효과 페이즈 인프라 ────────────────────────────────────────────────
         // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
         const slotOrder: { x: number; y: number }[] = [];
         for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -268,7 +293,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             const currentBoard = currentState.board;
             const symbol = currentBoard[x][y];
 
-            if (!symbol) {
+            // 전투 페이즈에서 파괴된 심볼은 효과 페이즈를 건너뜀
+            if (!symbol || symbol.is_marked_for_destruction) {
                 processSlot(slotIdx + 1);
                 return;
             }
@@ -412,17 +438,19 @@ export const useGameStore = create<GameState>((set, get) => ({
                     }
                 }
 
-                const destroyedIds = new Set<string>();
+                // combatDestroyedIds는 이미 playerSymbols에서 제거됨
+                // 여기선 효과 페이즈 중 파괴된 심볼(Banana 등)만 추가로 처리
+                const effectDestroyedIds = new Set<string>();
                 for (let bx = 0; bx < BOARD_WIDTH; bx++) {
                     for (let by = 0; by < BOARD_HEIGHT; by++) {
                         const prevSym = prev.board[bx][by];
                         if (prevSym && !cleanBoard[bx][by]) {
-                            destroyedIds.add(prevSym.instanceId);
+                            effectDestroyedIds.add(prevSym.instanceId);
                         }
                     }
                 }
 
-                const filteredSymbols = newPlayerSymbols.filter(s => !destroyedIds.has(s.instanceId));
+                const filteredSymbols = newPlayerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
                 const choices = generateChoices(newEra, prev.religionUnlocked);
                 const crossedToClassical = prev.era === 1 && newEra === 2;
 
@@ -449,12 +477,125 @@ export const useGameStore = create<GameState>((set, get) => ({
             }, 500);
         };
 
-        const initialDelay = EFFECT_SPEED_DELAY[useSettingsStore.getState().effectSpeed];
-        if (initialDelay === 0) {
-            processSlot(0);
-        } else {
-            setTimeout(() => processSlot(0), Math.max(initialDelay, 300));
+        // ── 전투 페이즈: COMBAT ↔ ENEMY 인접 쌍을 하나하나 순차 처리 ─────────
+        const combatBoard = get().board;
+        const combatEvents: { ax: number; ay: number; tx: number; ty: number }[] = [];
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                const sym = combatBoard[x][y];
+                if (sym?.definition.symbol_type !== SymbolType.COMBAT) continue;
+                for (const adj of getAdjacentCoords(x, y)) {
+                    const target = combatBoard[adj.x][adj.y];
+                    if (target?.definition.symbol_type === SymbolType.ENEMY) {
+                        combatEvents.push({ ax: x, ay: y, tx: adj.x, ty: adj.y });
+                    }
+                }
+            }
         }
+
+        // 전투 종료 후: 파괴 심볼 진동 표시 → 보드·컬렉션에서 제거 → 효과 페이즈 시작
+        const startEffectPhase = () => {
+            const combatDestroyedIds = new Set<string>();
+            const b = get().board;
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    const sym = b[x][y];
+                    if (sym?.is_marked_for_destruction) combatDestroyedIds.add(sym.instanceId);
+                }
+            }
+
+            const effectSpeed = useSettingsStore.getState().effectSpeed;
+            const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
+
+            const doRemoveAndStart = () => {
+                if (combatDestroyedIds.size > 0) {
+                    set(prev => ({
+                        board: prev.board.map(col => col.map(s => s?.is_marked_for_destruction ? null : s)),
+                        playerSymbols: prev.playerSymbols.filter(s => !combatDestroyedIds.has(s.instanceId)),
+                        combatShaking: false,
+                    }));
+                }
+                set({ activeSlot: null, activeContributors: [], combatAnimation: null, combatShaking: false });
+
+                const initialDelay = EFFECT_SPEED_DELAY[effectSpeed];
+                if (initialDelay === 0) {
+                    processSlot(0);
+                } else {
+                    setTimeout(() => processSlot(0), Math.max(initialDelay, 300));
+                }
+            };
+
+            if (combatDestroyedIds.size > 0 && bounceDur > 0) {
+                // 삭제 전 진동 표시
+                set({ combatAnimation: null, combatShaking: true });
+                setTimeout(doRemoveAndStart, Math.max(bounceDur * 2, 200));
+            } else {
+                doRemoveAndStart();
+            }
+        };
+
+        // 전투 이벤트 순차 처리 (공격 bounce → 반격 bounce → 다음)
+        const processCombatEvent = (eventIdx: number) => {
+            if (eventIdx >= combatEvents.length) {
+                startEffectPhase();
+                return;
+            }
+
+            const { ax, ay, tx, ty } = combatEvents[eventIdx];
+            const board = get().board;
+            const attacker = board[ax][ay];
+            const target = board[tx][ty];
+
+            // 둘 다 살아있을 때만 전투
+            let atkDmg = 0;
+            let counterDmg = 0;
+            if (attacker && !attacker.is_marked_for_destruction &&
+                target && !target.is_marked_for_destruction) {
+                atkDmg = attacker.definition.base_attack ?? 0;
+                counterDmg = target.definition.base_attack ?? 0;
+
+                if (atkDmg > 0) {
+                    target.enemy_hp = (target.enemy_hp ?? target.definition.base_hp ?? 0) - atkDmg;
+                    if (target.enemy_hp <= 0) target.is_marked_for_destruction = true;
+                }
+                if (counterDmg > 0) {
+                    attacker.enemy_hp = (attacker.enemy_hp ?? attacker.definition.base_hp ?? 0) - counterDmg;
+                    if (attacker.enemy_hp <= 0) attacker.is_marked_for_destruction = true;
+                }
+            }
+
+            const effectSpeed = useSettingsStore.getState().effectSpeed;
+            const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
+
+            // instant 모드 — 애니메이션 없이 즉시 진행
+            if (bounceDur === 0) {
+                processCombatEvent(eventIdx + 1);
+                return;
+            }
+
+            const stepDelay = bounceDur + 40;
+
+            if (atkDmg > 0 && counterDmg > 0) {
+                // 양방향: 공격 bounce → 반격 bounce → 다음
+                set({ combatAnimation: { ax, ay, tx, ty, atkDmg, counterDmg: 0 } });
+                setTimeout(() => {
+                    set({ combatAnimation: { ax: tx, ay: ty, tx: ax, ty: ay, atkDmg: counterDmg, counterDmg: 0 } });
+                    setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
+                }, stepDelay);
+            } else if (atkDmg > 0) {
+                // 공격만
+                set({ combatAnimation: { ax, ay, tx, ty, atkDmg, counterDmg: 0 } });
+                setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
+            } else if (counterDmg > 0) {
+                // 반격만
+                set({ combatAnimation: { ax: tx, ay: ty, tx: ax, ty: ay, atkDmg: counterDmg, counterDmg: 0 } });
+                setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
+            } else {
+                processCombatEvent(eventIdx + 1);
+            }
+        };
+
+        processCombatEvent(0);
     },
 
     selectSymbol: (symbolId: number) => {
@@ -513,6 +654,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             activeSlot: null,
             activeContributors: [],
             prevBoard: createEmptyBoard(),
+            combatAnimation: null,
+            combatShaking: false,
             religionUnlocked: false,
             bonusKnowledgePerTurn: 0,
             pendingEraUnlock: false,

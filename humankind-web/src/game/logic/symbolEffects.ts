@@ -367,6 +367,24 @@ export const processSingleSymbolEffects = (
 
         case 34: // Hinduism: destruction bonus handled in gameStore finishProcessing
             break;
+
+        // ── Enemy / Combat Symbols ──
+
+        case 35: // Barbarian: 50% chance -3 Food, 50% chance -1 Gold (passive damage each spin alive)
+            if (Math.random() < 0.5) {
+                food -= 3;
+            } else {
+                gold -= 1;
+            }
+            break;
+
+        case 36: // Warrior: Every 10 spins: -3 Food
+            symbolInstance.effect_counter++;
+            if (symbolInstance.effect_counter >= 10) {
+                food -= 3;
+                symbolInstance.effect_counter = 0;
+            }
+            break;
     }
 
     // ── 교리 패널티: 다른 교리 심볼에 인접 시 -50 Food ──
