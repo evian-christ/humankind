@@ -46,7 +46,7 @@ export const RESOLUTION_OPTIONS: ResolutionOption[] = [
 export const BASE_WIDTH = 1920;
 export const BASE_HEIGHT = 1080;
 
-interface SettingsState {
+export interface SettingsState {
     resolutionWidth: number;
     resolutionHeight: number;
     language: Language;
