@@ -315,9 +315,71 @@ body {
   bottom: 0;
   background: rgba(0, 0, 0, 0.75);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 500;
+  transition: background 0.45s ease;
+}
+
+.selection-overlay--peeked {
+  background: rgba(0, 0, 0, 0);
+  pointer-events: none;
+}
+
+.selection-overlay--peeked .selection-peek-handle {
+  pointer-events: auto;
+}
+
+/* Peek handle — at top when normal, at bottom when peeked */
+.selection-peek-handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 40px;
+  background: rgba(30, 30, 30, 0.92);
+  border: 1px solid rgba(120, 120, 120, 0.5);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  color: rgba(200, 200, 200, 0.8);
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 20px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  z-index: 510;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.45s ease;
+  white-space: nowrap;
+}
+
+.selection-peek-handle:hover {
+  background: rgba(60, 60, 60, 0.98);
+  color: #ffffff;
+}
+
+/* When peeked: handle goes to bottom edge, flat bottom + rounded top */
+.selection-overlay--peeked .selection-peek-handle {
+  top: auto;
+  bottom: 0;
+  border-radius: 12px 12px 0 0;
+  border: 1px solid rgba(120, 120, 120, 0.5);
+  border-bottom: none;
+}
+
+/* Content wrapper — slides down when peeked */
+.selection-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+}
+
+.selection-overlay--peeked .selection-panel-wrapper {
+  transform: translateY(120%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .selection-panel {
@@ -333,6 +395,7 @@ body {
   color: #ffffff;
   letter-spacing: 2px;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  margin-top: 16px;
 }
 
 .selection-cards {
