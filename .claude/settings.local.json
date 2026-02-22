@@ -32,7 +32,9 @@
       "Bash(git -C /Users/chan/Documents/projects/humankind log --oneline -5)",
       "Bash(git -C /Users/chan/Documents/projects/humankind diff --stat)",
       "Bash(git -C /Users/chan/Documents/projects/humankind add AGENTS.md CLAUDE.md DESIGN_REFERENCE.md EARLY_ACCESS_PLAN.md EventSymbols.csv README.md SYSTEM_OVERVIEW.md Symbols_v4.csv .claude/settings.local.json)",
-      "Bash(git -C:*)"
+      "Bash(git -C:*)",
+      "Bash(npm run build:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
