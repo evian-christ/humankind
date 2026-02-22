@@ -74,17 +74,13 @@ const randomEra1SymbolId = (): number => {
     return Math.floor(Math.random() * 21) + 1;
 };
 
-/** Era 2 심볼 중 랜덤 하나 반환 (ID 22~30) */
-const randomEra2SymbolId = (): number => {
-    return Math.floor(Math.random() * 9) + 22;
-};
+
 
 export const processSingleSymbolEffects = (
     symbolInstance: PlayerSymbolInstance,
     boardGrid: (PlayerSymbolInstance | null)[][],
     x: number,
-    y: number,
-    _currentFood?: number
+    y: number
 ): EffectResult => {
     const id = symbolInstance.definition.id;
     let food = 0;

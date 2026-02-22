@@ -12,20 +12,20 @@ export const REROLL_COST = 5;
 
 // 시대별 심볼 등장 확률 테이블 (종교 미해금)
 const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
-    1: { 1: 100, 2: 0,   3: 0,   4: 0,   5: 0  },
-    2: { 1: 55,  2: 45,  3: 0,   4: 0,   5: 0  },
-    3: { 1: 30,  2: 35,  3: 35,  4: 0,   5: 0  },
-    4: { 1: 15,  2: 25,  3: 30,  4: 30,  5: 0  },
-    5: { 1: 10,  2: 15,  3: 25,  4: 25,  5: 25 },
+    1: { 1: 100, 2: 0, 3: 0, 4: 0, 5: 0 },
+    2: { 1: 55, 2: 45, 3: 0, 4: 0, 5: 0 },
+    3: { 1: 30, 2: 35, 3: 35, 4: 0, 5: 0 },
+    4: { 1: 15, 2: 25, 3: 30, 4: 30, 5: 0 },
+    5: { 1: 10, 2: 15, 3: 25, 4: 25, 5: 25 },
 };
 
 // 시대별 심볼 등장 확률 테이블 (종교 해금 후, 0 = Religion)
 const ERA_PROBABILITIES_WITH_RELIGION: Record<number, Record<number, number>> = {
-    1: { 0: 0,  1: 100, 2: 0,  3: 0,  4: 0,  5: 0  },
-    2: { 0: 10, 1: 50,  2: 40, 3: 0,  4: 0,  5: 0  },
-    3: { 0: 10, 1: 25,  2: 30, 3: 35, 4: 0,  5: 0  },
-    4: { 0: 5,  1: 13,  2: 22, 3: 30, 4: 30, 5: 0  },
-    5: { 0: 0,  1: 10,  2: 15, 3: 25, 4: 25, 5: 25 },
+    1: { 0: 0, 1: 100, 2: 0, 3: 0, 4: 0, 5: 0 },
+    2: { 0: 10, 1: 50, 2: 40, 3: 0, 4: 0, 5: 0 },
+    3: { 0: 10, 1: 25, 2: 30, 3: 35, 4: 0, 5: 0 },
+    4: { 0: 5, 1: 13, 2: 22, 3: 30, 4: 30, 5: 0 },
+    5: { 0: 0, 1: 10, 2: 15, 3: 25, 4: 25, 5: 25 },
 };
 
 // 시대 전환에 필요한 Knowledge
@@ -44,7 +44,7 @@ export const calculateFoodCost = (turn: number): number => {
     return 100 + (paymentCycle - 1) * 50;
 };
 
-interface GameState {
+export interface GameState {
     food: number;
     gold: number;
     knowledge: number;
@@ -300,7 +300,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             const result = processSingleSymbolEffects(
-                symbol, currentBoard, x, y, currentState.food + totalFood
+                symbol, currentBoard, x, y
             );
 
             if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
