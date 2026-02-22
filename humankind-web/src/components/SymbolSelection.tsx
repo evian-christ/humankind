@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useGameStore, REROLL_COST } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { Era, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
@@ -54,33 +55,47 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
 const SymbolSelection = () => {
     const { phase, symbolChoices, gold, selectSymbol, skipSelection, rerollSymbols } = useGameStore();
     const language = useSettingsStore((s) => s.language);
+    const [isPeeked, setIsPeeked] = useState(false);
 
     if (phase !== 'selection') return null;
 
     return (
-        <div className="selection-overlay">
-            <div className="selection-panel">
-                <div className="selection-title">{t('game.chooseSymbol', language)}</div>
-                <div className="selection-cards">
-                    {symbolChoices.map((sym, i) => (
-                        <SymbolCard
-                            key={`${sym.id}-${i}`}
-                            symbol={sym}
-                            onClick={() => selectSymbol(sym.id)}
-                        />
-                    ))}
-                </div>
-                <div className="selection-actions">
-                    <button
-                        className="selection-reroll-btn"
-                        onClick={rerollSymbols}
-                        disabled={gold < REROLL_COST}
-                    >
-                        {t('game.reroll', language)} ({REROLL_COST}G)
-                    </button>
-                    <button className="selection-skip-btn" onClick={skipSelection}>
-                        {t('game.skip', language)}
-                    </button>
+        <div
+            className={`selection-overlay${isPeeked ? ' selection-overlay--peeked' : ''}`}
+        >
+            {/* Peek toggle handle */}
+            <button
+                className="selection-peek-handle"
+                onClick={() => setIsPeeked((v) => !v)}
+                title={isPeeked ? 'Show selection panel' : 'Peek at board'}
+            >
+                {isPeeked ? '▲ 돌아오기' : '▼ 보드 보기'}
+            </button>
+
+            <div className="selection-panel-wrapper">
+                <div className="selection-panel">
+                    <div className="selection-title">{t('game.chooseSymbol', language)}</div>
+                    <div className="selection-cards">
+                        {symbolChoices.map((sym, i) => (
+                            <SymbolCard
+                                key={`${sym.id}-${i}`}
+                                symbol={sym}
+                                onClick={() => selectSymbol(sym.id)}
+                            />
+                        ))}
+                    </div>
+                    <div className="selection-actions">
+                        <button
+                            className="selection-reroll-btn"
+                            onClick={rerollSymbols}
+                            disabled={gold < REROLL_COST}
+                        >
+                            {t('game.reroll', language)} ({REROLL_COST}G)
+                        </button>
+                        <button className="selection-skip-btn" onClick={skipSelection}>
+                            {t('game.skip', language)}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

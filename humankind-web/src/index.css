@@ -213,41 +213,58 @@ body {
 }
 
 .spin-btn {
-  width: 100px;
+  width: 200px;
   height: 100px;
-  border-radius: 50%;
-  border: 2px solid #666;
-  background: radial-gradient(circle at 35% 35%, #444, #222);
-  color: #eee;
+  background: #eab308;
+  border: 8px solid #1a1a1a;
+  border-radius: 0;
+  color: #1a1a1a;
   font-family: 'Mulmaru', sans-serif;
-  font-size: 24px;
-  /* Increased base size */
-  font-weight: normal;
-  letter-spacing: 1px;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 6px 6px 0px 0px rgba(255, 255, 255, 0.5),
+    inset -6px -6px 0px 0px rgba(0, 0, 0, 0.3),
+    0 12px 0 0 #854d0e,
+    0 12px 15px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .spin-btn:hover:not(:disabled) {
-  border-color: #aaa;
-  background: radial-gradient(circle at 35% 35%, #555, #333);
-  transform: scale(1.05);
+  background: #fde047;
+  transform: translateY(3px);
+  box-shadow:
+    inset 6px 6px 0px 0px rgba(255, 255, 255, 0.6),
+    inset -6px -6px 0px 0px rgba(0, 0, 0, 0.2),
+    0 9px 0 0 #854d0e,
+    0 9px 15px rgba(0, 0, 0, 0.5);
 }
 
 .spin-btn:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: translateY(12px);
+  background: #ca8a04;
+  box-shadow:
+    inset 4px 4px 0px 0px rgba(255, 255, 255, 0.2),
+    inset -4px -4px 0px 0px rgba(0, 0, 0, 0.5),
+    0 0 0 0 #854d0e,
+    0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 .spin-btn:disabled {
-  opacity: 0.4;
+  background: #444;
+  color: #1a1a1a;
+  transform: translateY(12px);
+  box-shadow:
+    inset 3px 3px 0px 0px rgba(255, 255, 255, 0.1),
+    inset -6px -6px 0px 0px rgba(0, 0, 0, 0.6),
+    0 0 0 0 #222;
   cursor: default;
-}
-
-.spin-btn .spin-icon {
-  display: block;
-  font-size: 28px;
-  margin-bottom: 2px;
 }
 
 .reset-btn {

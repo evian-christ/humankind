@@ -68,15 +68,15 @@ function App() {
       {/* ===== DEV OVERLAY ===== */}
       <DevOverlay />
 
-      {/* ===== SPIN BUTTON ===== */}
+      {/* ===== PIXEL ARCADE SPIN BUTTON ===== */}
       <div className="spin-area">
         <button
           className="spin-btn"
           onClick={spinBoard}
           disabled={phase !== 'idle'}
+          title={t('game.spin', language)}
         >
-          <span className="spin-icon">⚡</span>
-          {phase === 'spinning' || phase === 'processing' || phase === 'era_unlock' ? '...' : t('game.spin', language)}
+          {t('game.spin', language)}
         </button>
       </div>
     </>
