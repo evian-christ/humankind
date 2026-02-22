@@ -626,17 +626,18 @@ export class PixiGameApp {
         fracLabel.y = rowCY;
         this.bgContainer.addChild(fracLabel);
 
-        const statsFontSize = 32 * fs;
-        const statsCY = h - 24 * scale - statsFontSize / 2;
-        const statGap = 20 * scale;
+        // Food & Gold — same row, right of knowledge bar
+        const statsFontSize = demandFontSize;
+        const statGap = 16 * scale;
+        const statsStartX = barX + barW + gap * 2;
 
         const foodSym = new PIXI.Text({
             text: '⬟',
             style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: statsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
         });
         foodSym.anchor.set(0, 0.5);
-        foodSym.x = 32 * scale;
-        foodSym.y = statsCY - 3 * scale;
+        foodSym.x = statsStartX;
+        foodSym.y = rowCY - 2 * scale;
         this.bgContainer.addChild(foodSym);
 
         const foodNum = new PIXI.Text({
@@ -645,7 +646,7 @@ export class PixiGameApp {
         });
         foodNum.anchor.set(0, 0.5);
         foodNum.x = foodSym.x + foodSym.width;
-        foodNum.y = statsCY;
+        foodNum.y = rowCY;
         this.bgContainer.addChild(foodNum);
 
         const goldSym = new PIXI.Text({
@@ -654,7 +655,7 @@ export class PixiGameApp {
         });
         goldSym.anchor.set(0, 0.5);
         goldSym.x = foodNum.x + foodNum.width + statGap;
-        goldSym.y = statsCY;
+        goldSym.y = rowCY;
         this.bgContainer.addChild(goldSym);
 
         const goldNum = new PIXI.Text({
@@ -663,7 +664,7 @@ export class PixiGameApp {
         });
         goldNum.anchor.set(0, 0.5);
         goldNum.x = goldSym.x + goldSym.width;
-        goldNum.y = statsCY;
+        goldNum.y = rowCY;
         this.bgContainer.addChild(goldNum);
 
         const rt = state.runningTotals;
@@ -690,9 +691,9 @@ export class PixiGameApp {
                     text: `${rt.food > 0 ? '+' : ''}${rt.food}`,
                     style: new PIXI.TextStyle({ fill: rt.food > 0 ? '#4ade80' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
                 });
-                txt.anchor.set(0.5, 1);
-                txt.x = foodNum.x + foodNum.width / 2;
-                txt.y = statsCY - statsFontSize / 2 - 4 * scale;
+                txt.anchor.set(0.5, 0);
+                txt.x = foodSym.x + (foodNum.x + foodNum.width - foodSym.x) / 2;
+                txt.y = rowCY + rowH / 2 + 4 * scale;
                 this.effectsContainer.addChild(txt);
                 rtTexts.food = txt;
             }
@@ -701,9 +702,9 @@ export class PixiGameApp {
                     text: `${rt.gold > 0 ? '+' : ''}${rt.gold}`,
                     style: new PIXI.TextStyle({ fill: rt.gold > 0 ? '#fbbf24' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
                 });
-                txt.anchor.set(0.5, 1);
-                txt.x = goldNum.x + goldNum.width / 2;
-                txt.y = statsCY - statsFontSize / 2 - 4 * scale;
+                txt.anchor.set(0.5, 0);
+                txt.x = goldSym.x + (goldNum.x + goldNum.width - goldSym.x) / 2;
+                txt.y = rowCY + rowH / 2 + 4 * scale;
                 this.effectsContainer.addChild(txt);
                 rtTexts.gold = txt;
             }
