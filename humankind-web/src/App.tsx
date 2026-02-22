@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useSettingsStore } from './game/state/settingsStore';
+import { useRelicStore } from './game/state/relicStore';
 import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
 import EraUnlockModal from './components/EraUnlockModal';
 import PauseMenu from './components/PauseMenu';
+import RelicPanel from './components/RelicPanel';
 import DevOverlay from './components/DevOverlay';
 
 function App() {
@@ -13,6 +15,7 @@ function App() {
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { panelOpen, togglePanel } = useRelicStore();
 
   // 앱 최초 로드 시 저장된 해상도를 DOM에 적용
   useEffect(() => {
@@ -64,6 +67,16 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* ===== RELIC PANEL ===== */}
+      <RelicPanel />
+
+      {/* ===== RELIC BUTTON (bottom-left) ===== */}
+      <div className="relic-btn-area">
+        <button className={`relic-btn${panelOpen ? ' relic-btn--active' : ''}`} onClick={togglePanel}>
+          🏺
+        </button>
+      </div>
 
       {/* ===== DEV OVERLAY ===== */}
       <DevOverlay />

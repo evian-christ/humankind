@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
+import { useRelicStore } from '../game/state/relicStore';
 import { SYMBOLS } from '../game/data/symbolDefinitions';
+import { RELIC_LIST } from '../game/data/relicDefinitions';
 
 const allSymbolsList = Object.values(SYMBOLS).sort((a, b) => a.era - b.era || a.id - b.id);
 
@@ -65,7 +67,9 @@ const StatRow = ({
 const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
+    const [selectedRelicId, setSelectedRelicId] = useState(RELIC_LIST[0]?.id ?? '');
     const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat } = useGameStore();
+    const { relics, addRelic, removeRelic } = useRelicStore();
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -181,6 +185,75 @@ const DevOverlay = () => {
                         fontSize: '13px',
                     }}
                 >+</button>
+            </div>
+
+            {/* Relic Section */}
+            <div style={{
+                padding: '10px 14px',
+                borderBottom: '1px solid #333',
+            }}>
+                <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>RELICS</div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                    <select
+                        value={selectedRelicId}
+                        onChange={e => setSelectedRelicId(e.target.value)}
+                        style={{
+                            flex: 1,
+                            background: '#222',
+                            color: '#e0e0e0',
+                            border: '1px solid #555',
+                            padding: '4px 6px',
+                            fontSize: '13px',
+                        }}
+                    >
+                        {RELIC_LIST.map(r => (
+                            <option key={r.id} value={r.id}>
+                                {r.sprite} {r.name}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={() => {
+                            const def = RELIC_LIST.find(r => r.id === selectedRelicId);
+                            if (def) addRelic(def);
+                        }}
+                        style={{
+                            background: '#2563eb',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '4px 12px',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                        }}
+                    >+</button>
+                </div>
+                {relics.map(r => (
+                    <div
+                        key={r.instanceId}
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '3px 6px',
+                            borderBottom: '1px solid #2a2a2a',
+                        }}
+                    >
+                        <span style={{ fontSize: '13px' }}>
+                            {r.definition.sprite} {r.definition.name}
+                        </span>
+                        <button
+                            onClick={() => removeRelic(r.instanceId)}
+                            style={{
+                                background: '#7f1d1d',
+                                color: '#fca5a5',
+                                border: 'none',
+                                padding: '2px 8px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                            }}
+                        >-</button>
+                    </div>
+                ))}
             </div>
 
             {/* Symbol Count */}
