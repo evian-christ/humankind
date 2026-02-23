@@ -316,7 +316,7 @@ export class PixiGameApp {
         this.cellLayout = { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
 
         // Board bg sprite
-        const boardBg = PIXI.Sprite.from('/assets/sprites/slot_bg.png');
+        const boardBg = PIXI.Sprite.from('./assets/sprites/slot_bg.png');
         const spritePaddingX = 8 * scale;
         const spritePaddingY = 8 * scale;
         boardBg.x = startX - spritePaddingX;
@@ -363,7 +363,7 @@ export class PixiGameApp {
                     group.x = colX;
                     group.y = yPos;
                     if (def && def.sprite) {
-                        const spritePath = `/assets/sprites/${def.sprite}`;
+                        const spritePath = `./assets/sprites/${def.sprite}`;
                         const spriteSize = Math.min(cellWidth - 6, cellHeight) * 0.7;
                         const sprite = PIXI.Sprite.from(spritePath);
                         sprite.x = cellWidth / 2;
@@ -434,7 +434,7 @@ export class PixiGameApp {
                 const rarityColor = getSymbolColor(symDef.era);
 
                 if (symDef.sprite) {
-                    const spritePath = `/assets/sprites/${symDef.sprite}`;
+                    const spritePath = `./assets/sprites/${symDef.sprite}`;
                     const spriteSize = Math.min(innerW, cellHeight) * 0.7;
                     const sprite = PIXI.Sprite.from(spritePath);
                     sprite.x = cellX + cellWidth / 2;
@@ -742,7 +742,7 @@ export class PixiGameApp {
 
         if (attackerDef?.sprite) {
             const spriteSize = Math.min(cellWidth - 6, cellHeight) * 0.7;
-            const sp = PIXI.Sprite.from(`/assets/sprites/${attackerDef.sprite}`);
+            const sp = PIXI.Sprite.from(`./assets/sprites/${attackerDef.sprite}`);
             sp.anchor.set(0.5);
             sp.width = spriteSize;
             sp.height = spriteSize;

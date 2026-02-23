@@ -101,11 +101,20 @@ function applyResolutionToDOM(width: number, height: number) {
     root.style.transformOrigin = 'center center';
 
     // Desktop App (Tauri) 해상도 변경 적용
-    if ('__TAURI_INTERNALS__' in window) {
-        import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
-            getCurrentWindow().setSize(new LogicalSize(width, height)).catch(console.error);
-        }).catch(console.error);
-    }
+    import('@tauri-apps/api/core').then(({ isTauri }) => {
+        if (isTauri()) {
+            import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
+                const win = getCurrentWindow();
+                const setWinSize = async () => {
+                    const isFull = await win.isFullscreen();
+                    if (!isFull) {
+                        await win.setSize(new LogicalSize(width, height));
+                    }
+                };
+                setWinSize().catch(console.error);
+            }).catch(console.error);
+        }
+    }).catch(console.error);
 }
 
 /** #root에 data-lang 속성 설정 (CSS 폰트 전환용) */

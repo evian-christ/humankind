@@ -35,39 +35,43 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
     const { resolutionWidth, resolutionHeight, language, effectSpeed, spinSpeed, setResolution, setLanguage, setEffectSpeed, setSpinSpeed } = useSettingsStore();
 
     useEffect(() => {
-        if ('__TAURI_INTERNALS__' in window) {
-            import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-                getCurrentWindow().isFullscreen().then(setIsFullscreen);
-            }).catch(console.error);
-        } else {
-            const handleFullscreenChange = () => {
+        import('@tauri-apps/api/core').then(({ isTauri }) => {
+            if (isTauri()) {
+                import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                    getCurrentWindow().isFullscreen().then(setIsFullscreen);
+                }).catch(console.error);
+            } else {
+                const handleFullscreenChange = () => {
+                    setIsFullscreen(!!document.fullscreenElement);
+                };
+                document.addEventListener('fullscreenchange', handleFullscreenChange);
                 setIsFullscreen(!!document.fullscreenElement);
-            };
-            document.addEventListener('fullscreenchange', handleFullscreenChange);
-            setIsFullscreen(!!document.fullscreenElement);
-            return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        }
+                return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            }
+        }).catch(console.error);
     }, []);
 
     const toggleFullscreen = () => {
-        if ('__TAURI_INTERNALS__' in window) {
-            import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-                const win = getCurrentWindow();
-                win.isFullscreen().then((isFull) => {
-                    win.setFullscreen(!isFull).then(() => setIsFullscreen(!isFull));
-                });
-            }).catch(console.error);
-        } else {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
-                });
+        import('@tauri-apps/api/core').then(({ isTauri }) => {
+            if (isTauri()) {
+                import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                    const win = getCurrentWindow();
+                    win.isFullscreen().then((isFull) => {
+                        win.setFullscreen(!isFull).then(() => setIsFullscreen(!isFull));
+                    });
+                }).catch(console.error);
             } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
+                    });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
                 }
             }
-        }
+        }).catch(console.error);
     };
 
     if (!isOpen) return null;
