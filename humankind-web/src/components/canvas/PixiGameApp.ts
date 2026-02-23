@@ -571,10 +571,10 @@ export class PixiGameApp {
         }
 
         // UI bars (Knowledge, Food, Gold)
-        this.renderUI(state, settings, scale, h, topRowCY, fs);
+        this.renderUI(state, settings, scale, topRowCY, fs);
     }
 
-    private renderUI(state: GameState, settings: SettingsState, scale: number, h: number, topRowCY: number, fs: number) {
+    private renderUI(state: GameState, settings: SettingsState, scale: number, topRowCY: number, fs: number) {
         const lang = settings.language;
         const fontFamily = 'Mulmaru';
         const eraName = t(ERA_NAME_KEYS[state.era] ?? 'era.ancient', lang);
