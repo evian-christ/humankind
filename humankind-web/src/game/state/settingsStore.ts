@@ -35,11 +35,18 @@ export interface ResolutionOption {
 }
 
 export const RESOLUTION_OPTIONS: ResolutionOption[] = [
-    { label: '1280 x 720', width: 1280, height: 720 },
-    { label: '1366 x 768', width: 1366, height: 768 },
-    { label: '1600 x 900', width: 1600, height: 900 },
-    { label: '1920 x 1080', width: 1920, height: 1080 },
-    { label: '2560 x 1440', width: 2560, height: 1440 },
+    { label: '1280 x 720 (16:9)', width: 1280, height: 720 },
+    { label: '1280 x 800 (16:10)', width: 1280, height: 800 },
+    { label: '1280 x 960 (4:3)', width: 1280, height: 960 },
+    { label: '1440 x 900 (16:10)', width: 1440, height: 900 },
+    { label: '1600 x 900 (16:9)', width: 1600, height: 900 },
+    { label: '1680 x 1050 (16:10)', width: 1680, height: 1050 },
+    { label: '1920 x 1080 (16:9)', width: 1920, height: 1080 },
+    { label: '1920 x 1200 (16:10)', width: 1920, height: 1200 },
+    { label: '2560 x 1080 (21:9)', width: 2560, height: 1080 },
+    { label: '2560 x 1440 (16:9)', width: 2560, height: 1440 },
+    { label: '3440 x 1440 (21:9)', width: 3440, height: 1440 },
+    { label: '3840 x 2160 (16:9)', width: 3840, height: 2160 },
 ];
 
 /** 기준 해상도 (모든 UI는 이 해상도 기준 px로 작성) */
@@ -85,22 +92,28 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     },
 }));
 
-/** #root에 transform scale 적용 */
-function applyResolutionToDOM(width: number, height: number) {
+/** #root에 뷰포트 기반 transform scale 적용 */
+function applyScaleFromViewport() {
     const root = document.getElementById('root');
     if (!root) return;
 
-    const scaleX = width / BASE_WIDTH;
-    const scaleY = height / BASE_HEIGHT;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const scaleX = vw / BASE_WIDTH;
+    const scaleY = vh / BASE_HEIGHT;
     const scale = Math.min(scaleX, scaleY);
 
-    // #root는 항상 1920x1080 고정, transform: scale로 줄이거나 키움
     root.style.width = `${BASE_WIDTH}px`;
     root.style.height = `${BASE_HEIGHT}px`;
     root.style.transform = `translate(-50%, -50%) scale(${scale})`;
     root.style.transformOrigin = 'center center';
+}
 
-    // Desktop App (Tauri) 해상도 변경 적용
+// 윈도우 리사이즈 / 전체화면 전환 시 스케일 자동 재계산
+window.addEventListener('resize', () => applyScaleFromViewport());
+
+/** 해상도 설정 변경 시 Tauri 윈도우 크기 변경 + 스케일 재계산 */
+function applyResolutionToDOM(width: number, height: number) {
     import('@tauri-apps/api/core').then(({ isTauri }) => {
         if (isTauri()) {
             import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
@@ -115,6 +128,9 @@ function applyResolutionToDOM(width: number, height: number) {
             }).catch(console.error);
         }
     }).catch(console.error);
+
+    // 스케일 즉시 적용 (Tauri setSize 후에는 resize 이벤트로도 호출됨)
+    requestAnimationFrame(() => applyScaleFromViewport());
 }
 
 /** #root에 data-lang 속성 설정 (CSS 폰트 전환용) */

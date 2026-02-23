@@ -40,7 +40,7 @@ body {
 
 
 
-/* Fixed resolution for Steam game development */
+/* Fixed resolution for game development */
 #root {
   width: 1920px;
   height: 1080px;
@@ -49,6 +49,7 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   background: #1a1a1a;
+  overflow: hidden;
 }
 
 /* ===== GAME HUD TOP BAR ===== */
@@ -991,10 +992,10 @@ body {
 .settings-dropdown {
   appearance: none;
   -webkit-appearance: none;
-  min-width: 280px;
-  padding: 8px 44px 8px 18px;
+  min-width: 220px;
+  padding: 6px 36px 6px 14px;
   font-family: 'Mulmaru', sans-serif;
-  font-size: 24px;
+  font-size: 18px;
   letter-spacing: 1px;
   color: #ddd;
   background: rgba(255, 255, 255, 0.06);
@@ -1004,7 +1005,7 @@ body {
   transition: all 0.15s ease;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' fill='none'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 14px center;
+  background-position: right 12px center;
 }
 
 .settings-dropdown:hover {
@@ -1021,7 +1022,7 @@ body {
   background: #1a1a1a;
   color: #ddd;
   font-family: 'Mulmaru', sans-serif;
-  font-size: 20px;
+  font-size: 16px;
 }
 
 /* ── Back Button ── */
