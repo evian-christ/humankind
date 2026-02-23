@@ -129,6 +129,11 @@ const GameCanvas = () => {
                         {t(`symbol.${hoveredSymbol.definition.id}.desc`, language).split('\n').map((line, i) => (
                             <div key={i} className="symbol-tooltip-desc-line">{line}</div>
                         ))}
+                        {hoveredSymbol.enemy_effect_id && (
+                            <div className="symbol-tooltip-effect">
+                                ▸ {t(`enemyEffect.${hoveredSymbol.enemy_effect_id}.desc`, language)}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

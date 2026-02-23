@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { SYMBOLS, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
+import { getEffectsByIntensity } from '../data/enemyEffectDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 
 export { type PlayerSymbolInstance } from '../types';
@@ -107,14 +108,31 @@ const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => {
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
 
-const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => ({
-    definition: def,
-    instanceId: generateInstanceId(),
-    effect_counter: 0,
-    is_marked_for_destruction: false,
-    remaining_attacks: def.base_attack ? 3 : 0,
-    enemy_hp: def.base_hp
-});
+/** 턴 수 기반 적 강도 계산 (60턴 단위, max 5) */
+const getEnemyIntensity = (turn: number): number =>
+    Math.min(Math.floor(turn / 60) + 1, 5);
+
+const createInstance = (def: SymbolDefinition, turn: number = 0): PlayerSymbolInstance => {
+    const inst: PlayerSymbolInstance = {
+        definition: def,
+        instanceId: generateInstanceId(),
+        effect_counter: 0,
+        is_marked_for_destruction: false,
+        remaining_attacks: def.base_attack ? 3 : 0,
+        enemy_hp: def.base_hp,
+    };
+
+    // 적 심볼이면 턴 기반 강도에 맞는 랜덤 효과 배정
+    if (def.symbol_type === SymbolType.ENEMY) {
+        const intensity = getEnemyIntensity(turn);
+        const pool = getEffectsByIntensity(intensity);
+        if (pool.length > 0) {
+            inst.enemy_effect_id = pool[Math.floor(Math.random() * pool.length)].id;
+        }
+    }
+
+    return inst;
+};
 
 /** CSV v4 기준 시작 심볼 */
 const getStartingSymbols = (): PlayerSymbolInstance[] => {
@@ -418,7 +436,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         for (let bx = 0; bx < BOARD_WIDTH && !placed; bx++) {
                             for (let by = 0; by < BOARD_HEIGHT && !placed; by++) {
                                 if (!cleanBoard[bx][by]) {
-                                    const inst = createInstance(def);
+                                    const inst = createInstance(def, prev.turn);
                                     cleanBoard[bx][by] = inst;
                                     newPlayerSymbols.push(inst);
                                     placed = true;
@@ -426,7 +444,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                             }
                         }
                         if (!placed) {
-                            newPlayerSymbols.push(createInstance(def));
+                            newPlayerSymbols.push(createInstance(def, prev.turn));
                         }
                     }
                 }
@@ -434,7 +452,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (const symId of toAdd) {
                     const def = SYMBOLS[symId];
                     if (def) {
-                        newPlayerSymbols.push(createInstance(def));
+                        newPlayerSymbols.push(createInstance(def, prev.turn));
                     }
                 }
 
@@ -606,7 +624,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (!def) return;
 
         set({
-            playerSymbols: [...state.playerSymbols, createInstance(def)],
+            playerSymbols: [...state.playerSymbols, createInstance(def, state.turn)],
             phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
             symbolChoices: [],
         });
@@ -666,7 +684,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = SYMBOLS[symbolId];
         if (!def) return;
         set((prev) => ({
-            playerSymbols: [...prev.playerSymbols, createInstance(def)],
+            playerSymbols: [...prev.playerSymbols, createInstance(def, prev.turn)],
         }));
     },
 

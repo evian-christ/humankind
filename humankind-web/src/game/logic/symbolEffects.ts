@@ -1,5 +1,6 @@
 import type { PlayerSymbolInstance } from '../types';
 import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS } from '../data/symbolDefinitions';
+import { ENEMY_EFFECTS } from '../data/enemyEffectDefinitions';
 
 export interface EffectResult {
     food: number;
@@ -366,13 +367,42 @@ export const processSingleSymbolEffects = (
 
         // ── Enemy / Combat Symbols ──
 
-        case 35: // Barbarian: 50% chance -3 Food, 50% chance -1 Gold (passive damage each spin alive)
-            if (Math.random() < 0.5) {
-                food -= 3;
+        case 35: { // Barbarian: 턴 기반 강도에서 배정된 적 효과 적용
+            const effectId = symbolInstance.enemy_effect_id;
+            const effect = effectId ? ENEMY_EFFECTS[effectId] : null;
+            if (effect) {
+                food -= effect.food_penalty;
+                gold -= effect.gold_penalty;
+
+                // debuff 효과: 인접 심볼 생산 감소 (결과에 직접 반영하지 않고 패널티만 적용)
+                if (effect.effect_type === 'debuff') {
+                    const adjCount = adj.filter(pos => boardGrid[pos.x][pos.y] !== null).length;
+                    // 약간의 추가 패널티: 인접 심볼 수 * 1
+                    food -= adjCount;
+                }
+
+                // destruction 효과: 카운터 기반 인접 심볼 파괴
+                if (effect.effect_type === 'destruction') {
+                    symbolInstance.effect_counter++;
+                    const interval = effectId === 14 ? 5 : 4; // id 14 = 5스핀, id 18 = 4스핀
+                    if (symbolInstance.effect_counter >= interval) {
+                        symbolInstance.effect_counter = 0;
+                        const occupiedAdj = adj.filter(pos => {
+                            const s = boardGrid[pos.x][pos.y];
+                            return s !== null && !s.is_marked_for_destruction;
+                        });
+                        if (occupiedAdj.length > 0) {
+                            const target = occupiedAdj[Math.floor(Math.random() * occupiedAdj.length)];
+                            boardGrid[target.x][target.y]!.is_marked_for_destruction = true;
+                        }
+                    }
+                }
             } else {
-                gold -= 1;
+                // fallback (효과 미배정 시 기본 동작)
+                if (Math.random() < 0.5) food -= 3; else gold -= 1;
             }
             break;
+        }
 
         case 36: // Warrior: Every 10 spins: -3 Food
             symbolInstance.effect_counter++;

@@ -25,13 +25,18 @@ export interface SymbolDefinition {
 }
 
 /**
- * Symbols_v4.csv 기반 심볼 정의 (ID 1~36)
- * Era 1 (Ancient): ID 1~21, 35~36
- * Era 2 (Classical): ID 22~30
- * Religion: ID 31~34
+ * gameData.yaml에서 자동 생성된 파일입니다.
+ * 직접 수정하지 마세요. gameData.yaml을 수정한 뒤
+ * npx tsx scripts/generate-from-yaml.ts 를 실행하세요.
  */
 export const SYMBOLS: Record<number, SymbolDefinition> = {
-    // ── Era 1: Ancient ──
+    // ── Religion ──
+    31: { id: 31, name: "Christianity", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: produces Food equal to the highest Food produced by an adjacent symbol this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "015.png" },
+    32: { id: 32, name: "Islam", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: gains Gold equal to 3× the total Knowledge produced by adjacent symbols this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "018.png" },
+    33: { id: 33, name: "Buddhism", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food per empty slot on the board. Adjacent to a Religion symbol: -50 Food.", sprite: "016.png" },
+    34: { id: 34, name: "Hinduism", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "When an adjacent symbol is destroyed: +5 Knowledge and adds a copy of that symbol to your collection. Adjacent to a Religion symbol: -50 Food.", sprite: "017.png" },
+
+    // ── Ancient ──
     1: { id: 1, name: "Wheat", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food.", sprite: "001.png" },
     2: { id: 2, name: "Rice", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every 4 spins: +10 Food.", sprite: "002.png" },
     3: { id: 3, name: "Cattle", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +1 Food. +2 Food per adjacent Cattle.", sprite: "011.png" },
@@ -53,20 +58,10 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     19: { id: 19, name: "Campfire", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +1 Food. After 10 spins: destroyed and adjacent symbols produce double food this spin.", sprite: "029.png" },
     20: { id: 20, name: "Pottery", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: stores +2 Food internally. On destroy: releases stored Food ×2.", sprite: "" },
     21: { id: 21, name: "Tribal Village", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "After 1 spin: immediately adds 2 random Ancient symbols. Then destroys self.", sprite: "" },
-
-    // ── Religion (era-agnostic, first appears in Classical era) ──
-    31: { id: 31, name: "Christianity", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: produces Food equal to the highest Food produced by an adjacent symbol this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "015.png" },
-    32: { id: 32, name: "Islam", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: gains Gold equal to 3× the total Knowledge produced by adjacent symbols this spin. Adjacent to a Religion symbol: -50 Food.", sprite: "018.png" },
-    33: { id: 33, name: "Buddhism", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food per empty slot on the board. Adjacent to a Religion symbol: -50 Food.", sprite: "016.png" },
-    34: { id: 34, name: "Hinduism", era: Era.RELIGION, symbol_type: SymbolType.FRIENDLY, description: "When an adjacent symbol is destroyed: +5 Knowledge and adds a copy of that symbol to your collection. Adjacent to a Religion symbol: -50 Food.", sprite: "017.png" },
-
-    // ── Enemy Symbols ──
-    35: { id: 35, name: "Barbarian", era: Era.ANCIENT, symbol_type: SymbolType.ENEMY, description: "Every spin: 50% chance −3 Food, 50% chance −1 Gold.", base_attack: 5, base_hp: 10, sprite: "022.png" },
-
-    // ── Combat Symbols ──
+    35: { id: 35, name: "Barbarian", era: Era.ANCIENT, symbol_type: SymbolType.ENEMY, description: "Random penalty based on turn intensity (1~5).", base_attack: 5, base_hp: 10, sprite: "022.png" },
     36: { id: 36, name: "Warrior", era: Era.ANCIENT, symbol_type: SymbolType.COMBAT, description: "Every 10 spins: -3 Food.", base_attack: 5, base_hp: 10, sprite: "" },
 
-    // ── Era 2: Classical ──
+    // ── Classical ──
     22: { id: 22, name: "Horse", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food, +1 Gold.", sprite: "" },
     23: { id: 23, name: "Iron", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food, +2 Gold.", sprite: "" },
     24: { id: 24, name: "Galley", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Gold. +2 Food per adjacent Coast. Every 8 spins: adds a random Ancient symbol.", sprite: "" },
@@ -76,6 +71,7 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     28: { id: 28, name: "Tax Collector", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +3 Gold. Adjacent symbols produce -1 Food this spin.", sprite: "" },
     29: { id: 29, name: "Forge", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food, +1 Gold. If adjacent to Copper or Iron: +4 Gold. If adjacent to Stone: +2 Food.", sprite: "" },
     30: { id: 30, name: "Arena", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +2 Food. Whenever any symbol is destroyed this spin: +4 Food, +2 Gold.", sprite: "" },
+
 };
 
 /** Religion 심볼 ID 목록 (Shrine, Totem, Offering + 4대 교리 심볼) */
@@ -85,19 +81,19 @@ export const RELIGION_SYMBOL_IDS = new Set([12, 16, 17, 31, 32, 33, 34]);
 export const RELIGION_DOCTRINE_IDS = new Set([31, 32, 33, 34]);
 
 /** Knowledge를 생산하는 심볼 ID 목록 */
-export const KNOWLEDGE_PRODUCING_IDS = new Set([10, 17, 25, 26]); // Monument, Offering, Library, Scroll
+export const KNOWLEDGE_PRODUCING_IDS = new Set([10, 17, 25, 26]);
 
 /** Gold를 생산하는 심볼 ID 목록 */
-export const GOLD_PRODUCING_IDS = new Set([6, 7, 8, 15, 22, 23, 24, 27, 28, 29]); // Coast, Stone, Copper, Quarry, Horse, Iron, Galley, Market, Tax Collector, Forge
+export const GOLD_PRODUCING_IDS = new Set([6, 7, 8, 15, 22, 23, 24, 27, 28, 29]);
 
 export const getSymbolColor = (era: Era): number => {
     switch (era) {
-        case Era.RELIGION: return 0xffffff;
-        case Era.ANCIENT: return 0x8B4513;
-        case Era.CLASSICAL: return 0x22c55e;
-        case Era.MEDIEVAL: return 0xf97316;
-        case Era.INDUSTRIAL: return 0x3b82f6;
-        case Era.MODERN: return 0xeab308;
+        case Era.RELIGION: return 16777215;
+        case Era.ANCIENT: return 9127187;
+        case Era.CLASSICAL: return 2278750;
+        case Era.MEDIEVAL: return 16347926;
+        case Era.INDUSTRIAL: return 3900150;
+        case Era.MODERN: return 15381256;
         default: return 0x9ca3af;
     }
 };

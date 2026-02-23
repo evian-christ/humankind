@@ -425,7 +425,7 @@ export class PixiGameApp {
                 const symDef = symbol.definition;
 
                 hitArea.on('pointerover', () => {
-                    this.onHoverSymbol({ definition: symDef, screenX: cellX + cellWidth, screenY: cellY });
+                    this.onHoverSymbol({ definition: symDef, screenX: cellX + cellWidth, screenY: cellY, enemy_effect_id: symbol.enemy_effect_id });
                 });
                 hitArea.on('pointerout', () => this.onHoverSymbol(null));
                 this.hitContainer.addChild(hitArea);
