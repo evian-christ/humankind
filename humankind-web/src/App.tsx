@@ -5,6 +5,7 @@ import { useRelicStore } from './game/state/relicStore';
 import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
+import RelicSelection from './components/RelicSelection';
 import EraUnlockModal from './components/EraUnlockModal';
 import PauseMenu from './components/PauseMenu';
 import RelicPanel from './components/RelicPanel';
@@ -43,6 +44,9 @@ function App() {
 
       {/* ===== SYMBOL SELECTION OVERLAY ===== */}
       <SymbolSelection />
+
+      {/* ===== RELIC SELECTION OVERLAY ===== */}
+      <RelicSelection />
 
       {/* ===== ERA UNLOCK MODAL ===== */}
       <EraUnlockModal />

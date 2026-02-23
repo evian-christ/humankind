@@ -3,6 +3,8 @@ import { SYMBOLS, SymbolType, type SymbolDefinition } from '../data/symbolDefini
 import { processSingleSymbolEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
 import { getEffectsByIntensity } from '../data/enemyEffectDefinitions';
+import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
+import { useRelicStore } from './relicStore';
 import type { PlayerSymbolInstance } from '../types';
 
 export { type PlayerSymbolInstance } from '../types';
@@ -37,8 +39,7 @@ const ERA_KNOWLEDGE_REQUIRED: Record<number, number> = {
     4: 275,
 };
 
-type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'era_unlock' | 'game_over' | 'victory';
-
+type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'relic_selection' | 'era_unlock' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250...) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
@@ -55,6 +56,7 @@ export interface GameState {
     playerSymbols: PlayerSymbolInstance[];
     phase: GamePhase;
     symbolChoices: SymbolDefinition[];
+    relicChoices: RelicDefinition[];
     lastEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>;
     /** processing 중 누적 합산 (food, gold, knowledge) */
     runningTotals: { food: number; gold: number; knowledge: number };
@@ -74,6 +76,8 @@ export interface GameState {
     bonusKnowledgePerTurn: number;
     /** 고전 시대 진입 시 선택 대기 중 */
     pendingEraUnlock: boolean;
+    /** 유물 선택 대기 중 */
+    pendingRelicSelection: boolean;
 
     // Actions
     spinBoard: () => void;
@@ -82,6 +86,8 @@ export interface GameState {
     selectSymbol: (symbolId: number) => void;
     skipSelection: () => void;
     rerollSymbols: () => void;
+    selectRelic: (relicId: number) => void;
+    skipRelicSelection: () => void;
     resolveEraUnlock: (choice: 'religion' | 'knowledge') => void;
     initializeGame: () => void;
     devAddSymbol: (symbolId: number) => void;
@@ -194,6 +200,25 @@ const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefiniti
     return choices;
 };
 
+const generateRelicChoices = (): RelicDefinition[] => {
+    // 3 unique relics
+    const choices: RelicDefinition[] = [];
+    const pool = [...RELIC_LIST];
+    // Filter out already owned relics
+    const ownedIds = new Set(useRelicStore.getState().relics.map(r => r.definition.id));
+    const available = pool.filter(r => !ownedIds.has(r.id));
+
+    // Sort randomly
+    available.sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < 3; i++) {
+        if (available[i]) {
+            choices.push(available[i]);
+        }
+    }
+    return choices;
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
     food: 0,
     gold: 0,
@@ -204,6 +229,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     playerSymbols: getStartingSymbols(),
     phase: 'idle' as GamePhase,
     symbolChoices: [],
+    relicChoices: [],
     lastEffects: [],
     runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
@@ -214,6 +240,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     religionUnlocked: false,
     bonusKnowledgePerTurn: 0,
     pendingEraUnlock: false,
+    pendingRelicSelection: false,
 
     spinBoard: () => {
         const state = get();
@@ -247,6 +274,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 1b. Food payment every 10 turns (before effects, Godot 원본 순서)
         let currentFood = state.food;
+        let pRelicSelection = false;
+        let generatedRelics: RelicDefinition[] = state.relicChoices;
         if (newTurn % 10 === 0) {
             const cost = calculateFoodCost(newTurn);
             if (currentFood < cost) {
@@ -254,6 +283,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                 return;
             }
             currentFood -= cost;
+            pRelicSelection = true;
+            generatedRelics = generateRelicChoices();
         }
 
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
@@ -268,6 +299,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
+            pendingRelicSelection: pRelicSelection,
+            relicChoices: generatedRelics,
         });
 
         // spinning 애니메이션은 GameCanvas ticker가 처리하고,
@@ -623,9 +656,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = SYMBOLS[symbolId];
         if (!def) return;
 
+        let nextPhase: GamePhase = 'idle';
+        if (state.pendingRelicSelection) nextPhase = 'relic_selection';
+        else if (state.pendingEraUnlock) nextPhase = 'era_unlock';
+
         set({
             playerSymbols: [...state.playerSymbols, createInstance(def, state.turn)],
-            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
+            phase: nextPhase,
             symbolChoices: [],
         });
     },
@@ -633,7 +670,39 @@ export const useGameStore = create<GameState>((set, get) => ({
     skipSelection: () => {
         const state = get();
         if (state.phase !== 'selection') return;
-        set({ phase: state.pendingEraUnlock ? 'era_unlock' : 'idle', symbolChoices: [] });
+
+        let nextPhase: GamePhase = 'idle';
+        if (state.pendingRelicSelection) nextPhase = 'relic_selection';
+        else if (state.pendingEraUnlock) nextPhase = 'era_unlock';
+
+        set({ phase: nextPhase, symbolChoices: [] });
+    },
+
+    selectRelic: (relicId: number) => {
+        const state = get();
+        if (state.phase !== 'relic_selection') return;
+
+        const def = RELIC_LIST.find((r) => r.id === relicId);
+        if (def) {
+            useRelicStore.getState().addRelic(def);
+        }
+
+        set({
+            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
+            relicChoices: [],
+            pendingRelicSelection: false,
+        });
+    },
+
+    skipRelicSelection: () => {
+        const state = get();
+        if (state.phase !== 'relic_selection') return;
+
+        set({
+            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
+            relicChoices: [],
+            pendingRelicSelection: false,
+        });
     },
 
     rerollSymbols: () => {
@@ -667,6 +736,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             playerSymbols: getStartingSymbols(),
             phase: 'idle' as GamePhase,
             symbolChoices: [],
+            relicChoices: [],
             lastEffects: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
@@ -677,6 +747,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             religionUnlocked: false,
             bonusKnowledgePerTurn: 0,
             pendingEraUnlock: false,
+            pendingRelicSelection: false,
         });
     },
 
