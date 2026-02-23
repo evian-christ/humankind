@@ -40,14 +40,13 @@ body {
 
 
 
-/* Fixed resolution for game development */
+/* #root: width/height/transform 은 JS(settingsStore)에서 해상도에 따라 설정 */
 #root {
-  width: 1920px;
-  height: 1080px;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  transform-origin: center center;
   background: #1a1a1a;
   overflow: hidden;
 }
@@ -1016,6 +1015,11 @@ body {
 .settings-dropdown:focus {
   outline: none;
   border-color: #aaa;
+}
+
+.settings-dropdown:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .settings-dropdown option {

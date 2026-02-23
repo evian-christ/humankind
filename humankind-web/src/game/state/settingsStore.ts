@@ -34,20 +34,38 @@ export interface ResolutionOption {
     height: number;
 }
 
-export const RESOLUTION_OPTIONS: ResolutionOption[] = [
-    { label: '1280 x 720 (16:9)', width: 1280, height: 720 },
-    { label: '1280 x 800 (16:10)', width: 1280, height: 800 },
-    { label: '1280 x 960 (4:3)', width: 1280, height: 960 },
-    { label: '1440 x 900 (16:10)', width: 1440, height: 900 },
-    { label: '1600 x 900 (16:9)', width: 1600, height: 900 },
-    { label: '1680 x 1050 (16:10)', width: 1680, height: 1050 },
-    { label: '1920 x 1080 (16:9)', width: 1920, height: 1080 },
-    { label: '1920 x 1200 (16:10)', width: 1920, height: 1200 },
-    { label: '2560 x 1080 (21:9)', width: 2560, height: 1080 },
-    { label: '2560 x 1440 (16:9)', width: 2560, height: 1440 },
-    { label: '3440 x 1440 (21:9)', width: 3440, height: 1440 },
-    { label: '3840 x 2160 (16:9)', width: 3840, height: 2160 },
-];
+/**
+ * 사용자 모니터 해상도 기반으로 같은 비율의 해상도 옵션 생성
+ * 최대 = 모니터 해상도, 100% ~ 50% 단위로
+ */
+export function getResolutionOptions(): ResolutionOption[] {
+    const sw = window.screen.width;
+    const sh = window.screen.height;
+
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const g = gcd(sw, sh);
+    const rw = sw / g;
+    const rh = sh / g;
+
+    // 비율 라벨 생성
+    const KNOWN_RATIOS: Record<string, string> = {
+        '16:9': '16:9', '8:5': '16:10', '16:10': '16:10',
+        '4:3': '4:3', '21:9': '21:9', '32:9': '32:9',
+    };
+    const rawRatio = `${rw}:${rh}`;
+    const ratioLabel = KNOWN_RATIOS[rawRatio] || rawRatio;
+
+    const percentages = [100, 85, 75, 65, 50];
+    return percentages.map(pct => {
+        const w = Math.round(sw * pct / 100);
+        const h = Math.round(sh * pct / 100);
+        return { label: `${w} x ${h} (${pct}%)`, width: w, height: h };
+    });
+}
+
+// 초기 해상도: 모니터의 75%
+const _initW = Math.round(window.screen.width * 0.75);
+const _initH = Math.round(window.screen.height * 0.75);
 
 /** 기준 해상도 (모든 UI는 이 해상도 기준 px로 작성) */
 export const BASE_WIDTH = 1920;
@@ -67,8 +85,8 @@ export interface SettingsState {
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-    resolutionWidth: 1280,
-    resolutionHeight: 720,
+    resolutionWidth: _initW,
+    resolutionHeight: _initH,
     language: 'ko',
     effectSpeed: '4x',
     spinSpeed: '4x',
@@ -92,25 +110,77 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     },
 }));
 
-/** #root에 뷰포트 기반 transform scale 적용 */
-function applyScaleFromViewport() {
+// ─── 전체화면 상태 추적 ───
+let _isFullscreen = false;
+
+function syncFullscreenState() {
+    if (document.fullscreenElement) {
+        _isFullscreen = true;
+        applyRootScale();
+        return;
+    }
+    import('@tauri-apps/api/core').then(({ isTauri }) => {
+        if (isTauri()) {
+            import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                getCurrentWindow().isFullscreen().then(isFull => {
+                    _isFullscreen = isFull;
+                    applyRootScale();
+                });
+            }).catch(() => { });
+        } else {
+            _isFullscreen = false;
+            applyRootScale();
+        }
+    }).catch(() => {
+        _isFullscreen = false;
+        applyRootScale();
+    });
+}
+
+/**
+ * #root 스케일 적용
+ *
+ * uniformScale = min(resW / 1920, resH / 1080)
+ * virtualW = resW / uniformScale,  virtualH = resH / uniformScale
+ * #root 내부 좌표 공간 = virtualW × virtualH
+ * CSS transform: scale(uniformScale) → 시각적 크기 = resW × resH
+ *
+ * 전체화면: scale(monW / virtualW, monH / virtualH) → 모니터에 늘여서 채움
+ */
+function applyRootScale() {
     const root = document.getElementById('root');
     if (!root) return;
 
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const scaleX = vw / BASE_WIDTH;
-    const scaleY = vh / BASE_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
+    const { resolutionWidth: resW, resolutionHeight: resH } = useSettingsStore.getState();
 
-    root.style.width = `${BASE_WIDTH}px`;
-    root.style.height = `${BASE_HEIGHT}px`;
-    root.style.transform = `translate(-50%, -50%) scale(${scale})`;
-    root.style.transformOrigin = 'center center';
+    const uniformScale = Math.min(resW / BASE_WIDTH, resH / BASE_HEIGHT);
+    const virtualW = resW / uniformScale;
+    const virtualH = resH / uniformScale;
+
+    root.style.width = `${virtualW}px`;
+    root.style.height = `${virtualH}px`;
+
+    if (_isFullscreen) {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const fsScaleX = vw / virtualW;
+        const fsScaleY = vh / virtualH;
+        root.style.transform = `translate(-50%, -50%) scale(${fsScaleX}, ${fsScaleY})`;
+    } else {
+        // 실제 뷰포트 기반 스케일 (타이틀바 등 고려)
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const fitScale = Math.min(vw / virtualW, vh / virtualH);
+        root.style.transform = `translate(-50%, -50%) scale(${fitScale})`;
+    }
 }
 
-// 윈도우 리사이즈 / 전체화면 전환 시 스케일 자동 재계산
-window.addEventListener('resize', () => applyScaleFromViewport());
+// 리사이즈 / 전체화면 이벤트
+window.addEventListener('resize', () => syncFullscreenState());
+document.addEventListener('fullscreenchange', () => {
+    _isFullscreen = !!document.fullscreenElement;
+    applyRootScale();
+});
 
 /** 해상도 설정 변경 시 Tauri 윈도우 크기 변경 + 스케일 재계산 */
 function applyResolutionToDOM(width: number, height: number) {
@@ -129,8 +199,7 @@ function applyResolutionToDOM(width: number, height: number) {
         }
     }).catch(console.error);
 
-    // 스케일 즉시 적용 (Tauri setSize 후에는 resize 이벤트로도 호출됨)
-    requestAnimationFrame(() => applyScaleFromViewport());
+    requestAnimationFrame(() => applyRootScale());
 }
 
 /** #root에 data-lang 속성 설정 (CSS 폰트 전환용) */

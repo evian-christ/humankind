@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSettingsStore, RESOLUTION_OPTIONS, type Language, type EffectSpeed, type SpinSpeed } from '../game/state/settingsStore';
+import { useSettingsStore, getResolutionOptions, type Language, type EffectSpeed, type SpinSpeed } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
 const LANGUAGE_OPTIONS: { value: Language; labelKey: string }[] = [
@@ -51,21 +51,43 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
         }).catch(console.error);
     }, []);
 
+    // 전체화면 전환 시 해상도 100% 강제 / 복원
+    const [preFullscreenRes, setPreFullscreenRes] = useState<{ w: number, h: number } | null>(null);
+
     const toggleFullscreen = () => {
         import('@tauri-apps/api/core').then(({ isTauri }) => {
             if (isTauri()) {
                 import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
                     const win = getCurrentWindow();
                     win.isFullscreen().then((isFull) => {
+                        if (!isFull) {
+                            // 전체화면 진입: 현재 해상도 저장, 100%로 전환
+                            setPreFullscreenRes({ w: resolutionWidth, h: resolutionHeight });
+                            const fullOpt = getResolutionOptions()[0]; // 100%
+                            if (fullOpt) setResolution(fullOpt.width, fullOpt.height);
+                        } else {
+                            // 전체화면 해제: 이전 해상도 복원
+                            if (preFullscreenRes) {
+                                setResolution(preFullscreenRes.w, preFullscreenRes.h);
+                                setPreFullscreenRes(null);
+                            }
+                        }
                         win.setFullscreen(!isFull).then(() => setIsFullscreen(!isFull));
                     });
                 }).catch(console.error);
             } else {
                 if (!document.fullscreenElement) {
+                    setPreFullscreenRes({ w: resolutionWidth, h: resolutionHeight });
+                    const fullOpt = getResolutionOptions()[0];
+                    if (fullOpt) setResolution(fullOpt.width, fullOpt.height);
                     document.documentElement.requestFullscreen().catch(err => {
                         console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
                     });
                 } else {
+                    if (preFullscreenRes) {
+                        setResolution(preFullscreenRes.w, preFullscreenRes.h);
+                        setPreFullscreenRes(null);
+                    }
                     if (document.exitFullscreen) {
                         document.exitFullscreen();
                     }
@@ -76,7 +98,9 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
 
     if (!isOpen) return null;
 
-    const currentResLabel = `${resolutionWidth} x ${resolutionHeight}`;
+    const resOptions = getResolutionOptions();
+    const currentResOption = resOptions.find(o => o.width === resolutionWidth && o.height === resolutionHeight);
+    const currentResLabel = currentResOption ? currentResOption.label : `${resolutionWidth} x ${resolutionHeight}`;
 
     const handleResume = () => {
         setScreen('main');
@@ -181,12 +205,13 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
                                             <select
                                                 className="settings-dropdown"
                                                 value={currentResLabel}
+                                                disabled={isFullscreen}
                                                 onChange={(e) => {
-                                                    const opt = RESOLUTION_OPTIONS.find((o) => o.label === e.target.value);
+                                                    const opt = resOptions.find((o) => o.label === e.target.value);
                                                     if (opt) setResolution(opt.width, opt.height);
                                                 }}
                                             >
-                                                {RESOLUTION_OPTIONS.map((opt) => (
+                                                {resOptions.map((opt) => (
                                                     <option key={opt.label} value={opt.label}>
                                                         {opt.label}
                                                     </option>
