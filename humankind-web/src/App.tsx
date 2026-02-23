@@ -9,6 +9,7 @@ import EraUnlockModal from './components/EraUnlockModal';
 import PauseMenu from './components/PauseMenu';
 import RelicPanel from './components/RelicPanel';
 import DevOverlay from './components/DevOverlay';
+import DataBrowser from './components/DataBrowser';
 
 function App() {
   const { phase, turn, spinBoard, initializeGame } = useGameStore();
@@ -80,6 +81,9 @@ function App() {
 
       {/* ===== DEV OVERLAY ===== */}
       <DevOverlay />
+
+      {/* ===== DATA BROWSER (F3) ===== */}
+      <DataBrowser />
 
       {/* ===== PIXEL ARCADE SPIN BUTTON ===== */}
       <div className="spin-area">

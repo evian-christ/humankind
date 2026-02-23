@@ -764,6 +764,15 @@ body {
   line-height: 1.4;
 }
 
+.symbol-tooltip-effect {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #444;
+  font-size: 17px;
+  color: #ef4444;
+  font-weight: bold;
+}
+
 /* ===== MENU BUTTON (top-right) ===== */
 .menu-btn {
   position: fixed;
@@ -1035,4 +1044,325 @@ body {
   background: rgba(255, 255, 255, 0.12);
   border-color: #aaa;
   color: #fff;
+}
+
+/* ===== DATA BROWSER (F3) ===== */
+.databrowser {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 10, 14, 0.97);
+  z-index: 10000;
+  font-family: 'Mulmaru', sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.databrowser-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 2px solid #333;
+  flex-shrink: 0;
+}
+
+.databrowser-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.databrowser-title {
+  font-size: 28px;
+  color: #fff;
+  letter-spacing: 3px;
+}
+
+.databrowser-hint {
+  font-size: 14px;
+  color: #555;
+  background: #222;
+  padding: 2px 8px;
+  border: 1px solid #444;
+  border-radius: 3px;
+}
+
+.databrowser-close {
+  background: none;
+  border: 1px solid #555;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 12px;
+  transition: all 0.15s ease;
+}
+
+.databrowser-close:hover {
+  color: #fff;
+  border-color: #aaa;
+}
+
+/* Tabs */
+.databrowser-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #333;
+  flex-shrink: 0;
+  padding: 0 24px;
+}
+
+.databrowser-tab {
+  padding: 12px 28px;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: #666;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -2px;
+}
+
+.databrowser-tab:hover {
+  color: #aaa;
+}
+
+.databrowser-tab--active {
+  color: #fff;
+  border-bottom-color: #eab308;
+}
+
+/* Toolbar */
+.databrowser-toolbar {
+  display: flex;
+  gap: 12px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.databrowser-search {
+  flex: 1;
+  max-width: 400px;
+  padding: 8px 14px;
+  background: #181818;
+  border: 1px solid #444;
+  color: #e0e0e0;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 18px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.databrowser-search::placeholder {
+  color: #555;
+}
+
+.databrowser-search:focus {
+  border-color: #888;
+}
+
+.databrowser-filter {
+  padding: 8px 14px;
+  background: #181818;
+  border: 1px solid #444;
+  color: #e0e0e0;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+  outline: none;
+}
+
+.databrowser-filter option {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+/* Content area */
+.databrowser-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: #444 transparent;
+}
+
+/* Table */
+.databrowser-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.databrowser-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.databrowser-table th {
+  text-align: left;
+  padding: 12px 10px;
+  font-size: 14px;
+  color: #888;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: rgba(10, 10, 14, 0.97);
+  border-bottom: 2px solid #333;
+}
+
+.databrowser-table td {
+  padding: 10px 10px;
+  font-size: 18px;
+  color: #ccc;
+  border-bottom: 1px solid #222;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.databrowser-row:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Column widths — symbols */
+.databrowser-th--id {
+  width: 60px;
+}
+
+.databrowser-th--name {
+  width: 180px;
+}
+
+.databrowser-th--era {
+  width: 130px;
+}
+
+.databrowser-th--type {
+  width: 140px;
+}
+
+.databrowser-th--desc {
+  width: auto;
+}
+
+.databrowser-th--stat {
+  width: 60px;
+  text-align: center;
+}
+
+.databrowser-th--cost {
+  width: 80px;
+  text-align: center;
+}
+
+.databrowser-th--sprite {
+  width: 120px;
+}
+
+.databrowser-th--icon {
+  width: 60px;
+  text-align: center;
+}
+
+.databrowser-cell--id {
+  color: #666;
+  font-size: 16px;
+}
+
+.databrowser-cell--name {
+  color: #fff;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.databrowser-cell--type {
+  font-size: 16px;
+}
+
+.databrowser-cell--desc {
+  color: #999;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.databrowser-cell--stat {
+  text-align: center;
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.databrowser-cell--cost {
+  text-align: center;
+  color: #fbbf24;
+  font-weight: bold;
+}
+
+.databrowser-cell--sprite {
+  color: #666;
+  font-size: 14px;
+}
+
+.databrowser-cell--internal {
+  color: #666;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.databrowser-cell--icon {
+  font-size: 28px;
+  text-align: center;
+}
+
+/* Era badge */
+.databrowser-era-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+/* Color swatch */
+.databrowser-color-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #555;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.databrowser-color-hex {
+  color: #888;
+  font-size: 14px;
+}
+
+/* Empty state */
+.databrowser-empty {
+  padding: 60px 0;
+  text-align: center;
+  color: #444;
+  font-size: 24px;
+  letter-spacing: 2px;
+}
+
+/* Intensity badge */
+.databrowser-intensity-badge {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  letter-spacing: 1px;
 }

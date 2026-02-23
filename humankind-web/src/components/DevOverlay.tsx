@@ -67,7 +67,7 @@ const StatRow = ({
 const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
-    const [selectedRelicId, setSelectedRelicId] = useState(RELIC_LIST[0]?.id ?? '');
+    const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
     const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
 
@@ -196,7 +196,7 @@ const DevOverlay = () => {
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
                     <select
                         value={selectedRelicId}
-                        onChange={e => setSelectedRelicId(e.target.value)}
+                        onChange={e => setSelectedRelicId(Number(e.target.value))}
                         style={{
                             flex: 1,
                             background: '#222',
