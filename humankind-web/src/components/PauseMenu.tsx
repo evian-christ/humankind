@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSettingsStore, RESOLUTION_OPTIONS, type Language, type EffectSpeed, type SpinSpeed } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
@@ -31,7 +31,44 @@ interface PauseMenuProps {
 const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
     const [screen, setScreen] = useState<'main' | 'settings'>('main');
     const [activeTab, setActiveTab] = useState<SettingsTab>('gameplay');
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const { resolutionWidth, resolutionHeight, language, effectSpeed, spinSpeed, setResolution, setLanguage, setEffectSpeed, setSpinSpeed } = useSettingsStore();
+
+    useEffect(() => {
+        if ('__TAURI_INTERNALS__' in window) {
+            import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                getCurrentWindow().isFullscreen().then(setIsFullscreen);
+            }).catch(console.error);
+        } else {
+            const handleFullscreenChange = () => {
+                setIsFullscreen(!!document.fullscreenElement);
+            };
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            setIsFullscreen(!!document.fullscreenElement);
+            return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        }
+    }, []);
+
+    const toggleFullscreen = () => {
+        if ('__TAURI_INTERNALS__' in window) {
+            import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                const win = getCurrentWindow();
+                win.isFullscreen().then((isFull) => {
+                    win.setFullscreen(!isFull).then(() => setIsFullscreen(!isFull));
+                });
+            }).catch(console.error);
+        } else {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -152,6 +189,18 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
                                                 ))}
                                             </select>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="settings-row">
+                                    <div className="settings-row-label">{t('settings.fullscreen', language)}</div>
+                                    <div className="settings-row-controls">
+                                        <button
+                                            className={`settings-seg-btn ${isFullscreen ? 'active' : ''}`}
+                                            onClick={toggleFullscreen}
+                                        >
+                                            {isFullscreen ? t('settings.fullscreen.on', language) : t('settings.fullscreen.off', language)}
+                                        </button>
                                     </div>
                                 </div>
                             </>

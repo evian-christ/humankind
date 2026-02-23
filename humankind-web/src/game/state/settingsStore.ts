@@ -99,6 +99,13 @@ function applyResolutionToDOM(width: number, height: number) {
     root.style.height = `${BASE_HEIGHT}px`;
     root.style.transform = `translate(-50%, -50%) scale(${scale})`;
     root.style.transformOrigin = 'center center';
+
+    // Desktop App (Tauri) 해상도 변경 적용
+    if ('__TAURI_INTERNALS__' in window) {
+        import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
+            getCurrentWindow().setSize(new LogicalSize(width, height)).catch(console.error);
+        }).catch(console.error);
+    }
 }
 
 /** #root에 data-lang 속성 설정 (CSS 폰트 전환용) */

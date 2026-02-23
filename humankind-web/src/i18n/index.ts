@@ -20,6 +20,9 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.tab.gameplay': 'Gameplay',
         'settings.tab.graphics': 'Graphics',
         'settings.tab.general': 'General',
+        'settings.fullscreen': 'Fullscreen',
+        'settings.fullscreen.on': 'On',
+        'settings.fullscreen.off': 'Off',
 
         // Game UI
         'game.spin': 'SPIN',
@@ -264,6 +267,9 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.tab.gameplay': '게임플레이',
         'settings.tab.graphics': '그래픽',
         'settings.tab.general': '일반',
+        'settings.fullscreen': '전체화면',
+        'settings.fullscreen.on': '켜짐',
+        'settings.fullscreen.off': '꺼짐',
 
         // Game UI
         'game.spin': '스핀',
