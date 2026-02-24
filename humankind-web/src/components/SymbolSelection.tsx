@@ -24,9 +24,10 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
         <button className="selection-card" onClick={onClick}>
             {symbol.sprite ? (
                 <img
-                    src={`./assets/sprites/${symbol.sprite}`}
+                    src={`./assets/symbols_new/${symbol.sprite}`}
                     alt={symName}
                     className="selection-card-sprite"
+                    style={{ imageRendering: 'pixelated' }}
                 />
             ) : (
                 <div className="selection-card-sprite-placeholder">

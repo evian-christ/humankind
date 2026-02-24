@@ -363,8 +363,10 @@ export class PixiGameApp {
                     group.x = colX;
                     group.y = yPos;
                     if (def && def.sprite) {
-                        const spritePath = `./assets/sprites/${def.sprite}`;
-                        const spriteSize = Math.min(cellWidth - 6, cellHeight) * 0.7;
+                        const spritePath = `./assets/symbols_new/${def.sprite}`;
+                        const SPRITE_PX = 32;
+                        const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
+                        const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                         const sprite = PIXI.Sprite.from(spritePath);
                         sprite.x = cellWidth / 2;
                         sprite.y = cellHeight / 2;
@@ -434,8 +436,10 @@ export class PixiGameApp {
                 const rarityColor = getSymbolColor(symDef.era);
 
                 if (symDef.sprite) {
-                    const spritePath = `./assets/sprites/${symDef.sprite}`;
-                    const spriteSize = Math.min(innerW, cellHeight) * 0.7;
+                    const spritePath = `./assets/symbols_new/${symDef.sprite}`;
+                    const SPRITE_PX = 32;
+                    const rawSize = Math.min(innerW, cellHeight) * 0.85;
+                    const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                     const sprite = PIXI.Sprite.from(spritePath);
                     sprite.x = cellX + cellWidth / 2;
                     sprite.y = cellY + cellHeight / 2;
@@ -741,8 +745,10 @@ export class PixiGameApp {
         let bounceSprite: PIXI.Container;
 
         if (attackerDef?.sprite) {
-            const spriteSize = Math.min(cellWidth - 6, cellHeight) * 0.7;
-            const sp = PIXI.Sprite.from(`./assets/sprites/${attackerDef.sprite}`);
+            const SPRITE_PX = 32;
+            const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
+            const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
+            const sp = PIXI.Sprite.from(`./assets/symbols_new/${attackerDef.sprite}`);
             sp.anchor.set(0.5);
             sp.width = spriteSize;
             sp.height = spriteSize;

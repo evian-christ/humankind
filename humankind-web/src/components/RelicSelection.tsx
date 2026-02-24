@@ -22,9 +22,10 @@ const RelicCard = ({ relic, onClick }: { relic: RelicDefinition; onClick: () => 
         <button className="selection-card" onClick={onClick}>
             {relic.sprite ? (
                 <img
-                    src={`./assets/sprites/${relic.sprite}`}
+                    src={`./assets/symbols_new/${relic.sprite}`}
                     alt={relic.name}
                     className="selection-card-sprite"
+                    style={{ imageRendering: 'pixelated' }}
                 />
             ) : (
                 <div className="selection-card-sprite-placeholder">

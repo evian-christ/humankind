@@ -30,7 +30,15 @@ const RelicPanel = () => {
                 ) : (
                     relics.map((relic) => (
                         <div key={relic.instanceId} className="relic-panel-item">
-                            <span className="relic-panel-item-icon">{relic.definition.sprite}</span>
+                            <span className="relic-panel-item-icon">
+                                {relic.definition.sprite ? (
+                                    <img
+                                        src={`./assets/symbols_new/${relic.definition.sprite}`}
+                                        alt={relic.definition.name}
+                                        style={{ width: '24px', height: '24px', imageRendering: 'pixelated' }}
+                                    />
+                                ) : relic.definition.name.charAt(0)}
+                            </span>
                             <div className="relic-panel-item-info">
                                 <div className="relic-panel-item-name">
                                     <span
