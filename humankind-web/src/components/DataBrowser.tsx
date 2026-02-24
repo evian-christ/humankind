@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { SYMBOLS, Era, SymbolType, getSymbolColorHex } from '../game/data/symbolDefinitions';
 import { RELICS } from '../game/data/relicDefinitions';
 import { RELIC_CANDIDATES } from '../game/data/relicCandidates';
@@ -7,6 +7,8 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
 type Tab = 'symbols' | 'relics' | 'relicCandidates' | 'enemyEffects';
+type SortDir = 'asc' | 'desc';
+interface SortState { column: string; dir: SortDir; }
 
 const ERA_KEYS: Record<number, string> = {
     [Era.RELIGION]: 'religion',
@@ -27,6 +29,29 @@ const EFFECT_TYPE_EMOJI: Record<string, string> = {
 
 const ERA_ORDER = [Era.ANCIENT, Era.CLASSICAL, Era.MEDIEVAL, Era.INDUSTRIAL, Era.MODERN, Era.RELIGION];
 
+/** Sortable column header */
+const SortTh = ({ column, label, sort, onSort, className }: {
+    column: string; label: React.ReactNode; sort: SortState | null;
+    onSort: (col: string) => void; className?: string;
+}) => {
+    const active = sort?.column === column;
+    const arrow = active ? (sort!.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return (
+        <th className={className} onClick={() => onSort(column)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+            {label}{arrow}
+        </th>
+    );
+};
+
+function genericCompare(a: unknown, b: unknown, dir: SortDir): number {
+    const mul = dir === 'asc' ? 1 : -1;
+    if (a == null && b == null) return 0;
+    if (a == null) return mul;
+    if (b == null) return -mul;
+    if (typeof a === 'number' && typeof b === 'number') return (a - b) * mul;
+    return String(a).localeCompare(String(b)) * mul;
+}
+
 const DataBrowser = () => {
     const [open, setOpen] = useState(false);
     const [tab, setTab] = useState<Tab>('symbols');
@@ -35,6 +60,22 @@ const DataBrowser = () => {
     const [intensityFilter, setIntensityFilter] = useState<number | 'all'>('all');
     const [search, setSearch] = useState('');
     const language = useSettingsStore((s) => s.language);
+
+    // Per-tab sort state
+    const [symbolSort, setSymbolSort] = useState<SortState | null>(null);
+    const [relicSort, setRelicSort] = useState<SortState | null>(null);
+    const [relicCandSort, setRelicCandSort] = useState<SortState | null>(null);
+    const [enemySort, setEnemySort] = useState<SortState | null>(null);
+
+    const toggleSort = useCallback((setter: React.Dispatch<React.SetStateAction<SortState | null>>) =>
+        (col: string) => {
+            setter(prev => {
+                if (prev?.column === col) {
+                    return prev.dir === 'asc' ? { column: col, dir: 'desc' } : null;
+                }
+                return { column: col, dir: 'asc' };
+            });
+        }, []);
 
     // F3 키 바인딩
     useEffect(() => {
@@ -48,16 +89,9 @@ const DataBrowser = () => {
         return () => window.removeEventListener('keydown', handler);
     }, []);
 
-    // 심볼 목록 (필터 + 검색)
+    // 심볼 목록 (필터 + 검색 + 정렬)
     const filteredSymbols = useMemo(() => {
         let list = Object.values(SYMBOLS);
-
-        list.sort((a, b) => {
-            const aIdx = ERA_ORDER.indexOf(a.era);
-            const bIdx = ERA_ORDER.indexOf(b.era);
-            if (aIdx !== bIdx) return aIdx - bIdx;
-            return a.id - b.id;
-        });
 
         if (eraFilter !== 'all') {
             list = list.filter(s => s.era === eraFilter);
@@ -73,33 +107,93 @@ const DataBrowser = () => {
                 return name.includes(q) || desc.includes(q) || String(s.id).includes(q);
             });
         }
+
+        if (symbolSort) {
+            const { column, dir } = symbolSort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'name': va = t(`symbol.${a.id}.name`, language); vb = t(`symbol.${b.id}.name`, language); break;
+                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'type': va = a.symbol_type; vb = b.symbol_type; break;
+                    case 'desc': va = t(`symbol.${a.id}.desc`, language); vb = t(`symbol.${b.id}.desc`, language); break;
+                    case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
+                    case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
+                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        } else {
+            list.sort((a, b) => {
+                const aIdx = ERA_ORDER.indexOf(a.era);
+                const bIdx = ERA_ORDER.indexOf(b.era);
+                if (aIdx !== bIdx) return aIdx - bIdx;
+                return a.id - b.id;
+            });
+        }
+
         return list;
-    }, [eraFilter, typeFilter, search, language]);
+    }, [eraFilter, typeFilter, search, language, symbolSort]);
 
     // 유물 목록
     const filteredRelics = useMemo(() => {
-        return Object.values(RELICS).filter(r =>
+        let list = Object.values(RELICS).filter(r =>
             search === '' ||
             r.name.toLowerCase().includes(search.toLowerCase()) ||
             r.description.toLowerCase().includes(search.toLowerCase()) ||
             String(r.id).includes(search)
         );
-    }, [search]);
+        if (relicSort) {
+            const { column, dir } = relicSort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'name': va = a.name; vb = b.name; break;
+                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'cost': va = a.cost; vb = b.cost; break;
+                    case 'desc': va = a.description; vb = b.description; break;
+                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        }
+        return list;
+    }, [search, relicSort]);
 
     const filteredRelicCandidates = useMemo(() => {
-        return Object.values(RELIC_CANDIDATES).filter(r =>
+        let list = Object.values(RELIC_CANDIDATES).filter(r =>
             search === '' ||
             t(`relic.${r.id}.name`, language).toLowerCase().includes(search.toLowerCase()) ||
             r.name.toLowerCase().includes(search.toLowerCase()) ||
             r.description.toLowerCase().includes(search.toLowerCase()) ||
             String(r.id).includes(search)
         );
-    }, [search, language]);
+        if (relicCandSort) {
+            const { column, dir } = relicCandSort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'name': va = a.name; vb = b.name; break;
+                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'cost': va = a.cost; vb = b.cost; break;
+                    case 'desc': va = a.description; vb = b.description; break;
+                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        }
+        return list;
+    }, [search, language, relicCandSort]);
 
     // 적 효과 목록
     const filteredEnemyEffects = useMemo(() => {
         let list = Object.values(ENEMY_EFFECTS);
-        list.sort((a, b) => a.intensity - b.intensity || a.id - b.id);
 
         if (intensityFilter !== 'all') {
             list = list.filter(e => e.intensity === intensityFilter);
@@ -113,8 +207,28 @@ const DataBrowser = () => {
                     e.effect_type.toLowerCase().includes(q);
             });
         }
+
+        if (enemySort) {
+            const { column, dir } = enemySort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'intensity': va = a.intensity; vb = b.intensity; break;
+                    case 'type': va = a.effect_type; vb = b.effect_type; break;
+                    case 'food': va = a.food_penalty; vb = b.food_penalty; break;
+                    case 'gold': va = a.gold_penalty; vb = b.gold_penalty; break;
+                    case 'desc': va = t(`enemyEffect.${a.id}.desc`, language); vb = t(`enemyEffect.${b.id}.desc`, language); break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        } else {
+            list.sort((a, b) => a.intensity - b.intensity || a.id - b.id);
+        }
+
         return list;
-    }, [intensityFilter, search, language]);
+    }, [intensityFilter, search, language, enemySort]);
 
     // 시대별 카운트
     const eraCounts = useMemo(() => {
@@ -140,6 +254,11 @@ const DataBrowser = () => {
     }, []);
 
     if (!open) return null;
+
+    const symSortHandler = toggleSort(setSymbolSort);
+    const relSortHandler = toggleSort(setRelicSort);
+    const rcSortHandler = toggleSort(setRelicCandSort);
+    const enSortHandler = toggleSort(setEnemySort);
 
     return (
         <div className="databrowser">
@@ -237,15 +356,15 @@ const DataBrowser = () => {
                     <table className="databrowser-table">
                         <thead>
                             <tr>
-                                <th className="databrowser-th--id">ID</th>
-                                <th className="databrowser-th--name">{t('dataBrowser.colName', language)}</th>
-                                <th className="databrowser-th--era">{t('dataBrowser.colEra', language)}</th>
-                                <th className="databrowser-th--type">{t('dataBrowser.colType', language)}</th>
-                                <th className="databrowser-th--desc">{t('dataBrowser.colPlayerDesc', language)}</th>
+                                <SortTh column="id" label="ID" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--id" />
+                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--name" />
+                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--era" />
+                                <SortTh column="type" label={t('dataBrowser.colType', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--type" />
+                                <SortTh column="desc" label={t('dataBrowser.colPlayerDesc', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--desc" />
                                 <th className="databrowser-th--desc">{t('dataBrowser.colDesc', language)}</th>
-                                <th className="databrowser-th--stat">ATK</th>
-                                <th className="databrowser-th--stat">HP</th>
-                                <th className="databrowser-th--sprite">{t('dataBrowser.colSprite', language)}</th>
+                                <SortTh column="atk" label="ATK" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="hp" label="HP" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--sprite" />
                             </tr>
                         </thead>
                         <tbody>
@@ -287,12 +406,12 @@ const DataBrowser = () => {
                     <table className="databrowser-table">
                         <thead>
                             <tr>
-                                <th className="databrowser-th--id">ID</th>
-                                <th className="databrowser-th--name">{t('dataBrowser.colName', language)}</th>
-                                <th className="databrowser-th--era">{t('dataBrowser.colEra', language)}</th>
-                                <th className="databrowser-th--cost">{t('dataBrowser.colCost', language)}</th>
-                                <th className="databrowser-th--desc">{t('dataBrowser.colDesc', language)}</th>
-                                <th className="databrowser-th--sprite">{t('dataBrowser.colSprite', language)}</th>
+                                <SortTh column="id" label="ID" sort={relicSort} onSort={relSortHandler} className="databrowser-th--id" />
+                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--name" />
+                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--era" />
+                                <SortTh column="cost" label={t('dataBrowser.colCost', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--cost" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--sprite" />
                             </tr>
                         </thead>
                         <tbody>
@@ -320,12 +439,12 @@ const DataBrowser = () => {
                     <table className="databrowser-table">
                         <thead>
                             <tr>
-                                <th className="databrowser-th--id">ID</th>
-                                <th className="databrowser-th--name">{t('dataBrowser.colName', language)}</th>
-                                <th className="databrowser-th--era">{t('dataBrowser.colEra', language)}</th>
-                                <th className="databrowser-th--cost">{t('dataBrowser.colCost', language)}</th>
-                                <th className="databrowser-th--desc">{t('dataBrowser.colDesc', language)}</th>
-                                <th className="databrowser-th--sprite">{t('dataBrowser.colSprite', language)}</th>
+                                <SortTh column="id" label="ID" sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--id" />
+                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--name" />
+                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--era" />
+                                <SortTh column="cost" label={t('dataBrowser.colCost', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--cost" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--sprite" />
                             </tr>
                         </thead>
                         <tbody>
@@ -353,12 +472,12 @@ const DataBrowser = () => {
                     <table className="databrowser-table">
                         <thead>
                             <tr>
-                                <th className="databrowser-th--id">ID</th>
-                                <th className="databrowser-th--stat">{t('dataBrowser.colIntensity', language)}</th>
-                                <th className="databrowser-th--type">{t('dataBrowser.colEffectType', language)}</th>
-                                <th className="databrowser-th--stat">🍖</th>
-                                <th className="databrowser-th--stat">💰</th>
-                                <th className="databrowser-th--desc">{t('dataBrowser.colDesc', language)}</th>
+                                <SortTh column="id" label="ID" sort={enemySort} onSort={enSortHandler} className="databrowser-th--id" />
+                                <SortTh column="intensity" label={t('dataBrowser.colIntensity', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="type" label={t('dataBrowser.colEffectType', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--type" />
+                                <SortTh column="food" label="🍖" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="gold" label="💰" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--desc" />
                             </tr>
                         </thead>
                         <tbody>
