@@ -111,6 +111,16 @@ const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => {
     return Array(BOARD_WIDTH).fill(null).map(() => Array(BOARD_HEIGHT).fill(null));
 };
 
+/** Fisher-Yates shuffle — 모든 순열에 균등한 확률 보장 */
+const shuffle = <T>(arr: T[]): T[] => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+};
+
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
 
@@ -206,10 +216,7 @@ const generateRelicChoices = (): RelicDefinition[] => {
     const pool = [...RELIC_LIST];
     // Filter out already owned relics
     const ownedIds = new Set(useRelicStore.getState().relics.map(r => r.definition.id));
-    const available = pool.filter(r => !ownedIds.has(r.id));
-
-    // Sort randomly
-    available.sort(() => Math.random() - 0.5);
+    const available = shuffle(pool.filter(r => !ownedIds.has(r.id)));
 
     for (let i = 0; i < 3; i++) {
         if (available[i]) {
@@ -249,12 +256,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         // 1. Clear Board & Place Symbols (reuse existing instances to preserve counters)
         const newBoard = createEmptyBoard();
         // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
-        const combatAndEnemy = [...state.playerSymbols]
-            .filter(s => s.definition.symbol_type === SymbolType.ENEMY || s.definition.symbol_type === SymbolType.COMBAT)
-            .sort(() => Math.random() - 0.5);
-        const friendly = [...state.playerSymbols]
-            .filter(s => s.definition.symbol_type === SymbolType.FRIENDLY)
-            .sort(() => Math.random() - 0.5);
+        const combatAndEnemy = shuffle(state.playerSymbols
+            .filter(s => s.definition.symbol_type === SymbolType.ENEMY || s.definition.symbol_type === SymbolType.COMBAT));
+        const friendly = shuffle(state.playerSymbols
+            .filter(s => s.definition.symbol_type === SymbolType.FRIENDLY));
         const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
 
         const positions: { x: number, y: number }[] = [];
@@ -263,7 +268,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 positions.push({ x, y });
             }
         }
-        const shuffledPositions = positions.sort(() => Math.random() - 0.5);
+        const shuffledPositions = shuffle(positions);
 
         shuffledSymbols.forEach((instance, idx) => {
             const pos = shuffledPositions[idx];
