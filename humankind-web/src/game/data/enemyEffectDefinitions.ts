@@ -23,31 +23,31 @@ export interface EnemyEffectDefinition {
 
 export const ENEMY_EFFECTS: Record<number, EnemyEffectDefinition> = {
     // ── 강도 1 (Ancient 초반) ──
-    1: { id: 1, intensity: 1, effect_type: 'food_loss', food_penalty: 2, gold_penalty: 0, description: 'Every spin: -2 Food.' },
-    2: { id: 2, intensity: 1, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 1, description: 'Every spin: -1 Gold.' },
-    3: { id: 3, intensity: 1, effect_type: 'mixed_loss', food_penalty: 1, gold_penalty: 1, description: 'Every spin: -1 Food, -1 Gold.' },
+    1: { id: 1, intensity: 1, effect_type: 'food_loss', food_penalty: 20, gold_penalty: 0, description: 'Every spin: -20 Food.' },
+    2: { id: 2, intensity: 1, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 10, description: 'Every spin: -10 Gold.' },
+    3: { id: 3, intensity: 1, effect_type: 'mixed_loss', food_penalty: 10, gold_penalty: 10, description: 'Every spin: -10 Food, -10 Gold.' },
 
     // ── 강도 2 ──
-    4: { id: 4, intensity: 2, effect_type: 'food_loss', food_penalty: 3, gold_penalty: 0, description: 'Every spin: -3 Food.' },
-    5: { id: 5, intensity: 2, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 2, description: 'Every spin: -2 Gold.' },
-    6: { id: 6, intensity: 2, effect_type: 'mixed_loss', food_penalty: 2, gold_penalty: 1, description: 'Every spin: -2 Food, -1 Gold.' },
+    4: { id: 4, intensity: 2, effect_type: 'food_loss', food_penalty: 30, gold_penalty: 0, description: 'Every spin: -30 Food.' },
+    5: { id: 5, intensity: 2, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 20, description: 'Every spin: -20 Gold.' },
+    6: { id: 6, intensity: 2, effect_type: 'mixed_loss', food_penalty: 20, gold_penalty: 10, description: 'Every spin: -20 Food, -10 Gold.' },
 
     // ── 강도 3 (Classical) ──
-    7: { id: 7, intensity: 3, effect_type: 'food_loss', food_penalty: 4, gold_penalty: 0, description: 'Every spin: -4 Food.' },
-    8: { id: 8, intensity: 3, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 3, description: 'Every spin: -3 Gold.' },
-    9: { id: 9, intensity: 3, effect_type: 'mixed_loss', food_penalty: 2, gold_penalty: 2, description: 'Every spin: -2 Food, -2 Gold.' },
-    10: { id: 10, intensity: 3, effect_type: 'debuff', food_penalty: 1, gold_penalty: 0, description: 'Every spin: -1 Food. Adjacent symbols produce -1 Food.' },
+    7: { id: 7, intensity: 3, effect_type: 'food_loss', food_penalty: 40, gold_penalty: 0, description: 'Every spin: -40 Food.' },
+    8: { id: 8, intensity: 3, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 30, description: 'Every spin: -30 Gold.' },
+    9: { id: 9, intensity: 3, effect_type: 'mixed_loss', food_penalty: 20, gold_penalty: 20, description: 'Every spin: -20 Food, -20 Gold.' },
+    10: { id: 10, intensity: 3, effect_type: 'debuff', food_penalty: 10, gold_penalty: 0, description: 'Every spin: -10 Food. Adjacent symbols produce -10 Food.' },
 
     // ── 강도 4 ──
-    11: { id: 11, intensity: 4, effect_type: 'food_loss', food_penalty: 5, gold_penalty: 0, description: 'Every spin: -5 Food.' },
-    12: { id: 12, intensity: 4, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 4, description: 'Every spin: -4 Gold.' },
-    13: { id: 13, intensity: 4, effect_type: 'mixed_loss', food_penalty: 3, gold_penalty: 2, description: 'Every spin: -3 Food, -2 Gold.' },
+    11: { id: 11, intensity: 4, effect_type: 'food_loss', food_penalty: 50, gold_penalty: 0, description: 'Every spin: -50 Food.' },
+    12: { id: 12, intensity: 4, effect_type: 'gold_loss', food_penalty: 0, gold_penalty: 40, description: 'Every spin: -40 Gold.' },
+    13: { id: 13, intensity: 4, effect_type: 'mixed_loss', food_penalty: 30, gold_penalty: 20, description: 'Every spin: -30 Food, -20 Gold.' },
     14: { id: 14, intensity: 4, effect_type: 'destruction', food_penalty: 0, gold_penalty: 0, description: 'Every 5 spins: destroys 1 adjacent symbol.' },
 
     // ── 강도 5 (Medieval) ──
-    15: { id: 15, intensity: 5, effect_type: 'food_loss', food_penalty: 6, gold_penalty: 0, description: 'Every spin: -6 Food.' },
-    16: { id: 16, intensity: 5, effect_type: 'mixed_loss', food_penalty: 3, gold_penalty: 3, description: 'Every spin: -3 Food, -3 Gold.' },
-    17: { id: 17, intensity: 5, effect_type: 'debuff', food_penalty: 2, gold_penalty: 0, description: 'Every spin: -2 Food. Adjacent symbols produce -1 Food, -1 Gold.' },
+    15: { id: 15, intensity: 5, effect_type: 'food_loss', food_penalty: 60, gold_penalty: 0, description: 'Every spin: -60 Food.' },
+    16: { id: 16, intensity: 5, effect_type: 'mixed_loss', food_penalty: 30, gold_penalty: 30, description: 'Every spin: -30 Food, -30 Gold.' },
+    17: { id: 17, intensity: 5, effect_type: 'debuff', food_penalty: 20, gold_penalty: 0, description: 'Every spin: -20 Food. Adjacent symbols produce -10 Food, -10 Gold.' },
     18: { id: 18, intensity: 5, effect_type: 'destruction', food_penalty: 0, gold_penalty: 0, description: 'Every 4 spins: destroys 1 adjacent symbol.' },
 };
 

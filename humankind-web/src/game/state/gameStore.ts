@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SYMBOLS, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
+import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
 import { getEffectsByIntensity } from '../data/enemyEffectDefinitions';
@@ -11,7 +12,7 @@ export { type PlayerSymbolInstance } from '../types';
 
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
-export const REROLL_COST = 5;
+export const REROLL_COST = 50;
 
 // 시대별 심볼 등장 확률 테이블 (종교 미해금)
 const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
@@ -22,8 +23,8 @@ const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
     5: { 1: 10, 2: 15, 3: 25, 4: 25, 5: 25 },
 };
 
-// 시대별 심볼 등장 확률 테이블 (종교 해금 후, 0 = Religion)
-const ERA_PROBABILITIES_WITH_RELIGION: Record<number, Record<number, number>> = {
+// 시대별 심볼 등장 확률 테이블 (특수 0 해금 후)
+const ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
     1: { 0: 0, 1: 100, 2: 0, 3: 0, 4: 0, 5: 0 },
     2: { 0: 10, 1: 50, 2: 40, 3: 0, 4: 0, 5: 0 },
     3: { 0: 10, 1: 25, 2: 30, 3: 35, 4: 0, 5: 0 },
@@ -33,17 +34,17 @@ const ERA_PROBABILITIES_WITH_RELIGION: Record<number, Record<number, number>> = 
 
 // 시대 전환에 필요한 Knowledge
 const ERA_KNOWLEDGE_REQUIRED: Record<number, number> = {
-    1: 50,
-    2: 100,
-    3: 175,
-    4: 275,
+    1: 500,
+    2: 1000,
+    3: 1750,
+    4: 2750,
 };
 
 type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'relic_selection' | 'era_unlock' | 'game_over' | 'victory';
-/** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250...) */
+/** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250... -> x10: 1000, 1500, 2000, 2500...) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
-    return 100 + (paymentCycle - 1) * 50;
+    return 1000 + (paymentCycle - 1) * 500;
 };
 
 export interface GameState {
@@ -129,13 +130,19 @@ const getEnemyIntensity = (turn: number): number =>
     Math.min(Math.floor(turn / 60) + 1, 5);
 
 const createInstance = (def: SymbolDefinition, turn: number = 0): PlayerSymbolInstance => {
+    let finalDef = def;
+    // Relic ID 8 (십계명 석판): Replaces 'Stone' (ID 7) with 'Stone Tablet' (ID 201)
+    if (def.id === 7 && useRelicStore.getState().relics.some(r => r.definition.id === 8)) {
+        finalDef = SYMBOLS[201] || def;
+    }
+
     const inst: PlayerSymbolInstance = {
-        definition: def,
+        definition: finalDef,
         instanceId: generateInstanceId(),
         effect_counter: 0,
         is_marked_for_destruction: false,
-        remaining_attacks: def.base_attack ? 3 : 0,
-        enemy_hp: def.base_hp,
+        remaining_attacks: finalDef.base_attack ? 3 : 0,
+        enemy_hp: finalDef.base_hp,
     };
 
     // 적 심볼이면 턴 기반 강도에 맞는 랜덤 효과 배정
@@ -150,38 +157,81 @@ const createInstance = (def: SymbolDefinition, turn: number = 0): PlayerSymbolIn
     return inst;
 };
 
-/** CSV v4 기준 시작 심볼 */
+/** 시작 심볼: Wheat x2, Stone x1 */
 const getStartingSymbols = (): PlayerSymbolInstance[] => {
     return [
         SYMBOLS[1],  // Wheat
-        SYMBOLS[2],  // Rice
-        SYMBOLS[3],  // Cattle
-        SYMBOLS[5],  // Fish
-        SYMBOLS[4],  // Banana
+        SYMBOLS[1],  // Wheat
         SYMBOLS[7],  // Stone
-        SYMBOLS[19], // Campfire
     ].map(createInstance);
 };
 
+/**
+ * 시작 보드: 고정 슬롯에 시작 심볼을 배치한 채 반환
+ * 슬롯 7 (x=1, y=1) → Wheat
+ * 슬롯 9 (x=3, y=1) → Wheat
+ * 슬롯 13 (x=2, y=2) → Stone
+ */
+const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], playerSymbols: PlayerSymbolInstance[] } => {
+    const symbols = getStartingSymbols();
+    const board = createEmptyBoard();
+    board[1][1] = symbols[0]; // Wheat  — 슬롯 7
+    board[3][1] = symbols[1]; // Wheat  — 슬롯 9
+    board[2][2] = symbols[2]; // Stone  — 슬롯 13
+    return { board, playerSymbols: symbols };
+};
+
 /** 선택 풀에서 제외할 심볼 */
-const EXCLUDED_FROM_CHOICES = new Set<number>();
+const EXCLUDED_FROM_CHOICES = new Set<number>([201]);
+/** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
+const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
+    8: [7, 201] // 십계명 석판: 돌(7) -> 석판(201)
+};
 
 /** 심볼을 시대별로 그룹화 (적 심볼은 이벤트로만 등장하므로 선택 풀에서 제외) */
 const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
     const result: Record<number, SymbolDefinition[]> = {};
+    const hasRelic = (relicId: number) => useRelicStore.getState().relics.some(r => r.definition.id === relicId);
+
+    // 현재 유물에 의해 대체되어야 할 심볼 ID들과 그 대체물들 파악
+    const activeReplacements = new Map<number, number>();
+    for (const [relicId, [oldId, newId]] of Object.entries(SYMBOL_REPLACEMENTS_BY_RELIC)) {
+        if (hasRelic(Number(relicId))) {
+            activeReplacements.set(oldId, newId);
+        }
+    }
+
     for (const sym of Object.values(SYMBOLS)) {
-        if (EXCLUDED_FROM_CHOICES.has(sym.id)) continue;
-        if (sym.symbol_type === SymbolType.ENEMY) continue;
-        const e = sym.era as number;
+        let finalSym = sym;
+
+        // 1. 제외 목록에 있고, 어떤 유물의 대체물도 아니라면 건너뜀
+        const isReplacementTarget = Array.from(activeReplacements.values()).includes(sym.id);
+        if (EXCLUDED_FROM_CHOICES.has(sym.id) && !isReplacementTarget) continue;
+
+        // 2. 현재 활성화된 유물에 의해 대체되어야 하는 심볼인 경우 대체
+        if (activeReplacements.has(sym.id)) {
+            const replacementId = activeReplacements.get(sym.id)!;
+            finalSym = SYMBOLS[replacementId] || sym;
+        }
+
+        // 3. 만약 이 심볼이 다른 심볼을 대체한 놈인데, 원래는 제외 목록에 있었다면 통과시켜야 함
+        // (위의 1번에서 이미 처리됨)
+
+        if (finalSym.symbol_type === SymbolType.ENEMY) continue;
+        const e = finalSym.era as number;
         if (!result[e]) result[e] = [];
-        result[e].push(sym);
+
+        // 중복 방지 (이미 대체된 심볼이 들어와 있을 수 있음)
+        if (!result[e].find(s => s.id === finalSym.id)) {
+            result[e].push(finalSym);
+        }
     }
     return result;
 };
 
 /** 시대 기반 가중치로 심볼 3개 생성 (중복 가능) */
 const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
-    const probTable = religionUnlocked ? ERA_PROBABILITIES_WITH_RELIGION : ERA_PROBABILITIES_BASE;
+    const probTable = religionUnlocked ? ERA_PROBABILITIES_WITH_SPECIAL : ERA_PROBABILITIES_BASE;
     const probs = probTable[era] ?? probTable[1];
     const symbolsByEra = getSymbolsByEra();
     const choices: SymbolDefinition[] = [];
@@ -232,8 +282,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     knowledge: 0,
     era: 1,
     turn: 0,
-    board: createEmptyBoard(),
-    playerSymbols: getStartingSymbols(),
+    board: (() => { const s = createStartingBoard(); return s.board; })(),
+    playerSymbols: (() => { const s = createStartingBoard(); return s.playerSymbols; })(),
     phase: 'idle' as GamePhase,
     symbolChoices: [],
     relicChoices: [],
@@ -316,7 +366,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'spinning') return;
 
-        set({ phase: 'processing' });
+        set({ phase: 'processing', runningTotals: { food: 0, gold: 0, knowledge: 2 + get().bonusKnowledgePerTurn } });
 
         // ── 효과 페이즈 인프라 ────────────────────────────────────────────────
         // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
@@ -328,8 +378,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         let totalFood = 0;
-        let totalKnowledge = get().bonusKnowledgePerTurn;
+        let totalKnowledge = 2 + get().bonusKnowledgePerTurn;
         let totalGold = 0;
+        let pRelicSelection = get().pendingRelicSelection;
         const symbolsToAdd: number[] = [];
         const symbolsToSpawnOnBoard: number[] = [];
         const accumulatedEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }> = [];
@@ -356,11 +407,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             const result = processSingleSymbolEffects(
-                symbol, currentBoard, x, y
+                symbol, currentBoard, x, y, useRelicStore.getState().relics.length
             );
 
             if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
             if (result.spawnOnBoard) symbolsToSpawnOnBoard.push(...result.spawnOnBoard);
+            if (result.triggerRelicSelection) pRelicSelection = true;
 
             if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
                 accumulatedEffects.push({ x, y, food: result.food, gold: result.gold, knowledge: result.knowledge });
@@ -404,8 +456,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                     for (let y = 0; y < BOARD_HEIGHT; y++) {
                         const s = currentBoard[x][y];
                         if (s && s.definition.id === 30 && !s.is_marked_for_destruction) {
-                            const arenaFood = destroyedCount * 4;
-                            const arenaGold = destroyedCount * 2;
+                            const arenaFood = destroyedCount * 40;
+                            const arenaGold = destroyedCount * 20;
                             bonusFood += arenaFood;
                             bonusGold += arenaGold;
                             effects.push({ x, y, food: arenaFood, gold: arenaGold, knowledge: 0 });
@@ -418,12 +470,12 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
                     if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
-                        bonusFood += (s.effect_counter || 0) * 2;
+                        bonusFood += (s.effect_counter || 0) * 20;
                     }
                 }
             }
 
-            // Hinduism (34): 인접 심볼이 파괴되면 +5 Knowledge + 복사본 컬렉션 추가
+            // Hinduism (34): 인접 심볼이 파괴되면 +50 Knowledge + 복사본 컬렉션 추가
             let bonusKnowledge = 0;
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -436,9 +488,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
                                 const adjSym = currentBoard[nx][ny];
                                 if (adjSym && adjSym.is_marked_for_destruction) {
-                                    bonusKnowledge += 5;
+                                    bonusKnowledge += 50;
                                     toAdd.push(adjSym.definition.id);
-                                    effects.push({ x, y, food: 0, gold: 0, knowledge: 5 });
+                                    effects.push({ x, y, food: 0, gold: 0, knowledge: 50 });
                                 }
                             }
                         }
@@ -509,6 +561,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 const filteredSymbols = newPlayerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
                 const choices = generateChoices(newEra, prev.religionUnlocked);
                 const crossedToClassical = prev.era === 1 && newEra === 2;
+                const genRelics = pRelicSelection && prev.relicChoices.length === 0 ? generateRelicChoices() : prev.relicChoices;
 
                 return {
                     food: prev.food + tFood + bonusFood,
@@ -524,6 +577,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                     phase: 'processing' as GamePhase,
                     symbolChoices: choices,
                     pendingEraUnlock: crossedToClassical,
+                    pendingRelicSelection: pRelicSelection,
+                    relicChoices: genRelics,
                 };
             });
 
@@ -690,6 +745,22 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = RELIC_LIST.find((r) => r.id === relicId);
         if (def) {
             useRelicStore.getState().addRelic(def);
+
+            // Relic ID 8: Tablet of the Ten Commandments - Replaces all 'Stone' (ID 7) with 'Stone Tablet' (ID 201)
+            if (relicId === 8) {
+                const tabletDef = SYMBOLS[201];
+                if (tabletDef) {
+                    const newBoard = state.board.map(row =>
+                        row.map(cell =>
+                            (cell && cell.definition.id === 7) ? { ...cell, definition: tabletDef } : cell
+                        )
+                    );
+                    const newPlayerSymbols = state.playerSymbols.map(sym =>
+                        sym.definition.id === 7 ? { ...sym, definition: tabletDef } : sym
+                    );
+                    set({ board: newBoard, playerSymbols: newPlayerSymbols });
+                }
+            }
         }
 
         set({
@@ -724,7 +795,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     resolveEraUnlock: (choice: 'religion' | 'knowledge') => {
         set(prev => ({
             religionUnlocked: choice === 'religion' ? true : prev.religionUnlocked,
-            bonusKnowledgePerTurn: choice === 'knowledge' ? prev.bonusKnowledgePerTurn + 1 : prev.bonusKnowledgePerTurn,
+            bonusKnowledgePerTurn: choice === 'knowledge' ? prev.bonusKnowledgePerTurn + 100 : prev.bonusKnowledgePerTurn,
             pendingEraUnlock: false,
             phase: 'idle' as GamePhase,
         }));
@@ -737,8 +808,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             knowledge: 0,
             era: 1,
             turn: 0,
-            board: createEmptyBoard(),
-            playerSymbols: getStartingSymbols(),
+            ...(() => { const s = createStartingBoard(); return { board: s.board, playerSymbols: s.playerSymbols }; })(),
             phase: 'idle' as GamePhase,
             symbolChoices: [],
             relicChoices: [],
@@ -757,7 +827,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     devAddSymbol: (symbolId: number) => {
-        const def = SYMBOLS[symbolId];
+        const def = SYMBOLS[symbolId] || SYMBOL_CANDIDATES[symbolId];
         if (!def) return;
         set((prev) => ({
             playerSymbols: [...prev.playerSymbols, createInstance(def, prev.turn)],

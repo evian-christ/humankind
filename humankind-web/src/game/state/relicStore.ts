@@ -8,17 +8,14 @@ export interface RelicInstance {
 
 interface RelicState {
     relics: RelicInstance[];
-    panelOpen: boolean;
     addRelic: (def: RelicDefinition) => void;
     removeRelic: (instanceId: string) => void;
-    togglePanel: () => void;
 }
 
 let nextId = 1;
 
 export const useRelicStore = create<RelicState>((set) => ({
     relics: [],
-    panelOpen: false,
 
     addRelic: (def) =>
         set((state) => ({
@@ -29,7 +26,4 @@ export const useRelicStore = create<RelicState>((set) => ({
         set((state) => ({
             relics: state.relics.filter((r) => r.instanceId !== instanceId),
         })),
-
-    togglePanel: () =>
-        set((state) => ({ panelOpen: !state.panelOpen })),
 }));
