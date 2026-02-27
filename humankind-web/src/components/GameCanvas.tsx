@@ -5,6 +5,7 @@ import { Era, getSymbolColorHex } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import type { HoveredSymbol } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
+import { EffectText } from './EffectText';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [Era.SPECIAL]: 'era.special',
@@ -133,11 +134,11 @@ const GameCanvas = () => {
                     </div>
                     <div className="symbol-tooltip-desc">
                         {t(`symbol.${hoveredSymbol.definition.id}.desc`, language).split('\n').map((line, i) => (
-                            <div key={i} className="symbol-tooltip-desc-line">{line}</div>
+                            <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
                         ))}
                         {hoveredSymbol.enemy_effect_id && (
                             <div className="symbol-tooltip-effect">
-                                ▸ {t(`enemyEffect.${hoveredSymbol.enemy_effect_id}.desc`, language)}
+                                ▸ <EffectText text={t(`enemyEffect.${hoveredSymbol.enemy_effect_id}.desc`, language)} />
                             </div>
                         )}
                     </div>

@@ -3,12 +3,14 @@ import { SYMBOLS, Era, SymbolType, getSymbolColorHex } from '../game/data/symbol
 import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
 import { RELICS } from '../game/data/relicDefinitions';
 import { RELIC_CANDIDATES } from '../game/data/relicCandidates';
+import { ENEMIES } from '../game/data/enemyDefinitions';
 import { ENEMY_EFFECTS } from '../game/data/enemyEffectDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
 import { t } from '../i18n';
+import { EffectText } from './EffectText';
 
-type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'relicCandidates' | 'enemyEffects';
+type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'relicCandidates' | 'enemyEffects' | 'enemies';
 type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
@@ -69,6 +71,7 @@ const DataBrowser = () => {
     const [symbolCandSort, setSymbolCandSort] = useState<SortState | null>(null);
     const [relicSort, setRelicSort] = useState<SortState | null>(null);
     const [relicCandSort, setRelicCandSort] = useState<SortState | null>(null);
+    const [enemyEffectSort, setEnemyEffectSort] = useState<SortState | null>(null);
     const [enemySort, setEnemySort] = useState<SortState | null>(null);
 
     const toggleSort = useCallback((setter: React.Dispatch<React.SetStateAction<SortState | null>>) =>
@@ -258,8 +261,8 @@ const DataBrowser = () => {
             });
         }
 
-        if (enemySort) {
-            const { column, dir } = enemySort;
+        if (enemyEffectSort) {
+            const { column, dir } = enemyEffectSort;
             list = [...list].sort((a, b) => {
                 let va: unknown, vb: unknown;
                 switch (column) {
@@ -278,7 +281,46 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [intensityFilter, search, language, enemySort]);
+    }, [intensityFilter, search, language, enemyEffectSort]);
+
+    // 적 유닛 목록
+    const filteredEnemies = useMemo(() => {
+        let list = Object.values(ENEMIES);
+
+        if (eraFilter !== 'all') {
+            list = list.filter(enemy => enemy.era === eraFilter);
+        }
+        if (search.trim()) {
+            const q = search.toLowerCase();
+            list = list.filter(enemy => {
+                const name = enemy.name.toLowerCase();
+                const desc = enemy.description.toLowerCase();
+                return name.includes(q) || desc.includes(q) || String(enemy.id).includes(q);
+            });
+        }
+
+        if (enemySort) {
+            const { column, dir } = enemySort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'name': va = a.name; vb = b.name; break;
+                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
+                    case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
+                    case 'desc': va = a.description; vb = b.description; break;
+                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        } else {
+            list.sort((a, b) => a.id - b.id);
+        }
+
+        return list;
+    }, [eraFilter, search, language, enemySort]);
 
     // 시대별 카운트
     const eraCounts = useMemo(() => {
@@ -309,6 +351,7 @@ const DataBrowser = () => {
     const symCandSortHandler = toggleSort(setSymbolCandSort);
     const relSortHandler = toggleSort(setRelicSort);
     const rcSortHandler = toggleSort(setRelicCandSort);
+    const enEffectSortHandler = toggleSort(setEnemyEffectSort);
     const enSortHandler = toggleSort(setEnemySort);
 
     return (
@@ -354,6 +397,12 @@ const DataBrowser = () => {
                 >
                     {t('dataBrowser.enemyEffects', language)} ({Object.keys(ENEMY_EFFECTS).length})
                 </button>
+                <button
+                    className={`databrowser-tab ${tab === 'enemies' ? 'databrowser-tab--active' : ''}`}
+                    onClick={() => setTab('enemies')}
+                >
+                    {t('dataBrowser.enemies', language)} ({Object.keys(ENEMIES).length})
+                </button>
             </div>
 
             {/* Toolbar */}
@@ -390,6 +439,20 @@ const DataBrowser = () => {
                             <option value={SymbolType.COMBAT}>⚔️ {t('dataBrowser.combat', language)}</option>
                         </select>
                     </>
+                )}
+                {tab === 'enemies' && (
+                    <select
+                        className="databrowser-filter"
+                        value={eraFilter === 'all' ? 'all' : String(eraFilter)}
+                        onChange={e => setEraFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                    >
+                        <option value="all">{t('dataBrowser.allEras', language)}</option>
+                        {ERA_ORDER.map(era => (
+                            <option key={era} value={era}>
+                                {t(`era.${ERA_KEYS[era]}`, language)}
+                            </option>
+                        ))}
+                    </select>
                 )}
                 {tab === 'enemyEffects' && (
                     <select
@@ -461,13 +524,13 @@ const DataBrowser = () => {
                                             </div>
                                         ) : '-'}
                                     </td>
-                                    <td className="databrowser-cell--desc">{t(`symbol.${s.id}.desc`, language)}</td>
-                                    <td className="databrowser-cell--desc databrowser-cell--internal">{
+                                    <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
+                                    <td className="databrowser-cell--desc databrowser-cell--internal"><EffectText text={
                                         (() => {
                                             const dev = t(`symbol.${s.id}.devDesc`, language);
                                             return dev.startsWith('symbol.') ? t(`symbol.${s.id}.desc`, language) : dev;
                                         })()
-                                    }</td>
+                                    } /></td>
                                     <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
                                     <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
                                     <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
@@ -531,7 +594,7 @@ const DataBrowser = () => {
                                             </div>
                                         ) : '-'}
                                     </td>
-                                    <td className="databrowser-cell--desc">{s.description}</td>
+                                    <td className="databrowser-cell--desc"><EffectText text={s.description} /></td>
                                     <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
                                     <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
                                     <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
@@ -626,12 +689,12 @@ const DataBrowser = () => {
                     <table className="databrowser-table">
                         <thead>
                             <tr>
-                                <SortTh column="id" label="ID" sort={enemySort} onSort={enSortHandler} className="databrowser-th--id" />
-                                <SortTh column="intensity" label={t('dataBrowser.colIntensity', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
-                                <SortTh column="type" label={t('dataBrowser.colEffectType', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--type" />
-                                <SortTh column="food" label="🍖" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
-                                <SortTh column="gold" label="💰" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
-                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="id" label="ID" sort={enemyEffectSort} onSort={enEffectSortHandler} className="databrowser-th--id" />
+                                <SortTh column="intensity" label={t('dataBrowser.colIntensity', language)} sort={enemyEffectSort} onSort={enEffectSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="type" label={t('dataBrowser.colEffectType', language)} sort={enemyEffectSort} onSort={enEffectSortHandler} className="databrowser-th--type" />
+                                <SortTh column="food" label="🍖" sort={enemyEffectSort} onSort={enEffectSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="gold" label="💰" sort={enemyEffectSort} onSort={enEffectSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={enemyEffectSort} onSort={enEffectSortHandler} className="databrowser-th--desc" />
                             </tr>
                         </thead>
                         <tbody>
@@ -653,7 +716,44 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--stat" style={{ color: e.gold_penalty > 0 ? '#fbbf24' : '#555' }}>
                                         {e.gold_penalty > 0 ? `-${e.gold_penalty}` : '-'}
                                     </td>
-                                    <td className="databrowser-cell--desc">{t(`enemyEffect.${e.id}.desc`, language)}</td>
+                                    <td className="databrowser-cell--desc"><EffectText text={t(`enemyEffect.${e.id}.desc`, language)} /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+
+                {tab === 'enemies' && (
+                    <table className="databrowser-table">
+                        <thead>
+                            <tr>
+                                <SortTh column="id" label="ID" sort={enemySort} onSort={enSortHandler} className="databrowser-th--id" />
+                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--name" />
+                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--era" />
+                                <SortTh column="desc" label={t('dataBrowser.colPlayerDesc', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="atk" label="ATK" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="hp" label="HP" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--sprite" />
+                                <th className="databrowser-th--action" style={{ width: '80px', textAlign: 'center' }}>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredEnemies.map(s => (
+                                <tr key={s.id} className="databrowser-row">
+                                    <td className="databrowser-cell--id">{s.id}</td>
+                                    <td className="databrowser-cell--name">{s.name}</td>
+                                    <td>
+                                        <span style={{ color: getSymbolColorHex(s.era), fontWeight: 'bold' }}>
+                                            [{t(`era.${ERA_KEYS[s.era]}`, language)}]
+                                        </span>
+                                    </td>
+                                    <td className="databrowser-cell--desc"><EffectText text={s.description} /></td>
+                                    <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
+                                    <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
+                                    <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -663,7 +763,8 @@ const DataBrowser = () => {
                 {((tab === 'symbols' && filteredSymbols.length === 0) ||
                     (tab === 'symbolCandidates' && filteredSymbolCandidates.length === 0) ||
                     (tab === 'relics' && filteredRelics.length === 0) ||
-                    (tab === 'enemyEffects' && filteredEnemyEffects.length === 0)) && (
+                    (tab === 'enemyEffects' && filteredEnemyEffects.length === 0) ||
+                    (tab === 'enemies' && filteredEnemies.length === 0)) && (
                         <div className="databrowser-empty">{t('dataBrowser.noResults', language)}</div>
                     )}
             </div>

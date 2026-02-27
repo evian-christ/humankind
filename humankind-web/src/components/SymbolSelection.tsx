@@ -3,6 +3,7 @@ import { useGameStore, REROLL_COST } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { Era, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
+import { EffectText } from './EffectText';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [Era.SPECIAL]: 'era.special',
@@ -53,7 +54,7 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
             )}
             <div className="selection-card-desc">
                 {symDesc.split('\n').map((line, i) => (
-                    <div key={i} className="selection-card-desc-line">{line}</div>
+                    <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
                 ))}
             </div>
             {symbol.tags && symbol.tags.length > 0 && (

@@ -4,6 +4,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { type RelicDefinition } from '../game/data/relicDefinitions';
 import { getSymbolColorHex, Era } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
+import { EffectText } from './EffectText';
 
 const ERA_NAMES: Record<number, string> = {
     [Era.SPECIAL]: '특수',
@@ -49,7 +50,7 @@ const RelicCard = ({ relic, onClick }: { relic: RelicDefinition; onClick: () => 
 
             <div className="selection-card-desc">
                 {relic.description.split('\n').map((line, i) => (
-                    <div key={i} className="selection-card-desc-line">{line}</div>
+                    <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
                 ))}
             </div>
             <div className="selection-card-cost" style={{ marginTop: '8px', color: '#ffb74d' }}>
