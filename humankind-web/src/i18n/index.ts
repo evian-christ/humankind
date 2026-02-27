@@ -64,6 +64,7 @@ const translations: Record<Language, Record<string, string>> = {
         'tag.water': 'Water',
         'tag.food': 'Food',
         'tag.mineral': 'Mineral',
+        'tag.unit': 'Unit',
 
         // Data Browser
         'dataBrowser.title': 'DATA BROWSER',
@@ -92,6 +93,7 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.colEffectType': 'Type',
         'dataBrowser.allIntensities': 'All Intensities',
         'dataBrowser.intensity': 'Intensity',
+        'dataBrowser.enemies': 'Enemies',
         'dataBrowser.effectType.food_loss': 'Food Loss',
         'dataBrowser.effectType.gold_loss': 'Gold Loss',
         'dataBrowser.effectType.mixed_loss': 'Mixed Loss',
@@ -156,11 +158,11 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.name': 'Islam',
         'symbol.33.name': 'Buddhism',
         'symbol.34.name': 'Hinduism',
-        'symbol.35.name': 'Barbarian',
+
         'symbol.36.name': 'Warrior',
         'symbol.37.name': 'Glowing Amber',
         'symbol.38.name': 'Stargazer',
-        'symbol.201.name': 'Stone Tablet',
+        'symbol.39.name': 'Stone Tablet',
 
         // ── Symbol Descriptions ──
         'symbol.1.desc': 'Every spin: +20 Food.',
@@ -197,12 +199,11 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.desc': 'Every spin: +Gold equal to 3× total Knowledge produced by adjacent symbols.\nAdjacent to a Religion symbol: -500 Food.',
         'symbol.33.desc': 'Every spin: +20 Food per empty slot on the board.\nAdjacent to a Religion symbol: -500 Food.',
         'symbol.34.desc': 'When an adjacent symbol is destroyed: +50 Knowledge and adds a copy to your collection.\nAdjacent to a Religion symbol: -500 Food.',
-        'symbol.35.desc': 'On spawn: a random penalty is assigned.',
-        'symbol.35.devDesc': 'Turn-based intensity (1~5, every 60 turns). Random effect from enemy pool on spawn.',
-        'symbol.36.desc': 'Every 10 spins: -30 Food.',
+
+        'symbol.36.desc': 'A basic combat unit.',
         'symbol.37.desc': 'Every spin: +0 Food.\nAfter 3 spins: destroyed and opens relic selection.',
         'symbol.38.desc': 'Every spin: +3 Knowledge per empty slot.',
-        'symbol.201.desc': 'Every spin: +5 Knowledge per relic owned.',
+        'symbol.39.desc': 'Every spin: +5 Knowledge per relic owned.',
 
         // ── Relics ──
         'relic.1.name': 'Clovis Spear Point',
@@ -327,6 +328,7 @@ const translations: Record<Language, Record<string, string>> = {
         'tag.water': '물',
         'tag.food': '식량',
         'tag.mineral': '광물',
+        'tag.unit': '유닛',
 
         // Data Browser
         'dataBrowser.title': '데이터 브라우저',
@@ -355,6 +357,7 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.colEffectType': '유형',
         'dataBrowser.allIntensities': '모든 강도',
         'dataBrowser.intensity': '강도',
+        'dataBrowser.enemies': '적 유닛',
         'dataBrowser.effectType.food_loss': '식량 감소',
         'dataBrowser.effectType.gold_loss': '골드 감소',
         'dataBrowser.effectType.mixed_loss': '복합 감소',
@@ -419,11 +422,11 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.name': '이슬람',
         'symbol.33.name': '불교',
         'symbol.34.name': '힌두교',
-        'symbol.35.name': '야만인',
+
         'symbol.36.name': '전사',
         'symbol.37.name': '빛나는 호박석',
         'symbol.38.name': '별 관찰자',
-        'symbol.201.name': '석판',
+        'symbol.39.name': '석판',
 
         // ── Symbol Descriptions ──
         'symbol.1.desc': '매 스핀: 식량 +20.',
@@ -460,12 +463,11 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.32.desc': '매 스핀: 인접 심볼의 지식 생산 합계 x3만큼 골드 획득.\n종교 심볼에 인접 시: 식량 -500.',
         'symbol.33.desc': '매 스핀: 빈 슬롯 하나당 식량 +20.\n종교 심볼에 인접 시: 식량 -500.',
         'symbol.34.desc': '인접 심볼이 파괴되면: 지식 +50, 같은 심볼 컬렉션에 추가.\n종교 심볼에 인접 시: 식량 -500.',
-        'symbol.35.desc': '등장 시 랜덤 패널티가 배정됩니다.',
-        'symbol.35.devDesc': '턴 기반 강도(1~5, 60턴 단위). 소환 시 적 효과 풀에서 랜덤 배정.',
-        'symbol.36.desc': '10스핀마다: 식량 -30.',
+
+        'symbol.36.desc': '기본 전투 유닛입니다.',
         'symbol.37.desc': '3스핀 후 자기자신을 파괴하며 유물 선택 상점을 엽니다.',
         'symbol.38.desc': '매 스핀: 빈 슬롯 하나당 지식 +3.',
-        'symbol.201.desc': '매 스핀: 보유한 유물 1개당 지식 +5.',
+        'symbol.39.desc': '매 스핀: 보유한 유물 1개당 지식 +5.',
 
         // ── Relics ──
         'relic.1.name': '클로비스 투창촉',

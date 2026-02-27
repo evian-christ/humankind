@@ -486,8 +486,8 @@ body {
 
 .selection-card {
   width: 400px;
-  height: 773px;
-  background: url('/assets/ui/cards_300x580.png') no-repeat center / 400px 773px;
+  height: 667px;
+  background: url('/assets/ui/cards_ancient_300x500.png') no-repeat center / 400px 667px;
   border: none;
   border-radius: 0;
   display: flex;

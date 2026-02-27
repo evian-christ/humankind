@@ -131,9 +131,9 @@ const getEnemyIntensity = (turn: number): number =>
 
 const createInstance = (def: SymbolDefinition, turn: number = 0): PlayerSymbolInstance => {
     let finalDef = def;
-    // Relic ID 8 (십계명 석판): Replaces 'Stone' (ID 7) with 'Stone Tablet' (ID 201)
+    // Relic ID 8 (십계명 석판): Replaces 'Stone' (ID 7) with 'Stone Tablet' (ID 39)
     if (def.id === 7 && useRelicStore.getState().relics.some(r => r.definition.id === 8)) {
-        finalDef = SYMBOLS[201] || def;
+        finalDef = SYMBOLS[39] || def;
     }
 
     const inst: PlayerSymbolInstance = {
@@ -182,10 +182,10 @@ const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], play
 };
 
 /** 선택 풀에서 제외할 심볼 */
-const EXCLUDED_FROM_CHOICES = new Set<number>([201]);
+const EXCLUDED_FROM_CHOICES = new Set<number>([39]);
 /** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
 const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
-    8: [7, 201] // 십계명 석판: 돌(7) -> 석판(201)
+    8: [7, 39] // 십계명 석판: 돌(7) -> 석판(39)
 };
 
 /** 심볼을 시대별로 그룹화 (적 심볼은 이벤트로만 등장하므로 선택 풀에서 제외) */
@@ -746,9 +746,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (def) {
             useRelicStore.getState().addRelic(def);
 
-            // Relic ID 8: Tablet of the Ten Commandments - Replaces all 'Stone' (ID 7) with 'Stone Tablet' (ID 201)
+            // Relic ID 8: Tablet of the Ten Commandments - Replaces all 'Stone' (ID 7) with 'Stone Tablet' (ID 39)
             if (relicId === 8) {
-                const tabletDef = SYMBOLS[201];
+                const tabletDef = SYMBOLS[39];
                 if (tabletDef) {
                     const newBoard = state.board.map(row =>
                         row.map(cell =>
