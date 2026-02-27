@@ -8,7 +8,7 @@ import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
 import EraUnlockModal from './components/EraUnlockModal';
 import PauseMenu from './components/PauseMenu';
-import RelicPanel from './components/RelicPanel';
+import RelicBar from './components/RelicBar';
 import DevOverlay from './components/DevOverlay';
 import DataBrowser from './components/DataBrowser';
 
@@ -17,7 +17,6 @@ function App() {
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { panelOpen, togglePanel } = useRelicStore();
 
   // 앱 최초 로드 시 저장된 해상도를 DOM에 적용
   useEffect(() => {
@@ -73,15 +72,9 @@ function App() {
         </div>
       )}
 
-      {/* ===== RELIC PANEL ===== */}
-      <RelicPanel />
+      {/* ===== RELICS BAR (bottom-left) ===== */}
+      <RelicBar />
 
-      {/* ===== RELIC BUTTON (bottom-left) ===== */}
-      <div className="relic-btn-area">
-        <button className={`relic-btn${panelOpen ? ' relic-btn--active' : ''}`} onClick={togglePanel}>
-          🏺
-        </button>
-      </div>
 
       {/* ===== DEV OVERLAY ===== */}
       <DevOverlay />
