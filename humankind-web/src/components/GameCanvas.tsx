@@ -7,7 +7,7 @@ import type { HoveredSymbol } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 
 const ERA_NAME_KEYS: Record<number, string> = {
-    [Era.RELIGION]: 'era.religion',
+    [Era.SPECIAL]: 'era.special',
     [Era.ANCIENT]: 'era.ancient',
     [Era.CLASSICAL]: 'era.classical',
     [Era.MEDIEVAL]: 'era.medieval',
@@ -122,8 +122,14 @@ const GameCanvas = () => {
             {hoveredSymbol && (
                 <div className="symbol-tooltip" style={getTooltipStyle()}>
                     <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.definition.id}.name`, language)}</div>
-                    <div className="symbol-tooltip-rarity" style={{ color: getSymbolColorHex(hoveredSymbol.definition.era) }}>
-                        ── {t(ERA_NAME_KEYS[hoveredSymbol.definition.era] ?? 'era.ancient', language)} ──
+                    <div className="symbol-tooltip-rarity" style={{
+                        color: getSymbolColorHex(hoveredSymbol.definition.era),
+                        fontWeight: 'bold',
+                        fontSize: '18px',
+                        letterSpacing: '2px',
+                        textShadow: `0 0 10px ${getSymbolColorHex(hoveredSymbol.definition.era)}80`,
+                    }}>
+                        {t(ERA_NAME_KEYS[hoveredSymbol.definition.era] ?? 'era.ancient', language)}
                     </div>
                     <div className="symbol-tooltip-desc">
                         {t(`symbol.${hoveredSymbol.definition.id}.desc`, language).split('\n').map((line, i) => (
@@ -135,6 +141,15 @@ const GameCanvas = () => {
                             </div>
                         )}
                     </div>
+                    {hoveredSymbol.definition.tags && hoveredSymbol.definition.tags.length > 0 && (
+                        <div className="symbol-tooltip-tags" style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                            {hoveredSymbol.definition.tags.map(tag => (
+                                <span key={tag} style={{ background: 'rgba(55, 65, 81, 0.9)', padding: '4px 10px', borderRadius: '6px', fontSize: '15px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                                    {t(`tag.${tag}`, language)}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

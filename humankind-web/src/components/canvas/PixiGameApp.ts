@@ -13,7 +13,7 @@ const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
 const FLOAT_DISTANCE = 30; // px — 위로 이동 거리
 
 const ERA_NAME_KEYS: Record<number, string> = {
-    [Era.RELIGION]: 'era.religion',
+    [Era.SPECIAL]: 'era.special',
     [Era.ANCIENT]: 'era.ancient',
     [Era.CLASSICAL]: 'era.classical',
     [Era.MEDIEVAL]: 'era.medieval',
@@ -582,8 +582,8 @@ export class PixiGameApp {
         const lang = settings.language;
         const fontFamily = 'Mulmaru';
         const eraName = t(ERA_NAME_KEYS[state.era] ?? 'era.ancient', lang);
-        const knowledgeThresholds = [50, 100, 175, 275];
-        const knowledgeCap = knowledgeThresholds[Math.min(state.era - 1, knowledgeThresholds.length - 1)] ?? 275;
+        const knowledgeThresholds = [500, 1000, 1750, 2750];
+        const knowledgeCap = knowledgeThresholds[Math.min(state.era - 1, knowledgeThresholds.length - 1)] ?? 2750;
         const knowledgeCurrent = Math.min(state.knowledge, knowledgeCap);
         const knowledgeRatio = knowledgeCap > 0 ? knowledgeCurrent / knowledgeCap : 0;
 

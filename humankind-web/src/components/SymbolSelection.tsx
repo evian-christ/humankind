@@ -5,7 +5,7 @@ import { Era, getSymbolColorHex, type SymbolDefinition } from '../game/data/symb
 import { t } from '../i18n';
 
 const ERA_NAME_KEYS: Record<number, string> = {
-    [Era.RELIGION]: 'era.religion',
+    [Era.SPECIAL]: 'era.special',
     [Era.ANCIENT]: 'era.ancient',
     [Era.CLASSICAL]: 'era.classical',
     [Era.MEDIEVAL]: 'era.medieval',
@@ -35,8 +35,15 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
                 </div>
             )}
             <div className="selection-card-name">{symName}</div>
-            <div className="selection-card-rarity" style={{ color: eraColor }}>
-                ── {eraName} ──
+            <div className="selection-card-rarity" style={{
+                color: eraColor,
+                fontSize: '28px',
+                fontWeight: '900',
+                letterSpacing: '4px',
+                textShadow: `0 0 15px ${eraColor}b3`,
+                marginBottom: '12px'
+            }}>
+                {eraName}
             </div>
             {(symbol.base_attack !== undefined || symbol.base_hp !== undefined) && (
                 <div className="selection-card-stats" style={{ display: 'flex', gap: '16px', fontSize: '24px', margin: '8px 0', fontWeight: 'bold', color: '#1a1a1a' }}>
@@ -49,6 +56,15 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
                     <div key={i} className="selection-card-desc-line">{line}</div>
                 ))}
             </div>
+            {symbol.tags && symbol.tags.length > 0 && (
+                <div className="selection-card-tags" style={{ display: 'flex', gap: '8px', justifyContent: 'center', margin: '16px 0 0 0', flexWrap: 'wrap' }}>
+                    {symbol.tags.map(tag => (
+                        <span key={tag} style={{ background: 'rgba(55, 65, 81, 0.9)', padding: '6px 14px', borderRadius: '8px', fontSize: '16px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 4px 6px rgba(0,0,0,0.2)' }}>
+                            {t(`tag.${tag}`, language)}
+                        </span>
+                    ))}
+                </div>
+            )}
         </button>
     );
 };

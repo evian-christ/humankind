@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { type RelicDefinition } from '../game/data/relicDefinitions';
-import { getSymbolColorHex } from '../game/data/symbolDefinitions';
+import { getSymbolColorHex, Era } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 
 const ERA_NAMES: Record<number, string> = {
-    1: '태고',
-    2: '고대',
-    3: '고전',
-    4: '중세',
-    5: '산업',
-    6: '현대'
+    [Era.SPECIAL]: '특수',
+    [Era.ANCIENT]: '태고',
+    [Era.CLASSICAL]: '고대',
+    [Era.MEDIEVAL]: '고전',
+    [Era.INDUSTRIAL]: '중세',
+    [Era.MODERN]: '산업',
 };
 
 const RelicCard = ({ relic, onClick }: { relic: RelicDefinition; onClick: () => void }) => {
@@ -33,8 +33,18 @@ const RelicCard = ({ relic, onClick }: { relic: RelicDefinition; onClick: () => 
                 </div>
             )}
             <div className="selection-card-name">{relic.name}</div>
-            <div className="selection-card-rarity" style={{ color: eraColor }}>
-                ── {eraName} 유물 ──
+            <div className="selection-card-rarity" style={{
+                background: eraColor,
+                color: relic.era === Era.SPECIAL ? '#1a1a1a' : '#ffffff',
+                padding: '4px 16px',
+                borderRadius: '16px',
+                display: 'inline-block',
+                fontWeight: 'bold',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                textShadow: relic.era === Era.SPECIAL ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                marginBottom: '12px'
+            }}>
+                {eraName} 유물
             </div>
 
             <div className="selection-card-desc">
