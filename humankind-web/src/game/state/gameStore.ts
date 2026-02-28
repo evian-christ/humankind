@@ -327,35 +327,17 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const newTurn = state.turn + 1;
 
-        // 1b. Food payment every 10 turns (before effects, Godot 원본 순서)
-        let currentFood = state.food;
-        let pRelicSelection = false;
-        let generatedRelics: RelicDefinition[] = state.relicChoices;
-        if (newTurn % 10 === 0) {
-            const cost = calculateFoodCost(newTurn);
-            if (currentFood < cost) {
-                set({ board: newBoard, turn: newTurn, food: currentFood, phase: 'game_over' as GamePhase, lastEffects: [] });
-                return;
-            }
-            currentFood -= cost;
-            pRelicSelection = true;
-            generatedRelics = generateRelicChoices();
-        }
-
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
         // prevBoard: 스핀 전 보드를 저장 (릴 시작점용)
         set({
             prevBoard: state.board,
             board: newBoard,
             turn: newTurn,
-            food: currentFood,
             phase: 'spinning',
             lastEffects: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
-            pendingRelicSelection: pRelicSelection,
-            relicChoices: generatedRelics,
         });
 
         // spinning 애니메이션은 GameCanvas ticker가 처리하고,
@@ -584,8 +566,24 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             // 결과 확인 시간을 준 후 selection으로 전환
             setTimeout(() => {
-                set({ phase: 'selection' as GamePhase });
-            }, 500);
+                const finalState = get();
+                if (finalState.phase === 'processing') {
+                    const patch: Partial<GameState> = { phase: 'selection' as GamePhase };
+                    if (finalState.turn > 0 && finalState.turn % 10 === 0) {
+                        const cost = calculateFoodCost(finalState.turn);
+                        if (finalState.food < cost) {
+                            set({ phase: 'game_over' as GamePhase });
+                            return;
+                        }
+                        patch.food = finalState.food - cost;
+                        patch.pendingRelicSelection = true;
+                        if (!finalState.relicChoices || finalState.relicChoices.length === 0) {
+                            patch.relicChoices = generateRelicChoices();
+                        }
+                    }
+                    set(patch);
+                }
+            }, 600);
         };
 
         // ── 전투 페이즈: COMBAT ↔ ENEMY 인접 쌍을 하나하나 순차 처리 ─────────

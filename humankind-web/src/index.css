@@ -484,10 +484,23 @@ body {
   gap: 30px;
 }
 
+@keyframes cardMysticGlow {
+  0% {
+    filter: drop-shadow(0 0 8px var(--card-glow, rgba(255, 255, 255, 0.1)));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 20px var(--card-glow, rgba(255, 255, 255, 0.4)));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 8px var(--card-glow, rgba(255, 255, 255, 0.1)));
+  }
+}
+
 .selection-card {
   width: 400px;
   height: 667px;
-  background: url('/assets/ui/cards_ancient_300x500.png') no-repeat center / 400px 667px;
   border: none;
   border-radius: 0;
   display: flex;
@@ -496,15 +509,17 @@ body {
   padding: 120px 24px 24px;
   gap: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s ease, filter 0.05s ease;
   font-family: 'Mulmaru', sans-serif;
   color: #1a1a1a;
   image-rendering: pixelated;
+  animation: cardMysticGlow 3s infinite ease-in-out;
 }
 
 .selection-card:hover {
   transform: translateY(-8px);
-  filter: brightness(1.15);
+  filter: drop-shadow(0 0 32px var(--card-glow, rgba(255, 255, 255, 0.6))) brightness(1.15);
+  animation: none;
 }
 
 .selection-card-sprite {
