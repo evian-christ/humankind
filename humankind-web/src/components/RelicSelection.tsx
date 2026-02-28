@@ -20,10 +20,10 @@ const RelicCard = ({ relic, onClick }: { relic: RelicDefinition; onClick: () => 
     const eraName = ERA_NAMES[relic.era] || '태고';
 
     return (
-        <button className="selection-card" onClick={onClick}>
+        <button className="selection-card" onClick={onClick} style={{ '--card-glow': `${eraColor}cc`, background: 'url("./assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px' } as React.CSSProperties}>
             {relic.sprite ? (
                 <img
-                    src={`./assets/symbols_new/${relic.sprite}`}
+                    src={`./assets/symbols/${relic.sprite}`}
                     alt={relic.name}
                     className="selection-card-sprite"
                     style={{ imageRendering: 'pixelated' }}

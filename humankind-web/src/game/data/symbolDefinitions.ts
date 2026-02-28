@@ -35,7 +35,7 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     31: { id: 31, name: "Christianity", era: Era.SPECIAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: produces Food equal to the highest Food produced by an adjacent symbol this spin. Adjacent to a Religion symbol: -500 Food.", sprite: "031.png", tags: ["religion"] },
     32: { id: 32, name: "Islam", era: Era.SPECIAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: gains Gold equal to 3× the total Knowledge produced by adjacent symbols this spin. Adjacent to a Religion symbol: -500 Food.", sprite: "032.png", tags: ["religion"] },
     33: { id: 33, name: "Buddhism", era: Era.SPECIAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Food per empty slot on the board. Adjacent to a Religion symbol: -500 Food.", sprite: "033.png", tags: ["religion"] },
-    34: { id: 34, name: "Hinduism", era: Era.SPECIAL, symbol_type: SymbolType.FRIENDLY, description: "When an adjacent symbol is destroyed: +50 Knowledge and adds a copy of that symbol to your collection. Adjacent to a Religion symbol: -500 Food.", sprite: "", tags: ["religion"] },
+    34: { id: 34, name: "Hinduism", era: Era.SPECIAL, symbol_type: SymbolType.FRIENDLY, description: "When an adjacent symbol is destroyed: +50 Knowledge and adds a copy of that symbol to your collection. Adjacent to a Religion symbol: -500 Food.", sprite: "034.png", tags: ["religion"] },
 
     // ── Ancient ──
     1: { id: 1, name: "Wheat", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Food.", sprite: "001.png", tags: ["food"] },

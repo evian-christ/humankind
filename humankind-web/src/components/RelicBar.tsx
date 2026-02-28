@@ -13,7 +13,7 @@ const RelicBar = () => {
             {relics.map((relic, i) => (
                 <div key={`${relic.instanceId}-${i}`} className="relic-icon-wrapper">
                     {relic.definition.sprite ? (
-                        <img src={`./assets/symbols_new/${relic.definition.sprite}`} alt={relic.definition.name} />
+                        <img src={`./assets/symbols/${relic.definition.sprite}`} alt={relic.definition.name} />
                     ) : (
                         <div className="relic-icon-wrapper-placeholder">🏺</div>
                     )}

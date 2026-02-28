@@ -22,10 +22,10 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
     const symDesc = t(`symbol.${symbol.id}.desc`, language);
 
     return (
-        <button className="selection-card" onClick={onClick}>
+        <button className="selection-card" onClick={onClick} style={{ '--card-glow': `${eraColor}cc`, background: 'url("./assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px' } as React.CSSProperties}>
             {symbol.sprite ? (
                 <img
-                    src={`./assets/symbols_new/${symbol.sprite}`}
+                    src={`./assets/symbols/${symbol.sprite}`}
                     alt={symName}
                     className="selection-card-sprite"
                     style={{ imageRendering: 'pixelated' }}
