@@ -66,11 +66,15 @@ export class PixiGameApp {
             background: '#1a1a1a',
             antialias: false,
             roundPixels: true,
-            resizeTo: this.canvas,
         });
 
         if (this.destroyed) {
-            this.app.destroy(true, { children: true, texture: true });
+            try {
+                if (this.app.resizeTo) (this.app as any).resizeTo = null;
+                this.app.destroy(true);
+            } catch (e) {
+                console.warn("PIXI destroy error:", e);
+            }
             return;
         }
 
@@ -95,10 +99,21 @@ export class PixiGameApp {
         this.destroyed = true;
         if (this.app) {
             try {
-                this.app.destroy(true, { children: true, texture: true });
+                if (this.app.resizeTo) (this.app as any).resizeTo = null;
+                this.app.destroy(true);
             } catch (e) {
                 console.warn("Error destroying PIXI app:", e);
             }
+
+            try {
+                if (this.canvas) this.canvas.innerHTML = '';
+            } catch (e) { }
+        }
+    }
+
+    public resize(width: number, height: number) {
+        if (!this.destroyed && this.app && this.app.renderer) {
+            this.app.renderer.resize(width, height);
         }
     }
 
@@ -316,7 +331,7 @@ export class PixiGameApp {
         this.cellLayout = { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
 
         // Board bg sprite
-        const boardBg = PIXI.Sprite.from('./assets/sprites/slot_bg.png');
+        const boardBg = PIXI.Sprite.from('./assets/ui/slot_bg.png');
         const spritePaddingX = 8 * scale;
         const spritePaddingY = 8 * scale;
         boardBg.x = startX - spritePaddingX;
@@ -363,8 +378,8 @@ export class PixiGameApp {
                     group.x = colX;
                     group.y = yPos;
                     if (def && def.sprite) {
-                        const spritePath = `./assets/symbols_new/${def.sprite}`;
-                        const SPRITE_PX = 32;
+                        const spritePath = `./assets/symbols/${def.sprite}`;
+                        const SPRITE_PX = 26;
                         const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
                         const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                         const sprite = PIXI.Sprite.from(spritePath);
@@ -436,8 +451,8 @@ export class PixiGameApp {
                 const rarityColor = getSymbolColor(symDef.era);
 
                 if (symDef.sprite) {
-                    const spritePath = `./assets/symbols_new/${symDef.sprite}`;
-                    const SPRITE_PX = 32;
+                    const spritePath = `./assets/symbols/${symDef.sprite}`;
+                    const SPRITE_PX = 26;
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                     const sprite = PIXI.Sprite.from(spritePath);
@@ -748,7 +763,7 @@ export class PixiGameApp {
             const SPRITE_PX = 32;
             const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
             const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
-            const sp = PIXI.Sprite.from(`./assets/symbols_new/${attackerDef.sprite}`);
+            const sp = PIXI.Sprite.from(`./assets/symbols/${attackerDef.sprite}`);
             sp.anchor.set(0.5);
             sp.width = spriteSize;
             sp.height = spriteSize;

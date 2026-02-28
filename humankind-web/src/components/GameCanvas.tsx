@@ -41,8 +41,11 @@ const GameCanvas = () => {
             await app.init();
             if (destroyed) return;
 
-            resizeObserver = new ResizeObserver(() => {
+            resizeObserver = new ResizeObserver((entries) => {
                 if (!destroyed && appRef.current) {
+                    if (entries[0] && entries[0].contentRect) {
+                        appRef.current.resize(entries[0].contentRect.width, entries[0].contentRect.height);
+                    }
                     appRef.current.renderBoard(useGameStore.getState(), useSettingsStore.getState());
                 }
             });
