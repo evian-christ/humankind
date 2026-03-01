@@ -282,6 +282,62 @@ body {
   white-space: pre-wrap;
 }
 
+.relic-icon-tooltip-counter {
+  font-size: 13px;
+  color: #fbbf24;
+  letter-spacing: 1px;
+  margin-top: 2px;
+  border-top: 1px solid #444;
+  padding-top: 4px;
+}
+
+/* 유물 진행도 바 */
+.relic-progress-bar {
+  position: absolute;
+  bottom: -18px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 0 0 6px 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.relic-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.relic-progress-text {
+  position: absolute;
+  right: 2px;
+  bottom: -14px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* 유물 보너스 스택 배지 */
+.relic-bonus-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #fbbf24;
+  color: #1a1a1a;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1.5px solid #1a1a1a;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+
 /* ===== SPIN BUTTON ===== */
 .spin-area {
   position: fixed;

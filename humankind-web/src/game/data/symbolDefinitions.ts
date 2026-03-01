@@ -57,7 +57,7 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     17: { id: 17, name: "Offering", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: -10 Food, +10 Knowledge.", sprite: "017.png", tags: [] },
     18: { id: 18, name: "Omen", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: 50% chance +30 Food, 50% chance -15 Food.", sprite: "018.png", tags: [] },
     19: { id: 19, name: "Campfire", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +10 Food. After 10 spins: destroyed and adjacent symbols produce double food this spin.", sprite: "019.png", tags: [] },
-    20: { id: 20, name: "Pottery", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: stores +20 Food internally. On destroy: releases stored Food ×2.", sprite: "020.png", tags: [] },
+    20: { id: 20, name: "Pottery", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: stores +30 Food internally. On destroy: releases all stored Food.", sprite: "020.png", tags: [] },
     21: { id: 21, name: "Tribal Village", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "After 1 spin: immediately adds 2 random Ancient symbols. Then destroys self.", sprite: "021.png", tags: [] },
 
     36: { id: 36, name: "Warrior", era: Era.ANCIENT, symbol_type: SymbolType.COMBAT, description: "A basic combat unit.", base_attack: 5, base_hp: 10, sprite: "036.png", tags: ["unit"] },

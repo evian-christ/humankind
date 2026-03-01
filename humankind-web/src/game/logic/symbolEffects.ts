@@ -16,6 +16,46 @@ export interface EffectResult {
     contributors?: { x: number; y: number }[];
 }
 
+/** 현재 보유 유물의 활성 효과 플래그 (gameStore에서 조합해서 전달) */
+export interface ActiveRelicEffects {
+    /** 유물 보유 수 (석판 효과용) */
+    relicCount: number;
+    /** ID 4: 조몬 토기 조각 - 토기가 인접한 다른 토기를 파괴 */
+    potteryDestroyAdjacent: boolean;
+    /** ID 5: 이집트 구리 톱 - 채석장 인접 빈 슬롯마다 골드 +10 */
+    quarryEmptyGold: boolean;
+    /** ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 인접한 바나나 당 +20 식량 */
+    bananaFossilBonus: boolean;
+    /** ID 103: 가나안의 번제물 - 매 스핀 빈 슬롯마다 식량 -10 */
+    burnOfferingEmptyPenalty: boolean;
+    /** ID 107: 예리코 점토 두개골 - 제단/기념비 지식 +20 추가 */
+    jerichoMonumentBonus: boolean;
+    /** ID 111: 괴베클리 테페 짐승 뼈 - 목장 인접 동물 심볼 5% 잭팟 +150 */
+    gobekliAnimalJackpot: boolean;
+    /** ID 112: 길가메시 서사시 토판 - 종교 패널티 무효화 */
+    gilgameshReligionNoPenalty: boolean;
+    /** ID 115: 막달레니안 뼈 낚싯바늘 - 물고기가 골드 +10 추가 */
+    fishBoneHookGold: boolean;
+    /** ID 119: 가라만테스 안뜰 수로 - 오아시스 빈 칸 보너스 7→1, 자체 +5 */
+    garamantesOasisReduce: boolean;
+    /** ID 120: 나일 강 비옥한 흑니 (활성 중) - 식량 2배 */
+    nileFloodDoubleFood: boolean;
+}
+
+export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
+    relicCount: 0,
+    potteryDestroyAdjacent: false,
+    quarryEmptyGold: false,
+    bananaFossilBonus: false,
+    burnOfferingEmptyPenalty: false,
+    jerichoMonumentBonus: false,
+    gobekliAnimalJackpot: false,
+    gilgameshReligionNoPenalty: false,
+    fishBoneHookGold: false,
+    garamantesOasisReduce: false,
+    nileFloodDoubleFood: false,
+};
+
 const BOARD_WIDTH = 5;
 const BOARD_HEIGHT = 4;
 
@@ -77,14 +117,15 @@ const randomEra1SymbolId = (): number => {
     return Math.floor(Math.random() * 21) + 1;
 };
 
-
+/** 목장 인접 동물 심볼 태그 */
+const ANIMAL_SYMBOL_IDS = new Set([3, 5, 22]); // Cattle, Fish, Horse
 
 export const processSingleSymbolEffects = (
     symbolInstance: PlayerSymbolInstance,
     boardGrid: (PlayerSymbolInstance | null)[][],
     x: number,
     y: number,
-    relicCount: number = 0
+    relicEffects: ActiveRelicEffects = DEFAULT_RELIC_EFFECTS
 ): EffectResult => {
     const id = symbolInstance.definition.id;
     let food = 0;
@@ -117,6 +158,13 @@ export const processSingleSymbolEffects = (
                 const t = boardGrid[pos.x][pos.y];
                 if (t && t.definition.id === 3) { food += 20; contributors.push(pos); }
             });
+            // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
+            if (relicEffects.gobekliAnimalJackpot) {
+                const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+                if (nearPasture && Math.random() < 0.05) {
+                    food += 150;
+                }
+            }
             break;
         }
 
@@ -130,9 +178,20 @@ export const processSingleSymbolEffects = (
 
         case 5: { // Fish: Every spin: +1 Food. +3 Food if adjacent to Coast
             food += 10;
+            // ID 115: 막달레니안 뼈 낚싯바늘 - 물고기 골드 +10
+            if (relicEffects.fishBoneHookGold) {
+                gold += 10;
+            }
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 6) { food += 30; contributors.push(pos); }
             });
+            // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
+            if (relicEffects.gobekliAnimalJackpot) {
+                const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+                if (nearPasture && Math.random() < 0.05) {
+                    food += 150;
+                }
+            }
             break;
         }
 
@@ -156,18 +215,30 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 9: // Granary: Every spin: +2 Food. (Adjacent Wheat/Rice double handled below)
+        case 9: // Granary: Every spin: +2 Food.
             food += 20;
             break;
 
         case 10: // Monument: Every spin: +5 Knowledge
             knowledge += 5;
+            // ID 107: 예리코 점토 두개골 - 기념비 지식 +20 추가
+            if (relicEffects.jerichoMonumentBonus) {
+                knowledge += 20;
+            }
             break;
 
         case 11: { // Oasis: Every spin: +7 Food per adjacent empty slot
-            adj.forEach(pos => {
-                if (!boardGrid[pos.x][pos.y]) food += 7;
-            });
+            // ID 119: 가라만테스 안뜰 수로 - 빈 칸 보너스 1, 자체 +5
+            if (relicEffects.garamantesOasisReduce) {
+                food += 5; // 자체 보너스
+                adj.forEach(pos => {
+                    if (!boardGrid[pos.x][pos.y]) food += 1; // 빈 칸당 1
+                });
+            } else {
+                adj.forEach(pos => {
+                    if (!boardGrid[pos.x][pos.y]) food += 7;
+                });
+            }
             break;
         }
 
@@ -194,12 +265,16 @@ export const processSingleSymbolEffects = (
                 if (t && t.definition.id === 4) {
                     t.effect_counter = 0;
                     contributors.push(pos);
+                    // ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 매 스핀 인접한 바나나 당 식량 +20 생산
+                    if (relicEffects.bananaFossilBonus) {
+                        food += 20;
+                    }
                 }
             });
             break;
         }
 
-        case 14: // Pasture: Every spin: +1 Food. (Adjacent Cattle/Horse buff handled below)
+        case 14: // Pasture: Every spin: +1 Food.
             food += 10;
             break;
 
@@ -212,6 +287,12 @@ export const processSingleSymbolEffects = (
                     if (t.definition.id === 8) { gold += 20; contributors.push(pos); }
                 }
             });
+            // ID 5: 이집트 구리 톱 - 인접 빈 슬롯마다 골드 +10
+            if (relicEffects.quarryEmptyGold) {
+                adj.forEach(pos => {
+                    if (!boardGrid[pos.x][pos.y]) { gold += 10; }
+                });
+            }
             break;
         }
 
@@ -227,8 +308,12 @@ export const processSingleSymbolEffects = (
         }
 
         case 17: // Offering: Every spin: -10 Food, +10 Knowledge
+            // ID 107: 예리코 점토 두개골 - 제단 지식 +20 추가
             food -= 10;
             knowledge += 10;
+            if (relicEffects.jerichoMonumentBonus) {
+                knowledge += 20;
+            }
             break;
 
         case 18: // Omen: 50% chance +30 Food, 50% chance -15 Food
@@ -240,7 +325,7 @@ export const processSingleSymbolEffects = (
             break;
 
         case 39: // Stone Tablet: Every spin: +5 Knowledge per relic owned
-            knowledge += relicCount * 5;
+            knowledge += relicEffects.relicCount * 5;
             break;
 
         case 19: // Campfire: Every spin: +1 Food. After 10 spins: destroyed
@@ -251,9 +336,20 @@ export const processSingleSymbolEffects = (
             }
             break;
 
-        case 20: // Pottery: stores +2 Food internally. On destroy: releases stored Food ×2
-            symbolInstance.effect_counter += 20;
+        case 20: { // Pottery: stores +30 Food per spin. On destroy: releases stored Food
+            symbolInstance.effect_counter += 30;
+            // ID 4: 조몬 토기 조각 - 인접한 다른 토기를 파괴 표시
+            if (relicEffects.potteryDestroyAdjacent) {
+                adj.forEach(pos => {
+                    const t = boardGrid[pos.x][pos.y];
+                    if (t && t.definition.id === 20 && !t.is_marked_for_destruction) {
+                        t.is_marked_for_destruction = true;
+                        contributors.push(pos);
+                    }
+                });
+            }
             break;
+        }
 
         case 21: // Tribal Village: After 1 spin: adds 2 random Ancient symbols. Destroys self
             addSymbolIds.push(randomEra1SymbolId(), randomEra1SymbolId());
@@ -265,6 +361,13 @@ export const processSingleSymbolEffects = (
         case 22: // Horse: Every spin: +2 Food, +1 Gold
             food += 20;
             gold += 10;
+            // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
+            if (relicEffects.gobekliAnimalJackpot) {
+                const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+                if (nearPasture && Math.random() < 0.05) {
+                    food += 150;
+                }
+            }
             break;
 
         case 23: // Iron: Every spin: +2 Food, +2 Gold
@@ -432,13 +535,19 @@ export const processSingleSymbolEffects = (
             break;
     }
 
-    // ── 교리 패널티: 다른 교리 심볼에 인접 시 -50 Food ──
+    // ── ID 103: 가나안의 번제물 - 빈 슬롯마다 식량 -10 ──
+    if (relicEffects.burnOfferingEmptyPenalty && id !== 0) {
+        // 이건 보드 전체 빈 슬롯 처리라 gameStore에서 한 번만 처리
+        // 심볼별로는 여기서 적용하지 않음 (gameStore에서 처리)
+    }
+
+    // ── 교리 패널티: 다른 교리 심볼에 인접 시 -500 Food ──
     if (RELIGION_DOCTRINE_IDS.has(id)) {
         const hasAdjacentDoctrine = adj.some(pos => {
             const t = boardGrid[pos.x][pos.y];
             return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
         });
-        if (hasAdjacentDoctrine) {
+        if (hasAdjacentDoctrine && !relicEffects.gilgameshReligionNoPenalty) {
             food -= 500;
         }
     }
@@ -463,6 +572,11 @@ export const processSingleSymbolEffects = (
                 contributors.push(pos);
             }
         });
+    }
+
+    // ── ID 120: 나일 강 비옥한 흑니 - 활성 중 식량 2배 ──
+    if (relicEffects.nileFloodDoubleFood && food > 0) {
+        food *= 2;
     }
 
     const result: EffectResult = { food, knowledge, gold };
