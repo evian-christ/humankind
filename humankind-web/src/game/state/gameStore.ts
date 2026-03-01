@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { SYMBOLS, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
-import { processSingleSymbolEffects } from '../logic/symbolEffects';
+import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
 import { getEffectsByIntensity } from '../data/enemyEffectDefinitions';
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
@@ -13,6 +13,23 @@ export { type PlayerSymbolInstance } from '../types';
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 export const REROLL_COST = 50;
+
+/** 유물 ID 목록 (relicDefinitions + relicCandidates) */
+const RELIC_ID = {
+    CLOVIS_SPEAR: 1,          // 클로비스 투창촉: 적 체력 -1
+    LYDIA_COIN: 2,            // 리디아 호박금 주화: 리롤 50% 할인, 턴당 최대 3회
+    UR_WHEEL: 3,              // 우르 전차 바퀴: 매 스핀 최저 식량 심볼 파괴 + G+50, 5턴 후 소멸
+    JOMON_POTTERY: 4,         // 조몬 토기 조각: 토기 인접 파괴
+    EGYPT_SAW: 5,             // 이집트 구리 톱: 채석장 빈 슬롯 G+10
+    BABYLON_MAP: 6,           // 바빌로니아 세계 지도: 매 턴 F+10, 보드 20번 심볼 -이면 영구 +10
+    GOANNA_BANANA: 7,         // 쿠크 늪지대 바나나 화석: 열대 과수원 인접 바나나 F+20
+    TEN_COMMANDMENTS: 8,      // 십계명 석판: 돌→석판
+    NILE_SILT: 9,             // 나일 강 흑니: 5스핀 동안 식량 2배
+} as const;
+
+
+/** 작물 심볼 ID 목록 (카르멜 산 화덕 재 효과용) */
+const CROP_SYMBOL_IDS = [1, 2, 4, 5]; // Wheat, Rice, Banana, Fish
 
 // 시대별 심볼 등장 확률 테이블 (종교 미해금)
 const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
@@ -79,6 +96,8 @@ export interface GameState {
     pendingEraUnlock: boolean;
     /** 유물 선택 대기 중 */
     pendingRelicSelection: boolean;
+    /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
+    rerollsThisTurn: number;
 
     // Actions
     spinBoard: () => void;
@@ -276,6 +295,31 @@ const generateRelicChoices = (): RelicDefinition[] => {
     return choices;
 };
 
+/** 현재 보유 유물에서 ActiveRelicEffects 플래그를 조합 */
+const buildActiveRelicEffects = (): ActiveRelicEffects => {
+    const relics = useRelicStore.getState().relics;
+    const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
+    const getRelicInstance = (id: number) => relics.find(r => r.definition.id === id);
+
+    // ID 120: 나일 강 흑니 — effect_counter < 5 인 동안 활성
+    const nileRelic = getRelicInstance(RELIC_ID.NILE_SILT);
+    const nileActive = nileRelic ? nileRelic.effect_counter < 5 : false;
+
+    return {
+        relicCount: relics.length,
+        potteryDestroyAdjacent: hasRelic(RELIC_ID.JOMON_POTTERY),
+        quarryEmptyGold: hasRelic(RELIC_ID.EGYPT_SAW),
+        bananaFossilBonus: hasRelic(RELIC_ID.GOANNA_BANANA),
+        burnOfferingEmptyPenalty: false,
+        jerichoMonumentBonus: false,
+        gobekliAnimalJackpot: false,
+        gilgameshReligionNoPenalty: false,
+        fishBoneHookGold: false,
+        garamantesOasisReduce: false,
+        nileFloodDoubleFood: nileActive,
+    };
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
     food: 0,
     gold: 0,
@@ -298,6 +342,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     bonusKnowledgePerTurn: 0,
     pendingEraUnlock: false,
     pendingRelicSelection: false,
+    rerollsThisTurn: 0,
 
     spinBoard: () => {
         const state = get();
@@ -306,8 +351,17 @@ export const useGameStore = create<GameState>((set, get) => ({
         // 1. Clear Board & Place Symbols (reuse existing instances to preserve counters)
         const newBoard = createEmptyBoard();
         // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
-        const combatAndEnemy = shuffle(state.playerSymbols
+        let combatAndEnemy = shuffle(state.playerSymbols
             .filter(s => s.definition.symbol_type === SymbolType.ENEMY || s.definition.symbol_type === SymbolType.COMBAT));
+        // ID 1: 클로비스 투창촉 - 야만인(적) 등장 시 HP -1
+        if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
+            combatAndEnemy = combatAndEnemy.map(sym => {
+                if (sym.definition.symbol_type === SymbolType.ENEMY) {
+                    return { ...sym, enemy_hp: Math.max(1, (sym.enemy_hp ?? sym.definition.base_hp ?? 1) - 1) };
+                }
+                return sym;
+            });
+        }
         const friendly = shuffle(state.playerSymbols
             .filter(s => s.definition.symbol_type === SymbolType.FRIENDLY));
         const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
@@ -338,6 +392,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
+            rerollsThisTurn: 0,  // 매 스핀 리롤 횟수 리셋
         });
 
         // spinning 애니메이션은 GameCanvas ticker가 처리하고,
@@ -382,14 +437,16 @@ export const useGameStore = create<GameState>((set, get) => ({
             const currentBoard = currentState.board;
             const symbol = currentBoard[x][y];
 
-            // 전투 페이즈에서 파괴된 심볼은 효과 페이즈를 건너뜀
-            if (!symbol || symbol.is_marked_for_destruction) {
+            // 전투 페이즈에서 파괴된 심볼은 보드에서 null로 제거된 상태.
+            // 효과 페이즈 중 파괴 표시(is_marked_for_destruction)된 심볼은
+            // 여전히 자신의 효과를 발동해야 하므로 null 체크만 수행.
+            if (!symbol) {
                 processSlot(slotIdx + 1);
                 return;
             }
 
             const result = processSingleSymbolEffects(
-                symbol, currentBoard, x, y, useRelicStore.getState().relics.length
+                symbol, currentBoard, x, y, buildActiveRelicEffects()
             );
 
             if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
@@ -424,15 +481,25 @@ export const useGameStore = create<GameState>((set, get) => ({
             effects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>
         ) => {
             const currentBoard = get().board;
+            const relics = useRelicStore.getState().relics;
+            const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
+            const getRelicInst = (id: number) => relics.find(r => r.definition.id === id);
 
             let destroyedCount = 0;
+            const destroyedSymbols: { id: number; x: number; y: number }[] = [];
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
-                    if (currentBoard[x][y]?.is_marked_for_destruction) destroyedCount++;
+                    const s = currentBoard[x][y];
+                    if (s?.is_marked_for_destruction) {
+                        destroyedCount++;
+                        destroyedSymbols.push({ id: s.definition.id, x, y });
+                    }
                 }
             }
             let bonusFood = 0;
             let bonusGold = 0;
+
+            // ── Arena (30): 파괴 심볼마다 +40 Food, +20 Gold ──
             if (destroyedCount > 0) {
                 for (let x = 0; x < BOARD_WIDTH; x++) {
                     for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -448,16 +515,46 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                for (let y = 0; y < BOARD_HEIGHT; y++) {
-                    const s = currentBoard[x][y];
-                    if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
-                        bonusFood += (s.effect_counter || 0) * 20;
+            // ── Pottery (20): 조몬 토기 조각 유물 — 파괴 전파 패스 ──
+            // processSlot에서 이미 파괴 표시된 심볼은 스킵되므로,
+            // 여기서 파괴 예정 토기 → 인접 토기 전파를 한 번 더 돌린다.
+            if (hasRelic(RELIC_ID.JOMON_POTTERY)) {
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    for (let x = 0; x < BOARD_WIDTH; x++) {
+                        for (let y = 0; y < BOARD_HEIGHT; y++) {
+                            const s = currentBoard[x][y];
+                            if (!s || s.definition.id !== 20 || !s.is_marked_for_destruction) continue;
+                            // 파괴 예정인 토기 → 인접 토기 파괴 표시
+                            for (let dx = -1; dx <= 1; dx++) {
+                                for (let dy = -1; dy <= 1; dy++) {
+                                    if (dx === 0 && dy === 0) continue;
+                                    const nx = x + dx, ny = y + dy;
+                                    if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+                                    const nb = currentBoard[nx][ny];
+                                    if (nb && nb.definition.id === 20 && !nb.is_marked_for_destruction) {
+                                        nb.is_marked_for_destruction = true;
+                                        changed = true;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            // Hinduism (34): 인접 심볼이 파괴되면 +50 Knowledge + 복사본 컬렉션 추가
+            // ── Pottery (20): 파괴 시 저장된 식량 방출 ──
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    const s = currentBoard[x][y];
+                    if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
+                        bonusFood += (s.effect_counter || 0);
+                    }
+                }
+            }
+
+            // ── Hinduism (34): 인접 심볼이 파괴되면 +50 Knowledge + 복사본 컬렉션 추가 ──
             let bonusKnowledge = 0;
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -477,6 +574,71 @@ export const useGameStore = create<GameState>((set, get) => ({
                             }
                         }
                     }
+                }
+            }
+
+            // ── 유물 ID 3: 우르의 전차 바퀴 ──
+            // 매 스핀 식량 생산량 가장 낮은 심볼 파괴 + G+50. 5턴 후 유물 소멸.
+            const urWheelRelic = getRelicInst(RELIC_ID.UR_WHEEL);
+            if (urWheelRelic) {
+                // 식량 기준 최저 심볼(파괴 안 된 것 중) 찾기
+                let minFood = Infinity;
+                let minSymbol: { x: number; y: number } | null = null;
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    for (let y = 0; y < BOARD_HEIGHT; y++) {
+                        const s = currentBoard[x][y];
+                        if (!s || s.is_marked_for_destruction) continue;
+                        const baseFood = (() => {
+                            switch (s.definition.id) {
+                                case 1: return 20; case 2: return 25; case 3: return 10;
+                                case 4: return 20; case 5: return 10; case 6: return 10;
+                                case 7: return 10; case 9: return 20; case 13: return 10;
+                                case 14: return 10; case 19: return 10; case 22: return 20;
+                                case 23: return 20; case 29: return 20; case 30: return 20;
+                                default: return 0;
+                            }
+                        })();
+                        if (baseFood < minFood) { minFood = baseFood; minSymbol = { x, y }; }
+                    }
+                }
+                if (minSymbol) {
+                    const sym = currentBoard[minSymbol.x][minSymbol.y];
+                    if (sym) sym.is_marked_for_destruction = true;
+                    bonusGold += 50;
+                    effects.push({ x: minSymbol.x, y: minSymbol.y, food: 0, gold: 50, knowledge: 0 });
+                }
+                // 5턴 후 유물 소멸
+                useRelicStore.getState().incrementRelicCounter(urWheelRelic.instanceId);
+                if (urWheelRelic.effect_counter + 1 >= 5) {
+                    useRelicStore.getState().removeRelic(urWheelRelic.instanceId);
+                }
+            }
+
+            // ── 유물 ID 6: 바빌로니아 세계 지도 ──
+            // 매 턴 F+10(+ 누적 보너스). 보드 마지막 슬롯(x=4,y=3) 심볼이 0이하 식량이면 영구 +10.
+            const babylonRelic = getRelicInst(RELIC_ID.BABYLON_MAP);
+            if (babylonRelic) {
+                const baseBonus = 10 + babylonRelic.bonus_stacks * 10;
+                bonusFood += baseBonus;
+                effects.push({ x: 0, y: 0, food: baseBonus, gold: 0, knowledge: 0 });
+                // 보드 마지막 자리 (x=4, y=3) 검사
+                const lastSym = currentBoard[BOARD_WIDTH - 1][BOARD_HEIGHT - 1];
+                if (lastSym) {
+                    const lastEffect = effects.find(e => e.x === BOARD_WIDTH - 1 && e.y === BOARD_HEIGHT - 1);
+                    const lastFood = lastEffect?.food ?? 0;
+                    if (lastFood <= 0) {
+                        useRelicStore.getState().incrementRelicBonus(babylonRelic.instanceId, 1);
+                    }
+                }
+            }
+
+            // ── 유물 ID 120: 나일 강 비옥한 흑니 ──
+            // 활성 5스핀 후 소멸 (카운터 증가)
+            const nileRelic = getRelicInst(RELIC_ID.NILE_SILT);
+            if (nileRelic && nileRelic.effect_counter < 5) {
+                useRelicStore.getState().incrementRelicCounter(nileRelic.instanceId);
+                if (nileRelic.effect_counter + 1 >= 5) {
+                    useRelicStore.getState().removeRelic(nileRelic.instanceId);
                 }
             }
 
@@ -744,8 +906,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (def) {
             useRelicStore.getState().addRelic(def);
 
-            // Relic ID 8: Tablet of the Ten Commandments - Replaces all 'Stone' (ID 7) with 'Stone Tablet' (ID 39)
-            if (relicId === 8) {
+            // ── 유물 획득 즉시 효과 ──
+
+            // ID 2: 리디아의 호박금 주화 - on-acquire 효과 없음 (패시브만)
+
+            // ID 3: 우르의 전차 바퀴 - 카운터는 relicStore에서 관리
+
+            // ID 8: 십계명 석판 - 돌 → 석판 대체
+            if (relicId === RELIC_ID.TEN_COMMANDMENTS) {
                 const tabletDef = SYMBOLS[39];
                 if (tabletDef) {
                     const newBoard = state.board.map(row =>
@@ -759,6 +927,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                     set({ board: newBoard, playerSymbols: newPlayerSymbols });
                 }
             }
+
+
+
         }
 
         set({
@@ -782,11 +953,20 @@ export const useGameStore = create<GameState>((set, get) => ({
     rerollSymbols: () => {
         const state = get();
         if (state.phase !== 'selection') return;
-        if (state.gold < REROLL_COST) return;
+
+        const hasLydia = useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.LYDIA_COIN);
+
+        // ID 2: 리디아의 호박금 주화 — 비용 50% 할인, 턴당 최대 3회
+        const rerollCost = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+        const maxRerolls = hasLydia ? 3 : Infinity;
+
+        if (state.rerollsThisTurn >= maxRerolls) return;
+        if (state.gold < rerollCost) return;
 
         set({
-            gold: state.gold - REROLL_COST,
+            gold: state.gold - rerollCost,
             symbolChoices: generateChoices(state.era, state.religionUnlocked),
+            rerollsThisTurn: state.rerollsThisTurn + 1,
         });
     },
 
@@ -821,6 +1001,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             bonusKnowledgePerTurn: 0,
             pendingEraUnlock: false,
             pendingRelicSelection: false,
+            rerollsThisTurn: 0,
         });
     },
 

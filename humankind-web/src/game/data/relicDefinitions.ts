@@ -12,7 +12,7 @@ export interface RelicDefinition {
     description: string;
     cost: number;
     era: Era;
-    sprite: string;
+    sprite: string; // assets/relics/ 폴더 기준 파일명
 }
 
 export const RELICS: Record<number, RelicDefinition> = {
@@ -20,65 +20,73 @@ export const RELICS: Record<number, RelicDefinition> = {
         id: 1,
         name: "클로비스 투창촉",
         description: "야만인 등장 시, 체력이 1 깎인 채로 추가됨.",
-        cost: 900,
+        cost: 300,
         era: Era.ANCIENT,
-        sprite: "relic_001.png",
+        sprite: "001.png",
     },
     2: {
         id: 2,
         name: "리디아의 호박금 주화",
-        description: "매 스핀 리롤 비용 10골드 증가. 이 유물 획득 시 즉시 골드 +1000.",
-        cost: 500,
+        description: "리롤 비용이 50% 할인됩니다. 턴당 리롤은 최대 3회로 제한됩니다.",
+        cost: 400,
         era: Era.ANCIENT,
-        sprite: "relic_002.png",
+        sprite: "002.png",
     },
     3: {
         id: 3,
         name: "우르의 전차 바퀴",
         description: "매 스핀 식량 생산량이 제일 낮은 심볼 파괴 및 골드 +50 제공. 5턴 후 제거됩니다.",
-        cost: 1600,
+        cost: 400,
         era: Era.ANCIENT,
-        sprite: "relic_003.png",
+        sprite: "003.png",
     },
     4: {
         id: 4,
         name: "조몬 토기 조각",
-        description: "'토기' 심볼은 '토기' 심볼에 의해 파괴됩니다.",
-        cost: 800,
+        description: "'토기' 심볼은 인접한 '토기'를 파괴합니다.",
+        cost: 350,
         era: Era.ANCIENT,
-        sprite: "relic_101.png",
+        sprite: "004.png",
     },
     5: {
         id: 5,
         name: "이집트 구리 톱",
         description: "채석장이 인접한 빈 슬롯마다 골드 +10",
-        cost: 1800,
+        cost: 400,
         era: Era.ANCIENT,
-        sprite: "relic_104.png",
+        sprite: "005.png",
     },
     6: {
         id: 6,
         name: "바빌로니아 세계 지도",
         description: "매 턴 식량 +10 생산. 보드 마지막 (20) 자리에 배치된 심볼의 생산량이 0 이하일 경우, 이 유물의 식량 생산량이 영구적으로 10 증가.",
-        cost: 1700,
+        cost: 600,
         era: Era.ANCIENT,
-        sprite: "relic_109.png",
+        sprite: "006.png",
     },
     7: {
         id: 7,
         name: "쿠크 늪지대 바나나 화석",
-        description: "바나나는 한 스핀 후에 파괴됨.",
-        cost: 1000,
+        description: "열대 과수원이 매 스핀 인접한 바나나 당 식량 +20 생산.",
+        cost: 350,
         era: Era.ANCIENT,
-        sprite: "relic_106.png",
+        sprite: "007.png",
     },
     8: {
         id: 8,
         name: "십계명 석판",
         description: "'돌' 심볼을 '석판' 심볼로 대체합니다.",
-        cost: 2000,
+        cost: 500,
         era: Era.ANCIENT,
-        sprite: "relic_108.png",
+        sprite: "008.png",
+    },
+    9: {
+        id: 9,
+        name: "나일 강 비옥한 흑니",
+        description: "획득 후 다음 5스핀 동안 모든 식량 획득량 2배 (이후 소멸).",
+        cost: 800,
+        era: Era.ANCIENT,
+        sprite: "",
     },
 };
 
