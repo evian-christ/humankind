@@ -1,60 +1,59 @@
 import { useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
-import { useSettingsStore } from '../game/state/settingsStore';
+import { useSettingsStore, type Language } from '../game/state/settingsStore';
 import { type RelicDefinition } from '../game/data/relicDefinitions';
 import { getSymbolColorHex, Era } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 
-const ERA_NAMES: Record<number, string> = {
-    [Era.SPECIAL]: '특수',
-    [Era.ANCIENT]: '태고',
-    [Era.CLASSICAL]: '고대',
-    [Era.MEDIEVAL]: '고전',
-    [Era.INDUSTRIAL]: '중세',
-    [Era.MODERN]: '산업',
+const ERA_NAME_KEYS: Record<number, string> = {
+    [Era.SPECIAL]: 'era.special',
+    [Era.ANCIENT]: 'era.ancient',
+    [Era.CLASSICAL]: 'era.classical',
+    [Era.MEDIEVAL]: 'era.medieval',
+    [Era.INDUSTRIAL]: 'era.industrial',
+    [Era.MODERN]: 'era.modern',
 };
 
-const RelicCard = ({ relic, onClick }: { relic: RelicDefinition; onClick: () => void }) => {
+const RelicCard = ({ relic, onClick, language }: { relic: RelicDefinition; onClick: () => void; language: Language }) => {
     const eraColor = getSymbolColorHex(relic.era);
-    const eraName = ERA_NAMES[relic.era] || '태고';
+    const eraName = t(ERA_NAME_KEYS[relic.era] ?? 'era.ancient', language);
+    const relicName = t(`relic.${relic.id}.name`, language);
+    const relicDesc = t(`relic.${relic.id}.desc`, language);
 
     return (
         <button className="selection-card" onClick={onClick} style={{ '--card-glow': `${eraColor}cc`, background: 'url("./assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px' } as React.CSSProperties}>
             {relic.sprite ? (
                 <img
-                    src={`./assets/symbols/${relic.sprite}`}
-                    alt={relic.name}
+                    src={`./assets/relics/${relic.sprite}`}
+                    alt={relicName}
                     className="selection-card-sprite"
                     style={{ imageRendering: 'pixelated' }}
                 />
             ) : (
                 <div className="selection-card-sprite-placeholder">
-                    {relic.name}
+                    {relicName}
                 </div>
             )}
-            <div className="selection-card-name">{relic.name}</div>
+            <div className="selection-card-name">{relicName}</div>
             <div className="selection-card-rarity" style={{
-                background: eraColor,
-                color: relic.era === Era.SPECIAL ? '#1a1a1a' : '#ffffff',
-                padding: '4px 16px',
-                borderRadius: '16px',
-                display: 'inline-block',
-                fontWeight: 'bold',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                textShadow: relic.era === Era.SPECIAL ? 'none' : '0 1px 2px rgba(0,0,0,0.5)',
+                color: eraColor,
+                fontSize: '28px',
+                fontWeight: '900',
+                letterSpacing: '4px',
+                textShadow: `0 0 15px ${eraColor}b3`,
                 marginBottom: '12px'
             }}>
-                {eraName} 유물
+                {eraName}
             </div>
 
             <div className="selection-card-desc">
-                {relic.description.split('\n').map((line, i) => (
+                {relicDesc.split('\n').map((line, i) => (
                     <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
                 ))}
             </div>
-            <div className="selection-card-cost" style={{ marginTop: '8px', color: '#ffb74d' }}>
-                가치: {relic.cost}G
+            <div className="selection-card-cost" style={{ marginTop: '8px', color: '#ffb74d', fontSize: '20px', fontWeight: 'bold' }}>
+                {relic.cost}G
             </div>
         </button>
     );
@@ -82,12 +81,13 @@ const RelicSelection = () => {
 
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
-                    <div className="selection-title">유물 선택 (10턴 보상)</div>
+                    <div className="selection-title">{t('game.chooseRelic', language)}</div>
                     <div className="selection-cards">
                         {relicChoices.map((relic, i) => (
                             <RelicCard
                                 key={`${relic.id}-${i}`}
                                 relic={relic}
+                                language={language}
                                 onClick={() => selectRelic(relic.id)}
                             />
                         ))}

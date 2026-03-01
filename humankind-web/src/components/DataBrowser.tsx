@@ -188,22 +188,22 @@ const DataBrowser = () => {
 
     // 유물 목록
     const filteredRelics = useMemo(() => {
-        let list = Object.values(RELICS).filter(r =>
-            search === '' ||
-            r.name.toLowerCase().includes(search.toLowerCase()) ||
-            r.description.toLowerCase().includes(search.toLowerCase()) ||
-            String(r.id).includes(search)
-        );
+        let list = Object.values(RELICS).filter(r => {
+            const name = t(`relic.${r.id}.name`, language).toLowerCase();
+            const desc = t(`relic.${r.id}.desc`, language).toLowerCase();
+            const q = search.toLowerCase();
+            return search === '' || name.includes(q) || desc.includes(q) || String(r.id).includes(q);
+        });
         if (relicSort) {
             const { column, dir } = relicSort;
             list = [...list].sort((a, b) => {
                 let va: unknown, vb: unknown;
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = a.name; vb = b.name; break;
+                    case 'name': va = t(`relic.${a.id}.name`, language); vb = t(`relic.${b.id}.name`, language); break;
                     case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
                     case 'cost': va = a.cost; vb = b.cost; break;
-                    case 'desc': va = a.description; vb = b.description; break;
+                    case 'desc': va = t(`relic.${a.id}.desc`, language); vb = t(`relic.${b.id}.desc`, language); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     default: va = a.id; vb = b.id;
                 }
@@ -213,7 +213,7 @@ const DataBrowser = () => {
             list.sort((a, b) => a.id - b.id);
         }
         return list;
-    }, [search, relicSort]);
+    }, [search, relicSort, language]);
 
     const filteredRelicCandidates = useMemo(() => {
         let list = Object.values(RELIC_CANDIDATES).filter(r =>
@@ -377,7 +377,7 @@ const DataBrowser = () => {
                     className={`databrowser-tab ${tab === 'symbolCandidates' ? 'databrowser-tab--active' : ''}`}
                     onClick={() => setTab('symbolCandidates')}
                 >
-                    심볼 후보 ({Object.keys(SYMBOL_CANDIDATES).length})
+                    {t('dataBrowser.symbolCandidates', language)} ({Object.keys(SYMBOL_CANDIDATES).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'relics' ? 'databrowser-tab--active' : ''}`}
@@ -623,7 +623,7 @@ const DataBrowser = () => {
                             {filteredRelics.map(r => (
                                 <tr key={r.id} className="databrowser-row">
                                     <td className="databrowser-cell--id">{r.id}</td>
-                                    <td className="databrowser-cell--name">{r.name}</td>
+                                    <td className="databrowser-cell--name">{t(`relic.${r.id}.name`, language)}</td>
                                     <td className="databrowser-cell--era">
                                         <span style={{
                                             color: getSymbolColorHex(r.era),
@@ -636,9 +636,14 @@ const DataBrowser = () => {
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
-                                    <td className="databrowser-cell--desc">{r.description}</td>
-                                    <td className="databrowser-cell--sprite" style={{ color: '#555' }}>
-                                        {r.sprite || '-'}
+                                    <td className="databrowser-cell--desc">{t(`relic.${r.id}.desc`, language)}</td>
+                                    <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {r.sprite ? (
+                                            <>
+                                                <img src={`./assets/relics/${r.sprite}`} alt={t(`relic.${r.id}.name`, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'contain' }} />
+                                                <span style={{ fontSize: '11px', color: '#888' }}>{r.sprite}</span>
+                                            </>
+                                        ) : '-'}
                                     </td>
                                 </tr>
                             ))}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGameStore, REROLL_COST } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { Era, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { useRelicStore } from '../game/state/relicStore';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 
@@ -71,11 +72,19 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
 };
 
 const SymbolSelection = () => {
-    const { phase, symbolChoices, gold, selectSymbol, skipSelection, rerollSymbols } = useGameStore();
+    const { phase, symbolChoices, gold, rerollsThisTurn, selectSymbol, skipSelection, rerollSymbols } = useGameStore();
     const language = useSettingsStore((s) => s.language);
+    const relics = useRelicStore((s) => s.relics);
     const [isPeeked, setIsPeeked] = useState(false);
 
     if (phase !== 'selection') return null;
+
+    // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
+    const hasLydia = relics.some(r => r.definition.id === 2);
+    const rerollCost = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+    const maxRerolls = hasLydia ? 3 : Infinity;
+    const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
+    const canReroll = gold >= rerollCost && (rerollsLeft === null || rerollsLeft > 0);
 
     return (
         <div
@@ -106,9 +115,14 @@ const SymbolSelection = () => {
                         <button
                             className="selection-reroll-btn"
                             onClick={rerollSymbols}
-                            disabled={gold < REROLL_COST}
+                            disabled={!canReroll}
                         >
-                            {t('game.reroll', language)} ({REROLL_COST}G)
+                            {t('game.reroll', language)} ({rerollCost}G)
+                            {rerollsLeft !== null && (
+                                <span style={{ marginLeft: '8px', opacity: 0.75, fontSize: '0.75em' }}>
+                                    {rerollsLeft}/{maxRerolls}
+                                </span>
+                            )}
                         </button>
                         <button className="selection-skip-btn" onClick={skipSelection}>
                             {t('game.skip', language)}

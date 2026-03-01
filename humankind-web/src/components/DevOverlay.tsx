@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useRelicStore } from '../game/state/relicStore';
+import { useSettingsStore } from '../game/state/settingsStore';
 import { SYMBOLS } from '../game/data/symbolDefinitions';
 import { RELIC_LIST } from '../game/data/relicDefinitions';
+import { t } from '../i18n';
 
 const allSymbolsList = Object.values(SYMBOLS).sort((a, b) => a.era - b.era || a.id - b.id);
 
@@ -70,6 +72,7 @@ const DevOverlay = () => {
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
     const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
+    const language = useSettingsStore(s => s.language);
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -129,19 +132,19 @@ const DevOverlay = () => {
             }}>
                 <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>STATS</div>
                 <StatRow
-                    label="Food"
+                    label={t('game.food', language)}
                     value={food}
                     onAdjust={d => devSetStat('food', food + d)}
                     onSet={v => devSetStat('food', v)}
                 />
                 <StatRow
-                    label="Gold"
+                    label={t('game.gold', language)}
                     value={gold}
                     onAdjust={d => devSetStat('gold', gold + d)}
                     onSet={v => devSetStat('gold', v)}
                 />
                 <StatRow
-                    label="Knowledge"
+                    label={t('game.knowledge', language)}
                     value={knowledge}
                     onAdjust={d => devSetStat('knowledge', knowledge + d)}
                     onSet={v => devSetStat('knowledge', v)}
@@ -170,7 +173,7 @@ const DevOverlay = () => {
                 >
                     {allSymbolsList.map(sym => (
                         <option key={sym.id} value={sym.id}>
-                            [{sym.era}] {sym.name} (#{sym.id})
+                            [E{sym.era}] {t(`symbol.${sym.id}.name`, language)} (#{sym.id})
                         </option>
                     ))}
                 </select>
@@ -192,7 +195,9 @@ const DevOverlay = () => {
                 padding: '10px 14px',
                 borderBottom: '1px solid #333',
             }}>
-                <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>RELICS</div>
+                <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>
+                    {t('dataBrowser.relics', language).toUpperCase()}
+                </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
                     <select
                         value={selectedRelicId}
@@ -208,7 +213,7 @@ const DevOverlay = () => {
                     >
                         {RELIC_LIST.map(r => (
                             <option key={r.id} value={r.id}>
-                                {r.sprite} {r.name}
+                                #{r.id} {t(`relic.${r.id}.name`, language)}
                             </option>
                         ))}
                     </select>
@@ -239,7 +244,7 @@ const DevOverlay = () => {
                         }}
                     >
                         <span style={{ fontSize: '13px' }}>
-                            {r.definition.sprite} {r.definition.name}
+                            #{r.definition.id} {t(`relic.${r.definition.id}.name`, language)}
                         </span>
                         <button
                             onClick={() => removeRelic(r.instanceId)}
@@ -258,7 +263,7 @@ const DevOverlay = () => {
 
             {/* Symbol Count */}
             <div style={{ padding: '6px 14px', color: '#888', fontSize: '12px' }}>
-                심볼 {playerSymbols.length}개
+                {t('dataBrowser.symbols', language)}: {playerSymbols.length}
             </div>
 
             {/* Player Symbols List */}
@@ -279,8 +284,8 @@ const DevOverlay = () => {
                         }}
                     >
                         <span>
-                            <span style={{ color: '#888', marginRight: '6px' }}>[{sym.definition.era}]</span>
-                            {sym.definition.name}
+                            <span style={{ color: '#888', marginRight: '6px' }}>[E{sym.definition.era}]</span>
+                            {t(`symbol.${sym.definition.id}.name`, language)}
                             {sym.effect_counter > 0 && (
                                 <span style={{ color: '#fbbf24', marginLeft: '6px' }}>({sym.effect_counter})</span>
                             )}
