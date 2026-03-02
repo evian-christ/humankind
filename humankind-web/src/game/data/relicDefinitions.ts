@@ -88,6 +88,30 @@ export const RELICS: Record<number, RelicDefinition> = {
         era: Era.ANCIENT,
         sprite: "",
     },
+    10: {
+        id: 10,
+        name: "괴베클리 테페 신전 석주",
+        description: "빈 슬롯 하나당 매 턴 식량 +5 생산.",
+        cost: 450,
+        era: Era.ANCIENT,
+        sprite: "",
+    },
+    11: {
+        id: 11,
+        name: "차탈회위크 여신상",
+        description: "보드에 심볼이 15개 이상일 때, 매 턴 식량 +80을 추가로 생산합니다.",
+        cost: 480,
+        era: Era.ANCIENT,
+        sprite: "",
+    },
+    12: {
+        id: 12,
+        name: "고대 이집트 쇠똥구리 부적",
+        description: "심볼이 파괴될 때마다 골드 +30을 획득합니다.",
+        cost: 400,
+        era: Era.ANCIENT,
+        sprite: "",
+    },
 };
 
 export const RELIC_LIST = Object.values(RELICS);
