@@ -25,6 +25,9 @@ const RELIC_ID = {
     GOANNA_BANANA: 7,         // 쿠크 늪지대 바나나 화석: 열대 과수원 인접 바나나 F+20
     TEN_COMMANDMENTS: 8,      // 십계명 석판: 돌→석판
     NILE_SILT: 9,             // 나일 강 흑니: 5스핀 동안 식량 2배
+    GOBEKLI_PILLAR: 10,       // 괴베클리 테페 신전 석주: 빈 슬롯당 F+5
+    CATALHOYUK: 11,           // 차탈회위크 여신상: 심볼 15개↑ 일 때 F+80
+    SCARAB: 12,               // 쇠똥구리 부적: 심볼 파괴 시 G+30
 } as const;
 
 
@@ -301,7 +304,7 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
     const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
     const getRelicInstance = (id: number) => relics.find(r => r.definition.id === id);
 
-    // ID 120: 나일 강 흑니 — effect_counter < 5 인 동안 활성
+    // ID 9: 나일 강 흑니 — effect_counter < 5 인 동안 활성
     const nileRelic = getRelicInstance(RELIC_ID.NILE_SILT);
     const nileActive = nileRelic ? nileRelic.effect_counter < 5 : false;
 
@@ -448,6 +451,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             const result = processSingleSymbolEffects(
                 symbol, currentBoard, x, y, buildActiveRelicEffects()
             );
+
+            // ── Campfire 폭발 버프: 이번 스핀 식량 2배 ──
+            if (symbol.campfire_double_food && result.food > 0) {
+                result.food *= 2;
+                symbol.campfire_double_food = false; // 플래그 소비
+            }
 
             if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
             if (result.spawnOnBoard) symbolsToSpawnOnBoard.push(...result.spawnOnBoard);
@@ -632,7 +641,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
-            // ── 유물 ID 120: 나일 강 비옥한 흑니 ──
+            // ── 유물 ID 9: 나일 강 비옥한 흑니 ──
             // 활성 5스핀 후 소멸 (카운터 증가)
             const nileRelic = getRelicInst(RELIC_ID.NILE_SILT);
             if (nileRelic && nileRelic.effect_counter < 5) {
@@ -642,6 +651,37 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
+            // ── 유물 ID 10: 괴베클리 테페 신전 석주 — 빈 슬롯당 F+5 ──
+            if (hasRelic(RELIC_ID.GOBEKLI_PILLAR)) {
+                let emptySlots = 0;
+                for (let x = 0; x < BOARD_WIDTH; x++)
+                    for (let y = 0; y < BOARD_HEIGHT; y++)
+                        if (!currentBoard[x][y]) emptySlots++;
+                const pillarFood = emptySlots * 5;
+                if (pillarFood > 0) {
+                    bonusFood += pillarFood;
+                    effects.push({ x: 0, y: 0, food: pillarFood, gold: 0, knowledge: 0 });
+                }
+            }
+
+            // ── 유물 ID 16: 차탈회위크 여신상 — 보드 심볼 15개 이상 시 F+80 ──
+            if (hasRelic(RELIC_ID.CATALHOYUK)) {
+                let symbolCount = 0;
+                for (let x = 0; x < BOARD_WIDTH; x++)
+                    for (let y = 0; y < BOARD_HEIGHT; y++)
+                        if (currentBoard[x][y]) symbolCount++;
+                if (symbolCount >= 15) {
+                    bonusFood += 80;
+                    effects.push({ x: 0, y: 0, food: 80, gold: 0, knowledge: 0 });
+                }
+            }
+
+            // ── 유물 ID 18: 고대 이집트 쇠똥구리 부적 — 심볼 파괴 시 G+30 ──
+            if (destroyedCount > 0 && hasRelic(RELIC_ID.SCARAB)) {
+                const scarabGold = destroyedCount * 30;
+                bonusGold += scarabGold;
+                effects.push({ x: 0, y: 0, food: 0, gold: scarabGold, knowledge: 0 });
+            }
             set((prev) => {
                 let newEra = prev.era;
                 let newKnowledge = prev.knowledge + tKnowledge + bonusKnowledge;
