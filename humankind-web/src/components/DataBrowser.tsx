@@ -481,8 +481,7 @@ const DataBrowser = () => {
                                 <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--era" />
                                 <SortTh column="type" label={t('dataBrowser.colType', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--type" />
                                 <SortTh column="tags" label={t('dataBrowser.colTags', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--tags" />
-                                <SortTh column="desc" label={t('dataBrowser.colPlayerDesc', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--desc" />
-                                <th className="databrowser-th--desc">{t('dataBrowser.colDesc', language)}</th>
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="atk" label="ATK" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="hp" label="HP" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--sprite" />
@@ -525,12 +524,6 @@ const DataBrowser = () => {
                                         ) : '-'}
                                     </td>
                                     <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
-                                    <td className="databrowser-cell--desc databrowser-cell--internal"><EffectText text={
-                                        (() => {
-                                            const dev = t(`symbol.${s.id}.devDesc`, language);
-                                            return dev.startsWith('symbol.') ? t(`symbol.${s.id}.desc`, language) : dev;
-                                        })()
-                                    } /></td>
                                     <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
                                     <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
                                     <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
@@ -735,7 +728,7 @@ const DataBrowser = () => {
                                 <SortTh column="id" label="ID" sort={enemySort} onSort={enSortHandler} className="databrowser-th--id" />
                                 <SortTh column="name" label={t('dataBrowser.colName', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--name" />
                                 <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--era" />
-                                <SortTh column="desc" label={t('dataBrowser.colPlayerDesc', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="atk" label="ATK" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="hp" label="HP" sort={enemySort} onSort={enSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={enemySort} onSort={enSortHandler} className="databrowser-th--sprite" />

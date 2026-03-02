@@ -1254,6 +1254,10 @@ body {
   width: 140px;
 }
 
+.databrowser-th--tags {
+  width: 140px;
+}
+
 .databrowser-th--desc {
   width: auto;
 }

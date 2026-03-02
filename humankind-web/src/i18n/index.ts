@@ -84,7 +84,7 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.colType': 'Type',
         'dataBrowser.colCost': 'Cost',
         'dataBrowser.colTags': 'Tags',
-        'dataBrowser.colDesc': 'Internal Desc',
+        'dataBrowser.colDesc': 'Desc',
         'dataBrowser.colPlayerDesc': 'Player Desc',
         'dataBrowser.colSprite': 'Sprite',
         'dataBrowser.colIcon': 'Icon',
@@ -226,6 +226,12 @@ const translations: Record<Language, Record<string, string>> = {
         'relic.8.desc': "Replaces 'Stone' symbols with 'Stone Tablet' symbols.",
         'relic.9.name': 'Black Silt of the Nile',
         'relic.9.desc': 'For the next 5 spins after acquisition, all Food gains are doubled. Then destroyed.',
+        'relic.10.name': 'Göbekli Tepe Pillar',
+        'relic.10.desc': 'Every turn: +5 Food per empty slot on the board.',
+        'relic.11.name': 'Çatalhöyük Goddess Statuette',
+        'relic.11.desc': 'Every turn: if there are 15 or more symbols on the board, gain +80 Food.',
+        'relic.12.name': 'Ancient Egyptian Scarab Amulet',
+        'relic.12.desc': 'Whenever any symbol is destroyed, gain +30 Gold.',
     },
     ko: {
         // Pause Menu
@@ -310,7 +316,7 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.colType': '타입',
         'dataBrowser.colCost': '비용',
         'dataBrowser.colTags': '태그',
-        'dataBrowser.colDesc': '내부 설명',
+        'dataBrowser.colDesc': '설명',
         'dataBrowser.colPlayerDesc': '플레이어 설명',
         'dataBrowser.colSprite': '스프라이트',
         'dataBrowser.colIcon': '아이콘',
@@ -452,6 +458,12 @@ const translations: Record<Language, Record<string, string>> = {
         'relic.8.desc': "'돌' 심볼을 '석판' 심볼로 대체합니다.",
         'relic.9.name': '나일 강 비옥한 흑니',
         'relic.9.desc': '획득 후 다음 5스핀 동안 모든 식량 획득량 2배 (이후 소멸).',
+        'relic.10.name': '괴베클리 테페 신전 석주',
+        'relic.10.desc': '매 턴: 보드의 빈 슬롯 하나당 식량 +5 생산.',
+        'relic.11.name': '차탈회위크 여신상',
+        'relic.11.desc': '매 턴: 보드에 심볼이 15개 이상일 때 식량 +80 추가 생산.',
+        'relic.12.name': '고대 이집트 쇠똥구리 부적',
+        'relic.12.desc': '심볼이 파괴될 때마다 골드 +30 획득.',
     },
 };
 
