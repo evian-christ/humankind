@@ -140,11 +140,11 @@ export const processSingleSymbolEffects = (
     const adj = getAdjacentCoords(x, y);
 
     switch (id) {
-        case 1: // Wheat: Every spin: +2 Food
+        case 1: // Wheat
             food += 20;
             break;
 
-        case 2: // Rice: Every 4 spins: +10 Food
+        case 2: // Rice: Every 4 spins: +100 Food
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 4) {
                 food += 100;
@@ -176,21 +176,17 @@ export const processSingleSymbolEffects = (
             }
             break;
 
-        case 5: { // Fish: Every spin: +1 Food. +3 Food if adjacent to Coast
+        case 5: { // Fish: Every spin: +10 Food. +30 Food if adjacent to Coast
             food += 10;
             // ID 115: 막달레니안 뼈 낚싯바늘 - 물고기 골드 +10
-            if (relicEffects.fishBoneHookGold) {
-                gold += 10;
-            }
+            if (relicEffects.fishBoneHookGold) gold += 10;
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 6) { food += 30; contributors.push(pos); }
             });
             // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
             if (relicEffects.gobekliAnimalJackpot) {
                 const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
-                if (nearPasture && Math.random() < 0.05) {
-                    food += 150;
-                }
+                if (nearPasture && Math.random() < 0.05) food += 150;
             }
             break;
         }
@@ -222,9 +218,7 @@ export const processSingleSymbolEffects = (
         case 10: // Monument: Every spin: +5 Knowledge
             knowledge += 5;
             // ID 107: 예리코 점토 두개골 - 기념비 지식 +20 추가
-            if (relicEffects.jerichoMonumentBonus) {
-                knowledge += 20;
-            }
+            if (relicEffects.jerichoMonumentBonus) knowledge += 20;
             break;
 
         case 11: { // Oasis: Every spin: +7 Food per adjacent empty slot
@@ -308,19 +302,17 @@ export const processSingleSymbolEffects = (
         }
 
         case 17: // Offering: Every spin: -10 Food, +10 Knowledge
-            // ID 107: 예리코 점토 두개골 - 제단 지식 +20 추가
             food -= 10;
             knowledge += 10;
-            if (relicEffects.jerichoMonumentBonus) {
-                knowledge += 20;
-            }
+            // ID 107: 예리코 점토 두개골 - 제단 지식 +20 추가
+            if (relicEffects.jerichoMonumentBonus) knowledge += 20;
             break;
 
-        case 18: // Omen: 50% chance +30 Food, 50% chance -15 Food
+        case 18: // Omen: 50% chance +40 Food, 50% chance -10 Food
             if (Math.random() < 0.5) {
-                food += 30;
+                food += 40;
             } else {
-                food -= 15;
+                food -= 10;
             }
             break;
 
@@ -328,13 +320,22 @@ export const processSingleSymbolEffects = (
             knowledge += relicEffects.relicCount * 5;
             break;
 
-        case 19: // Campfire: Every spin: +1 Food. After 10 spins: destroyed
+        case 19: { // Campfire: Every spin: +10 Food. After 10 spins: destroyed and adjacent symbols produce double food this spin
             food += 10;
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 10) {
                 symbolInstance.is_marked_for_destruction = true;
+                // 인접한 심볼들의 식량 2배 버프를 표시 (보드에 플래그 설정)
+                adj.forEach(pos => {
+                    const t = boardGrid[pos.x][pos.y];
+                    if (t) {
+                        t.campfire_double_food = true;
+                        contributors.push(pos);
+                    }
+                });
             }
             break;
+        }
 
         case 20: { // Pottery: stores +30 Food per spin. On destroy: releases stored Food
             symbolInstance.effect_counter += 30;
@@ -528,11 +529,14 @@ export const processSingleSymbolEffects = (
             }
             break;
 
-        case 38: // Stargazer: Every spin: +3 Knowledge per empty slot
-            adj.forEach(pos => {
-                if (!boardGrid[pos.x][pos.y]) knowledge += 3;
-            });
+        case 38: { // Stargazer: Every spin: +3 Knowledge per empty slot on the board
+            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+                for (let by = 0; by < BOARD_HEIGHT; by++) {
+                    if (!boardGrid[bx][by]) knowledge += 3;
+                }
+            }
             break;
+        }
     }
 
     // ── ID 103: 가나안의 번제물 - 빈 슬롯마다 식량 -10 ──

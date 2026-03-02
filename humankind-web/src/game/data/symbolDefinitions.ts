@@ -55,8 +55,8 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     15: { id: 15, name: "Quarry", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +10 Food. If adjacent to Stone: +30 Gold. If adjacent to Copper: +20 Gold.", sprite: "015.png", tags: [] },
     16: { id: 16, name: "Totem", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Knowledge if placed in a corner.", sprite: "016.png", tags: [] },
     17: { id: 17, name: "Offering", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: -10 Food, +10 Knowledge.", sprite: "017.png", tags: [] },
-    18: { id: 18, name: "Omen", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: 50% chance +30 Food, 50% chance -15 Food.", sprite: "018.png", tags: [] },
-    19: { id: 19, name: "Campfire", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +10 Food. After 10 spins: destroyed and adjacent symbols produce double food this spin.", sprite: "019.png", tags: [] },
+    18: { id: 18, name: "Omen", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: 50% chance +40 Food, 50% chance -10 Food.", sprite: "018.png", tags: [] },
+    19: { id: 19, name: "Campfire", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +10 Food. After 10 spins: destroyed and adjacent symbols produce double Food this spin.", sprite: "019.png", tags: [] },
     20: { id: 20, name: "Pottery", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: stores +30 Food internally. On destroy: releases all stored Food.", sprite: "020.png", tags: [] },
     21: { id: 21, name: "Tribal Village", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "After 1 spin: immediately adds 2 random Ancient symbols. Then destroys self.", sprite: "021.png", tags: [] },
 
