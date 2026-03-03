@@ -9,9 +9,7 @@ import { EffectText } from './EffectText';
 const ERA_NAME_KEYS: Record<number, string> = {
     [Era.SPECIAL]: 'era.special',
     [Era.ANCIENT]: 'era.ancient',
-    [Era.CLASSICAL]: 'era.classical',
     [Era.MEDIEVAL]: 'era.medieval',
-    [Era.INDUSTRIAL]: 'era.industrial',
     [Era.MODERN]: 'era.modern',
 };
 

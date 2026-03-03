@@ -17,9 +17,7 @@ interface SortState { column: string; dir: SortDir; }
 const ERA_KEYS: Record<number, string> = {
     [Era.SPECIAL]: 'special',
     [Era.ANCIENT]: 'ancient',
-    [Era.CLASSICAL]: 'classical',
     [Era.MEDIEVAL]: 'medieval',
-    [Era.INDUSTRIAL]: 'industrial',
     [Era.MODERN]: 'modern',
 };
 
@@ -31,7 +29,7 @@ const EFFECT_TYPE_EMOJI: Record<string, string> = {
     debuff: '⬇️',
 };
 
-const ERA_ORDER = [Era.ANCIENT, Era.CLASSICAL, Era.MEDIEVAL, Era.INDUSTRIAL, Era.MODERN, Era.SPECIAL];
+const ERA_ORDER = [Era.ANCIENT, Era.MEDIEVAL, Era.MODERN, Era.SPECIAL];
 
 /** Sortable column header */
 const SortTh = ({ column, label, sort, onSort, className }: {

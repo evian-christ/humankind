@@ -7,10 +7,8 @@ export enum SymbolType {
 export enum Era {
     SPECIAL = 0,
     ANCIENT = 1,
-    CLASSICAL = 2,
-    MEDIEVAL = 3,
-    INDUSTRIAL = 4,
-    MODERN = 5
+    MEDIEVAL = 2,
+    MODERN = 3
 }
 
 export interface SymbolDefinition {
@@ -64,16 +62,6 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     37: { id: 37, name: "Glowing Amber", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +0 Food. After 3 spins: destroyed and opens relic selection.", sprite: "037.png", tags: [] },
     38: { id: 38, name: "Stargazer", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +3 Knowledge per empty slot.", sprite: "038.png", tags: [] },
 
-    // ── Classical ──
-    22: { id: 22, name: "Horse", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Food, +10 Gold.", sprite: "", tags: ["food"] },
-    23: { id: 23, name: "Iron", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Food, +20 Gold.", sprite: "", tags: ["mineral"] },
-    24: { id: 24, name: "Galley", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Gold. +20 Food per adjacent Coast. Every 8 spins: adds a random Ancient symbol.", sprite: "", tags: [] },
-    25: { id: 25, name: "Library", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Knowledge. +20 Knowledge if adjacent to Scroll.", sprite: "", tags: [] },
-    26: { id: 26, name: "Scroll", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +10 Knowledge. +10 Knowledge per adjacent symbol that produces Knowledge.", sprite: "", tags: [] },
-    27: { id: 27, name: "Market", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +10 Gold per adjacent symbol.", sprite: "", tags: [] },
-    28: { id: 28, name: "Tax Collector", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +30 Gold. Adjacent symbols produce -10 Food this spin.", sprite: "", tags: [] },
-    29: { id: 29, name: "Forge", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Food, +10 Gold. If adjacent to Copper or Iron: +40 Gold. If adjacent to Stone: +20 Food.", sprite: "", tags: [] },
-    30: { id: 30, name: "Arena", era: Era.CLASSICAL, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +20 Food. Whenever any symbol is destroyed this spin: +40 Food, +20 Gold.", sprite: "", tags: [] },
     39: { id: 39, name: "Stone Tablet", era: Era.ANCIENT, symbol_type: SymbolType.FRIENDLY, description: "Every spin: +5 Knowledge per relic owned.", sprite: "039.png", tags: [] },
 };
 
@@ -87,16 +75,14 @@ export const RELIGION_DOCTRINE_IDS = new Set([31, 32, 33, 34]);
 export const KNOWLEDGE_PRODUCING_IDS = new Set([10, 16, 17, 25, 26, 38, 39]);
 
 /** Gold를 생산하는 심볼 ID 목록 */
-export const GOLD_PRODUCING_IDS = new Set([6, 7, 8, 15, 22, 23, 24, 27, 28, 29]);
+export const GOLD_PRODUCING_IDS = new Set([6, 7, 8, 15]);
 
 export const getSymbolColor = (era: Era): number => {
     switch (era) {
-        case Era.SPECIAL: return 16777215;
-        case Era.ANCIENT: return 9127187;
-        case Era.CLASSICAL: return 2278750;
-        case Era.MEDIEVAL: return 16347926;
-        case Era.INDUSTRIAL: return 3900150;
-        case Era.MODERN: return 15381256;
+        case Era.SPECIAL: return 16777215; // 백색
+        case Era.ANCIENT: return 9127187; // 기존 고대
+        case Era.MEDIEVAL: return 16347926; // 오렌지/중세
+        case Era.MODERN: return 3900150; // 파랑/현대
         default: return 0x9ca3af;
     }
 };
@@ -105,10 +91,8 @@ export const getSymbolColorHex = (era: Era): string => {
     switch (era) {
         case Era.SPECIAL: return '#ffffff';
         case Era.ANCIENT: return '#8B4513';
-        case Era.CLASSICAL: return '#22c55e';
         case Era.MEDIEVAL: return '#f97316';
-        case Era.INDUSTRIAL: return '#3b82f6';
-        case Era.MODERN: return '#eab308';
+        case Era.MODERN: return '#3b82f6';
         default: return '#9ca3af';
     }
 };

@@ -44,7 +44,7 @@ const translations: Record<Language, Record<string, string>> = {
         'game.defense': 'Defense',
 
         // Era Unlock
-        'eraUnlock.title': 'Classical Era Begins',
+        'eraUnlock.title': 'Medieval Era Begins',
         'eraUnlock.desc': 'Choose a path for your civilization',
         'eraUnlock.religion': 'Unlock Religion',
         'eraUnlock.religion_desc': 'Christianity, Islam, Buddhism, and Hinduism become available in the symbol pool.',
@@ -54,9 +54,7 @@ const translations: Record<Language, Record<string, string>> = {
         // Era names
         'era.special': 'Special',
         'era.ancient': 'Ancient',
-        'era.classical': 'Classical',
         'era.medieval': 'Medieval',
-        'era.industrial': 'Industrial',
         'era.modern': 'Modern',
 
         // Tags
@@ -276,7 +274,7 @@ const translations: Record<Language, Record<string, string>> = {
         'game.defense': '방어력',
 
         // Era Unlock
-        'eraUnlock.title': '고전 시대가 열립니다',
+        'eraUnlock.title': '중세 시대가 열립니다',
         'eraUnlock.desc': '문명의 방향을 선택하세요',
         'eraUnlock.religion': '종교 해금',
         'eraUnlock.religion_desc': '기독교, 이슬람, 불교, 힌두교가 심볼 선택 풀에 추가됩니다.',
@@ -286,9 +284,7 @@ const translations: Record<Language, Record<string, string>> = {
         // Era names
         'era.special': '특수',
         'era.ancient': '고대',
-        'era.classical': '고전',
         'era.medieval': '중세',
-        'era.industrial': '산업',
         'era.modern': '현대',
 
         // Tags
