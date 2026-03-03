@@ -144,7 +144,7 @@ const DevOverlay = () => {
                     onSet={v => devSetStat('gold', v)}
                 />
                 <StatRow
-                    label={t('game.knowledge', language)}
+                    label="Knowledge"
                     value={knowledge}
                     onAdjust={d => devSetStat('knowledge', knowledge + d)}
                     onSet={v => devSetStat('knowledge', v)}

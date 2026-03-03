@@ -36,28 +36,33 @@ const CROP_SYMBOL_IDS = [1, 2, 4, 5]; // Wheat, Rice, Banana, Fish
 
 // 시대별 심볼 등장 확률 테이블 (종교 미해금)
 const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
-    1: { 1: 100, 2: 0, 3: 0, 4: 0, 5: 0 },
-    2: { 1: 55, 2: 45, 3: 0, 4: 0, 5: 0 },
-    3: { 1: 30, 2: 35, 3: 35, 4: 0, 5: 0 },
-    4: { 1: 15, 2: 25, 3: 30, 4: 30, 5: 0 },
-    5: { 1: 10, 2: 15, 3: 25, 4: 25, 5: 25 },
+    1: { 1: 100, 2: 0, 3: 0 },
+    2: { 1: 50, 2: 50, 3: 0 },
+    3: { 1: 30, 2: 35, 3: 35 },
 };
 
 // 시대별 심볼 등장 확률 테이블 (특수 0 해금 후)
 const ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
-    1: { 0: 0, 1: 100, 2: 0, 3: 0, 4: 0, 5: 0 },
-    2: { 0: 10, 1: 50, 2: 40, 3: 0, 4: 0, 5: 0 },
-    3: { 0: 10, 1: 25, 2: 30, 3: 35, 4: 0, 5: 0 },
-    4: { 0: 5, 1: 13, 2: 22, 3: 30, 4: 30, 5: 0 },
-    5: { 0: 0, 1: 10, 2: 15, 3: 25, 4: 25, 5: 25 },
+    1: { 0: 0, 1: 100, 2: 0, 3: 0 },
+    2: { 0: 10, 1: 45, 2: 45, 3: 0 },
+    3: { 0: 10, 1: 25, 2: 30, 3: 35 },
 };
 
-// 시대 전환에 필요한 Knowledge
-const ERA_KNOWLEDGE_REQUIRED: Record<number, number> = {
-    1: 500,
-    2: 1000,
-    3: 1750,
-    4: 2750,
+// 레벨업에 필요한 경험치(Knowledge)
+// 1~10렙: 50
+// 11~20렙: 100
+// 21~30렙: 200
+const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
+    if (currentLevel < 10) return 50;
+    if (currentLevel < 20) return 100;
+    return 200;
+};
+
+// 레벨을 기반으로 현재 시대를 반환 (1: Ancient, 2: Medieval, 3: Modern)
+export const getEraFromLevel = (level: number): number => {
+    if (level <= 10) return 1;
+    if (level <= 20) return 2;
+    return 3;
 };
 
 type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'relic_selection' | 'era_unlock' | 'game_over' | 'victory';
@@ -70,8 +75,9 @@ export const calculateFoodCost = (turn: number): number => {
 export interface GameState {
     food: number;
     gold: number;
-    knowledge: number;
-    era: number;
+    knowledge: number; // 기존 knowledge
+    level: number; // 1 ~ 30
+    era: number; // derived from level
     turn: number;
     board: (PlayerSymbolInstance | null)[][];
     playerSymbols: PlayerSymbolInstance[];
@@ -94,9 +100,11 @@ export interface GameState {
     /** 종교 심볼이 선택 풀에 해금되었는지 */
     religionUnlocked: boolean;
     /** 매 턴 영구 지식 보너스 */
-    bonusKnowledgePerTurn: number;
-    /** 고전 시대 진입 시 선택 대기 중 */
+    bonusXpPerTurn: number;
+    /** 중세 시대 등 진입 시 선택 대기 중 (추후 레벨업 보상으로 통합 가능) */
     pendingEraUnlock: boolean;
+    /** 레벨업 선택 대기 중 */
+    pendingLevelUpSelection: boolean;
     /** 유물 선택 대기 중 */
     pendingRelicSelection: boolean;
     /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
@@ -327,6 +335,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     food: 0,
     gold: 0,
     knowledge: 0,
+    level: 1,
     era: 1,
     turn: 0,
     board: (() => { const s = createStartingBoard(); return s.board; })(),
@@ -342,8 +351,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     combatAnimation: null,
     combatShaking: false,
     religionUnlocked: false,
-    bonusKnowledgePerTurn: 0,
+    bonusXpPerTurn: 0,
     pendingEraUnlock: false,
+    pendingLevelUpSelection: false,
     pendingRelicSelection: false,
     rerollsThisTurn: 0,
 
@@ -406,7 +416,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'spinning') return;
 
-        set({ phase: 'processing', runningTotals: { food: 0, gold: 0, knowledge: 2 + get().bonusKnowledgePerTurn } });
+        set({ phase: 'processing', runningTotals: { food: 0, gold: 0, knowledge: 2 + get().bonusXpPerTurn } });
 
         // ── 효과 페이즈 인프라 ────────────────────────────────────────────────
         // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
@@ -418,7 +428,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         let totalFood = 0;
-        let totalKnowledge = 2 + get().bonusKnowledgePerTurn;
+        let totalKnowledge = 2 + get().bonusXpPerTurn;
         let totalGold = 0;
         let pRelicSelection = get().pendingRelicSelection;
         const symbolsToAdd: number[] = [];
@@ -683,15 +693,19 @@ export const useGameStore = create<GameState>((set, get) => ({
                 effects.push({ x: 0, y: 0, food: 0, gold: scarabGold, knowledge: 0 });
             }
             set((prev) => {
-                let newEra = prev.era;
+                let newLevel = prev.level;
                 let newKnowledge = prev.knowledge + tKnowledge + bonusKnowledge;
+                let pendingLevelUp = false;
 
-                while (newEra < 5) {
-                    const required = ERA_KNOWLEDGE_REQUIRED[newEra];
-                    if (required === undefined || newKnowledge < required) break;
+                while (newLevel < 30) {
+                    const required = getKnowledgeRequiredForLevel(newLevel);
+                    if (newKnowledge < required) break;
                     newKnowledge -= required;
-                    newEra++;
+                    newLevel++;
+                    pendingLevelUp = true;
                 }
+
+                const newEra = getEraFromLevel(newLevel);
 
                 const cleanBoard = prev.board.map((col) =>
                     col.map((s) => {
@@ -744,13 +758,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
                 const filteredSymbols = newPlayerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
                 const choices = generateChoices(newEra, prev.religionUnlocked);
-                const crossedToClassical = prev.era === 1 && newEra === 2;
+                const crossedToMedieval = prev.era === 1 && newEra === 2;
                 const genRelics = pRelicSelection && prev.relicChoices.length === 0 ? generateRelicChoices() : prev.relicChoices;
 
                 return {
                     food: prev.food + tFood + bonusFood,
                     gold: prev.gold + tGold + bonusGold,
                     knowledge: newKnowledge,
+                    level: newLevel,
                     runningTotals: { food: 0, gold: 0, knowledge: 0 },
                     activeSlot: null,
                     activeContributors: [],
@@ -760,7 +775,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                     lastEffects: [...effects],
                     phase: 'processing' as GamePhase,
                     symbolChoices: choices,
-                    pendingEraUnlock: crossedToClassical,
+                    pendingEraUnlock: crossedToMedieval,
+                    pendingLevelUpSelection: pendingLevelUp,
                     pendingRelicSelection: pRelicSelection,
                     relicChoices: genRelics,
                 };
@@ -1011,23 +1027,28 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     resolveEraUnlock: (choice: 'religion' | 'knowledge') => {
-        set(prev => ({
-            religionUnlocked: choice === 'religion' ? true : prev.religionUnlocked,
-            bonusKnowledgePerTurn: choice === 'knowledge' ? prev.bonusKnowledgePerTurn + 100 : prev.bonusKnowledgePerTurn,
+        const state = get();
+        set({
+            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            bonusXpPerTurn: state.bonusXpPerTurn + (choice === 'knowledge' ? 100 : 0),
+            religionUnlocked: state.religionUnlocked || choice === 'religion',
             pendingEraUnlock: false,
-            phase: 'idle' as GamePhase,
-        }));
+        });
     },
 
     initializeGame: () => {
+        const { board, playerSymbols: symbols } = createStartingBoard();
         set({
             food: 0,
             gold: 0,
             knowledge: 0,
             era: 1,
+            level: 1,
             turn: 0,
-            ...(() => { const s = createStartingBoard(); return { board: s.board, playerSymbols: s.playerSymbols }; })(),
-            phase: 'idle' as GamePhase,
+            board,
+            playerSymbols: symbols,
+            phase: 'idle',
             symbolChoices: [],
             relicChoices: [],
             lastEffects: [],
@@ -1038,8 +1059,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             combatAnimation: null,
             combatShaking: false,
             religionUnlocked: false,
-            bonusKnowledgePerTurn: 0,
+            bonusXpPerTurn: 0,
             pendingEraUnlock: false,
+            pendingLevelUpSelection: false,
             pendingRelicSelection: false,
             rerollsThisTurn: 0,
         });

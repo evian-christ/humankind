@@ -15,9 +15,7 @@ const FLOAT_DISTANCE = 30; // px — 위로 이동 거리
 const ERA_NAME_KEYS: Record<number, string> = {
     [Era.SPECIAL]: 'era.special',
     [Era.ANCIENT]: 'era.ancient',
-    [Era.CLASSICAL]: 'era.classical',
     [Era.MEDIEVAL]: 'era.medieval',
-    [Era.INDUSTRIAL]: 'era.industrial',
     [Era.MODERN]: 'era.modern',
 };
 
@@ -597,10 +595,9 @@ export class PixiGameApp {
         const lang = settings.language;
         const fontFamily = 'Mulmaru';
         const eraName = t(ERA_NAME_KEYS[state.era] ?? 'era.ancient', lang);
-        const knowledgeThresholds = [500, 1000, 1750, 2750];
-        const knowledgeCap = knowledgeThresholds[Math.min(state.era - 1, knowledgeThresholds.length - 1)] ?? 2750;
-        const knowledgeCurrent = Math.min(state.knowledge, knowledgeCap);
-        const knowledgeRatio = knowledgeCap > 0 ? knowledgeCurrent / knowledgeCap : 0;
+        const knowledgeRequired = state.level < 10 ? 50 : (state.level < 20 ? 100 : 200);
+        const knowledgeCurrent = state.knowledge;
+        const knowledgeRatio = knowledgeRequired > 0 ? Math.min(1, knowledgeCurrent / knowledgeRequired) : 0;
 
         const demandFontSize = 28 * fs;
         const rowCY = topRowCY;
@@ -612,7 +609,7 @@ export class PixiGameApp {
         const gap = 12 * scale;
 
         const eraText = new PIXI.Text({
-            text: eraName,
+            text: `Lv.${state.level} ${eraName}`,
             style: new PIXI.TextStyle({ fill: '#e2e8f0', fontSize: demandFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
         });
         eraText.anchor.set(0, 0.5);
@@ -637,7 +634,7 @@ export class PixiGameApp {
         }
 
         const fracLabel = new PIXI.Text({
-            text: `✦ ${knowledgeCurrent}/${knowledgeCap}`,
+            text: `✦ ${knowledgeCurrent}/${knowledgeRequired}`,
             style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 22 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
         });
         fracLabel.anchor.set(0.5, 0.5);
