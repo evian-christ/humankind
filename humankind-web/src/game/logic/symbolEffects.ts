@@ -1,6 +1,7 @@
 import type { PlayerSymbolInstance } from '../types';
 import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType } from '../data/symbolDefinitions';
-import { ENEMY_EFFECTS } from '../data/enemyEffectDefinitions';
+
+import { useGameStore } from '../state/gameStore';
 
 export interface EffectResult {
     food: number;
@@ -40,6 +41,8 @@ export interface ActiveRelicEffects {
     garamantesOasisReduce: boolean;
     /** ID 120: 나일 강 비옥한 흑니 (활성 중) - 식량 2배 */
     nileFloodDoubleFood: boolean;
+    /** 기마술 업그레이드 - 목장 자체 생산량 +10 */
+    horsemansihpPastureBonus: boolean;
 }
 
 export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
@@ -54,6 +57,7 @@ export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
     fishBoneHookGold: false,
     garamantesOasisReduce: false,
     nileFloodDoubleFood: false,
+    horsemansihpPastureBonus: false,
 };
 
 const BOARD_WIDTH = 5;
@@ -101,7 +105,7 @@ const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Se
 const SYMBOL_BASE_FOOD: Record<number, number> = {
     1: 20, 2: 20, 3: 10, 4: 30, 5: 10, 6: 10, 7: 10, 8: 0, 9: 20, 10: 0,
     11: 0, 12: 0, 13: 10, 14: 10, 15: 10, 16: 0, 17: -10, 18: 10, 19: 10, 20: 0,
-    21: 0, 22: 20, 23: 20, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 20, 30: 20,
+    21: 0, 22: 0, 23: 20, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 20, 30: 20,
 };
 
 /** 심볼별 기본 지식 생산량 추정치 (Islam 효과 계산용) -> x10 */
@@ -114,7 +118,8 @@ const SYMBOL_BASE_KNOWLEDGE: Record<number, number> = {
 
 /** Era 1 심볼 중 랜덤 하나 반환 (ID 1~21) */
 const randomEra1SymbolId = (): number => {
-    return Math.floor(Math.random() * 21) + 1;
+    const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 35]; // Warrior(35) 포함
+    return ids[Math.floor(Math.random() * ids.length)];
 };
 
 /** 목장 인접 동물 심볼 태그 */
@@ -140,17 +145,35 @@ export const processSingleSymbolEffects = (
     const adj = getAdjacentCoords(x, y);
 
     switch (id) {
-        case 1: // Wheat
-            food += 20;
+        case 1: { // Wheat
+            let mult = 1;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Farm
+                    contributors.push(pos);
+                    const state = useGameStore.getState();
+                    mult = state.unlockedKnowledgeUpgrades.includes(3) ? 3 : 2;
+                }
+            });
+            food += 20 * mult;
             break;
+        }
 
-        case 2: // Rice: Every 4 spins: +100 Food
+        case 2: { // Rice: Every 4 spins: +100 Food
+            let mult = 1;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Farm
+                    contributors.push(pos);
+                    const state = useGameStore.getState();
+                    mult = state.unlockedKnowledgeUpgrades.includes(3) ? 3 : 2;
+                }
+            });
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 4) {
-                food += 100;
+                food += 100 * mult;
                 symbolInstance.effect_counter = 0;
             }
             break;
+        }
 
         case 3: { // Cattle: Every spin: +1 Food. +2 Food per adjacent Cattle
             food += 10;
@@ -268,8 +291,9 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 14: // Pasture: Every spin: +1 Food.
+        case 14: // Pasture: Every spin: +1 Food (+1 bonus with Horsemanship)
             food += 10;
+            if (relicEffects.horsemansihpPastureBonus) food += 10;
             break;
 
         case 15: { // Quarry: Every spin: +1 Food. Adjacent Stone: +3 Gold. Adjacent Copper: +2 Gold
@@ -359,17 +383,33 @@ export const processSingleSymbolEffects = (
 
         // ── Era 2: Classical ──
 
-        case 22: // Horse: Every spin: +2 Food, +1 Gold
-            food += 20;
-            gold += 10;
-            // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
-            if (relicEffects.gobekliAnimalJackpot) {
-                const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
-                if (nearPasture && Math.random() < 0.05) {
-                    food += 150;
-                }
+        case 22: { // Merchant: Not in corner -> stores gold equal to highest adj food prod. In corner -> gains stored gold.
+            const isCorner = (x === 0 && y === 0) ||
+                (x === 0 && y === BOARD_HEIGHT - 1) ||
+                (x === BOARD_WIDTH - 1 && y === 0) ||
+                (x === BOARD_WIDTH - 1 && y === BOARD_HEIGHT - 1);
+
+            if (!isCorner) {
+                let maxAdjFood = 0;
+                adj.forEach(pos => {
+                    const t = boardGrid[pos.x][pos.y];
+                    if (t) {
+                        const baseFood = SYMBOL_BASE_FOOD[t.definition.id] ?? 0;
+                        if (baseFood > maxAdjFood) {
+                            maxAdjFood = baseFood;
+                        }
+                        if (baseFood > 0) {
+                            contributors.push(pos);
+                        }
+                    }
+                });
+                symbolInstance.stored_gold = (symbolInstance.stored_gold ?? 0) + maxAdjFood;
+            } else {
+                gold += symbolInstance.stored_gold ?? 0;
+                symbolInstance.stored_gold = 0;
             }
             break;
+        }
 
         case 23: // Iron: Every spin: +2 Food, +2 Gold
             food += 20;
@@ -389,11 +429,8 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 25: { // Library: +2 Knowledge. +2 Knowledge if adjacent to Scroll
-            knowledge += 20;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 26) { knowledge += 20; contributors.push(pos); }
-            });
+        case 25: { // Library: +5 Knowledge
+            knowledge += 50;
             break;
         }
 
@@ -486,38 +523,15 @@ export const processSingleSymbolEffects = (
 
         // ── Enemy / Combat Symbols ──
 
-        case 36: // Warrior
+        case 35: // Warrior
             if (symbolInstance.definition.symbol_type === SymbolType.ENEMY) {
-                // 적 유닛 전용: 턴 기반 강도에서 배정된 적 효과 적용
-                const effectId = symbolInstance.enemy_effect_id;
-                const effect = effectId ? ENEMY_EFFECTS[effectId] : null;
-                if (effect) {
-                    food -= effect.food_penalty;
-                    gold -= effect.gold_penalty;
+                if (Math.random() < 0.5) food -= 30; else gold -= 10;
+            }
+            break;
 
-                    if (effect.effect_type === 'debuff') {
-                        const occupiedAdjCount = adj.filter(pos => boardGrid[pos.x][pos.y] !== null).length;
-                        food -= occupiedAdjCount * 10;
-                    }
-
-                    if (effect.effect_type === 'destruction') {
-                        symbolInstance.effect_counter++;
-                        const interval = effectId === 14 ? 5 : 4;
-                        if (symbolInstance.effect_counter >= interval) {
-                            symbolInstance.effect_counter = 0;
-                            const occupiedAdj = adj.filter(pos => {
-                                const s = boardGrid[pos.x][pos.y];
-                                return s !== null && !s.is_marked_for_destruction;
-                            });
-                            if (occupiedAdj.length > 0) {
-                                const target = occupiedAdj[Math.floor(Math.random() * occupiedAdj.length)];
-                                boardGrid[target.x][target.y]!.is_marked_for_destruction = true;
-                            }
-                        }
-                    }
-                } else {
-                    if (Math.random() < 0.5) food -= 30; else gold -= 10;
-                }
+        case 36: // Archer
+            if (symbolInstance.definition.symbol_type === SymbolType.ENEMY) {
+                if (Math.random() < 0.5) food -= 20; else gold -= 20;
             }
             break;
 
@@ -537,6 +551,11 @@ export const processSingleSymbolEffects = (
             }
             break;
         }
+
+        case 23: // Horse: Every spin: +10 Food, +10 Gold
+            food += 10;
+            gold += 10;
+            break;
     }
 
     // ── ID 103: 가나안의 번제물 - 빈 슬롯마다 식량 -10 ──
@@ -568,8 +587,8 @@ export const processSingleSymbolEffects = (
         }
     }
 
-    // ── Pasture(14) 인접 버프: 인접 Cattle(3) 또는 Horse(22)가 있으면 +2 Food ──
-    if (id === 3 || id === 22) {
+    // ── Pasture(14) 인접 버프: 인접 Cattle(3) 또는 Horse(23)가 있으면 +2 Food ──
+    if (id === 3 || id === 23) {
         adj.forEach(pos => {
             if (boardGrid[pos.x][pos.y]?.definition.id === 14) {
                 food += 20;

@@ -5,7 +5,6 @@ export interface HoveredSymbol {
     definition: SymbolDefinition;
     screenX: number;
     screenY: number;
-    enemy_effect_id?: number;
 }
 
 export interface FloatingEffect {

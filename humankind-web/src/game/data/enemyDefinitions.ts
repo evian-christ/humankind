@@ -7,9 +7,9 @@ import { Era, SymbolType, type SymbolDefinition } from './symbolDefinitions';
  * 이를 통해 동일한 유닛 타입에 대해 아군/적군 버전을 쉽게 관리할 수 있습니다.
  */
 export const ENEMIES: Record<number, SymbolDefinition> = {
-    36: {
-        id: 36,
-        name: "Warrior",
+    35: {
+        id: 35,
+        name: "symbol.35.name",
         era: Era.ANCIENT,
         symbol_type: SymbolType.ENEMY,
         description: "Enemy Warrior. Assigned a random penalty on spawn.",
