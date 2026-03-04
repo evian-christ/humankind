@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { SYMBOLS, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS } from '../data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
-import { getEffectsByIntensity } from '../data/enemyEffectDefinitions';
+
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
 import type { PlayerSymbolInstance } from '../types';
@@ -65,7 +65,7 @@ export const getEraFromLevel = (level: number): number => {
     return 3;
 };
 
-type GamePhase = 'idle' | 'spinning' | 'processing' | 'selection' | 'relic_selection' | 'era_unlock' | 'game_over' | 'victory';
+type GamePhase = 'idle' | 'spinning' | 'processing' | 'upgrade_selection' | 'selection' | 'relic_selection' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250... -> x10: 1000, 1500, 2000, 2500...) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
@@ -99,10 +99,14 @@ export interface GameState {
     combatShaking: boolean;
     /** 종교 심볼이 선택 풀에 해금되었는지 */
     religionUnlocked: boolean;
+    /** 플레이어가 획득한 지식 업그레이드 ID 목록 */
+    unlockedKnowledgeUpgrades: number[];
     /** 매 턴 영구 지식 보너스 */
     bonusXpPerTurn: number;
     /** 중세 시대 등 진입 시 선택 대기 중 (추후 레벨업 보상으로 통합 가능) */
-    pendingEraUnlock: boolean;
+
+    /** 지식 업그레이드 선택지 */
+    upgradeChoices: import('../data/knowledgeUpgrades').KnowledgeUpgrade[];
     /** 레벨업 선택 대기 중 */
     pendingLevelUpSelection: boolean;
     /** 유물 선택 대기 중 */
@@ -119,7 +123,9 @@ export interface GameState {
     rerollSymbols: () => void;
     selectRelic: (relicId: number) => void;
     skipRelicSelection: () => void;
-    resolveEraUnlock: (choice: 'religion' | 'knowledge') => void;
+    selectUpgrade: (upgradeId: number) => void;
+    skipUpgradeSelection: () => void;
+
     initializeGame: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
@@ -155,11 +161,8 @@ const shuffle = <T>(arr: T[]): T[] => {
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
 
-/** 턴 수 기반 적 강도 계산 (60턴 단위, max 5) */
-const getEnemyIntensity = (turn: number): number =>
-    Math.min(Math.floor(turn / 60) + 1, 5);
 
-const createInstance = (def: SymbolDefinition, turn: number = 0): PlayerSymbolInstance => {
+const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => {
     let finalDef = def;
     // Relic ID 8 (십계명 석판): Replaces 'Stone' (ID 7) with 'Stone Tablet' (ID 39)
     if (def.id === 7 && useRelicStore.getState().relics.some(r => r.definition.id === 8)) {
@@ -174,15 +177,6 @@ const createInstance = (def: SymbolDefinition, turn: number = 0): PlayerSymbolIn
         remaining_attacks: finalDef.base_attack ? 3 : 0,
         enemy_hp: finalDef.base_hp,
     };
-
-    // 적 심볼이면 턴 기반 강도에 맞는 랜덤 효과 배정
-    if (def.symbol_type === SymbolType.ENEMY) {
-        const intensity = getEnemyIntensity(turn);
-        const pool = getEffectsByIntensity(intensity);
-        if (pool.length > 0) {
-            inst.enemy_effect_id = pool[Math.floor(Math.random() * pool.length)].id;
-        }
-    }
 
     return inst;
 };
@@ -212,7 +206,7 @@ const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], play
 };
 
 /** 선택 풀에서 제외할 심볼 */
-const EXCLUDED_FROM_CHOICES = new Set<number>([39]);
+const EXCLUDED_FROM_CHOICES = new Set<number>([22, 23, 25, 36, 39]);
 /** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
 const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
     8: [7, 39] // 십계명 석판: 돌(7) -> 석판(39)
@@ -234,9 +228,19 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
     for (const sym of Object.values(SYMBOLS)) {
         let finalSym = sym;
 
-        // 1. 제외 목록에 있고, 어떤 유물의 대체물도 아니라면 건너뜀
+        // 1. 제외 목록에 있고, 어떤 유물의 대체물도 아니라면 건너뜜
         const isReplacementTarget = Array.from(activeReplacements.values()).includes(sym.id);
-        if (EXCLUDED_FROM_CHOICES.has(sym.id) && !isReplacementTarget) continue;
+        const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
+
+        // 업그레이드로 해금되는 심볼들 예외 처리
+        let isUnlocked = !EXCLUDED_FROM_CHOICES.has(sym.id);
+        if (sym.id === 25 && upgrades.includes(1)) isUnlocked = true; // Writing -> Library
+        if (sym.id === 36 && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
+        if (sym.id === 22 && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
+        if (sym.id === 23 && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
+        if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion
+
+        if (!isUnlocked && !isReplacementTarget) continue;
 
         // 2. 현재 활성화된 유물에 의해 대체되어야 하는 심볼인 경우 대체
         if (activeReplacements.has(sym.id)) {
@@ -306,6 +310,18 @@ const generateRelicChoices = (): RelicDefinition[] => {
     return choices;
 };
 
+import { KNOWLEDGE_UPGRADES, type KnowledgeUpgrade } from '../data/knowledgeUpgrades';
+
+/** 현재 시대에 맞는 지식 업그레이드 선택지 3개 생성 (이미 업그레이드된 것 제외) */
+const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
+    // KNOWLEDGE_UPGRADES만 사용 — 후보(CANDIDATES)는 표시하지 않음
+    const pool = Object.values(KNOWLEDGE_UPGRADES).filter(
+        (u) => u.era <= currentEra && !unlocked.includes(u.id)
+    );
+    const shuffled = shuffle(pool);
+    return shuffled.slice(0, 3);
+};
+
 /** 현재 보유 유물에서 ActiveRelicEffects 플래그를 조합 */
 const buildActiveRelicEffects = (): ActiveRelicEffects => {
     const relics = useRelicStore.getState().relics;
@@ -315,6 +331,8 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
     // ID 9: 나일 강 흑니 — effect_counter < 5 인 동안 활성
     const nileRelic = getRelicInstance(RELIC_ID.NILE_SILT);
     const nileActive = nileRelic ? nileRelic.effect_counter < 5 : false;
+
+    const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
 
     return {
         relicCount: relics.length,
@@ -328,6 +346,7 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
         fishBoneHookGold: false,
         garamantesOasisReduce: false,
         nileFloodDoubleFood: nileActive,
+        horsemansihpPastureBonus: upgrades.includes(7),
     };
 };
 
@@ -351,8 +370,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     combatAnimation: null,
     combatShaking: false,
     religionUnlocked: false,
+    unlockedKnowledgeUpgrades: [],
     bonusXpPerTurn: 0,
-    pendingEraUnlock: false,
+
+    upgradeChoices: [],
     pendingLevelUpSelection: false,
     pendingRelicSelection: false,
     rerollsThisTurn: 0,
@@ -414,9 +435,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     startProcessing: () => {
         const state = get();
-        if (state.phase !== 'spinning') return;
-
-        set({ phase: 'processing', runningTotals: { food: 0, gold: 0, knowledge: 2 + get().bonusXpPerTurn } });
+        const upgrades = state.unlockedKnowledgeUpgrades || [];
+        const baseKnowledge = upgrades.includes(1) ? 4 : 2;
+        const baseGold = upgrades.includes(6) ? 20 : 0;
+        set({ phase: 'processing', runningTotals: { food: 0, gold: baseGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
 
         // ── 효과 페이즈 인프라 ────────────────────────────────────────────────
         // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
@@ -428,8 +450,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         let totalFood = 0;
-        let totalKnowledge = 2 + get().bonusXpPerTurn;
-        let totalGold = 0;
+        const upgradesFinish = get().unlockedKnowledgeUpgrades || [];
+        const baseKnowledgeFinish = upgradesFinish.includes(1) ? 4 : 2;
+        const baseGoldFinish = upgradesFinish.includes(6) ? 20 : 0;
+        let totalKnowledge = baseKnowledgeFinish + get().bonusXpPerTurn;
+        let totalGold = baseGoldFinish;
         let pRelicSelection = get().pendingRelicSelection;
         const symbolsToAdd: number[] = [];
         const symbolsToSpawnOnBoard: number[] = [];
@@ -724,7 +749,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         for (let bx = 0; bx < BOARD_WIDTH && !placed; bx++) {
                             for (let by = 0; by < BOARD_HEIGHT && !placed; by++) {
                                 if (!cleanBoard[bx][by]) {
-                                    const inst = createInstance(def, prev.turn);
+                                    const inst = createInstance(def);
                                     cleanBoard[bx][by] = inst;
                                     newPlayerSymbols.push(inst);
                                     placed = true;
@@ -732,7 +757,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                             }
                         }
                         if (!placed) {
-                            newPlayerSymbols.push(createInstance(def, prev.turn));
+                            newPlayerSymbols.push(createInstance(def));
                         }
                     }
                 }
@@ -740,7 +765,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (const symId of toAdd) {
                     const def = SYMBOLS[symId];
                     if (def) {
-                        newPlayerSymbols.push(createInstance(def, prev.turn));
+                        newPlayerSymbols.push(createInstance(def));
                     }
                 }
 
@@ -758,7 +783,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
                 const filteredSymbols = newPlayerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
                 const choices = generateChoices(newEra, prev.religionUnlocked);
-                const crossedToMedieval = prev.era === 1 && newEra === 2;
                 const genRelics = pRelicSelection && prev.relicChoices.length === 0 ? generateRelicChoices() : prev.relicChoices;
 
                 return {
@@ -775,31 +799,37 @@ export const useGameStore = create<GameState>((set, get) => ({
                     lastEffects: [...effects],
                     phase: 'processing' as GamePhase,
                     symbolChoices: choices,
-                    pendingEraUnlock: crossedToMedieval,
+
                     pendingLevelUpSelection: pendingLevelUp,
                     pendingRelicSelection: pRelicSelection,
                     relicChoices: genRelics,
                 };
             });
 
-            // 결과 확인 시간을 준 후 selection으로 전환
+            // 결과 확인 시간을 준 후 upgrade_selection 또는 selection으로 전환
             setTimeout(() => {
                 const finalState = get();
                 if (finalState.phase === 'processing') {
-                    const patch: Partial<GameState> = { phase: 'selection' as GamePhase };
+                    // 식량 납부 체크 (10턴마다)
                     if (finalState.turn > 0 && finalState.turn % 10 === 0) {
                         const cost = calculateFoodCost(finalState.turn);
                         if (finalState.food < cost) {
                             set({ phase: 'game_over' as GamePhase });
                             return;
                         }
-                        patch.food = finalState.food - cost;
-                        patch.pendingRelicSelection = true;
-                        if (!finalState.relicChoices || finalState.relicChoices.length === 0) {
-                            patch.relicChoices = generateRelicChoices();
-                        }
+                        set((s) => ({
+                            food: s.food - cost,
+                            pendingRelicSelection: true,
+                            relicChoices: (!s.relicChoices || s.relicChoices.length === 0) ? generateRelicChoices() : s.relicChoices,
+                        }));
                     }
-                    set(patch);
+                    // 레벨업이 있으면 upgrade_selection 먼저, 아니면 바로 selection
+                    if (finalState.pendingLevelUpSelection) {
+                        const upgradeChoices = generateUpgradeChoices(finalState.unlockedKnowledgeUpgrades || [], finalState.era);
+                        set({ phase: 'upgrade_selection' as GamePhase, upgradeChoices });
+                    } else {
+                        set({ phase: 'selection' as GamePhase });
+                    }
                 }
             }, 600);
         };
@@ -811,10 +841,22 @@ export const useGameStore = create<GameState>((set, get) => ({
             for (let y = 0; y < BOARD_HEIGHT; y++) {
                 const sym = combatBoard[x][y];
                 if (sym?.definition.symbol_type !== SymbolType.COMBAT) continue;
-                for (const adj of getAdjacentCoords(x, y)) {
-                    const target = combatBoard[adj.x][adj.y];
-                    if (target?.definition.symbol_type === SymbolType.ENEMY) {
-                        combatEvents.push({ ax: x, ay: y, tx: adj.x, ty: adj.y });
+
+                if (sym.definition.id === 36) { // 궁수 (Archer)
+                    for (let tx = 0; tx < BOARD_WIDTH; tx++) {
+                        for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
+                            const target = combatBoard[tx][ty];
+                            if (target?.definition.symbol_type === SymbolType.ENEMY) {
+                                combatEvents.push({ ax: x, ay: y, tx, ty });
+                            }
+                        }
+                    }
+                } else {
+                    for (const adj of getAdjacentCoords(x, y)) {
+                        const target = combatBoard[adj.x][adj.y];
+                        if (target?.definition.symbol_type === SymbolType.ENEMY) {
+                            combatEvents.push({ ax: x, ay: y, tx: adj.x, ty: adj.y });
+                        }
                     }
                 }
             }
@@ -878,15 +920,31 @@ export const useGameStore = create<GameState>((set, get) => ({
             let counterDmg = 0;
             if (attacker && !attacker.is_marked_for_destruction &&
                 target && !target.is_marked_for_destruction) {
+
                 atkDmg = attacker.definition.base_attack ?? 0;
-                counterDmg = target.definition.base_attack ?? 0;
+                const isAdjacent = Math.abs(ax - tx) <= 1 && Math.abs(ay - ty) <= 1;
+                counterDmg = isAdjacent ? (target.definition.base_attack ?? 0) : 0;
+
+                const upgrades = get().unlockedKnowledgeUpgrades || [];
+
+                const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => {
+                    let hp = sym.definition.base_hp ?? 0;
+                    // 아군 유닛(COMBAT)에게만 업그레이드 체력 보너스 적용
+                    if (sym.definition.symbol_type === SymbolType.COMBAT && upgrades.includes(2)) {
+                        if (sym.definition.id === 35) hp += 10;
+                        if (sym.definition.id === 36) hp += 3;
+                    }
+                    return hp;
+                };
 
                 if (atkDmg > 0) {
-                    target.enemy_hp = (target.enemy_hp ?? target.definition.base_hp ?? 0) - atkDmg;
+                    const maxHP = getEffectiveMaxHP(target);
+                    target.enemy_hp = (target.enemy_hp ?? maxHP) - atkDmg;
                     if (target.enemy_hp <= 0) target.is_marked_for_destruction = true;
                 }
                 if (counterDmg > 0) {
-                    attacker.enemy_hp = (attacker.enemy_hp ?? attacker.definition.base_hp ?? 0) - counterDmg;
+                    const maxHP = getEffectiveMaxHP(attacker);
+                    attacker.enemy_hp = (attacker.enemy_hp ?? maxHP) - counterDmg;
                     if (attacker.enemy_hp <= 0) attacker.is_marked_for_destruction = true;
                 }
             }
@@ -934,10 +992,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         let nextPhase: GamePhase = 'idle';
         if (state.pendingRelicSelection) nextPhase = 'relic_selection';
-        else if (state.pendingEraUnlock) nextPhase = 'era_unlock';
+
 
         set({
-            playerSymbols: [...state.playerSymbols, createInstance(def, state.turn)],
+            playerSymbols: [...state.playerSymbols, createInstance(def)],
             phase: nextPhase,
             symbolChoices: [],
         });
@@ -949,7 +1007,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         let nextPhase: GamePhase = 'idle';
         if (state.pendingRelicSelection) nextPhase = 'relic_selection';
-        else if (state.pendingEraUnlock) nextPhase = 'era_unlock';
+
 
         set({ phase: nextPhase, symbolChoices: [] });
     },
@@ -989,7 +1047,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         set({
-            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
+            phase: 'idle',
             relicChoices: [],
             pendingRelicSelection: false,
         });
@@ -1000,9 +1058,42 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (state.phase !== 'relic_selection') return;
 
         set({
-            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
+            phase: 'idle',
             relicChoices: [],
             pendingRelicSelection: false,
+        });
+    },
+
+    selectUpgrade: (upgradeId: number) => {
+        const state = get();
+        if (state.phase !== 'upgrade_selection') return;
+
+        const upgrade = KNOWLEDGE_UPGRADES[upgradeId];
+        if (!upgrade) return;
+
+        const newUnlocked = [...(state.unlockedKnowledgeUpgrades || []), upgradeId];
+
+        // 업그레이드 효과 적용
+        let bonusXpDelta = 0;
+        if (upgradeId === 1) bonusXpDelta = 2; // Writing System: +2 base Knowledge
+        if (upgradeId === 6) { } // Currency: handled in startProcessing via bonusGold
+
+        set({
+            unlockedKnowledgeUpgrades: newUnlocked,
+            bonusXpPerTurn: state.bonusXpPerTurn + bonusXpDelta,
+            upgradeChoices: [],
+            pendingLevelUpSelection: false,
+            phase: 'selection' as GamePhase,
+        });
+    },
+
+    skipUpgradeSelection: () => {
+        const state = get();
+        if (state.phase !== 'upgrade_selection') return;
+        set({
+            upgradeChoices: [],
+            pendingLevelUpSelection: false,
+            phase: 'selection' as GamePhase,
         });
     },
 
@@ -1026,16 +1117,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
 
-    resolveEraUnlock: (choice: 'religion' | 'knowledge') => {
-        const state = get();
-        set({
-            phase: state.pendingEraUnlock ? 'era_unlock' : 'idle',
-            runningTotals: { food: 0, gold: 0, knowledge: 0 },
-            bonusXpPerTurn: state.bonusXpPerTurn + (choice === 'knowledge' ? 100 : 0),
-            religionUnlocked: state.religionUnlocked || choice === 'religion',
-            pendingEraUnlock: false,
-        });
-    },
+
 
     initializeGame: () => {
         const { board, playerSymbols: symbols } = createStartingBoard();
@@ -1059,8 +1141,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             combatAnimation: null,
             combatShaking: false,
             religionUnlocked: false,
+            unlockedKnowledgeUpgrades: [],
             bonusXpPerTurn: 0,
-            pendingEraUnlock: false,
+
+            upgradeChoices: [],
             pendingLevelUpSelection: false,
             pendingRelicSelection: false,
             rerollsThisTurn: 0,
@@ -1071,7 +1155,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = SYMBOLS[symbolId] || SYMBOL_CANDIDATES[symbolId];
         if (!def) return;
         set((prev) => ({
-            playerSymbols: [...prev.playerSymbols, createInstance(def, prev.turn)],
+            playerSymbols: [...prev.playerSymbols, createInstance(def)],
         }));
     },
 

@@ -6,7 +6,8 @@ import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
-import EraUnlockModal from './components/EraUnlockModal';
+import UpgradeSelection from './components/UpgradeSelection';
+
 import PauseMenu from './components/PauseMenu';
 import RelicBar from './components/RelicBar';
 import DevOverlay from './components/DevOverlay';
@@ -41,14 +42,14 @@ function App() {
       {/* ===== PAUSE MENU OVERLAY ===== */}
       <PauseMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
+      {/* ===== UPGRADE SELECTION OVERLAY ===== */}
+      <UpgradeSelection />
+
       {/* ===== SYMBOL SELECTION OVERLAY ===== */}
       <SymbolSelection />
 
       {/* ===== RELIC SELECTION OVERLAY ===== */}
       <RelicSelection />
-
-      {/* ===== ERA UNLOCK MODAL ===== */}
-      <EraUnlockModal />
 
       {/* ===== GAME OVER OVERLAY ===== */}
       {phase === 'game_over' && (
