@@ -666,6 +666,88 @@ body {
   color: #bbb;
 }
 
+/* ===== UPGRADE SELECTION CARDS ===== */
+.upgrade-cards {
+  gap: 24px;
+}
+
+.upgrade-card {
+  width: 420px;
+  height: 768px;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  font-family: 'Mulmaru', sans-serif;
+  image-rendering: pixelated;
+  position: relative;
+  flex-shrink: 0;
+  animation: cardMysticGlow 3s infinite ease-in-out;
+}
+
+.upgrade-card:hover {
+  transform: translateY(-8px);
+  filter: drop-shadow(0 0 28px rgba(147, 197, 253, 0.7)) brightness(1.12);
+  animation: none;
+}
+
+.upgrade-card-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 140px 72px 108px;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.upgrade-card-sprite {
+  width: 104px;
+  height: 104px;
+  min-height: 104px;
+  max-height: 104px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.upgrade-card-name {
+  font-size: 36px;
+  color: #1a1a1a;
+  letter-spacing: 1px;
+  text-align: center;
+  font-weight: 900;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.upgrade-card-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  padding: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.upgrade-card-desc-line {
+  font-size: 20px;
+  color: #2a2a2a;
+  line-height: 1.4;
+}
+
+
 /* ===== ENDGAME OVERLAY (Game Over / Victory) ===== */
 .endgame-overlay {
   position: fixed;
