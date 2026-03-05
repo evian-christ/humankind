@@ -105,7 +105,7 @@ const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Se
 const SYMBOL_BASE_FOOD: Record<number, number> = {
     1: 20, 2: 20, 3: 10, 4: 30, 5: 10, 6: 10, 7: 10, 8: 0, 9: 20, 10: 0,
     11: 0, 12: 0, 13: 10, 14: 10, 15: 10, 16: 0, 17: -10, 18: 10, 19: 10, 20: 0,
-    21: 0, 22: 0, 23: 20, 24: 0, 25: 0, 26: 0, 27: 0, 28: 0, 29: 20, 30: 20,
+    21: 0, 22: 0, 23: 10, 25: 0,
 };
 
 /** 심볼별 기본 지식 생산량 추정치 (Islam 효과 계산용) -> x10 */
@@ -113,7 +113,6 @@ const SYMBOL_BASE_KNOWLEDGE: Record<number, number> = {
     10: 5,   // Monument
     17: 10,  // Offering
     25: 20,  // Library
-    26: 10,  // Scroll
 };
 
 /** Era 1 심볼 중 랜덤 하나 반환 (ID 1~21) */
@@ -381,8 +380,6 @@ export const processSingleSymbolEffects = (
             symbolInstance.is_marked_for_destruction = true;
             break;
 
-        // ── Era 2: Classical ──
-
         case 22: { // Merchant: Not in corner -> stores gold equal to highest adj food prod. In corner -> gains stored gold.
             const isCorner = (x === 0 && y === 0) ||
                 (x === 0 && y === BOARD_HEIGHT - 1) ||
@@ -411,69 +408,10 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 23: // Iron: Every spin: +2 Food, +2 Gold
-            food += 20;
-            gold += 20;
-            break;
-
-        case 24: { // Galley: +2 Gold. +2 Food per adjacent Coast. Every 8 spins: add random Ancient symbol
-            gold += 20;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 6) { food += 20; contributors.push(pos); }
-            });
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 8) {
-                addSymbolIds.push(randomEra1SymbolId());
-                symbolInstance.effect_counter = 0;
-            }
-            break;
-        }
-
         case 25: { // Library: +5 Knowledge
             knowledge += 50;
             break;
         }
-
-        case 26: { // Scroll: +1 Knowledge. +1 Knowledge per adjacent Knowledge-producing symbol
-            knowledge += 10;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t && KNOWLEDGE_PRODUCING_IDS.has(t.definition.id)) { knowledge += 10; contributors.push(pos); }
-            });
-            break;
-        }
-
-        case 27: { // Market: +1 Gold per adjacent symbol
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]) { gold += 10; contributors.push(pos); }
-            });
-            break;
-        }
-
-        case 28: { // Tax Collector: +3 Gold. Adjacent symbols produce -1 Food
-            gold += 30;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]) { food -= 10; contributors.push(pos); }
-            });
-            break;
-        }
-
-        case 29: { // Forge: +2 Food, +1 Gold. Adjacent Copper/Iron: +4 Gold. Adjacent Stone: +2 Food
-            food += 20;
-            gold += 10;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t) {
-                    if (t.definition.id === 8 || t.definition.id === 23) { gold += 40; contributors.push(pos); }
-                    if (t.definition.id === 7) { food += 20; contributors.push(pos); }
-                }
-            });
-            break;
-        }
-
-        case 30: // Arena: +2 Food. (Destruction bonus handled in store)
-            food += 20;
-            break;
 
         // ── Religion Doctrine Symbols ──
 

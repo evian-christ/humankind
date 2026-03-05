@@ -543,21 +543,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             let bonusFood = 0;
             let bonusGold = 0;
 
-            // ── Arena (30): 파괴 심볼마다 +40 Food, +20 Gold ──
-            if (destroyedCount > 0) {
-                for (let x = 0; x < BOARD_WIDTH; x++) {
-                    for (let y = 0; y < BOARD_HEIGHT; y++) {
-                        const s = currentBoard[x][y];
-                        if (s && s.definition.id === 30 && !s.is_marked_for_destruction) {
-                            const arenaFood = destroyedCount * 40;
-                            const arenaGold = destroyedCount * 20;
-                            bonusFood += arenaFood;
-                            bonusGold += arenaGold;
-                            effects.push({ x, y, food: arenaFood, gold: arenaGold, knowledge: 0 });
-                        }
-                    }
-                }
-            }
 
             // ── Pottery (20): 조몬 토기 조각 유물 — 파괴 전파 패스 ──
             // processSlot에서 이미 파괴 표시된 심볼은 스킵되므로,
@@ -638,7 +623,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 case 4: return 20; case 5: return 10; case 6: return 10;
                                 case 7: return 10; case 9: return 20; case 13: return 10;
                                 case 14: return 10; case 19: return 10; case 22: return 20;
-                                case 23: return 20; case 29: return 20; case 30: return 20;
+                                case 23: return 10;
                                 default: return 0;
                             }
                         })();
