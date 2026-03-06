@@ -9,8 +9,8 @@ const resolveUpgradeSprite = (sprite: string | undefined): string => {
     return './assets/upgrades/000.png';
 };
 
-const CARD_W = 420;
-const CARD_H = 768;
+const CARD_W = 364;
+const CARD_H = 665;
 
 const UpgradeCard = ({
     name,
@@ -57,7 +57,7 @@ const UpgradeCard = ({
 };
 
 const UpgradeSelection = () => {
-    const { phase, upgradeChoices, selectUpgrade, skipUpgradeSelection } = useGameStore();
+    const { phase, upgradeChoices, selectUpgrade, skipUpgradeSelection, level, levelBeforeUpgrade } = useGameStore();
     const language = useSettingsStore((s) => s.language);
 
     if (phase !== 'upgrade_selection') return null;
@@ -66,7 +66,36 @@ const UpgradeSelection = () => {
         <div className="selection-overlay">
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
-                    <div className="selection-title">{t('game.chooseUpgrade', language)}</div>
+                    <div className="selection-title">지식 업그레이드</div>
+                    {/* 레벨업 정보 — 박스 없이 텍스트만 */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        marginTop: '-12px',
+                    }}>
+                        <span style={{
+                            fontFamily: 'Mulmaru, monospace',
+                            fontSize: '26px',
+                            color: '#94a3b8',
+                            letterSpacing: '2px',
+                        }}>Lv.{levelBeforeUpgrade}</span>
+                        <span style={{ fontSize: '26px', color: '#60a5fa' }}>→</span>
+                        <span style={{
+                            fontFamily: 'Mulmaru, monospace',
+                            fontSize: '30px',
+                            fontWeight: '900',
+                            color: '#93c5fd',
+                            letterSpacing: '2px',
+                            textShadow: '0 0 12px rgba(147, 197, 253, 0.6)',
+                        }}>Lv.{level}</span>
+                        <span style={{
+                            fontFamily: 'Mulmaru, monospace',
+                            fontSize: '20px',
+                            color: '#bfdbfe',
+                            letterSpacing: '1px',
+                        }}>⬆ LEVEL UP!</span>
+                    </div>
                     <div className="selection-cards upgrade-cards">
                         {upgradeChoices.map((upgrade) => (
                             <UpgradeCard
@@ -82,11 +111,6 @@ const UpgradeSelection = () => {
                                 {t('game.noUpgradesAvailable', language)}
                             </div>
                         )}
-                    </div>
-                    <div className="selection-actions">
-                        <button className="selection-skip-btn" onClick={skipUpgradeSelection}>
-                            {t('game.skip', language)}
-                        </button>
                     </div>
                 </div>
             </div>

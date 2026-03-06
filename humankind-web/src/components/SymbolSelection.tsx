@@ -22,6 +22,22 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
 
     return (
         <button className="selection-card" onClick={onClick} style={{ '--card-glow': `${eraColor}cc`, background: 'url("./assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px' } as React.CSSProperties}>
+            {/* 시대 — 스프라이트 위 */}
+            <div className="selection-card-rarity" style={{
+                color: eraColor,
+                fontSize: '20px',
+                fontWeight: '900',
+                letterSpacing: '3px',
+                textShadow: `0 0 12px ${eraColor}b3`,
+                marginBottom: '8px',
+                display: 'inline-block',
+                transform: 'scaleX(1.4)',
+                transformOrigin: 'center'
+            }}>
+                {eraName}
+            </div>
+
+            {/* 스프라이트 */}
             {symbol.sprite ? (
                 <img
                     src={`./assets/symbols/${symbol.sprite}`}
@@ -34,17 +50,9 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
                     {symName}
                 </div>
             )}
+
+            {/* 이름 */}
             <div className="selection-card-name">{symName}</div>
-            <div className="selection-card-rarity" style={{
-                color: eraColor,
-                fontSize: '28px',
-                fontWeight: '900',
-                letterSpacing: '4px',
-                textShadow: `0 0 15px ${eraColor}b3`,
-                marginBottom: '12px'
-            }}>
-                {eraName}
-            </div>
             {(symbol.base_attack !== undefined || symbol.base_hp !== undefined) && (
                 <div className="selection-card-stats" style={{ display: 'flex', gap: '16px', fontSize: '24px', margin: '8px 0', fontWeight: 'bold', color: '#1a1a1a' }}>
                     {symbol.base_attack !== undefined && <span>⚔ {symbol.base_attack}</span>}
@@ -59,7 +67,7 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
             {symbol.tags && symbol.tags.length > 0 && (
                 <div className="selection-card-tags" style={{ display: 'flex', gap: '8px', justifyContent: 'center', margin: '16px 0 0 0', flexWrap: 'wrap' }}>
                     {symbol.tags.map(tag => (
-                        <span key={tag} style={{ background: 'rgba(55, 65, 81, 0.9)', padding: '6px 14px', borderRadius: '8px', fontSize: '16px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 4px 6px rgba(0,0,0,0.2)' }}>
+                        <span key={tag} style={{ background: 'rgba(55, 65, 81, 0.5)', padding: '4px 10px', borderRadius: '0', fontSize: '16px', color: '#e5e7eb', border: '1px solid rgba(75, 85, 99, 0.7)' }}>
                             {t(`tag.${tag}`, language)}
                         </span>
                     ))}
@@ -114,10 +122,13 @@ const SymbolSelection = () => {
                             className="selection-reroll-btn"
                             onClick={rerollSymbols}
                             disabled={!canReroll}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                         >
-                            {t('game.reroll', language)} ({rerollCost}G)
+                            <span>{t('game.reroll', language)}</span>
+                            <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>
+                            <span style={{ color: '#fbbf24', fontWeight: '900' }}>{rerollCost}</span>
                             {rerollsLeft !== null && (
-                                <span style={{ marginLeft: '8px', opacity: 0.75, fontSize: '0.75em' }}>
+                                <span style={{ marginLeft: '4px', opacity: 0.75, fontSize: '0.75em' }}>
                                     {rerollsLeft}/{maxRerolls}
                                 </span>
                             )}

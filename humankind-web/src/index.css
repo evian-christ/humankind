@@ -220,8 +220,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(30, 30, 30, 0.85);
-  border: 2px solid #555;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 8px;
   cursor: help;
   transition: all 0.15s ease;
@@ -240,8 +240,8 @@ body {
 }
 
 .relic-icon-wrapper:hover {
-  background: rgba(60, 60, 60, 0.95);
-  border-color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
 }
 
@@ -459,6 +459,10 @@ body {
   transition: background 0.45s ease;
 }
 
+.selection-overlay--relic {
+  background: rgba(0, 0, 0, 0.92);
+}
+
 .selection-overlay--peeked {
   background: rgba(0, 0, 0, 0);
   pointer-events: none;
@@ -528,10 +532,9 @@ body {
 
 .selection-title {
   font-family: 'Mulmaru', sans-serif;
-  font-size: 48px;
-  color: #ffffff;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.6);
   letter-spacing: 2px;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   margin-top: 16px;
 }
 
@@ -600,9 +603,10 @@ body {
 }
 
 .selection-card-name {
-  font-size: 40px;
+  font-size: 32px;
   color: #1a1a1a;
-  letter-spacing: 1px;
+  letter-spacing: 0px;
+  margin-top: 8px;
 }
 
 .selection-card-rarity {
@@ -666,14 +670,219 @@ body {
   color: #bbb;
 }
 
-/* ===== UPGRADE SELECTION CARDS ===== */
-.upgrade-cards {
+/* ===== RELIC SELECTION CARDS ===== */
+.relic-cards {
+  display: flex;
   gap: 24px;
+  align-items: flex-start;
+}
+
+/* 카드 + 구매 버튼을 세로로 묶는 래퍼 */
+.relic-card-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.relic-card {
+  width: 400px;
+  height: 667px;
+  border-radius: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.relic-card-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 120px 60px 40px;
+  gap: 6px;
+  font-family: 'Mulmaru', sans-serif;
+  color: #1a1a1a;
+  overflow: hidden;
+}
+
+.relic-card-sprite-wrapper {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  margin-top: 4px;
+}
+
+.relic-card-sprite-wrapper .relic-card-sprite {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.relic-card-sprite-wrapper .relic-card-sprite-placeholder {
+  font-size: 40px;
+  line-height: 1;
+  color: #aaa;
+}
+
+.relic-card-name {
+  font-size: 24px;
+  color: #1a1a1a;
+  letter-spacing: 0px;
+  text-align: center;
+  font-weight: 400;
+  line-height: 1.2;
+  flex-shrink: 0;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.relic-card-era {
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+  display: inline-block;
+  transform: scaleX(1.4);
+  transform-origin: center;
+}
+
+.relic-card-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.relic-card-desc-line {
+  font-size: 18px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+/* 구매 버튼 — 카드 밖, 카드 아래 배치 */
+.relic-card-buy-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 32px;
+  background: rgba(15, 12, 4, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  backdrop-filter: blur(6px);
+}
+
+.relic-card-buy-btn:hover {
+  background: rgba(30, 22, 4, 0.9);
+  border-color: rgba(251, 191, 36, 0.7);
+  color: #fbbf24;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+  transform: translateY(-2px);
+}
+
+.relic-card-buy-gold {
+  font-size: 26px;
+  color: #fbbf24;
+  line-height: 1;
+  transform: translateY(1px);
+  /* 수직 중앙 정렬 보정 */
+}
+
+.relic-card-buy-cost {
+  font-size: 22px;
+  color: #fbbf24;
+  letter-spacing: 1px;
+  font-weight: 900;
+}
+
+/* 유물 선택 보유 골드 표시 */
+.relic-selection-gold {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  font-family: 'Mulmaru', sans-serif;
+}
+
+.relic-selection-gold-icon {
+  font-size: 24px;
+  color: #fbbf24;
+  line-height: 1;
+  transform: translateY(1px);
+}
+
+.relic-selection-gold-val {
+  font-size: 28px;
+  color: #fbbf24;
+  font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* 신비한 보라색 배경 펄스 효과 (가로 선형 관통) */
+.relic-bg-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200vw;
+  height: 50vh;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, transparent 0%, rgba(139, 92, 246, 0.5) 25%, rgba(167, 139, 250, 0.7) 50%, rgba(139, 92, 246, 0.5) 75%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+  animation: relicPulseEffect 4s infinite ease-in-out;
+  filter: blur(40px);
+}
+
+@keyframes relicPulseEffect {
+  0% {
+    transform: translate(-50%, -50%) scaleY(0.8);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scaleY(1.4);
+    opacity: 1;
+    filter: blur(30px) brightness(1.4);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scaleY(0.8);
+    opacity: 0.6;
+  }
+}
+
+/* ===== UPGRADE SELECTION CARDS ===== */
+
+.upgrade-cards {
+  gap: 40px;
 }
 
 .upgrade-card {
-  width: 420px;
-  height: 768px;
+  width: 364px;
+  height: 665px;
   border: none;
   border-radius: 0;
   display: flex;
@@ -706,27 +915,27 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 140px 72px 108px;
-  gap: 14px;
+  padding: 120px 60px 92px;
+  gap: 12px;
   overflow: hidden;
 }
 
 .upgrade-card-sprite {
-  width: 104px;
-  height: 104px;
-  min-height: 104px;
-  max-height: 104px;
+  width: 88px;
+  height: 88px;
+  min-height: 88px;
+  max-height: 88px;
   object-fit: contain;
   image-rendering: pixelated;
   flex-shrink: 0;
 }
 
 .upgrade-card-name {
-  font-size: 36px;
+  font-size: 28px;
   color: #1a1a1a;
   letter-spacing: 1px;
   text-align: center;
-  font-weight: 900;
+  font-weight: 500;
   flex-shrink: 0;
   width: 100%;
 }
@@ -742,7 +951,7 @@ body {
 }
 
 .upgrade-card-desc-line {
-  font-size: 20px;
+  font-size: 17px;
   color: #2a2a2a;
   line-height: 1.4;
 }
