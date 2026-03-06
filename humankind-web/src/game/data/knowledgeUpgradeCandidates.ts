@@ -2,39 +2,15 @@ import { Era } from './symbolDefinitions';
 import type { KnowledgeUpgrade } from './knowledgeUpgrades';
 
 export const KNOWLEDGE_UPGRADE_CANDIDATES: Record<number, KnowledgeUpgrade> = {
-    // ── Ancient Upgrades (Moved to Candidates) ──
-    // ── Medieval Upgrades (Moved to Candidates) ──
-    101: { id: 101, name: "Feudalism", era: Era.MEDIEVAL, description: "For every combat unit, gain +5 Food and +5 Gold each turn.", sprite: "feudalism.png" },
-    102: { id: 102, name: "Universities", era: Era.MEDIEVAL, description: "All Knowledge generation is increased by 50%.", sprite: "universities.png" },
-
-    // ── Ancient Era Candidates ──
-    201: {
-        id: 201,
-        name: "Wheel",
-        description: "Increases movement speed of combat units.",
-        era: 1,
-        sprite: "wheel_icon.png"
-    },
-    202: {
-        id: 202,
-        name: "Sailing",
-        description: "Allows traversal over water tiles.",
-        era: 1,
-        sprite: "sail_icon.png"
-    },
-    // ── Medieval Era Candidates ──
-    301: {
-        id: 301,
-        name: "Compass",
-        description: "Reduces exploration cost.",
-        era: 2,
-        sprite: "compass_icon.png"
-    },
-    302: {
-        id: 302,
-        name: "Gunpowder",
-        description: "Allows creation of ranged explosive units.",
-        era: 2,
-        sprite: "gunpowder_icon.png"
-    }
+    // ── Ancient / Classical Era Candidates ──
+    201: { id: 201, name: "Iron Working", era: Era.ANCIENT, description: "All combat units produce +10 Gold every turn.", sprite: "001.png" },
+    202: { id: 202, name: "Mathematics", era: Era.ANCIENT, description: "Permanently increases base Knowledge generation by +3.", sprite: "002.png" },
+    203: { id: 203, name: "Construction", era: Era.ANCIENT, description: "'Stone' and 'Quarry' symbols produce an additional +20 Gold.", sprite: "003.png" },
+    204: { id: 204, name: "Philosophy", era: Era.ANCIENT, description: "'Library' symbols produce double Knowledge.", sprite: "004.png" },
+    205: { id: 205, name: "Code of Laws", era: Era.ANCIENT, description: "Provides +10 Food and +10 Gold every turn for each empty slot on the board.", sprite: "005.png" },
+    206: { id: 206, name: "Mining", era: Era.ANCIENT, description: "'Copper' symbols produce +30 additional Gold.", sprite: "006.png" },
+    207: { id: 207, name: "Pottery", era: Era.ANCIENT, description: "All base Food-producing symbols (Wheat, Rice, Banana, Fish, Farm, Pasture) produce +5 additional Food.", sprite: "007.png" },
+    208: { id: 208, name: "Astrology", era: Era.ANCIENT, description: "Unlocks 'Stargazer' symbol for selection. Permanently increases base Knowledge generation by +1.", sprite: "008.png" },
+    209: { id: 209, name: "Drama and Poetry", era: Era.ANCIENT, description: "'Monument' symbols also produce +15 Gold.", sprite: "009.png" },
+    210: { id: 210, name: "Sacrificial Rite", era: Era.ANCIENT, description: "Immediately lets you select and destroy up to 3 owned symbols. +100 Gold per destroyed symbol.", sprite: "010.png" },
 };

@@ -142,6 +142,8 @@ export const processSingleSymbolEffects = (
 
     symbolInstance.effect_counter = (symbolInstance.effect_counter || 0);
     const adj = getAdjacentCoords(x, y);
+    const state = useGameStore.getState();
+    const upgrades = state.unlockedKnowledgeUpgrades || [];
 
     switch (id) {
         case 1: { // Wheat
@@ -149,8 +151,7 @@ export const processSingleSymbolEffects = (
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Farm
                     contributors.push(pos);
-                    const state = useGameStore.getState();
-                    mult = state.unlockedKnowledgeUpgrades.includes(3) ? 3 : 2;
+                    mult = upgrades.includes(3) ? 3 : 2;
                 }
             });
             food += 20 * mult;
@@ -162,8 +163,7 @@ export const processSingleSymbolEffects = (
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Farm
                     contributors.push(pos);
-                    const state = useGameStore.getState();
-                    mult = state.unlockedKnowledgeUpgrades.includes(3) ? 3 : 2;
+                    mult = upgrades.includes(3) ? 3 : 2;
                 }
             });
             symbolInstance.effect_counter++;
@@ -538,6 +538,32 @@ export const processSingleSymbolEffects = (
     // ── ID 120: 나일 강 비옥한 흑니 - 활성 중 식량 2배 ──
     if (relicEffects.nileFloodDoubleFood && food > 0) {
         food *= 2;
+    }
+
+    // ── Knowledge Upgrade Candidates ──
+    // Candidate 203: Construction (+20 Gold for Stone and Quarry)
+    if (upgrades.includes(203) && (id === 7 || id === 15)) {
+        gold += 20;
+    }
+
+    // Candidate 204: Philosophy (Library double Knowledge)
+    if (upgrades.includes(204) && id === 25) {
+        knowledge += 5; // Base is 5, making it 10
+    }
+
+    // Candidate 206: Mining (+30 Gold for Copper)
+    if (upgrades.includes(206) && id === 8) {
+        gold += 30; // Wait, Copper is base 20 Gold, +30 makes it 50? Description says +30 additional Gold.
+    }
+
+    // Candidate 207: Pottery (+5 Food for base food producers)
+    if (upgrades.includes(207) && [1, 2, 4, 5, 9, 14].includes(id)) {
+        food += 5;
+    }
+
+    // Candidate 209: Drama and Poetry (+15 Gold for Monument)
+    if (upgrades.includes(209) && id === 10) {
+        gold += 15;
     }
 
     const result: EffectResult = { food, knowledge, gold };

@@ -65,7 +65,7 @@ export const getEraFromLevel = (level: number): number => {
     return 3;
 };
 
-type GamePhase = 'idle' | 'spinning' | 'processing' | 'upgrade_selection' | 'selection' | 'relic_selection' | 'game_over' | 'victory';
+type GamePhase = 'idle' | 'spinning' | 'processing' | 'upgrade_selection' | 'selection' | 'relic_selection' | 'destroy_selection' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250... -> x10: 1000, 1500, 2000, 2500...) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
@@ -109,6 +109,8 @@ export interface GameState {
     upgradeChoices: import('../data/knowledgeUpgrades').KnowledgeUpgrade[];
     /** 레벨업 선택 대기 중 */
     pendingLevelUpSelection: boolean;
+    /** 레벨업 직전의 레벨 (업그레이드 화면에서 "Lv.X → Lv.Y" 표시용) */
+    levelBeforeUpgrade: number;
     /** 유물 선택 대기 중 */
     pendingRelicSelection: boolean;
     /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
@@ -130,6 +132,9 @@ export interface GameState {
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
     devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => void;
+    devForceScreen: (screen: 'symbol' | 'relic' | 'upgrade') => void;
+    confirmDestroySymbols: (instanceIds: string[]) => void;
+    finishDestroySelection: () => void;
 }
 
 const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => {
@@ -311,6 +316,7 @@ const generateRelicChoices = (): RelicDefinition[] => {
 };
 
 import { KNOWLEDGE_UPGRADES, type KnowledgeUpgrade } from '../data/knowledgeUpgrades';
+import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
 
 /** 현재 시대에 맞는 지식 업그레이드 선택지 3개 생성 (이미 업그레이드된 것 제외) */
 const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
@@ -375,6 +381,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     upgradeChoices: [],
     pendingLevelUpSelection: false,
+    levelBeforeUpgrade: 1,
     pendingRelicSelection: false,
     rerollsThisTurn: 0,
 
@@ -436,9 +443,39 @@ export const useGameStore = create<GameState>((set, get) => ({
     startProcessing: () => {
         const state = get();
         const upgrades = state.unlockedKnowledgeUpgrades || [];
-        const baseKnowledge = upgrades.includes(1) ? 4 : 2;
-        const baseGold = upgrades.includes(6) ? 20 : 0;
-        set({ phase: 'processing', runningTotals: { food: 0, gold: baseGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
+        const baseKnowledge = 0; // Handled in selectUpgrade via bonusXpPerTurn
+        const baseGold = upgrades.includes(6) ? 2 : 0; // Currency: +2 base gold
+
+        let startFood = 0;
+        let startGold = baseGold;
+
+        // Candidate 205: Code of Laws (+10 Food & Gold per empty slot)
+        if (upgrades.includes(205)) {
+            let emptyCount = 0;
+            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+                for (let by = 0; by < BOARD_HEIGHT; by++) {
+                    if (!state.board[bx][by]) emptyCount++;
+                }
+            }
+            startFood += emptyCount * 10;
+            startGold += emptyCount * 10;
+        }
+
+        // Candidate 201: Iron Working (+10 Gold per combat unit)
+        if (upgrades.includes(201)) {
+            let combatCount = 0;
+            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+                for (let by = 0; by < BOARD_HEIGHT; by++) {
+                    const sym = state.board[bx][by];
+                    if (sym?.definition.symbol_type === SymbolType.COMBAT) {
+                        combatCount++;
+                    }
+                }
+            }
+            startGold += combatCount * 10;
+        }
+
+        set({ phase: 'processing', runningTotals: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
 
         // ── 효과 페이즈 인프라 ────────────────────────────────────────────────
         // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
@@ -775,6 +812,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     gold: prev.gold + tGold + bonusGold,
                     knowledge: newKnowledge,
                     level: newLevel,
+                    levelBeforeUpgrade: pendingLevelUp ? prev.level : prev.levelBeforeUpgrade,
                     runningTotals: { food: 0, gold: 0, knowledge: 0 },
                     activeSlot: null,
                     activeContributors: [],
@@ -1053,19 +1091,35 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'upgrade_selection') return;
 
-        const upgrade = KNOWLEDGE_UPGRADES[upgradeId];
+        const upgrade = KNOWLEDGE_UPGRADES[upgradeId] || KNOWLEDGE_UPGRADE_CANDIDATES[upgradeId];
         if (!upgrade) return;
+
+        // ID 210: 희생 제의 -> 파괴 선택 모드로 전환
+        if (upgradeId === 210) {
+            set({
+                unlockedKnowledgeUpgrades: [...(state.unlockedKnowledgeUpgrades || []), upgradeId],
+                phase: 'destroy_selection',
+                pendingLevelUpSelection: false,
+                upgradeChoices: [],
+            });
+            return;
+        }
 
         const newUnlocked = [...(state.unlockedKnowledgeUpgrades || []), upgradeId];
 
         // 업그레이드 효과 적용
+        let religionUnlocked = state.religionUnlocked;
+        if (upgradeId === 4) religionUnlocked = true; // Theology
+
         let bonusXpDelta = 0;
         if (upgradeId === 1) bonusXpDelta = 2; // Writing System: +2 base Knowledge
-        if (upgradeId === 6) { } // Currency: handled in startProcessing via bonusGold
+        if (upgradeId === 202) bonusXpDelta = 3; // Mathematics: +3 base Knowledge
+        if (upgradeId === 208) bonusXpDelta = 1; // Astrology: +1 base Knowledge
 
         set({
             unlockedKnowledgeUpgrades: newUnlocked,
             bonusXpPerTurn: state.bonusXpPerTurn + bonusXpDelta,
+            religionUnlocked: religionUnlocked,
             upgradeChoices: [],
             pendingLevelUpSelection: false,
             phase: 'selection' as GamePhase,
@@ -1103,6 +1157,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
 
+    confirmDestroySymbols: (instanceIds: string[]) => {
+        const state = get();
+        if (state.phase !== 'destroy_selection') return;
+        const newSymbols = state.playerSymbols.filter(s => !instanceIds.includes(s.instanceId));
+        set({
+            playerSymbols: newSymbols,
+            gold: state.gold + instanceIds.length * 100,
+            phase: 'idle',
+        });
+    },
+
+    finishDestroySelection: () => {
+        if (get().phase !== 'destroy_selection') return;
+        set({ phase: 'idle' });
+    },
 
     initializeGame: () => {
         const { board, playerSymbols: symbols } = createStartingBoard();
@@ -1152,5 +1221,19 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => {
         set({ [stat]: Math.max(0, value) });
+    },
+
+    devForceScreen: (screen: 'symbol' | 'relic' | 'upgrade') => {
+        const state = get();
+        if (screen === 'symbol') {
+            const choices = generateChoices(state.era, state.religionUnlocked);
+            set({ phase: 'selection', symbolChoices: choices });
+        } else if (screen === 'relic') {
+            const choices = generateRelicChoices();
+            set({ phase: 'relic_selection', relicChoices: choices, pendingRelicSelection: true });
+        } else if (screen === 'upgrade') {
+            const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades, state.era);
+            set({ phase: 'upgrade_selection', upgradeChoices: choices, pendingLevelUpSelection: true });
+        }
     },
 }));
