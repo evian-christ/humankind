@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { SYMBOLS, Era, SymbolType, getSymbolColorHex } from '../game/data/symbolDefinitions';
+import { SYMBOLS, Era, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
 import { RELICS } from '../game/data/relicDefinitions';
 import { RELIC_CANDIDATES } from '../game/data/relicCandidates';
@@ -20,6 +20,14 @@ const ERA_KEYS: Record<number, string> = {
     [Era.ANCIENT]: 'ancient',
     [Era.MEDIEVAL]: 'medieval',
     [Era.MODERN]: 'modern',
+};
+
+const EXCLUDED_FROM_BASE_POOL = new Set<number>([22, 23, 25, 36, 39]);
+const isBasePool = (s: SymbolDefinition) => {
+    return s.era === Era.ANCIENT &&
+        s.symbol_type !== SymbolType.ENEMY &&
+        !EXCLUDED_FROM_BASE_POOL.has(s.id) &&
+        !RELIGION_DOCTRINE_IDS.has(s.id);
 };
 
 
@@ -95,6 +103,11 @@ const DataBrowser = () => {
         return () => window.removeEventListener('keydown', handler);
     }, []);
 
+    // 심볼 슬롯 뷰 모드: 필터/검색/정렬이 없을 때 ID 1~50 전체 슬롯 표시
+    const SYMBOL_SLOT_MIN = 1;
+    const SYMBOL_SLOT_MAX = 50;
+    const isSymbolSlotMode = eraFilter === 'all' && typeFilter === 'all' && !search.trim() && !symbolSort;
+
     // 심볼 목록 (필터 + 검색 + 정렬)
     const filteredSymbols = useMemo(() => {
         let list = Object.values(SYMBOLS);
@@ -129,6 +142,7 @@ const DataBrowser = () => {
                     case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
                     case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
+                    case 'basePool': va = isBasePool(a) ? 1 : 0; vb = isBasePool(b) ? 1 : 0; break;
                     default: va = a.id; vb = b.id;
                 }
                 return genericCompare(va, vb, dir);
@@ -501,6 +515,7 @@ const DataBrowser = () => {
                                 <SortTh column="type" label={t('dataBrowser.colType', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--type" />
                                 <SortTh column="tags" label={t('dataBrowser.colTags', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--tags" />
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="basePool" label={t('dataBrowser.colBasePool', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--id" />
                                 <SortTh column="atk" label="ATK" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="hp" label="HP" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--sprite" />
@@ -508,49 +523,116 @@ const DataBrowser = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredSymbols.map(s => (
-                                <tr key={s.id} className="databrowser-row">
-                                    <td className="databrowser-cell--id">{s.id}</td>
-                                    <td className="databrowser-cell--name">{t(`symbol.${s.id}.name`, language)}</td>
-                                    <td>
-                                        <span
-                                            style={{
-                                                color: getSymbolColorHex(s.era),
-                                                fontWeight: 'bold',
-                                                fontSize: '15px',
-                                                letterSpacing: '1px',
-                                                textShadow: `0 0 6px ${getSymbolColorHex(s.era)}80`
-                                            }}
-                                        >
-                                            [{t(`era.${ERA_KEYS[s.era]}`, language)}]
-                                        </span>
-                                    </td>
-                                    <td className="databrowser-cell--type">
-                                        {s.symbol_type === SymbolType.FRIENDLY && '🟢'}
-                                        {s.symbol_type === SymbolType.ENEMY && '🔴'}
-                                        {s.symbol_type === SymbolType.COMBAT && '⚔️'}
-                                        {' '}{t(`dataBrowser.${s.symbol_type === SymbolType.FRIENDLY ? 'friendly' : s.symbol_type === SymbolType.ENEMY ? 'enemy' : 'combat'}`, language)}
-                                    </td>
-                                    <td className="databrowser-cell--tags">
-                                        {s.tags?.length ? (
-                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                {s.tags.map(tag => (
-                                                    <span key={tag} style={{ background: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                                                        {t(`tag.${tag}`, language)}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        ) : '-'}
-                                    </td>
-                                    <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
-                                    <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
-                                    <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
-                                    <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {isSymbolSlotMode
+                                ? Array.from({ length: SYMBOL_SLOT_MAX - SYMBOL_SLOT_MIN + 1 }, (_, i) => i + SYMBOL_SLOT_MIN).map(slotId => {
+                                    const s = SYMBOLS[slotId];
+                                    if (!s) {
+                                        return (
+                                            <tr key={slotId} className="databrowser-row" style={{ opacity: 0.4 }}>
+                                                <td className="databrowser-cell--id">{slotId}</td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                        );
+                                    }
+                                    return (
+                                        <tr key={s.id} className="databrowser-row">
+                                            <td className="databrowser-cell--id">{s.id}</td>
+                                            <td className="databrowser-cell--name">{t(`symbol.${s.id}.name`, language)}</td>
+                                            <td>
+                                                <span
+                                                    style={{
+                                                        color: getSymbolColorHex(s.era),
+                                                        fontWeight: 'bold',
+                                                        fontSize: '15px',
+                                                        letterSpacing: '1px',
+                                                        textShadow: `0 0 6px ${getSymbolColorHex(s.era)}80`
+                                                    }}
+                                                >
+                                                    [{t(`era.${ERA_KEYS[s.era]}`, language)}]
+                                                </span>
+                                            </td>
+                                            <td className="databrowser-cell--type">
+                                                {s.symbol_type === SymbolType.FRIENDLY && '🟢'}
+                                                {s.symbol_type === SymbolType.ENEMY && '🔴'}
+                                                {s.symbol_type === SymbolType.COMBAT && '⚔️'}
+                                                {' '}{t(`dataBrowser.${s.symbol_type === SymbolType.FRIENDLY ? 'friendly' : s.symbol_type === SymbolType.ENEMY ? 'enemy' : 'combat'}`, language)}
+                                            </td>
+                                            <td className="databrowser-cell--tags">
+                                                {s.tags?.length ? (
+                                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                        {s.tags.map(tag => (
+                                                            <span key={tag} style={{ background: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                                                                {t(`tag.${tag}`, language)}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : '-'}
+                                            </td>
+                                            <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
+                                            <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
+                                            <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
+                                            <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
+                                            <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                                : filteredSymbols.map(s => (
+                                    <tr key={s.id} className="databrowser-row">
+                                        <td className="databrowser-cell--id">{s.id}</td>
+                                        <td className="databrowser-cell--name">{t(`symbol.${s.id}.name`, language)}</td>
+                                        <td>
+                                            <span
+                                                style={{
+                                                    color: getSymbolColorHex(s.era),
+                                                    fontWeight: 'bold',
+                                                    fontSize: '15px',
+                                                    letterSpacing: '1px',
+                                                    textShadow: `0 0 6px ${getSymbolColorHex(s.era)}80`
+                                                }}
+                                            >
+                                                [{t(`era.${ERA_KEYS[s.era]}`, language)}]
+                                            </span>
+                                        </td>
+                                        <td className="databrowser-cell--type">
+                                            {s.symbol_type === SymbolType.FRIENDLY && '🟢'}
+                                            {s.symbol_type === SymbolType.ENEMY && '🔴'}
+                                            {s.symbol_type === SymbolType.COMBAT && '⚔️'}
+                                            {' '}{t(`dataBrowser.${s.symbol_type === SymbolType.FRIENDLY ? 'friendly' : s.symbol_type === SymbolType.ENEMY ? 'enemy' : 'combat'}`, language)}
+                                        </td>
+                                        <td className="databrowser-cell--tags">
+                                            {s.tags?.length ? (
+                                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                    {s.tags.map(tag => (
+                                                        <span key={tag} style={{ background: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                                                            {t(`tag.${tag}`, language)}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
+                                        <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
+                                        <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
+                                        <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
+                                        <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                        </td>
+                                    </tr>
+                                ))
+                            }
                         </tbody>
                     </table>
                 )}
