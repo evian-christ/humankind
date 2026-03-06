@@ -7,6 +7,7 @@ import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
 import UpgradeSelection from './components/UpgradeSelection';
+import DestroySelection from './components/DestroySelection';
 
 import PauseMenu from './components/PauseMenu';
 import RelicBar from './components/RelicBar';
@@ -50,6 +51,9 @@ function App() {
 
       {/* ===== RELIC SELECTION OVERLAY ===== */}
       <RelicSelection />
+
+      {/* ===== DESTROY SYMBOLS OVERLAY ===== */}
+      <DestroySelection />
 
       {/* ===== GAME OVER OVERLAY ===== */}
       {phase === 'game_over' && (

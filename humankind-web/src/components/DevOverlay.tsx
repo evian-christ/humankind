@@ -70,7 +70,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat } = useGameStore();
+    const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
 
@@ -123,6 +123,76 @@ const DevOverlay = () => {
                         fontSize: '14px',
                     }}
                 >X</button>
+            </div>
+
+            {/* Open Screen */}
+            <div style={{
+                padding: '10px 14px',
+                borderBottom: '1px solid #333',
+            }}>
+                <div style={{ color: '#888', fontSize: '11px', marginBottom: '8px', letterSpacing: '1px' }}>OPEN SCREEN</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                        onClick={() => devForceScreen('symbol')}
+                        style={{
+                            flex: '1',
+                            background: '#1d4ed8',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '7px 4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '3px',
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>🃏</span>
+                        <span>심볼 선택</span>
+                    </button>
+                    <button
+                        onClick={() => devForceScreen('relic')}
+                        style={{
+                            flex: '1',
+                            background: '#7c3aed',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '7px 4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '3px',
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>🏺</span>
+                        <span>유물 선택</span>
+                    </button>
+                    <button
+                        onClick={() => devForceScreen('upgrade')}
+                        style={{
+                            flex: '1',
+                            background: '#065f46',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '7px 4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '3px',
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>📚</span>
+                        <span>지식 업그레이드</span>
+                    </button>
+                </div>
             </div>
 
             {/* Stats */}
