@@ -269,7 +269,8 @@ export const processSingleSymbolEffects = (
                         contributors.push(pos);
                     }
                 });
-                knowledge += adjCount * 10;
+                const multiplier = upgrades.includes(208) ? 20 : 10;
+                knowledge += adjCount * multiplier;
             }
             break;
         }
@@ -408,8 +409,34 @@ export const processSingleSymbolEffects = (
             break;
         }
 
+        case 24: { // Crab: +30 Food if adjacent to Sea.
+            let adjacentSea = false;
+            adj.forEach(pos => {
+                const t = boardGrid[pos.x][pos.y];
+                if (t && t.definition.id === 6) {
+                    adjacentSea = true;
+                    contributors.push(pos);
+                }
+            });
+            if (adjacentSea) food += 30;
+            break;
+        }
+
         case 25: { // Library: +5 Knowledge
-            knowledge += 50;
+            knowledge += 5;
+            break;
+        }
+
+        case 26: { // Pearl: +50 Gold if adjacent to Sea.
+            let adjacentSea = false;
+            adj.forEach(pos => {
+                const t = boardGrid[pos.x][pos.y];
+                if (t && t.definition.id === 6) {
+                    adjacentSea = true;
+                    contributors.push(pos);
+                }
+            });
+            if (adjacentSea) gold += 50;
             break;
         }
 
@@ -540,29 +567,12 @@ export const processSingleSymbolEffects = (
         food *= 2;
     }
 
-    // ── Knowledge Upgrade Candidates ──
-    // Candidate 203: Construction (+20 Gold for Stone and Quarry)
-    if (upgrades.includes(203) && (id === 7 || id === 15)) {
-        gold += 20;
-    }
+    // Candidate 203: Masonry (Monument Knowledge x2) -> No, 203 is Spearcraft mapping now.
+    // Wait, the previous logic had 203 Masonry. Let's completely replace the Candidate effects logic!
 
-    // Candidate 204: Philosophy (Library double Knowledge)
-    if (upgrades.includes(204) && id === 25) {
-        knowledge += 5; // Base is 5, making it 10
-    }
-
-    // Candidate 206: Mining (+30 Gold for Copper)
-    if (upgrades.includes(206) && id === 8) {
-        gold += 30; // Wait, Copper is base 20 Gold, +30 makes it 50? Description says +30 additional Gold.
-    }
-
-    // Candidate 207: Pottery (+5 Food for base food producers)
-    if (upgrades.includes(207) && [1, 2, 4, 5, 9, 14].includes(id)) {
-        food += 5;
-    }
-
-    // Candidate 209: Drama and Poetry (+15 Gold for Monument)
-    if (upgrades.includes(209) && id === 10) {
+    // Candidate 207: Jewelry (Stone produces -5 Food but +15 Gold)
+    if (upgrades.includes(207) && id === 7) {
+        food -= 5;
         gold += 15;
     }
 
