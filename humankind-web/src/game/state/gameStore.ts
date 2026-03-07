@@ -169,10 +169,8 @@ const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter
 
 const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => {
     let finalDef = def;
-    // Relic ID 8 (십계명 석판): Replaces 'Stone' (ID 7) with 'Stone Tablet' (ID 39)
-    if (def.id === 7 && useRelicStore.getState().relics.some(r => r.definition.id === 8)) {
-        finalDef = SYMBOLS[39] || def;
-    }
+    // Relic ID 8 (십계명 석판): Adds 1 'Stone Tablet' (ID 39) to collection on acquire.
+    // (No longer replaces Stone in createInstance)
 
     const inst: PlayerSymbolInstance = {
         definition: finalDef,
@@ -211,10 +209,10 @@ const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], play
 };
 
 /** 선택 풀에서 제외할 심볼 */
-const EXCLUDED_FROM_CHOICES = new Set<number>([22, 23, 25, 36, 39]);
+const EXCLUDED_FROM_CHOICES = new Set<number>([22, 23, 24, 25, 26, 36, 39, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
 /** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
 const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
-    8: [7, 39] // 십계명 석판: 돌(7) -> 석판(39)
+    // 8: [7, 39] // (Disabled: Now adds Tablet as additional symbol)
 };
 
 /** 심볼을 시대별로 그룹화 (적 심볼은 이벤트로만 등장하므로 선택 풀에서 제외) */
@@ -243,7 +241,23 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         if (sym.id === 36 && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
         if (sym.id === 22 && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === 23 && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
+        if ((sym.id === 24 || sym.id === 26) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion
+
+        // 패키지 업그레이드 해금 및 금지(Ban)
+        if (sym.id === 51 && upgrades.includes(201)) isUnlocked = true; // Hunting -> Bear
+        if (sym.id === 52 && upgrades.includes(202)) isUnlocked = true; // Metallurgy -> Bronze
+        if (sym.id === 53 && upgrades.includes(203)) isUnlocked = true; // Spearcraft -> Spearman
+        if (sym.id === 54 && upgrades.includes(204)) isUnlocked = true; // Shipbuilding -> Boat
+        if (sym.id === 55 && upgrades.includes(205)) isUnlocked = true; // Shamanism -> Shaman
+        if (sym.id === 56 && upgrades.includes(206)) isUnlocked = true; // Weaving -> Loom
+        if (sym.id === 57 && upgrades.includes(207)) isUnlocked = true; // Jewelry -> Gem
+        if (sym.id === 58 && upgrades.includes(208)) isUnlocked = true; // Epic Tales -> Storyteller
+        if (sym.id === 59 && upgrades.includes(209)) isUnlocked = true; // Trade -> Market
+
+        // 금지(Ban) 목록
+        if (sym.id === 4 && upgrades.includes(201)) isUnlocked = false; // Hunting -> Ban Banana
+        if (sym.id === 35 && upgrades.includes(203)) isUnlocked = false; // Spearcraft -> Ban Warrior
 
         if (!isUnlocked && !isReplacementTarget) continue;
 
@@ -443,36 +457,26 @@ export const useGameStore = create<GameState>((set, get) => ({
     startProcessing: () => {
         const state = get();
         const upgrades = state.unlockedKnowledgeUpgrades || [];
-        const baseKnowledge = 0; // Handled in selectUpgrade via bonusXpPerTurn
+        const baseKnowledge = upgrades.includes(1) ? 4 : 2;
         const baseGold = upgrades.includes(6) ? 2 : 0; // Currency: +2 base gold
 
         let startFood = 0;
         let startGold = baseGold;
 
-        // Candidate 205: Code of Laws (+10 Food & Gold per empty slot)
-        if (upgrades.includes(205)) {
-            let emptyCount = 0;
-            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-                for (let by = 0; by < BOARD_HEIGHT; by++) {
-                    if (!state.board[bx][by]) emptyCount++;
-                }
-            }
-            startFood += emptyCount * 10;
-            startGold += emptyCount * 10;
-        }
-
-        // Candidate 201: Iron Working (+10 Gold per combat unit)
-        if (upgrades.includes(201)) {
-            let combatCount = 0;
+        // 206 Weaving (+10 Gold if you have Farm or Pasture)
+        if (upgrades.includes(206)) {
+            let hasTextileSource = false;
             for (let bx = 0; bx < BOARD_WIDTH; bx++) {
                 for (let by = 0; by < BOARD_HEIGHT; by++) {
                     const sym = state.board[bx][by];
-                    if (sym?.definition.symbol_type === SymbolType.COMBAT) {
-                        combatCount++;
+                    if (sym?.definition.id === 14 || sym?.definition.id === 9) {
+                        hasTextileSource = true;
+                        break;
                     }
                 }
+                if (hasTextileSource) break;
             }
-            startGold += combatCount * 10;
+            if (hasTextileSource) startGold += 10;
         }
 
         set({ phase: 'processing', runningTotals: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
@@ -486,10 +490,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         }
 
-        let totalFood = 0;
+        let totalFood = startFood;
         const upgradesFinish = get().unlockedKnowledgeUpgrades || [];
         const baseKnowledgeFinish = upgradesFinish.includes(1) ? 4 : 2;
-        const baseGoldFinish = upgradesFinish.includes(6) ? 20 : 0;
+        const baseGoldFinish = startGold;
         let totalKnowledge = baseKnowledgeFinish + get().bonusXpPerTurn;
         let totalGold = baseGoldFinish;
         let pRelicSelection = get().pendingRelicSelection;
@@ -1049,19 +1053,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             // ID 3: 우르의 전차 바퀴 - 카운터는 relicStore에서 관리
 
-            // ID 8: 십계명 석판 - 돌 → 석판 대체
+            // ID 8: 십계명 석판 - 석판(39) 심볼 하나 추가
             if (relicId === RELIC_ID.TEN_COMMANDMENTS) {
                 const tabletDef = SYMBOLS[39];
                 if (tabletDef) {
-                    const newBoard = state.board.map(row =>
-                        row.map(cell =>
-                            (cell && cell.definition.id === 7) ? { ...cell, definition: tabletDef } : cell
-                        )
-                    );
-                    const newPlayerSymbols = state.playerSymbols.map(sym =>
-                        sym.definition.id === 7 ? { ...sym, definition: tabletDef } : sym
-                    );
-                    set({ board: newBoard, playerSymbols: newPlayerSymbols });
+                    set({ playerSymbols: [...state.playerSymbols, createInstance(tabletDef)] });
                 }
             }
 
@@ -1094,8 +1090,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         const upgrade = KNOWLEDGE_UPGRADES[upgradeId] || KNOWLEDGE_UPGRADE_CANDIDATES[upgradeId];
         if (!upgrade) return;
 
-        // ID 210: 희생 제의 -> 파괴 선택 모드로 전환
-        if (upgradeId === 210) {
+        // ID 8: 희생 제의 -> 파괴 선택 모드로 전환
+        if (upgradeId === 8) {
             set({
                 unlockedKnowledgeUpgrades: [...(state.unlockedKnowledgeUpgrades || []), upgradeId],
                 phase: 'destroy_selection',
@@ -1113,8 +1109,70 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         let bonusXpDelta = 0;
         if (upgradeId === 1) bonusXpDelta = 2; // Writing System: +2 base Knowledge
-        if (upgradeId === 202) bonusXpDelta = 3; // Mathematics: +3 base Knowledge
-        if (upgradeId === 208) bonusXpDelta = 1; // Astrology: +1 base Knowledge
+
+        let newBoard = [...state.board.map(row => [...row])];
+        let newPlayerSymbols = [...state.playerSymbols];
+        let addedKnowledge = 0;
+        let addedGold = 0;
+
+        // 201 Hunting: Destroy 1 Banana(4) for +100 Gold
+        if (upgradeId === 201) {
+            const idx = newPlayerSymbols.findIndex(s => s.definition.id === 4);
+            if (idx !== -1) {
+                newPlayerSymbols.splice(idx, 1);
+                addedGold += 100;
+            }
+        }
+
+        // 202 Metallurgy: All Copper(8) -> Bronze(52)
+        if (upgradeId === 202) {
+            newPlayerSymbols = newPlayerSymbols.map(s =>
+                s.definition.id === 8 ? { ...s, definition: SYMBOLS[52] } : s
+            );
+        }
+
+        // 204 Shipbuilding: All Oasis(11) -> Sea(6)
+        if (upgradeId === 204) {
+            newPlayerSymbols = newPlayerSymbols.map(s =>
+                s.definition.id === 11 ? { ...s, definition: SYMBOLS[6] } : s
+            );
+        }
+
+        // 205 Shamanism: Destroy 1 Omen(18) for +50 Knowledge
+        if (upgradeId === 205) {
+            const idx = newPlayerSymbols.findIndex(s => s.definition.id === 18);
+            if (idx !== -1) {
+                newPlayerSymbols.splice(idx, 1);
+                addedKnowledge += 50;
+            }
+        }
+
+        // 209 Trade: Up to 2 Wheat(1) -> Gem(57)
+        if (upgradeId === 209) {
+            let replaced = 0;
+            for (let i = 0; i < newPlayerSymbols.length; i++) {
+                if (newPlayerSymbols[i].definition.id === 1) {
+                    newPlayerSymbols[i] = { ...newPlayerSymbols[i], definition: SYMBOLS[57] };
+                    replaced++;
+                    if (replaced === 2) break;
+                }
+            }
+        }
+
+        // newPlayerSymbols에 맞춰 newBoard 갱신
+        for (let y = 0; y < state.board.length; y++) {
+            for (let x = 0; x < state.board[y].length; x++) {
+                const cell = state.board[y][x];
+                if (cell) {
+                    const match = newPlayerSymbols.find(s => s.instanceId === cell.instanceId);
+                    if (match) {
+                        newBoard[y][x] = match;
+                    } else {
+                        newBoard[y][x] = null;
+                    }
+                }
+            }
+        }
 
         set({
             unlockedKnowledgeUpgrades: newUnlocked,
@@ -1122,6 +1180,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             religionUnlocked: religionUnlocked,
             upgradeChoices: [],
             pendingLevelUpSelection: false,
+            board: newBoard,
+            playerSymbols: newPlayerSymbols,
+            knowledge: state.knowledge + addedKnowledge,
+            gold: state.gold + addedGold,
             phase: 'selection' as GamePhase,
         });
     },
