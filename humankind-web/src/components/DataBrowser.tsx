@@ -22,7 +22,7 @@ const ERA_KEYS: Record<number, string> = {
     [Era.MODERN]: 'modern',
 };
 
-const EXCLUDED_FROM_BASE_POOL = new Set<number>([22, 23, 25, 36, 39]);
+const EXCLUDED_FROM_BASE_POOL = new Set<number>([22, 23, 24, 25, 26, 36, 39, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
 const isBasePool = (s: SymbolDefinition) => {
     return s.era === Era.ANCIENT &&
         s.symbol_type !== SymbolType.ENEMY &&
