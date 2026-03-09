@@ -75,7 +75,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     8: {
         id: 8,
         name: "십계명 석판",
-        description: "'돌' 심볼을 '석판' 심볼로 대체합니다.",
+        description: "'석판' 심볼을 심볼 풀에 추가합니다.",
         cost: 500,
         era: Era.ANCIENT,
         sprite: "008.png",

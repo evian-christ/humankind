@@ -1,4 +1,6 @@
 import * as PIXI from 'pixi.js';
+import { SYMBOLS } from '../../game/data/symbolDefinitions';
+import { RELICS } from '../../game/data/relicDefinitions';
 
 let assetsLoaded = false;
 
@@ -6,13 +8,19 @@ export const loadGameAssets = async () => {
     if (assetsLoaded) return;
 
     try {
-        const availableSymbols = ['001', '002', '003', '004', '005', '006', '007', '008', '009', '010', '011', '012', '013', '014', '015', '016', '017', '018', '019', '020', '021', '031', '032', '033', '034', '036', '037', '038', '039'];
-        const symbolPaths = availableSymbols.map(id => `./assets/symbols/${id}.png`);
+        const symbolPaths = Object.values(SYMBOLS)
+            .filter(s => s.sprite && s.sprite !== '-' && s.sprite !== '-.png')
+            .map(s => `/assets/symbols/${s.sprite}`);
+        const relicPaths = Object.values(RELICS)
+            .filter(r => r.sprite && r.sprite !== '-' && r.sprite !== '-.png')
+            .map(r => `/assets/relics/${r.sprite}`);
+
         await PIXI.Assets.load([
-            './assets/ui/slot_bg.png',
-            './assets/ui/buttons/menu0.png',
-            './assets/ui/buttons/menu1.png',
-            ...symbolPaths
+            '/assets/ui/slot_bg.png',
+            '/assets/ui/buttons/menu0.png',
+            '/assets/ui/buttons/menu1.png',
+            ...symbolPaths,
+            ...relicPaths,
         ]);
         assetsLoaded = true;
     } catch (error) {

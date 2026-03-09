@@ -21,7 +21,7 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
     const symDesc = t(`symbol.${symbol.id}.desc`, language);
 
     return (
-        <button className="selection-card" onClick={onClick} style={{ '--card-glow': `${eraColor}cc`, background: 'url("./assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px' } as React.CSSProperties}>
+        <button className="selection-card" onClick={onClick} style={{ '--card-glow': `${eraColor}cc`, background: 'url("/assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px' } as React.CSSProperties}>
             {/* 시대 — 스프라이트 위 */}
             <div className="selection-card-rarity" style={{
                 color: eraColor,
@@ -38,9 +38,9 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
             </div>
 
             {/* 스프라이트 */}
-            {symbol.sprite ? (
+            {symbol.sprite && symbol.sprite !== '-' && symbol.sprite !== '-.png' ? (
                 <img
-                    src={`./assets/symbols/${symbol.sprite}`}
+                    src={`/assets/symbols/${symbol.sprite}`}
                     alt={symName}
                     className="selection-card-sprite"
                     style={{ imageRendering: 'pixelated' }}

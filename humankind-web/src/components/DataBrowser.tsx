@@ -732,9 +732,9 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
                                     <td className="databrowser-cell--desc">{t(`relic.${r.id}.desc`, language)}</td>
                                     <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        {r.sprite ? (
+                                        {r.sprite && r.sprite !== '-' && r.sprite !== '-.png' ? (
                                             <>
-                                                <img src={`./assets/relics/${r.sprite}`} alt={t(`relic.${r.id}.name`, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'contain' }} />
+                                                <img src={`/assets/relics/${r.sprite}`} alt={t(`relic.${r.id}.name`, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'contain' }} />
                                                 <span style={{ fontSize: '11px', color: '#888' }}>{r.sprite}</span>
                                             </>
                                         ) : '-'}

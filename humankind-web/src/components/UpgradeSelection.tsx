@@ -5,8 +5,8 @@ import { EffectText } from './EffectText';
 
 /** upgrades/ 폴더의 스프라이트를 불러옵니다. sprite가 없으면 000.png 사용 */
 const resolveUpgradeSprite = (sprite: string | undefined): string => {
-    if (sprite) return `./assets/upgrades/${sprite}`;
-    return './assets/upgrades/000.png';
+    if (sprite && sprite !== '-' && sprite !== '-.png') return `/assets/upgrades/${sprite}`;
+    return '/assets/upgrades/000.png';
 };
 
 const CARD_W = 364;
@@ -30,7 +30,7 @@ const UpgradeCard = ({
             className="upgrade-card"
             onClick={onClick}
             style={{
-                background: `url("./assets/ui/upgradeCard_312x570.png") no-repeat center / ${CARD_W}px ${CARD_H}px`,
+                background: `url("/assets/ui/upgradeCard_312x570.png") no-repeat center / ${CARD_W}px ${CARD_H}px`,
                 width: `${CARD_W}px`,
                 height: `${CARD_H}px`,
             } as React.CSSProperties}

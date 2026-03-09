@@ -50,8 +50,8 @@ const DestroySelection = () => {
                                 transition: 'all 0.1s ease', position: 'relative'
                             }} onClick={() => toggleSymbol(sym.instanceId)}>
                                 {/* render sprite */}
-                                {sym.definition.sprite ? (
-                                    <img src={`./assets/symbols/${sym.definition.sprite}`} alt={t(`symbol.${sym.definition.id}.name`, language)} style={{ width: '48px', height: '48px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                                {sym.definition.sprite && sym.definition.sprite !== '-' && sym.definition.sprite !== '-.png' ? (
+                                    <img src={`/assets/symbols/${sym.definition.sprite}`} alt={t(`symbol.${sym.definition.id}.name`, language)} style={{ width: '48px', height: '48px', objectFit: 'contain', imageRendering: 'pixelated' }} />
                                 ) : (
                                     <span style={{ fontSize: '24px', opacity: 0.5 }}>?</span>
                                 )}

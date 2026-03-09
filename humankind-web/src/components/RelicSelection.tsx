@@ -13,105 +13,100 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [Era.MODERN]: 'era.modern',
 };
 
-const RelicCard = ({ relic, onBuy, language }: { relic: RelicDefinition; onBuy: () => void; language: Language }) => {
-    const eraColor = getSymbolColorHex(relic.era);
-    const eraName = t(ERA_NAME_KEYS[relic.era] ?? 'era.ancient', language);
-    const relicName = t(`relic.${relic.id}.name`, language);
-    const relicDesc = t(`relic.${relic.id}.desc`, language);
-
-    return (
-        <div className="relic-card-wrapper">
-            {/* 카드 본체 — 원래 크기 유지, 내용만 축소 */}
-            <div
-                className="relic-card"
-                style={{
-                    '--card-glow': `${eraColor}cc`,
-                    background: 'url("./assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px',
-                } as React.CSSProperties}
-            >
-                <div className="relic-card-inner">
-                    {/* 시대 — 스프라이트 위 */}
-                    <div className="relic-card-era" style={{ color: eraColor, textShadow: `0 0 8px ${eraColor}88` }}>
-                        {eraName}
-                    </div>
-
-                    {/* 스프라이트 (좌하단 유물바 스타일의 테두리 박스) */}
-                    <div className="relic-card-sprite-wrapper">
-                        {relic.sprite ? (
-                            <img
-                                src={`./assets/relics/${relic.sprite}`}
-                                alt={relicName}
-                                className="relic-card-sprite"
-                            />
-                        ) : (
-                            <div className="relic-card-sprite-placeholder">🏺</div>
-                        )}
-                    </div>
-
-                    {/* 이름 */}
-                    <div className="relic-card-name">{relicName}</div>
-
-                    {/* 설명 */}
-                    <div className="relic-card-desc">
-                        {relicDesc.split('\n').map((line, i) => (
-                            <div key={i} className="relic-card-desc-line">
-                                <EffectText text={line} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* 구매 버튼 — 카드 밖 아래 */}
-            <button className="relic-card-buy-btn" onClick={onBuy}>
-                <span className="relic-card-buy-gold">&#9679;</span>
-                <span className="relic-card-buy-cost">{relic.cost}</span>
-            </button>
+// Helper function inside component to render effect text
+const renderRelicDesc = (desc: string) => {
+    return desc.split('\n').map((line, i) => (
+        <div key={i} className="relic-card-desc-line" style={{ color: '#e5e7eb', textShadow: '0 1px 3px #000' }}>
+            <EffectText text={line} />
         </div>
-    );
+    ));
 };
 
 const RelicSelection = () => {
-    const { phase, relicChoices, selectRelic, gold } = useGameStore();
+    const { isRelicShopOpen, toggleRelicShop, relicChoices, buyRelic, refreshRelicShop, gold, turn } = useGameStore();
     const language = useSettingsStore((s) => s.language);
-    const [isPeeked, setIsPeeked] = useState(false);
 
-    if (phase !== 'relic_selection') return null;
+    if (!isRelicShopOpen) return null;
 
     return (
-        <div
-            className={`selection-overlay selection-overlay--relic${isPeeked ? ' selection-overlay--peeked' : ''}`}
-        >
-            {/* Peek toggle handle */}
-            <button
-                className="selection-peek-handle"
-                onClick={() => setIsPeeked((v) => !v)}
-                title={isPeeked ? 'Show selection panel' : 'Peek at board'}
-            >
-                {isPeeked ? '▲ 돌아오기' : '▼ 보드 보기'}
-            </button>
+        <div className="selection-overlay selection-overlay--relic">
+            <button className="relic-shop-close-btn" onClick={toggleRelicShop}>×</button>
 
             <div className="selection-panel-wrapper" style={{ position: 'relative' }}>
-                {/* 신비한 보라색 배경 펄스 */}
-                <div className="relic-bg-glow" />
                 <div className="selection-panel" style={{ position: 'relative', zIndex: 1 }}>
-                    <div className="selection-title" style={{ marginBottom: '8px' }}>{t('game.chooseRelic', language)}</div>
-
-                    {/* 보유 골드 표시 */}
-                    <div className="relic-selection-gold">
-                        <span className="relic-selection-gold-icon">&#9679;</span>
-                        <span className="relic-selection-gold-val">{gold}</span>
+                    <div className="selection-title" style={{ marginBottom: '40px' }}>
+                        {t('game.chooseRelic', language)} <span style={{ fontSize: '18px', color: '#999' }}>(상점)</span>
                     </div>
 
-                    <div className="relic-cards">
-                        {relicChoices.map((relic, i) => (
-                            <RelicCard
-                                key={`${relic.id}-${i}`}
-                                relic={relic}
-                                language={language}
-                                onBuy={() => selectRelic(relic.id)}
-                            />
-                        ))}
+                    {/* 골드 표시 및 새로고침 */}
+                    <div className="relic-shop-action-bar">
+                        <div className="relic-selection-gold">
+                            <span className="relic-selection-gold-icon">&#9679;</span>
+                            <span className="relic-selection-gold-val">{gold}</span>
+                        </div>
+                        <button
+                            className={`relic-shop-refresh-btn ${gold < 50 ? 'disabled' : ''}`}
+                            onClick={() => refreshRelicShop(false)}
+                            disabled={gold < 50}
+                        >
+                            <span className="refresh-icon">↺</span> 50G
+                        </button>
+                    </div>
+                    {(() => {
+                        const turnsUntilRefresh = 10 - (turn % 10);
+                        return (
+                            <div className="relic-shop-refresh-timer">
+                                {language === 'ko'
+                                    ? `새로운 유물 입고까지 ${turnsUntilRefresh}턴 남음`
+                                    : `${turnsUntilRefresh} turns until new relics arrive`}
+                            </div>
+                        );
+                    })()}
+
+                    <div className="relic-museum-wrapper">
+                        <div className="relic-museum-bg">
+                            {relicChoices.map((relic, i) => (
+                                <div className="relic-museum-slot" key={`slot-${i}`}>
+                                    <div className="relic-spotlight" />
+                                    {relic ? (
+                                        <div className="relic-sprite-in-case">
+                                            {relic.sprite && relic.sprite !== '-' && relic.sprite !== '-.png' ? (
+                                                <img src={`/assets/relics/${relic.sprite}`} alt={t(`relic.${relic.id}.name`, language)} />
+                                            ) : (
+                                                <div className="placeholder">🏺</div>
+                                            )}
+                                            <div className="relic-sprite-price">
+                                                <span style={{ color: '#f59e0b', fontSize: '20px' }}>&#9679;</span> {relic.cost}
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="relic-museum-info-row">
+                            {relicChoices.map((relic, i) => (
+                                <div className="relic-museum-info-slot" key={`info-${i}`}>
+                                    {relic ? (
+                                        <div className="relic-museum-details">
+                                            <div className="relic-card-era" style={{ color: getSymbolColorHex(relic.era), textShadow: `0 0 8px ${getSymbolColorHex(relic.era)}88` }}>
+                                                {t(ERA_NAME_KEYS[relic.era] ?? 'era.ancient', language)}
+                                            </div>
+                                            <div className="relic-card-name" style={{ color: '#fff', textShadow: '0 2px 4px #000, 0 0 10px rgba(0,0,0,0.8)' }}>
+                                                {t(`relic.${relic.id}.name`, language)}
+                                            </div>
+                                            <div className="relic-card-desc">
+                                                {renderRelicDesc(t(`relic.${relic.id}.desc`, language))}
+                                            </div>
+                                            <button className="relic-card-buy-btn" onClick={() => buyRelic(relic.id)}>
+                                                {language === 'ko' ? '구매' : 'Buy'}
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="relic-sold-out">품절</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

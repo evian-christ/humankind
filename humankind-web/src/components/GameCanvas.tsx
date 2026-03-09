@@ -3,9 +3,10 @@ import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { Era, getSymbolColorHex } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
-import type { HoveredSymbol } from './canvas/types';
+import type { HoveredSymbol, HoveredRelic } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
+import { useRelicStore } from '../game/state/relicStore';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [Era.SPECIAL]: 'era.special',
@@ -18,10 +19,15 @@ const GameCanvas = () => {
     const canvasRef = useRef<HTMLDivElement>(null);
     const appRef = useRef<PixiGameApp | null>(null);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredSymbol | null>(null);
+    const [hoveredRelic, setHoveredRelic] = useState<HoveredRelic | null>(null);
     const language = useSettingsStore((s) => s.language);
 
     const setHoveredSymbolStable = useCallback((val: HoveredSymbol | null) => {
         setHoveredSymbol(val);
+    }, []);
+
+    const setHoveredRelicStable = useCallback((val: HoveredRelic | null) => {
+        setHoveredRelic(val);
     }, []);
 
     // 1. Initialize PixiGameApp
@@ -29,7 +35,7 @@ const GameCanvas = () => {
         if (!canvasRef.current) return;
 
         let destroyed = false;
-        const app = new PixiGameApp(canvasRef.current, setHoveredSymbolStable);
+        const app = new PixiGameApp(canvasRef.current, setHoveredSymbolStable, setHoveredRelicStable);
         appRef.current = app;
 
         let resizeObserver: ResizeObserver;
@@ -82,10 +88,16 @@ const GameCanvas = () => {
                 appRef.current.renderBoard(useGameStore.getState(), settings);
             }
         });
+        const unsub3 = useRelicStore.subscribe(() => {
+            if (appRef.current) {
+                appRef.current.renderBoard(useGameStore.getState(), useSettingsStore.getState());
+            }
+        });
 
         return () => {
             unsub1();
             unsub2();
+            unsub3();
         };
     }, []);
 
@@ -104,15 +116,15 @@ const GameCanvas = () => {
     }, []);
 
     // 4. Tooltip positioning
-    const getTooltipStyle = (): React.CSSProperties => {
-        if (!hoveredSymbol) return { display: 'none' };
+    const getTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
+        if (!hoveredItem) return { display: 'none' };
         const tooltipW = 280;
         const tooltipH = 180;
         const margin = 12;
-        let left = hoveredSymbol.screenX + margin;
-        let top = hoveredSymbol.screenY;
+        let left = hoveredItem.screenX + margin;
+        let top = hoveredItem.screenY;
 
-        if (left + tooltipW > 1920) left = hoveredSymbol.screenX - tooltipW - margin;
+        if (left + tooltipW > 1920) left = hoveredItem.screenX - tooltipW - margin;
         if (top + tooltipH > 1080) top = 1080 - tooltipH - margin;
         if (top < 0) top = 0;
 
@@ -122,7 +134,7 @@ const GameCanvas = () => {
     return (
         <div ref={canvasRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
             {hoveredSymbol && (
-                <div className="symbol-tooltip" style={getTooltipStyle()}>
+                <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
                     <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.definition.id}.name`, language)}</div>
                     <div className="symbol-tooltip-rarity" style={{
                         color: getSymbolColorHex(hoveredSymbol.definition.era),
@@ -149,6 +161,31 @@ const GameCanvas = () => {
                     )}
                 </div>
             )}
+
+            {hoveredRelic && (() => {
+                const info = hoveredRelic.relicInfo;
+                const counterMax = (info.definition.id === 3 || info.definition.id === 9) ? 5 : 0;
+                return (
+                    <div className="symbol-tooltip" style={{ ...getTooltipStyle(hoveredRelic), display: 'flex', flexDirection: 'column' }}>
+                        <div className="symbol-tooltip-name" style={{ color: '#dcfce7' }}>{t(`relic.${info.definition.id}.name`, language)}</div>
+                        <div className="symbol-tooltip-desc">
+                            {t(`relic.${info.definition.id}.desc`, language).split('\n').map((line: string, i: number) => (
+                                <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
+                            ))}
+                        </div>
+                        {counterMax > 0 && (
+                            <div className="symbol-tooltip-effect" style={{ marginTop: '8px', color: '#f5bd56' }}>
+                                {info.effect_counter} / {counterMax}
+                            </div>
+                        )}
+                        {info.bonus_stacks > 0 && (
+                            <div className="symbol-tooltip-effect" style={{ marginTop: '8px', color: '#4ade80' }}>
+                                +{info.bonus_stacks} Bonus
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
         </div>
     );
 };

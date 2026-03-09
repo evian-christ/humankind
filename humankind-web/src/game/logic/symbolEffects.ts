@@ -13,6 +13,8 @@ export interface EffectResult {
     spawnOnBoard?: number[];
     /** 강제로 유물 선택 상점을 열어야 하는지 여부 */
     triggerRelicSelection?: boolean;
+    /** 유물 상점을 강제로 새로고침해야 하는지 여부 */
+    triggerRelicRefresh?: boolean;
     /** 이 심볼의 효과에 기여한 인접 심볼 좌표 */
     contributors?: { x: number; y: number }[];
 }
@@ -103,7 +105,7 @@ const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Se
 
 /** 심볼별 기본 식량 생산량 추정치 (Christianity 효과 계산용) -> x10 */
 const SYMBOL_BASE_FOOD: Record<number, number> = {
-    1: 20, 2: 20, 3: 10, 4: 30, 5: 10, 6: 10, 7: 10, 8: 0, 9: 20, 10: 0,
+    1: 0, 2: 0, 3: 10, 4: 30, 5: 10, 6: 10, 7: 10, 8: 0, 9: 20, 10: 0,
     11: 0, 12: 0, 13: 10, 14: 10, 15: 10, 16: 0, 17: -10, 18: 10, 19: 10, 20: 0,
     21: 0, 22: 0, 23: 10, 25: 0,
 };
@@ -138,6 +140,7 @@ export const processSingleSymbolEffects = (
     const addSymbolIds: number[] = [];
     const spawnOnBoard: number[] = [];
     let triggerRelicSelection = false;
+    let triggerRelicRefresh = false;
     const contributors: { x: number; y: number }[] = [];
 
     symbolInstance.effect_counter = (symbolInstance.effect_counter || 0);
@@ -146,39 +149,47 @@ export const processSingleSymbolEffects = (
     const upgrades = state.unlockedKnowledgeUpgrades || [];
 
     switch (id) {
-        case 1: { // Wheat
-            let mult = 1;
+        case 1: { // Wheat: Every 4 turns: +100 Food. Grassland adjacency: required turns -1
+            let hasGrassland = false;
             adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Farm
+                if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Grassland
+                    hasGrassland = true;
                     contributors.push(pos);
-                    mult = upgrades.includes(3) ? 3 : 2;
                 }
             });
-            food += 20 * mult;
-            break;
-        }
+            symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
+            if (hasGrassland) symbolInstance.effect_counter += 1; // speeds up by 1 turn
 
-        case 2: { // Rice: Every 4 spins: +100 Food
-            let mult = 1;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Farm
-                    contributors.push(pos);
-                    mult = upgrades.includes(3) ? 3 : 2;
-                }
-            });
-            symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 4) {
-                food += 100 * mult;
-                symbolInstance.effect_counter = 0;
+                food += 100;
+                symbolInstance.effect_counter -= 4;
             }
             break;
         }
 
-        case 3: { // Cattle: Every spin: +1 Food. +2 Food per adjacent Cattle
+        case 2: { // Rice: Every 8 turns: +200 Food. Grassland adjacency: required turns -2
+            let hasGrassland = false;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Grassland
+                    hasGrassland = true;
+                    contributors.push(pos);
+                }
+            });
+            symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
+            if (hasGrassland) symbolInstance.effect_counter += 2; // speeds up by 2 turns
+
+            if (symbolInstance.effect_counter >= 8) {
+                food += 200;
+                symbolInstance.effect_counter -= 8;
+            }
+            break;
+        }
+
+        case 3: { // Cattle: +10 Food. +20 Food if adjacent to Plains.
             food += 10;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id === 3) { food += 20; contributors.push(pos); }
+                if (t && t.definition.id === 14) { food += 20; contributors.push(pos); }
             });
             // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
             if (relicEffects.gobekliAnimalJackpot) {
@@ -221,19 +232,26 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 7: // Stone: Every spin: +1 Food, +1 Gold
+        case 7: { // Stone: +10 Food, +10 Gold. +30 Gold if adjacent to Mountain.
             food += 10;
             gold += 10;
-            break;
-
-        case 8: { // Copper: Every spin: +2 Gold. If exactly 3 Copper on board: ×3
-            const copperCount = countOnBoard(boardGrid, 8);
-            const multiplier = copperCount === 3 ? 3 : 1;
-            gold += 20 * multiplier;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 15) { gold += 30; contributors.push(pos); }
+            });
             break;
         }
 
-        case 9: // Granary: Every spin: +2 Food.
+        case 8: { // Copper: +20 Gold. If exactly 3 Copper on board: x3. +20 Gold if adjacent to Mountain.
+            const copperCount = countOnBoard(boardGrid, 8);
+            const multiplier = copperCount === 3 ? 3 : 1;
+            gold += 20 * multiplier;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 15) { gold += 20; contributors.push(pos); }
+            });
+            break;
+        }
+
+        case 9: // Grassland: Every spin: +20 Food.
             food += 20;
             break;
 
@@ -275,7 +293,7 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 13: { // Tropical Farm: Every spin: +10 Food. Adjacent Banana: Banana's destroy timer resets
+        case 13: { // Rainforest: Every spin: +10 Food. Adjacent Banana: Banana's destroy timer resets
             food += 10;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -291,20 +309,13 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 14: // Pasture: Every spin: +1 Food (+1 bonus with Horsemanship)
+        case 14: // Plains: Every spin: +10 Food (+10 bonus with Horsemanship)
             food += 10;
             if (relicEffects.horsemansihpPastureBonus) food += 10;
             break;
 
-        case 15: { // Quarry: Every spin: +1 Food. Adjacent Stone: +3 Gold. Adjacent Copper: +2 Gold
+        case 15: { // Mountain: +10 Food.
             food += 10;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t) {
-                    if (t.definition.id === 7) { gold += 30; contributors.push(pos); }
-                    if (t.definition.id === 8) { gold += 20; contributors.push(pos); }
-                }
-            });
             // ID 5: 이집트 구리 톱 - 인접 빈 슬롯마다 골드 +10
             if (relicEffects.quarryEmptyGold) {
                 adj.forEach(pos => {
@@ -440,6 +451,22 @@ export const processSingleSymbolEffects = (
             break;
         }
 
+        case 27: { // Desert: Destroys a random adjacent symbol.
+            const validTargets = adj.filter(pos => {
+                const target = boardGrid[pos.x][pos.y];
+                return target && !target.is_marked_for_destruction;
+            });
+            if (validTargets.length > 0) {
+                const randomTarget = validTargets[Math.floor(Math.random() * validTargets.length)];
+                const targetInstance = boardGrid[randomTarget.x][randomTarget.y];
+                if (targetInstance) {
+                    targetInstance.is_marked_for_destruction = true;
+                    contributors.push(randomTarget);
+                }
+            }
+            break;
+        }
+
         // ── Religion Doctrine Symbols ──
 
         case 31: { // Christianity: Food = highest adjacent food. Gold = 3× adjacent knowledge.
@@ -500,12 +527,9 @@ export const processSingleSymbolEffects = (
             }
             break;
 
-        case 37: // Glowing Amber: After 3 spins: destroyed and opens relic selection
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 3) {
-                symbolInstance.is_marked_for_destruction = true;
-                triggerRelicSelection = true;
-            }
+        case 37: // Camel Caravan: After 1 spin: refreshes relic shop and destroys self
+            symbolInstance.is_marked_for_destruction = true;
+            triggerRelicRefresh = true;
             break;
 
         case 38: { // Stargazer: Every spin: +3 Knowledge per empty slot on the board
@@ -517,10 +541,14 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 23: // Horse: Every spin: +10 Food, +10 Gold
+        case 23: { // Horse: +10 Food, +10 Gold. +20 Food if adjacent to Plains.
             food += 10;
             gold += 10;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 14) { food += 20; contributors.push(pos); }
+            });
             break;
+        }
     }
 
     // ── ID 103: 가나안의 번제물 - 빈 슬롯마다 식량 -10 ──
@@ -539,28 +567,7 @@ export const processSingleSymbolEffects = (
             food -= 500;
         }
     }
-
-    // ── Granary(9) 인접 버프: 인접 Wheat(1) 또는 Rice(2)가 있으면 해당 심볼 food 2배 ──
-    if (id === 1 || id === 2) {
-        adj.forEach(pos => {
-            if (boardGrid[pos.x][pos.y]?.definition.id === 9) {
-                contributors.push(pos);
-            }
-        });
-        if (contributors.length > 0) {
-            food *= 2;
-        }
-    }
-
-    // ── Pasture(14) 인접 버프: 인접 Cattle(3) 또는 Horse(23)가 있으면 +2 Food ──
-    if (id === 3 || id === 23) {
-        adj.forEach(pos => {
-            if (boardGrid[pos.x][pos.y]?.definition.id === 14) {
-                food += 20;
-                contributors.push(pos);
-            }
-        });
-    }
+    // Adjacency and double bonuses moved to individual symbol cases.
 
     // ── ID 120: 나일 강 비옥한 흑니 - 활성 중 식량 2배 ──
     if (relicEffects.nileFloodDoubleFood && food > 0) {
@@ -580,6 +587,7 @@ export const processSingleSymbolEffects = (
     if (addSymbolIds.length > 0) result.addSymbolIds = addSymbolIds;
     if (spawnOnBoard.length > 0) result.spawnOnBoard = spawnOnBoard;
     if (triggerRelicSelection) result.triggerRelicSelection = true;
+    if (triggerRelicRefresh) result.triggerRelicRefresh = true;
     if (contributors.length > 0) result.contributors = contributors;
     return result;
 };

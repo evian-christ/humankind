@@ -7,19 +7,18 @@ interface EffectTextProps {
 export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
     if (!text) return null;
 
-    // 1: Condition (matches start of sentence up to colon)
-    // 2 & 3: English Num + Stat (+20 Food)
-    // 4 & 5: Korean Stat + Num (식량 +20)
-    // 6: Standalone Stat (Food/Gold/Knowledge)
-    // 7: HP/ATK/체력/공격력 + Num  (e.g. "HP +10", "체력 +3")
-    // 8: Standalone Num
-    const regex = /((?:^|\.\s+)[^.]{2,40}?:)|([+-]?\d+)\s*(Food|Gold|Knowledge)|(식량|골드|지식)\s*([+-]?\d+)|(Food|Gold|Knowledge|식량|골드|지식)|(HP|ATK|체력|공격력)\s*([+-]?\d+)|([+-]?\d+)/gi;
+    // 검은색 테두리 (4방향 text-shadow for visibility on light backgrounds)
+    const outline = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+
+    // 1: Condition (matches text ending with colon, like "파괴 시:", "바다에 인접 시:" etc)
+    // 2: English Stat + Num (+20 Food)
+    // 3: Korean Stat + Num (식량 +20)
+    // 4: Standalone Stat (Food/Gold/Knowledge/식량/골드/지식)
+    // 5: Standalone number (positive/negative integer or float, or x2, x3)
+    const regex = /([^:.;]+:)|([+-]?\d+)\s*(Food|Gold|Knowledge)|(식량|골드|지식)\s*([+-]?\d+)|(Food|Gold|Knowledge|식량|골드|지식)|(?:[xX])(\d+)|([+-]?\d+)/gi;
 
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
-
-    // 검은색 테두리 (4방향 text-shadow for visibility on light backgrounds)
-    const outline = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
 
     let match;
     while ((match = regex.exec(text)) !== null) {
@@ -33,21 +32,15 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
             enNum, enStat,
             koStat, koNum,
             standaloneStat,
-            hpAtkStat, hpAtkNum,
+            multiplierNum,
             standaloneNum
         ] = match;
 
         if (condition) {
-            let prefix = "";
-            let core = condition;
-            if (core.startsWith(". ")) {
-                prefix = ". ";
-                core = core.slice(2);
-            }
-            if (prefix) parts.push(prefix);
+            // 조건문 (Condition): 기존 갈색 계열 컬러 사용
             parts.push(
                 <span key={`cond-${match.index}`} style={{ color: '#8b7355', fontWeight: 'bold' }}>
-                    {core}
+                    {condition}
                 </span>
             );
         } else if (enStat || koStat || standaloneStat) {
@@ -65,13 +58,13 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
             if (enStat) {
                 parts.push(
                     <span key={`en-${match.index}`} style={{ color, fontWeight: 'bold', textShadow: outline }}>
-                        {enNum} {icon}
+                        {enNum}{icon}
                     </span>
                 );
             } else if (koStat) {
                 parts.push(
                     <span key={`ko-${match.index}`} style={{ color, fontWeight: 'bold', textShadow: outline }}>
-                        {icon} {koNum}
+                        {icon}{koNum}
                     </span>
                 );
             } else if (standaloneStat) {
@@ -81,18 +74,17 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
                     </span>
                 );
             }
-        } else if (hpAtkStat) {
-            // HP / ATK / 체력 / 공격력: 키워드는 원래 색 유지, 숫자만 진한 회색으로 강조
-            parts.push(hpAtkStat);
-            parts.push(' ');
+        } else if (multiplierNum) {
+            // 배율 표시 (예: x2, x3) -> 연회색 + 검정 테두리
             parts.push(
-                <span key={`hpatk-${match.index}`} style={{ color: '#555555', fontWeight: 'bold' }}>
-                    {hpAtkNum}
+                <span key={`mul-${match.index}`} style={{ color: '#e5e7eb', fontWeight: 'bold', textShadow: outline }}>
+                    x{multiplierNum}
                 </span>
             );
         } else if (standaloneNum) {
+            // 일반 숫자 -> 연회색 + 검정 테두리
             parts.push(
-                <span key={`num-${match.index}`} style={{ color: '#555555', fontWeight: 'bold' }}>
+                <span key={`num-${match.index}`} style={{ color: '#e5e7eb', fontWeight: 'bold', textShadow: outline }}>
                     {standaloneNum}
                 </span>
             );

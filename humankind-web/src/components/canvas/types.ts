@@ -7,6 +7,12 @@ export interface HoveredSymbol {
     screenY: number;
 }
 
+export interface HoveredRelic {
+    relicInfo: any; // Type defined in gameStore/relicDefinitions but let's keep it loose here or import from relicDefinitions
+    screenX: number;
+    screenY: number;
+}
+
 export interface FloatingEffect {
     texts: PIXI.Text[];
     startY: number;

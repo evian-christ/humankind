@@ -27,8 +27,8 @@ const RelicBar = () => {
 
                 return (
                     <div key={`${relic.instanceId}-${i}`} className="relic-icon-wrapper">
-                        {relic.definition.sprite ? (
-                            <img src={`./assets/relics/${relic.definition.sprite}`} alt={relicName} />
+                        {relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png' ? (
+                            <img src={`/assets/relics/${relic.definition.sprite}`} alt={relicName} />
                         ) : (
                             <div className="relic-icon-wrapper-placeholder">🏺</div>
                         )}

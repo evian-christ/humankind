@@ -200,55 +200,53 @@ body {
   opacity: 1;
 }
 
-/* ===== RELIC BAR (bottom-left horizontal icons) ===== */
+/* ===== RELIC BAR (left of board, vertical) ===== */
 .relics-bar {
-  position: fixed;
-  bottom: 32px;
-  left: 32px;
-  right: 280px;
+  position: absolute;
+  top: 50%;
+  left: 6%;
+  transform: translate(-50%, -50%);
   z-index: 100;
   display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap-reverse;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
 }
 
 .relic-icon-wrapper {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 112px;
+  height: 112px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-radius: 8px;
+  border: none;
+  border-radius: 0;
   cursor: help;
   transition: all 0.15s ease;
 }
 
 .relic-icon-wrapper img {
-  width: 36px;
-  height: 36px;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
   image-rendering: pixelated;
 }
 
 .relic-icon-wrapper-placeholder {
-  font-size: 28px;
+  font-size: 56px;
   line-height: 1;
 }
 
 .relic-icon-wrapper:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
+  background: transparent;
+  border: none;
+  transform: scale(1.08);
 }
 
 .relic-icon-tooltip {
   position: absolute;
-  bottom: calc(100% + 12px);
-  left: 0;
   width: max-content;
   max-width: 300px;
   background: rgba(15, 15, 15, 0.95);
@@ -256,8 +254,6 @@ body {
   padding: 12px;
   border-radius: 6px;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
   z-index: 300;
   font-family: 'Mulmaru', sans-serif;
   display: flex;
@@ -265,9 +261,6 @@ body {
   gap: 6px;
 }
 
-.relic-icon-wrapper:hover .relic-icon-tooltip {
-  opacity: 1;
-}
 
 .relic-icon-tooltip-name {
   font-size: 18px;
@@ -294,12 +287,12 @@ body {
 /* 유물 진행도 바 */
 .relic-progress-bar {
   position: absolute;
-  bottom: -18px;
-  left: 0;
-  right: 0;
-  height: 6px;
+  bottom: -10px;
+  left: 8px;
+  right: 8px;
+  height: 8px;
   background: rgba(0, 0, 0, 0.6);
-  border-radius: 0 0 6px 6px;
+  border-radius: 4px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -315,8 +308,8 @@ body {
 .relic-progress-text {
   position: absolute;
   right: 2px;
-  bottom: -14px;
-  font-size: 9px;
+  bottom: -16px;
+  font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -527,7 +520,68 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+}
+
+.relic-shop-close-btn {
+  position: absolute;
+  top: 32px;
+  right: 32px;
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 48px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.2s;
+}
+
+.relic-shop-close-btn:hover {
+  color: white;
+  transform: rotate(90deg);
+}
+
+.relic-shop-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 80%;
+  max-width: 800px;
+  margin-bottom: 20px;
+}
+
+.relic-shop-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(30, 30, 30, 0.8);
+  border: 2px solid #555;
+  border-radius: 8px;
+  color: #eab308;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: 'Mulmaru', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.relic-shop-refresh-btn:hover:not(.disabled) {
+  background: rgba(50, 50, 50, 0.9);
+  border-color: #eab308;
+  transform: scale(1.05);
+}
+
+.relic-shop-refresh-btn.disabled {
+  color: #555;
+  border-color: #333;
+  cursor: not-allowed;
+}
+
+.refresh-icon {
+  font-size: 20px;
 }
 
 .selection-title {
@@ -670,151 +724,274 @@ body {
   color: #bbb;
 }
 
-/* ===== RELIC SELECTION CARDS ===== */
-.relic-cards {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
-
-/* 카드 + 구매 버튼을 세로로 묶는 래퍼 */
-.relic-card-wrapper {
+/* ===== RELIC MUSEUM SHOP ===== */
+.relic-museum-wrapper {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  width: 990px;
+  height: 720px;
 }
 
-.relic-card {
-  width: 400px;
-  height: 667px;
-  border-radius: 0;
+.relic-museum-bg {
   position: relative;
-  flex-shrink: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/assets/ui/relic_bg.png') no-repeat center center;
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+  /* Manually tuned so the left and right columns center exactly over the glass cases */
 }
 
-.relic-card-inner {
+.relic-museum-slot {
+  width: 275px;
+  height: 100%;
+  position: relative;
+}
+
+.relic-sprite-in-case {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 95px;
+  /* Moved slightly down to rest better on the miniature pedestal */
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 120px 60px 40px;
-  gap: 6px;
-  font-family: 'Mulmaru', sans-serif;
-  color: #1a1a1a;
-  overflow: hidden;
+  justify-content: center;
+  align-items: flex-end;
 }
 
-.relic-card-sprite-wrapper {
-  position: relative;
-  width: 76px;
-  height: 76px;
+/* Museum stage spotlight — narrow source at top, widening cone downward */
+.relic-spotlight {
+  position: absolute;
+  top: -500px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  height: 800px;
+  /* Cone: narrow at top (light source), wide at bottom (relic) */
+  clip-path: polygon(46% 0%, 54% 0%, 80% 100%, 20% 100%);
+  pointer-events: none;
+  z-index: 0;
+  overflow: visible;
+}
+
+/* Main volumetric beam */
+.relic-spotlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 240, 0.35) 0%,
+      rgba(255, 255, 230, 0.18) 25%,
+      rgba(255, 255, 220, 0.08) 55%,
+      rgba(255, 255, 210, 0.03) 80%,
+      transparent 100%);
+  filter: blur(18px);
+  mix-blend-mode: screen;
+}
+
+/* Soft outer haze for volumetric depth */
+.relic-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 240, 0.12) 0%,
+      rgba(255, 255, 230, 0.06) 30%,
+      rgba(255, 255, 220, 0.02) 60%,
+      transparent 100%);
+  filter: blur(35px);
+  mix-blend-mode: screen;
+}
+
+@keyframes floatRelicSprite {
+  0% {
+    transform: translateY(0);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0));
+  }
+
+  50% {
+    transform: translateY(-8px);
+    filter: drop-shadow(0 15px 15px rgba(0, 0, 0, 0.4));
+  }
+
+  100% {
+    transform: translateY(0);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0));
+  }
+}
+
+.relic-sprite-in-case img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  animation: floatRelicSprite 4s infinite ease-in-out;
+}
+
+.relic-sprite-in-case .placeholder {
+  font-size: 80px;
+  line-height: 1;
+  animation: floatRelicSprite 4s infinite ease-in-out;
+  transform-origin: center;
+}
+
+.relic-sprite-price {
+  position: absolute;
+  top: 130px;
+  /* Moved further down, away from sprite */
+  width: max-content;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
-  margin-bottom: 6px;
-  margin-top: 4px;
+  gap: 6px;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
-.relic-card-sprite-wrapper .relic-card-sprite {
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
-  image-rendering: pixelated;
+.relic-museum-info-row {
+  position: absolute;
+  bottom: 50px;
+  /* Moved text higher up onto the pedestals */
+  left: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  height: 310px;
+  /* Overlaps perfectly on top of the tall grey pedestal section */
+  padding: 15px 15px 0 15px;
+  /* Slightly wider spread for text */
 }
 
-.relic-card-sprite-wrapper .relic-card-sprite-placeholder {
-  font-size: 40px;
-  line-height: 1;
-  color: #aaa;
+.relic-museum-info-slot {
+  width: 275px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  /* Increased from 10px to avoid text overlapping the edges of the pedestal */
 }
 
-.relic-card-name {
-  font-size: 24px;
-  color: #1a1a1a;
-  letter-spacing: 0px;
+.relic-museum-details {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  font-weight: 400;
-  line-height: 1.2;
-  flex-shrink: 0;
-  margin-top: 4px;
-  margin-bottom: 8px;
+  gap: 4px;
 }
 
 .relic-card-era {
   font-size: 16px;
   font-weight: 900;
   letter-spacing: 2px;
-  flex-shrink: 0;
-  margin-bottom: 4px;
   display: inline-block;
   transform: scaleX(1.4);
   transform-origin: center;
+  -webkit-text-stroke: 0.5px rgba(200, 200, 200, 0.8);
+  /* Changed to light gray stroke, made thinner */
+  margin-top: -30px;
+  /* Moves era and name significantly up */
+}
+
+.relic-card-name {
+  font-size: 24px;
+  letter-spacing: 1px;
+  margin-top: 2px;
 }
 
 .relic-card-desc {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   text-align: center;
-  width: 100%;
-  overflow: hidden;
+  margin-top: 20px;
+  /* Was 8px. Moves this up moderately compared to the era/name which moved up 30px */
+  flex-grow: 1;
 }
 
 .relic-card-desc-line {
   font-size: 18px;
-  color: #1a1a1a;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
-/* 구매 버튼 — 카드 밖, 카드 아래 배치 */
+/* 구매 버튼 */
 .relic-card-buy-btn {
+  margin-top: auto;
+  margin-bottom: 25px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 32px;
-  background: rgba(15, 12, 4, 0.85);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #f59e0b;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 30px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.6);
   font-family: 'Mulmaru', sans-serif;
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 20px;
   letter-spacing: 2px;
   cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.18s ease;
-  backdrop-filter: blur(6px);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.relic-card-buy-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .relic-card-buy-btn:hover {
-  background: rgba(30, 22, 4, 0.9);
-  border-color: rgba(251, 191, 36, 0.7);
-  color: #fbbf24;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.relic-card-buy-btn:hover::before {
+  opacity: 1;
 }
 
 .relic-card-buy-gold {
-  font-size: 26px;
-  color: #fbbf24;
+  font-size: 28px;
   line-height: 1;
-  transform: translateY(1px);
-  /* 수직 중앙 정렬 보정 */
 }
 
 .relic-card-buy-cost {
-  font-size: 22px;
-  color: #fbbf24;
   letter-spacing: 1px;
-  font-weight: 900;
+}
+
+.relic-sold-out {
+  width: 90%;
+  padding: 60px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 24px;
+  font-family: 'Mulmaru', sans-serif;
+  box-sizing: border-box;
 }
 
 /* 유물 선택 보유 골드 표시 */
@@ -839,6 +1016,16 @@ body {
   color: #fbbf24;
   font-weight: 900;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.relic-shop-refresh-timer {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 18px;
+  color: #999;
+  text-align: center;
+  margin-top: -10px;
+  margin-bottom: 25px;
+  letter-spacing: 1px;
 }
 
 /* 신비한 보라색 배경 펄스 효과 (가로 선형 관통) */
@@ -1088,6 +1275,32 @@ body {
   background: rgba(60, 60, 60, 0.95);
   border-color: #888;
   color: #fff;
+}
+
+/* ===== RELIC SHOP BUTTON (bottom-left) ===== */
+.relic-shop-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 48px;
+  height: 48px;
+  background: rgba(30, 30, 30, 0.85);
+  border: 2px solid #555;
+  color: #ccc;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.relic-shop-btn:hover {
+  background: rgba(60, 60, 60, 0.95);
+  border-color: #888;
+  color: #fff;
+  transform: scale(1.05);
 }
 
 /* ===== PAUSE MENU OVERLAY ===== */

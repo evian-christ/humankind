@@ -6,7 +6,8 @@ import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
 import { getSymbolColor, Era, SymbolType } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
-import type { HoveredSymbol, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
+import { useRelicStore } from '../../game/state/relicStore';
+import type { HoveredSymbol, HoveredRelic, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
 import { loadGameAssets } from './AssetLoader';
 
 const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
@@ -35,6 +36,7 @@ export class PixiGameApp {
 
     // Callbacks
     private onHoverSymbol: (symbol: HoveredSymbol | null) => void;
+    private onHoverRelic: (relic: HoveredRelic | null) => void;
 
     // Refs equivalent state
     private floatingEffects: FloatingEffect[] = [];
@@ -51,10 +53,11 @@ export class PixiGameApp {
 
 
 
-    constructor(canvas: HTMLDivElement, onHoverSymbol: (symbol: HoveredSymbol | null) => void) {
+    constructor(canvas: HTMLDivElement, onHoverSymbol: (symbol: HoveredSymbol | null) => void, onHoverRelic: (relic: HoveredRelic | null) => void) {
         this.app = new PIXI.Application();
         this.canvas = canvas;
         this.onHoverSymbol = onHoverSymbol;
+        this.onHoverRelic = onHoverRelic;
         this.hitContainer.eventMode = 'static';
     }
 
@@ -275,6 +278,9 @@ export class PixiGameApp {
         this.hitContainer.removeChildren();
         this.bgContainer.removeChildren();
 
+        if (this.onHoverSymbol) this.onHoverSymbol(null);
+        if (this.onHoverRelic) this.onHoverRelic(null);
+
         if (!state.combatAnimation) {
             this.combatContainer.removeChildren();
             this.combatContainer.x = 0;
@@ -329,7 +335,7 @@ export class PixiGameApp {
         this.cellLayout = { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
 
         // Board bg sprite
-        const boardBg = PIXI.Sprite.from('./assets/ui/slot_bg.png');
+        const boardBg = PIXI.Sprite.from('/assets/ui/slot_bg.png');
         const spritePaddingX = 8 * scale;
         const spritePaddingY = 8 * scale;
         boardBg.x = startX - spritePaddingX;
@@ -375,8 +381,8 @@ export class PixiGameApp {
                     const group = new PIXI.Container();
                     group.x = colX;
                     group.y = yPos;
-                    if (def && def.sprite) {
-                        const spritePath = `./assets/symbols/${def.sprite}`;
+                    if (def && def.sprite && def.sprite !== '-' && def.sprite !== '-.png') {
+                        const spritePath = `/assets/symbols/${def.sprite}`;
                         const SPRITE_PX = 26;
                         const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
                         const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
@@ -448,8 +454,8 @@ export class PixiGameApp {
                 const innerW = cellWidth - 6;
                 const rarityColor = getSymbolColor(symDef.era);
 
-                if (symDef.sprite) {
-                    const spritePath = `./assets/symbols/${symDef.sprite}`;
+                if (symDef.sprite && symDef.sprite !== '-' && symDef.sprite !== '-.png') {
+                    const spritePath = `/assets/symbols/${symDef.sprite}`;
                     const SPRITE_PX = 26;
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
@@ -589,6 +595,103 @@ export class PixiGameApp {
 
         // UI bars (Knowledge, Food, Gold)
         this.renderUI(state, settings, scale, topRowCY, fs);
+        this.renderRelics(scale);
+    }
+
+    private renderRelics(scale: number) {
+        if (!this.cellLayout) return;
+        const relics = useRelicStore.getState().relics;
+        if (relics.length === 0) return;
+
+        const { startX, startY } = this.cellLayout;
+
+        const iconSize = 96 * scale;
+        const gapX = 16 * scale;
+        const gapY = 32 * scale;
+
+        // 한 줄에 들어갈 수 있는 최대 아이콘 수 계산 (양쪽 최소 여백 24px)
+        const minMargin = 24 * scale;
+        const maxRowWidth = startX - minMargin * 2;
+        const iconsPerRow = Math.max(1, Math.floor((maxRowWidth + gapX) / (iconSize + gapX)));
+
+        // 실제 한 줄의 폭 계산
+        const actualRowWidth = iconsPerRow * iconSize + (iconsPerRow - 1) * gapX;
+
+        // 왼쪽 가장자리와 보드 사이 공간의 정중앙에 배치
+        const startRelicX = (startX - actualRowWidth) / 2;
+        const availableWidth = actualRowWidth;
+
+        const startRelicY = startY + 12 * scale;
+        let curX = startRelicX;
+        let curY = startRelicY;
+
+        for (const relic of relics) {
+            // 이번 유물을 현재 줄에 그릴 공간이 없다면 줄바꿈 (단, 첫 열이 아닐 때만)
+            if (curX > startRelicX && curX + iconSize > startRelicX + availableWidth) {
+                curX = startRelicX;
+                curY += iconSize + gapY;
+            }
+
+            const hitArea = new PIXI.Graphics();
+            hitArea.rect(curX, curY, iconSize, iconSize);
+            hitArea.fill({ color: 0x000000, alpha: 0 }); // 투명 히트박스
+            hitArea.eventMode = 'static';
+            hitArea.cursor = 'help';
+
+            hitArea.on('pointerover', () => {
+                this.onHoverRelic({ relicInfo: relic, screenX: curX + iconSize, screenY: curY });
+            });
+            hitArea.on('pointerout', () => this.onHoverRelic(null));
+            this.hitContainer.addChild(hitArea);
+
+            if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
+                const sp = PIXI.Sprite.from(`/assets/relics/${relic.definition.sprite}`);
+                sp.width = iconSize;
+                sp.height = iconSize;
+                sp.x = curX;
+                sp.y = curY;
+                this.boardContainer.addChild(sp);
+            } else {
+                const spPlaceholder = new PIXI.Text({
+                    text: '🏺',
+                    style: new PIXI.TextStyle({ fontSize: iconSize * 0.6 })
+                });
+                spPlaceholder.anchor.set(0.5);
+                spPlaceholder.x = curX + iconSize / 2;
+                spPlaceholder.y = curY + iconSize / 2;
+                this.boardContainer.addChild(spPlaceholder);
+            }
+
+            // 카운터 표시 필요가 있는 경우. 현재 3과 9는 Max 5인 카운터 진행도
+            const counterMax = (relic.definition.id === 3 || relic.definition.id === 9) ? 5 : 0;
+            if (counterMax > 0) {
+                const barH = 8 * scale;
+                const barW = iconSize;
+                const barY = curY + iconSize + 2 * scale;
+
+                const bgBar = new PIXI.Graphics();
+                bgBar.rect(curX, barY, barW, barH);
+                bgBar.fill({ color: 0x000000, alpha: 0.6 });
+                this.boardContainer.addChild(bgBar);
+
+                const ratio = Math.min(1, relic.effect_counter / counterMax);
+                const fillBar = new PIXI.Graphics();
+                fillBar.rect(curX, barY, barW * ratio, barH);
+                fillBar.fill({ color: 0xf59e0b });
+                this.boardContainer.addChild(fillBar);
+
+                const txt = new PIXI.Text({
+                    text: `${relic.effect_counter}/${counterMax}`,
+                    style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 14 * scale, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 2 } })
+                });
+                txt.anchor.set(1, 0);
+                txt.x = curX + iconSize;
+                txt.y = barY + barH + 2 * scale;
+                this.boardContainer.addChild(txt);
+            }
+
+            curX += iconSize + gapX;
+        }
     }
 
     private renderUI(state: GameState, settings: SettingsState, scale: number, topRowCY: number, fs: number) {
@@ -756,11 +859,11 @@ export class PixiGameApp {
         const attackerDef = board[ax]?.[ay]?.definition;
         let bounceSprite: PIXI.Container;
 
-        if (attackerDef?.sprite) {
+        if (attackerDef?.sprite && attackerDef.sprite !== '-' && attackerDef.sprite !== '-.png') {
             const SPRITE_PX = 32;
             const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
             const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
-            const sp = PIXI.Sprite.from(`./assets/symbols/${attackerDef.sprite}`);
+            const sp = PIXI.Sprite.from(`/assets/symbols/${attackerDef.sprite}`);
             sp.anchor.set(0.5);
             sp.width = spriteSize;
             sp.height = spriteSize;

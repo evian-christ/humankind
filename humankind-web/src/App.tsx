@@ -10,12 +10,11 @@ import UpgradeSelection from './components/UpgradeSelection';
 import DestroySelection from './components/DestroySelection';
 
 import PauseMenu from './components/PauseMenu';
-import RelicBar from './components/RelicBar';
 import DevOverlay from './components/DevOverlay';
 import DataBrowser from './components/DataBrowser';
 
 function App() {
-  const { phase, turn, spinBoard, initializeGame } = useGameStore();
+  const { phase, turn, spinBoard, initializeGame, toggleRelicShop } = useGameStore();
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,6 +37,15 @@ function App() {
         onClick={() => setMenuOpen(true)}
       >
         ☰
+      </button>
+
+      {/* ===== RELIC SHOP BUTTON (bottom-left corner) ===== */}
+      <button
+        className="relic-shop-btn"
+        onClick={toggleRelicShop}
+        title="유물 상점 (Relic Shop)"
+      >
+        🏺
       </button>
 
       {/* ===== PAUSE MENU OVERLAY ===== */}
@@ -76,10 +84,6 @@ function App() {
           </div>
         </div>
       )}
-
-      {/* ===== RELICS BAR (bottom-left) ===== */}
-      <RelicBar />
-
 
       {/* ===== DEV OVERLAY ===== */}
       <DevOverlay />

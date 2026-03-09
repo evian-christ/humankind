@@ -65,7 +65,7 @@ export const getEraFromLevel = (level: number): number => {
     return 3;
 };
 
-type GamePhase = 'idle' | 'spinning' | 'processing' | 'upgrade_selection' | 'selection' | 'relic_selection' | 'destroy_selection' | 'game_over' | 'victory';
+type GamePhase = 'idle' | 'spinning' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250... -> x10: 1000, 1500, 2000, 2500...) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
@@ -83,7 +83,8 @@ export interface GameState {
     playerSymbols: PlayerSymbolInstance[];
     phase: GamePhase;
     symbolChoices: SymbolDefinition[];
-    relicChoices: RelicDefinition[];
+    /** 유물 상점에 표시되는 유물 목록 (3개) */
+    relicChoices: (RelicDefinition | null)[];
     lastEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>;
     /** processing 중 누적 합산 (food, gold, knowledge) */
     runningTotals: { food: number; gold: number; knowledge: number };
@@ -111,8 +112,8 @@ export interface GameState {
     pendingLevelUpSelection: boolean;
     /** 레벨업 직전의 레벨 (업그레이드 화면에서 "Lv.X → Lv.Y" 표시용) */
     levelBeforeUpgrade: number;
-    /** 유물 선택 대기 중 */
-    pendingRelicSelection: boolean;
+    /** 유물 상점 오버레이 열림 여부 */
+    isRelicShopOpen: boolean;
     /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
     rerollsThisTurn: number;
 
@@ -123,8 +124,10 @@ export interface GameState {
     selectSymbol: (symbolId: number) => void;
     skipSelection: () => void;
     rerollSymbols: () => void;
-    selectRelic: (relicId: number) => void;
-    skipRelicSelection: () => void;
+
+    toggleRelicShop: () => void;
+    refreshRelicShop: (force?: boolean) => void;
+    buyRelic: (relicId: number) => void;
     selectUpgrade: (upgradeId: number) => void;
     skipUpgradeSelection: () => void;
 
@@ -169,8 +172,7 @@ const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter
 
 const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => {
     let finalDef = def;
-    // Relic ID 8 (십계명 석판): Adds 1 'Stone Tablet' (ID 39) to collection on acquire.
-    // (No longer replaces Stone in createInstance)
+    // Relic ID 8 (십계명 석판): Unlocks 'Stone Tablet' (ID 39) in the symbol selection pool.
 
     const inst: PlayerSymbolInstance = {
         definition: finalDef,
@@ -242,6 +244,7 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         if (sym.id === 22 && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === 23 && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
         if ((sym.id === 24 || sym.id === 26) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
+        if (sym.id === 39 && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion
 
         // 패키지 업그레이드 해금 및 금지(Ban)
@@ -381,7 +384,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     playerSymbols: (() => { const s = createStartingBoard(); return s.playerSymbols; })(),
     phase: 'idle' as GamePhase,
     symbolChoices: [],
-    relicChoices: [],
+    relicChoices: generateRelicChoices(),
     lastEffects: [],
     runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
@@ -396,7 +399,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     upgradeChoices: [],
     pendingLevelUpSelection: false,
     levelBeforeUpgrade: 1,
-    pendingRelicSelection: false,
+    isRelicShopOpen: false,
     rerollsThisTurn: 0,
 
     spinBoard: () => {
@@ -457,10 +460,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     startProcessing: () => {
         const state = get();
         const upgrades = state.unlockedKnowledgeUpgrades || [];
-        const baseKnowledge = upgrades.includes(1) ? 4 : 2;
-        const baseGold = upgrades.includes(6) ? 2 : 0; // Currency: +2 base gold
+        const baseKnowledge = (upgrades.includes(1) ? 4 : 2) + (upgrades.includes(10) ? 2 : 0);
+        const baseGold = (upgrades.includes(6) ? 2 : 0) + (upgrades.includes(10) ? 2 : 0);
 
-        let startFood = 0;
+        let startFood = upgrades.includes(10) ? 5 : 0;
         let startGold = baseGold;
 
         // 206 Weaving (+10 Gold if you have Farm or Pasture)
@@ -496,7 +499,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         const baseGoldFinish = startGold;
         let totalKnowledge = baseKnowledgeFinish + get().bonusXpPerTurn;
         let totalGold = baseGoldFinish;
-        let pRelicSelection = get().pendingRelicSelection;
         const symbolsToAdd: number[] = [];
         const symbolsToSpawnOnBoard: number[] = [];
         const accumulatedEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }> = [];
@@ -536,7 +538,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
             if (result.spawnOnBoard) symbolsToSpawnOnBoard.push(...result.spawnOnBoard);
-            if (result.triggerRelicSelection) pRelicSelection = true;
+
+            if (result.triggerRelicRefresh) {
+                get().refreshRelicShop(true);
+            }
+            if (result.triggerRelicSelection) {
+                set({ isRelicShopOpen: true });
+            }
 
             if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
                 accumulatedEffects.push({ x, y, food: result.food, gold: result.gold, knowledge: result.knowledge });
@@ -809,7 +817,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
                 const filteredSymbols = newPlayerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
                 const choices = generateChoices(newEra, prev.religionUnlocked);
-                const genRelics = pRelicSelection && prev.relicChoices.length === 0 ? generateRelicChoices() : prev.relicChoices;
 
                 return {
                     food: prev.food + tFood + bonusFood,
@@ -826,10 +833,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     lastEffects: [...effects],
                     phase: 'processing' as GamePhase,
                     symbolChoices: choices,
-
                     pendingLevelUpSelection: pendingLevelUp,
-                    pendingRelicSelection: pRelicSelection,
-                    relicChoices: genRelics,
                 };
             });
 
@@ -837,7 +841,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             setTimeout(() => {
                 const finalState = get();
                 if (finalState.phase === 'processing') {
-                    // 식량 납부 체크 (10턴마다)
+                    // 식량 납부 및 유물 상점 자동 갱신 (10턴마다)
                     if (finalState.turn > 0 && finalState.turn % 10 === 0) {
                         const cost = calculateFoodCost(finalState.turn);
                         if (finalState.food < cost) {
@@ -846,9 +850,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                         }
                         set((s) => ({
                             food: s.food - cost,
-                            pendingRelicSelection: true,
-                            relicChoices: (!s.relicChoices || s.relicChoices.length === 0) ? generateRelicChoices() : s.relicChoices,
                         }));
+                        get().refreshRelicShop(true); // Auto refresh shop inventory every 10 turns
                     }
                     // 레벨업이 있으면 upgrade_selection 먼저, 아니면 바로 selection
                     if (finalState.pendingLevelUpSelection) {
@@ -1017,13 +1020,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = SYMBOLS[symbolId];
         if (!def) return;
 
-        let nextPhase: GamePhase = 'idle';
-        if (state.pendingRelicSelection) nextPhase = 'relic_selection';
-
-
         set({
             playerSymbols: [...state.playerSymbols, createInstance(def)],
-            phase: nextPhase,
+            phase: 'idle',
             symbolChoices: [],
         });
     },
@@ -1032,55 +1031,47 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'selection') return;
 
-        let nextPhase: GamePhase = 'idle';
-        if (state.pendingRelicSelection) nextPhase = 'relic_selection';
-
-
-        set({ phase: nextPhase, symbolChoices: [] });
+        set({ phase: 'idle', symbolChoices: [] });
     },
 
-    selectRelic: (relicId: number) => {
+    toggleRelicShop: () => {
+        set((state) => ({ isRelicShopOpen: !state.isRelicShopOpen }));
+    },
+
+    refreshRelicShop: (force = false) => {
         const state = get();
-        if (state.phase !== 'relic_selection') return;
+        if (!force && state.gold < 50) return; // 골드 50 소모 (임의 지정, 필요에 따라 수정 가능)
 
-        const def = RELIC_LIST.find((r) => r.id === relicId);
-        if (def) {
-            useRelicStore.getState().addRelic(def);
-
-            // ── 유물 획득 즉시 효과 ──
-
-            // ID 2: 리디아의 호박금 주화 - on-acquire 효과 없음 (패시브만)
-
-            // ID 3: 우르의 전차 바퀴 - 카운터는 relicStore에서 관리
-
-            // ID 8: 십계명 석판 - 석판(39) 심볼 하나 추가
-            if (relicId === RELIC_ID.TEN_COMMANDMENTS) {
-                const tabletDef = SYMBOLS[39];
-                if (tabletDef) {
-                    set({ playerSymbols: [...state.playerSymbols, createInstance(tabletDef)] });
-                }
-            }
-
-
-
+        if (!force) {
+            set((s) => ({ gold: s.gold - 50, relicChoices: generateRelicChoices() }));
+        } else {
+            set({ relicChoices: generateRelicChoices() });
         }
-
-        set({
-            phase: 'idle',
-            relicChoices: [],
-            pendingRelicSelection: false,
-        });
     },
 
-    skipRelicSelection: () => {
+    buyRelic: (relicId: number) => {
         const state = get();
-        if (state.phase !== 'relic_selection') return;
+        const relicIndex = state.relicChoices.findIndex(r => r && r.id === relicId);
+        if (relicIndex === -1) return;
 
-        set({
-            phase: 'idle',
-            relicChoices: [],
-            pendingRelicSelection: false,
+        const def = state.relicChoices[relicIndex];
+        if (!def || state.gold < def.cost) return; // 골드 부족
+
+        useRelicStore.getState().addRelic(def);
+
+        set((s) => {
+            const newChoices = [...s.relicChoices];
+            newChoices[relicIndex] = null; // 품절 처리
+            return {
+                gold: s.gold - def.cost,
+                relicChoices: newChoices
+            };
         });
+
+        // ── 유물 획득 즉시 효과 ──
+        if (def.id === 8) { // 십계명 석판
+            // (Effect: Unlocks Tablet in pool, no immediate acquisition)
+        }
     },
 
     selectUpgrade: (upgradeId: number) => {
@@ -1248,7 +1239,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             playerSymbols: symbols,
             phase: 'idle',
             symbolChoices: [],
-            relicChoices: [],
+            relicChoices: generateRelicChoices(),
             lastEffects: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
@@ -1262,7 +1253,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             upgradeChoices: [],
             pendingLevelUpSelection: false,
-            pendingRelicSelection: false,
+            isRelicShopOpen: false,
             rerollsThisTurn: 0,
         });
     },
@@ -1291,8 +1282,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const choices = generateChoices(state.era, state.religionUnlocked);
             set({ phase: 'selection', symbolChoices: choices });
         } else if (screen === 'relic') {
-            const choices = generateRelicChoices();
-            set({ phase: 'relic_selection', relicChoices: choices, pendingRelicSelection: true });
+            set({ isRelicShopOpen: true, relicChoices: generateRelicChoices() });
         } else if (screen === 'upgrade') {
             const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades, state.era);
             set({ phase: 'upgrade_selection', upgradeChoices: choices, pendingLevelUpSelection: true });
