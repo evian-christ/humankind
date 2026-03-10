@@ -3,14 +3,14 @@
  * 모든 후보 유물은 relicDefinitions.ts 의 RELICS로 이동하거나 제거됨.
  */
 
-import { Era } from './symbolDefinitions';
+import { SymbolType } from './symbolDefinitions';
 
 export interface RelicCandidate {
     id: number;
     name: string;
     description: string;
     cost: number;
-    era: Era;
+    type: SymbolType;
     /** 효과 유형: passive(매 스핀), on_acquire(획득 시 1회), conditional(조건부) */
     effect_type: 'passive' | 'on_acquire' | 'conditional';
     sprite: string;
