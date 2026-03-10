@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { SYMBOLS, Era, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { SYMBOLS, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
 import { RELICS } from '../game/data/relicDefinitions';
 import { RELIC_CANDIDATES } from '../game/data/relicCandidates';
@@ -16,23 +16,27 @@ type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
 const ERA_KEYS: Record<number, string> = {
-    [Era.SPECIAL]: 'special',
-    [Era.ANCIENT]: 'ancient',
-    [Era.MEDIEVAL]: 'medieval',
-    [Era.MODERN]: 'modern',
+    [SymbolType.RELIGION]: 'special',
+    [SymbolType.NORMAL]: 'normal',
+    [SymbolType.ANCIENT]: 'ancient',
+    [SymbolType.MEDIEVAL]: 'medieval',
+    [SymbolType.MODERN]: 'modern',
+    [SymbolType.TERRAIN]: 'terrain',
+    [SymbolType.UNIT]: 'unit',
+    [SymbolType.ENEMY]: 'enemy',
 };
 
-const EXCLUDED_FROM_BASE_POOL = new Set<number>([22, 23, 24, 25, 26, 36, 39, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
+const EXCLUDED_FROM_BASE_POOL = new Set<number>([22, 23, 24, 25, 26, 36, 39, 41, 42, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
 const isBasePool = (s: SymbolDefinition) => {
-    return s.era === Era.ANCIENT &&
-        s.symbol_type !== SymbolType.ENEMY &&
+    return (s.type === SymbolType.NORMAL || s.type === SymbolType.TERRAIN || s.type === SymbolType.ANCIENT || s.type === SymbolType.UNIT) &&
+        !s.tags?.includes('enemy') &&
         !EXCLUDED_FROM_BASE_POOL.has(s.id) &&
         !RELIGION_DOCTRINE_IDS.has(s.id);
 };
 
 
 
-const ERA_ORDER = [Era.ANCIENT, Era.MEDIEVAL, Era.MODERN, Era.SPECIAL];
+const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.NORMAL, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION];
 
 /** Sortable column header */
 const SortTh = ({ column, label, sort, onSort, className }: {
@@ -61,7 +65,7 @@ const DataBrowser = () => {
     const [open, setOpen] = useState(false);
     const [tab, setTab] = useState<Tab>('symbols');
     const [eraFilter, setEraFilter] = useState<number | 'all'>('all');
-    const [typeFilter, setTypeFilter] = useState<number | 'all'>('all');
+
 
     const [search, setSearch] = useState('');
     const language = useSettingsStore((s) => s.language);
@@ -106,18 +110,16 @@ const DataBrowser = () => {
     // 심볼 슬롯 뷰 모드: 필터/검색/정렬이 없을 때 ID 1~50 전체 슬롯 표시
     const SYMBOL_SLOT_MIN = 1;
     const SYMBOL_SLOT_MAX = 50;
-    const isSymbolSlotMode = eraFilter === 'all' && typeFilter === 'all' && !search.trim() && !symbolSort;
+    const isSymbolSlotMode = eraFilter === 'all' && !search.trim() && !symbolSort;
 
     // 심볼 목록 (필터 + 검색 + 정렬)
     const filteredSymbols = useMemo(() => {
         let list = Object.values(SYMBOLS);
 
         if (eraFilter !== 'all') {
-            list = list.filter(s => s.era === eraFilter);
+            list = list.filter(s => s.type === eraFilter);
         }
-        if (typeFilter !== 'all') {
-            list = list.filter(s => s.symbol_type === typeFilter);
-        }
+
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(s => {
@@ -135,8 +137,8 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = t(`symbol.${a.id}.name`, language); vb = t(`symbol.${b.id}.name`, language); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
-                    case 'type': va = a.symbol_type; vb = b.symbol_type; break;
+                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
+                    case 'type': va = a.type; vb = b.type; break;
                     case 'tags': va = a.tags ? a.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; vb = b.tags ? b.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; break;
                     case 'desc': va = t(`symbol.${a.id}.desc`, language); vb = t(`symbol.${b.id}.desc`, language); break;
                     case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
@@ -152,18 +154,16 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [eraFilter, typeFilter, search, language, symbolSort]);
+    }, [eraFilter, search, language, symbolSort]);
 
     // 심볼 후보 목록
     const filteredSymbolCandidates = useMemo(() => {
         let list = Object.values(SYMBOL_CANDIDATES);
 
         if (eraFilter !== 'all') {
-            list = list.filter(s => s.era === eraFilter);
+            list = list.filter(s => s.type === eraFilter);
         }
-        if (typeFilter !== 'all') {
-            list = list.filter(s => s.symbol_type === typeFilter);
-        }
+
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(s => {
@@ -181,8 +181,8 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = tl(`symbolCandidate.${a.id}.name`, a.name); vb = tl(`symbolCandidate.${b.id}.name`, b.name); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
-                    case 'type': va = a.symbol_type; vb = b.symbol_type; break;
+                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
+                    case 'type': va = a.type; vb = b.type; break;
                     case 'tags': va = a.tags ? a.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; vb = b.tags ? b.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; break;
                     case 'desc': va = tl(`symbolCandidate.${a.id}.desc`, a.description); vb = tl(`symbolCandidate.${b.id}.desc`, b.description); break;
                     case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
@@ -197,7 +197,7 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [eraFilter, typeFilter, search, language, symbolCandSort]);
+    }, [eraFilter, search, language, symbolCandSort]);
 
     // 유물 목록
     const filteredRelics = useMemo(() => {
@@ -214,7 +214,7 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = t(`relic.${a.id}.name`, language); vb = t(`relic.${b.id}.name`, language); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'cost': va = a.cost; vb = b.cost; break;
                     case 'desc': va = t(`relic.${a.id}.desc`, language); vb = t(`relic.${b.id}.desc`, language); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
@@ -243,7 +243,7 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = a.name; vb = b.name; break;
-                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'cost': va = a.cost; vb = b.cost; break;
                     case 'desc': va = a.description; vb = b.description; break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
@@ -262,7 +262,7 @@ const DataBrowser = () => {
         let list = Object.values(KNOWLEDGE_UPGRADE_CANDIDATES);
 
         if (eraFilter !== 'all') {
-            list = list.filter(u => u.era === eraFilter);
+            list = list.filter(u => u.type === eraFilter);
         }
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -280,7 +280,7 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = tl(`knowledgeUpgradeCandidate.${a.id}.name`, a.name); vb = tl(`knowledgeUpgradeCandidate.${b.id}.name`, b.name); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'desc': va = tl(`knowledgeUpgradeCandidate.${a.id}.desc`, a.description); vb = tl(`knowledgeUpgradeCandidate.${b.id}.desc`, b.description); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     default: va = a.id; vb = b.id;
@@ -299,7 +299,7 @@ const DataBrowser = () => {
         let list = Object.values(ENEMIES);
 
         if (eraFilter !== 'all') {
-            list = list.filter(enemy => enemy.era === eraFilter);
+            list = list.filter(enemy => enemy.type === eraFilter);
         }
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -317,7 +317,7 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = a.name; vb = b.name; break;
-                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
                     case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
                     case 'desc': va = a.description; vb = b.description; break;
@@ -338,7 +338,7 @@ const DataBrowser = () => {
         let list = Object.values(KNOWLEDGE_UPGRADES);
 
         if (eraFilter !== 'all') {
-            list = list.filter(u => u.era === eraFilter);
+            list = list.filter(u => u.type === eraFilter);
         }
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -356,7 +356,7 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = tl(`knowledgeUpgrade.${a.id}.name`, a.name); vb = tl(`knowledgeUpgrade.${b.id}.name`, b.name); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.era); vb = ERA_ORDER.indexOf(b.era); break;
+                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'desc': va = tl(`knowledgeUpgrade.${a.id}.desc`, a.description); vb = tl(`knowledgeUpgrade.${b.id}.desc`, b.description); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     default: va = a.id; vb = b.id;
@@ -377,7 +377,7 @@ const DataBrowser = () => {
         const counts: Record<string, number> = {};
         const all = Object.values(SYMBOLS);
         for (const era of ERA_ORDER) {
-            counts[era] = all.filter(s => s.era === era).length;
+            counts[era] = all.filter(s => s.type === era).length;
         }
         return counts;
     }, []);
@@ -474,16 +474,7 @@ const DataBrowser = () => {
                                 </option>
                             ))}
                         </select>
-                        <select
-                            className="databrowser-filter"
-                            value={typeFilter === 'all' ? 'all' : String(typeFilter)}
-                            onChange={e => setTypeFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                        >
-                            <option value="all">{t('dataBrowser.allTypes', language)}</option>
-                            <option value={SymbolType.FRIENDLY}>🟢 {t('dataBrowser.friendly', language)}</option>
-                            <option value={SymbolType.ENEMY}>🔴 {t('dataBrowser.enemy', language)}</option>
-                            <option value={SymbolType.COMBAT}>⚔️ {t('dataBrowser.combat', language)}</option>
-                        </select>
+
                     </>
                 )}
                 {(tab === 'enemies' || tab === 'knowledgeUpgrades' || tab === 'knowledgeUpgradeCandidates') && (
@@ -512,7 +503,7 @@ const DataBrowser = () => {
                                 <SortTh column="id" label="ID" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--id" />
                                 <SortTh column="name" label={t('dataBrowser.colName', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--name" />
                                 <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--era" />
-                                <SortTh column="type" label={t('dataBrowser.colType', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--type" />
+
                                 <SortTh column="tags" label={t('dataBrowser.colTags', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--tags" />
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="basePool" label={t('dataBrowser.colBasePool', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--id" />
@@ -538,8 +529,6 @@ const DataBrowser = () => {
                                                 <td></td>
                                                 <td></td>
                                                 <td></td>
-                                                <td></td>
-                                                <td></td>
                                             </tr>
                                         );
                                     }
@@ -550,22 +539,17 @@ const DataBrowser = () => {
                                             <td>
                                                 <span
                                                     style={{
-                                                        color: getSymbolColorHex(s.era),
+                                                        color: getSymbolColorHex(s.type),
                                                         fontWeight: 'bold',
                                                         fontSize: '15px',
                                                         letterSpacing: '1px',
-                                                        textShadow: `0 0 6px ${getSymbolColorHex(s.era)}80`
+                                                        textShadow: `0 0 6px ${getSymbolColorHex(s.type)}80`
                                                     }}
                                                 >
-                                                    [{t(`era.${ERA_KEYS[s.era]}`, language)}]
+                                                    [{t(`era.${ERA_KEYS[s.type]}`, language)}]
                                                 </span>
                                             </td>
-                                            <td className="databrowser-cell--type">
-                                                {s.symbol_type === SymbolType.FRIENDLY && '🟢'}
-                                                {s.symbol_type === SymbolType.ENEMY && '🔴'}
-                                                {s.symbol_type === SymbolType.COMBAT && '⚔️'}
-                                                {' '}{t(`dataBrowser.${s.symbol_type === SymbolType.FRIENDLY ? 'friendly' : s.symbol_type === SymbolType.ENEMY ? 'enemy' : 'combat'}`, language)}
-                                            </td>
+
                                             <td className="databrowser-cell--tags">
                                                 {s.tags?.length ? (
                                                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -595,22 +579,17 @@ const DataBrowser = () => {
                                         <td>
                                             <span
                                                 style={{
-                                                    color: getSymbolColorHex(s.era),
+                                                    color: getSymbolColorHex(s.type),
                                                     fontWeight: 'bold',
                                                     fontSize: '15px',
                                                     letterSpacing: '1px',
-                                                    textShadow: `0 0 6px ${getSymbolColorHex(s.era)}80`
+                                                    textShadow: `0 0 6px ${getSymbolColorHex(s.type)}80`
                                                 }}
                                             >
-                                                [{t(`era.${ERA_KEYS[s.era]}`, language)}]
+                                                [{t(`era.${ERA_KEYS[s.type]}`, language)}]
                                             </span>
                                         </td>
-                                        <td className="databrowser-cell--type">
-                                            {s.symbol_type === SymbolType.FRIENDLY && '🟢'}
-                                            {s.symbol_type === SymbolType.ENEMY && '🔴'}
-                                            {s.symbol_type === SymbolType.COMBAT && '⚔️'}
-                                            {' '}{t(`dataBrowser.${s.symbol_type === SymbolType.FRIENDLY ? 'friendly' : s.symbol_type === SymbolType.ENEMY ? 'enemy' : 'combat'}`, language)}
-                                        </td>
+
                                         <td className="databrowser-cell--tags">
                                             {s.tags?.length ? (
                                                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -644,7 +623,7 @@ const DataBrowser = () => {
                                 <SortTh column="id" label="ID" sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--id" />
                                 <SortTh column="name" label={t('dataBrowser.colName', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--name" />
                                 <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--era" />
-                                <SortTh column="type" label={t('dataBrowser.colType', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--type" />
+
                                 <SortTh column="tags" label={t('dataBrowser.colTags', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--tags" />
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="atk" label="ATK" sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--stat" />
@@ -661,22 +640,17 @@ const DataBrowser = () => {
                                     <td>
                                         <span
                                             style={{
-                                                color: getSymbolColorHex(s.era),
+                                                color: getSymbolColorHex(s.type),
                                                 fontWeight: 'bold',
                                                 fontSize: '15px',
                                                 letterSpacing: '1px',
-                                                textShadow: `0 0 6px ${getSymbolColorHex(s.era)}80`
+                                                textShadow: `0 0 6px ${getSymbolColorHex(s.type)}80`
                                             }}
                                         >
-                                            [{t(`era.${ERA_KEYS[s.era]}`, language)}]
+                                            [{t(`era.${ERA_KEYS[s.type]}`, language)}]
                                         </span>
                                     </td>
-                                    <td className="databrowser-cell--type">
-                                        {s.symbol_type === SymbolType.FRIENDLY && '🟢'}
-                                        {s.symbol_type === SymbolType.ENEMY && '🔴'}
-                                        {s.symbol_type === SymbolType.COMBAT && '⚔️'}
-                                        {' '}{t(`dataBrowser.${s.symbol_type === SymbolType.FRIENDLY ? 'friendly' : s.symbol_type === SymbolType.ENEMY ? 'enemy' : 'combat'}`, language)}
-                                    </td>
+
                                     <td className="databrowser-cell--tags">
                                         {s.tags?.length ? (
                                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -720,13 +694,13 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--name">{t(`relic.${r.id}.name`, language)}</td>
                                     <td className="databrowser-cell--era">
                                         <span style={{
-                                            color: getSymbolColorHex(r.era),
+                                            color: getSymbolColorHex(r.type),
                                             fontWeight: 'bold',
                                             fontSize: '15px',
                                             letterSpacing: '1px',
-                                            textShadow: `0 0 6px ${getSymbolColorHex(r.era)}80`
+                                            textShadow: `0 0 6px ${getSymbolColorHex(r.type)}80`
                                         }}>
-                                            [{t(`era.${ERA_KEYS[r.era]}`, language)}]
+                                            [{t(`era.${ERA_KEYS[r.type]}`, language)}]
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
@@ -764,13 +738,13 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--name">{r.name}</td>
                                     <td className="databrowser-cell--era">
                                         <span style={{
-                                            color: getSymbolColorHex(r.era),
+                                            color: getSymbolColorHex(r.type),
                                             fontWeight: 'bold',
                                             fontSize: '15px',
                                             letterSpacing: '1px',
-                                            textShadow: `0 0 6px ${getSymbolColorHex(r.era)}80`
+                                            textShadow: `0 0 6px ${getSymbolColorHex(r.type)}80`
                                         }}>
-                                            [{t(`era.${ERA_KEYS[r.era]}`, language)}]
+                                            [{t(`era.${ERA_KEYS[r.type]}`, language)}]
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
@@ -801,8 +775,8 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--id">{u.id}</td>
                                     <td className="databrowser-cell--name">{tl(`knowledgeUpgradeCandidate.${u.id}.name`, u.name)}</td>
                                     <td>
-                                        <span style={{ color: getSymbolColorHex(u.era), fontWeight: 'bold' }}>
-                                            [{t(`era.${ERA_KEYS[u.era]}`, language)}]
+                                        <span style={{ color: getSymbolColorHex(u.type), fontWeight: 'bold' }}>
+                                            [{t(`era.${ERA_KEYS[u.type]}`, language)}]
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--desc"><EffectText text={tl(`knowledgeUpgradeCandidate.${u.id}.desc`, u.description)} /></td>
@@ -833,8 +807,8 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--id">{s.id}</td>
                                     <td className="databrowser-cell--name">{s.name}</td>
                                     <td>
-                                        <span style={{ color: getSymbolColorHex(s.era), fontWeight: 'bold' }}>
-                                            [{t(`era.${ERA_KEYS[s.era]}`, language)}]
+                                        <span style={{ color: getSymbolColorHex(s.type), fontWeight: 'bold' }}>
+                                            [{t(`era.${ERA_KEYS[s.type]}`, language)}]
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--desc"><EffectText text={s.description} /></td>
@@ -869,8 +843,8 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--id">{u.id}</td>
                                     <td className="databrowser-cell--name">{tl(`knowledgeUpgrade.${u.id}.name`, u.name)}</td>
                                     <td>
-                                        <span style={{ color: getSymbolColorHex(u.era), fontWeight: 'bold' }}>
-                                            [{t(`era.${ERA_KEYS[u.era]}`, language)}]
+                                        <span style={{ color: getSymbolColorHex(u.type), fontWeight: 'bold' }}>
+                                            [{t(`era.${ERA_KEYS[u.type]}`, language)}]
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--desc"><EffectText text={tl(`knowledgeUpgrade.${u.id}.desc`, u.description)} /></td>
