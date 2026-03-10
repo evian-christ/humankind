@@ -107,7 +107,7 @@ const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Se
 const SYMBOL_BASE_FOOD: Record<number, number> = {
     1: 0, 2: 0, 3: 10, 4: 30, 5: 10, 6: 10, 7: 10, 8: 0, 9: 20, 10: 0,
     11: 0, 12: 0, 13: 10, 14: 10, 15: 10, 16: 0, 17: -10, 18: 10, 19: 10, 20: 0,
-    21: 0, 22: 0, 23: 10, 25: 0,
+    21: 0, 22: 0, 23: 10, 25: 0, 28: 10, 29: 10, 30: 10,
 };
 
 /** 심볼별 기본 지식 생산량 추정치 (Islam 효과 계산용) -> x10 */
@@ -119,7 +119,7 @@ const SYMBOL_BASE_KNOWLEDGE: Record<number, number> = {
 
 /** Era 1 심볼 중 랜덤 하나 반환 (ID 1~21) */
 const randomEra1SymbolId = (): number => {
-    const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 35]; // Warrior(35) 포함
+    const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 29, 30, 35]; // Warrior(35) 포함
     return ids[Math.floor(Math.random() * ids.length)];
 };
 
@@ -158,7 +158,10 @@ export const processSingleSymbolEffects = (
                 }
             });
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
-            if (hasGrassland) symbolInstance.effect_counter += 1; // speeds up by 1 turn
+            if (hasGrassland) {
+                const irrigationBonus = upgrades.includes(3) ? 1 : 0;
+                symbolInstance.effect_counter += (1 + irrigationBonus); // speeds up by 1 turn (or 2 with Irrigation)
+            }
 
             if (symbolInstance.effect_counter >= 4) {
                 food += 100;
@@ -176,7 +179,10 @@ export const processSingleSymbolEffects = (
                 }
             });
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
-            if (hasGrassland) symbolInstance.effect_counter += 2; // speeds up by 2 turns
+            if (hasGrassland) {
+                const irrigationBonus = upgrades.includes(3) ? 1 : 0;
+                symbolInstance.effect_counter += (2 + irrigationBonus); // speeds up by 2 turns (or 3 with Irrigation)
+            }
 
             if (symbolInstance.effect_counter >= 8) {
                 food += 200;
@@ -201,13 +207,26 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 4: // Banana: Every spin: +20 Food. Destroyed after 6 spins
+        case 4: { // Banana: Every spin: +20 Food. Destroyed after 6 spins. Reset if adjacent to Rainforest
             food += 20;
-            symbolInstance.effect_counter++;
+            let nearRainforest = false;
+            adj.forEach(pos => {
+                const t = boardGrid[pos.x][pos.y];
+                if (t && t.definition.id === 13) {
+                    nearRainforest = true;
+                    contributors.push(pos);
+                }
+            });
+            if (nearRainforest) {
+                symbolInstance.effect_counter = 0;
+            } else {
+                symbolInstance.effect_counter++;
+            }
             if (symbolInstance.effect_counter >= 6) {
                 symbolInstance.is_marked_for_destruction = true;
             }
             break;
+        }
 
         case 5: { // Fish: Every spin: +10 Food. +30 Food if adjacent to Coast
             food += 10;
@@ -293,16 +312,15 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 13: { // Rainforest: Every spin: +10 Food. Adjacent Banana: Banana's destroy timer resets
+        case 13: { // Rainforest: Every spin: +10 Food.
             food += 10;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t && t.definition.id === 4) {
-                    t.effect_counter = 0;
-                    contributors.push(pos);
                     // ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 매 스핀 인접한 바나나 당 식량 +20 생산
                     if (relicEffects.bananaFossilBonus) {
                         food += 20;
+                        contributors.push(pos);
                     }
                 }
             });
@@ -451,19 +469,54 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 27: { // Desert: Destroys a random adjacent symbol.
+        case 27: { // Desert: Destroys a random adjacent Normal symbol.
             const validTargets = adj.filter(pos => {
                 const target = boardGrid[pos.x][pos.y];
-                return target && !target.is_marked_for_destruction;
+                return target && !target.is_marked_for_destruction && target.definition.type === SymbolType.NORMAL;
             });
             if (validTargets.length > 0) {
                 const randomTarget = validTargets[Math.floor(Math.random() * validTargets.length)];
                 const targetInstance = boardGrid[randomTarget.x][randomTarget.y];
                 if (targetInstance) {
                     targetInstance.is_marked_for_destruction = true;
+                    if (targetInstance.definition.id === 30) {
+                        food += 20;
+                        addSymbolIds.push(30);
+                    }
                     contributors.push(randomTarget);
                 }
             }
+            break;
+        }
+
+        case 28: { // Forest: +10 Food; per adjacent Forest: +10 Food.
+            food += 10;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 28) {
+                    food += 10;
+                    contributors.push(pos);
+                }
+            });
+            break;
+        }
+
+        case 29: { // Deer: +10 Food; if 2 or more adjacent Forests: +40 Food.
+            food += 10;
+            let forestCount = 0;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 28) {
+                    forestCount++;
+                    contributors.push(pos);
+                }
+            });
+            if (forestCount >= 2) {
+                food += 40;
+            }
+            break;
+        }
+
+        case 30: { // Date: +10 Food.
+            food += 10;
             break;
         }
 
@@ -516,13 +569,13 @@ export const processSingleSymbolEffects = (
         // ── Enemy / Combat Symbols ──
 
         case 35: // Warrior
-            if (symbolInstance.definition.symbol_type === SymbolType.ENEMY) {
+            if (symbolInstance.definition.tags?.includes('enemy')) {
                 if (Math.random() < 0.5) food -= 30; else gold -= 10;
             }
             break;
 
         case 36: // Archer
-            if (symbolInstance.definition.symbol_type === SymbolType.ENEMY) {
+            if (symbolInstance.definition.tags?.includes('enemy')) {
                 if (Math.random() < 0.5) food -= 20; else gold -= 20;
             }
             break;
@@ -547,6 +600,37 @@ export const processSingleSymbolEffects = (
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 14) { food += 20; contributors.push(pos); }
             });
+            break;
+        }
+
+        case 40: { // Barbarian Camp: Every 10 turns: adds 1 random current era Enemy combat unit.
+            symbolInstance.effect_counter++;
+            if (symbolInstance.effect_counter >= 10) {
+                const enemies = [35, 36]; // Warrior, Archer
+                const enemyId = enemies[Math.floor(Math.random() * enemies.length)];
+                addSymbolIds.push(enemyId);
+                symbolInstance.effect_counter -= 10;
+            }
+            break;
+        }
+
+        case 41: { // Loot: Destroyed; on destroy: various chances
+            symbolInstance.is_marked_for_destruction = true;
+            // 식량 1~100, 골드 1~100, 지식 1~30
+            food += Math.floor(Math.random() * 100) + 1;
+            gold += Math.floor(Math.random() * 100) + 1;
+            knowledge += Math.floor(Math.random() * 30) + 1;
+
+            // 1% 확률로 빛나는 호박석
+            if (Math.random() < 0.01) {
+                addSymbolIds.push(42);
+            }
+            break;
+        }
+
+        case 42: { // Glowing Amber: Destroyed; on destroy: adds random current era relic.
+            symbolInstance.is_marked_for_destruction = true;
+            triggerRelicSelection = true;
             break;
         }
     }

@@ -36,16 +36,16 @@ const CROP_SYMBOL_IDS = [1, 2, 4, 5]; // Wheat, Rice, Banana, Fish
 
 // 시대별 심볼 등장 확률 테이블 (종교 미해금)
 const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
-    1: { 1: 100, 2: 0, 3: 0 },
-    2: { 1: 50, 2: 50, 3: 0 },
-    3: { 1: 30, 2: 35, 3: 35 },
+    1: { 1: 75, 2: 0, 3: 0, 4: 25 },
+    2: { 1: 40, 2: 45, 3: 0, 4: 15 },
+    3: { 1: 20, 2: 35, 3: 35, 4: 10 },
 };
 
 // 시대별 심볼 등장 확률 테이블 (특수 0 해금 후)
 const ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
-    1: { 0: 0, 1: 100, 2: 0, 3: 0 },
-    2: { 0: 10, 1: 45, 2: 45, 3: 0 },
-    3: { 0: 10, 1: 25, 2: 30, 3: 35 },
+    1: { 0: 0, 1: 75, 2: 0, 3: 0, 4: 25 },
+    2: { 0: 10, 1: 35, 2: 40, 3: 0, 4: 15 },
+    3: { 0: 10, 1: 20, 2: 30, 3: 30, 4: 10 },
 };
 
 // 레벨업에 필요한 경험치(Knowledge)
@@ -273,8 +273,8 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         // 3. 만약 이 심볼이 다른 심볼을 대체한 놈인데, 원래는 제외 목록에 있었다면 통과시켜야 함
         // (위의 1번에서 이미 처리됨)
 
-        if (finalSym.symbol_type === SymbolType.ENEMY) continue;
-        const e = finalSym.era as number;
+        if (finalSym.tags?.includes('enemy')) continue;
+        const e = finalSym.type as number;
         if (!result[e]) result[e] = [];
 
         // 중복 방지 (이미 대체된 심볼이 들어와 있을 수 있음)
@@ -339,7 +339,7 @@ import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates
 const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
     // KNOWLEDGE_UPGRADES만 사용 — 후보(CANDIDATES)는 표시하지 않음
     const pool = Object.values(KNOWLEDGE_UPGRADES).filter(
-        (u) => u.era <= currentEra && !unlocked.includes(u.id)
+        (u) => u.type <= currentEra && !unlocked.includes(u.id)
     );
     const shuffled = shuffle(pool);
     return shuffled.slice(0, 3);
@@ -410,18 +410,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         const newBoard = createEmptyBoard();
         // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
         let combatAndEnemy = shuffle(state.playerSymbols
-            .filter(s => s.definition.symbol_type === SymbolType.ENEMY || s.definition.symbol_type === SymbolType.COMBAT));
+            .filter(s => s.definition.tags?.includes('enemy') || s.definition.base_hp !== undefined));
         // ID 1: 클로비스 투창촉 - 야만인(적) 등장 시 HP -1
         if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
             combatAndEnemy = combatAndEnemy.map(sym => {
-                if (sym.definition.symbol_type === SymbolType.ENEMY) {
+                if (sym.definition.tags?.includes('enemy')) {
                     return { ...sym, enemy_hp: Math.max(1, (sym.enemy_hp ?? sym.definition.base_hp ?? 1) - 1) };
                 }
                 return sym;
             });
         }
         const friendly = shuffle(state.playerSymbols
-            .filter(s => s.definition.symbol_type === SymbolType.FRIENDLY));
+            .filter(s => !(s.definition.tags?.includes('enemy') || s.definition.base_hp !== undefined)));
         const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
 
         const positions: { x: number, y: number }[] = [];
@@ -618,6 +618,16 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // ── Barbarian Camp (40) 파괴 시 전리품(41) 추가 ──
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    const s = currentBoard[x][y];
+                    if (s && s.definition.id === 40 && s.is_marked_for_destruction) {
+                        toAdd.push(41);
                     }
                 }
             }
@@ -870,13 +880,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let y = 0; y < BOARD_HEIGHT; y++) {
                 const sym = combatBoard[x][y];
-                if (sym?.definition.symbol_type !== SymbolType.COMBAT) continue;
+                if (!sym || sym.definition.base_hp === undefined || sym.definition.tags?.includes('enemy')) continue;
 
-                if (sym.definition.id === 36) { // 궁수 (Archer)
+                if (sym.definition.id === 36 || sym.definition.id === 107) { // 궁수, 석궁병
                     for (let tx = 0; tx < BOARD_WIDTH; tx++) {
                         for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
                             const target = combatBoard[tx][ty];
-                            if (target?.definition.symbol_type === SymbolType.ENEMY) {
+                            if (target?.definition.tags?.includes('enemy')) {
                                 combatEvents.push({ ax: x, ay: y, tx, ty });
                             }
                         }
@@ -884,7 +894,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 } else {
                     for (const adj of getAdjacentCoords(x, y)) {
                         const target = combatBoard[adj.x][adj.y];
-                        if (target?.definition.symbol_type === SymbolType.ENEMY) {
+                        if (target?.definition.tags?.includes('enemy')) {
                             combatEvents.push({ ax: x, ay: y, tx: adj.x, ty: adj.y });
                         }
                     }
@@ -960,7 +970,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => {
                     let hp = sym.definition.base_hp ?? 0;
                     // 아군 유닛(COMBAT)에게만 업그레이드 체력 보너스 적용
-                    if (sym.definition.symbol_type === SymbolType.COMBAT && upgrades.includes(2)) {
+                    if (!sym.definition.tags?.includes('enemy') && sym.definition.base_hp !== undefined && upgrades.includes(2)) {
                         if (sym.definition.id === 35) hp += 10;
                         if (sym.definition.id === 36) hp += 3;
                     }
