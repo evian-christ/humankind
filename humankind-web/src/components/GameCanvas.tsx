@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { Era, getSymbolColorHex } from '../game/data/symbolDefinitions';
+import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import type { HoveredSymbol, HoveredRelic } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
@@ -9,10 +9,12 @@ import { EffectText } from './EffectText';
 import { useRelicStore } from '../game/state/relicStore';
 
 const ERA_NAME_KEYS: Record<number, string> = {
-    [Era.SPECIAL]: 'era.special',
-    [Era.ANCIENT]: 'era.ancient',
-    [Era.MEDIEVAL]: 'era.medieval',
-    [Era.MODERN]: 'era.modern',
+    [SymbolType.RELIGION]: 'era.special',
+    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.ANCIENT]: 'era.ancient',
+    [SymbolType.MEDIEVAL]: 'era.medieval',
+    [SymbolType.MODERN]: 'era.modern',
+    [SymbolType.TERRAIN]: 'era.terrain',
 };
 
 const GameCanvas = () => {
@@ -137,13 +139,13 @@ const GameCanvas = () => {
                 <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
                     <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.definition.id}.name`, language)}</div>
                     <div className="symbol-tooltip-rarity" style={{
-                        color: getSymbolColorHex(hoveredSymbol.definition.era),
+                        color: getSymbolColorHex(hoveredSymbol.definition.type),
                         fontWeight: 'bold',
                         fontSize: '18px',
                         letterSpacing: '2px',
-                        textShadow: `0 0 10px ${getSymbolColorHex(hoveredSymbol.definition.era)}80`,
+                        textShadow: `0 0 10px ${getSymbolColorHex(hoveredSymbol.definition.type)}80`,
                     }}>
-                        {t(ERA_NAME_KEYS[hoveredSymbol.definition.era] ?? 'era.ancient', language)}
+                        {t(ERA_NAME_KEYS[hoveredSymbol.definition.type] ?? 'era.ancient', language)}
                     </div>
                     <div className="symbol-tooltip-desc">
                         {t(`symbol.${hoveredSymbol.definition.id}.desc`, language).split('\n').map((line, i) => (

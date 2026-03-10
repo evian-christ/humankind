@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { useGameStore, REROLL_COST } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { Era, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 
 const ERA_NAME_KEYS: Record<number, string> = {
-    [Era.SPECIAL]: 'era.special',
-    [Era.ANCIENT]: 'era.ancient',
-    [Era.MEDIEVAL]: 'era.medieval',
-    [Era.MODERN]: 'era.modern',
+    [SymbolType.RELIGION]: 'era.special',
+    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.ANCIENT]: 'era.ancient',
+    [SymbolType.MEDIEVAL]: 'era.medieval',
+    [SymbolType.MODERN]: 'era.modern',
+    [SymbolType.TERRAIN]: 'era.terrain',
 };
 
 const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: () => void }) => {
     const language = useSettingsStore((s) => s.language);
-    const eraColor = getSymbolColorHex(symbol.era);
-    const eraName = t(ERA_NAME_KEYS[symbol.era] ?? 'era.ancient', language);
+    const eraColor = getSymbolColorHex(symbol.type);
+    const eraName = t(ERA_NAME_KEYS[symbol.type] ?? 'era.ancient', language);
     const symName = t(`symbol.${symbol.id}.name`, language);
     const symDesc = t(`symbol.${symbol.id}.desc`, language);
 

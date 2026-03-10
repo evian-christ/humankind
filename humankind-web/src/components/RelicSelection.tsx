@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore, type Language } from '../game/state/settingsStore';
 import { type RelicDefinition } from '../game/data/relicDefinitions';
-import { getSymbolColorHex, Era } from '../game/data/symbolDefinitions';
+import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 
 const ERA_NAME_KEYS: Record<number, string> = {
-    [Era.SPECIAL]: 'era.special',
-    [Era.ANCIENT]: 'era.ancient',
-    [Era.MEDIEVAL]: 'era.medieval',
-    [Era.MODERN]: 'era.modern',
+    [SymbolType.RELIGION]: 'era.special',
+    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.ANCIENT]: 'era.ancient',
+    [SymbolType.MEDIEVAL]: 'era.medieval',
+    [SymbolType.MODERN]: 'era.modern',
+    [SymbolType.TERRAIN]: 'era.terrain',
 };
 
 // Helper function inside component to render effect text
@@ -88,8 +90,8 @@ const RelicSelection = () => {
                                 <div className="relic-museum-info-slot" key={`info-${i}`}>
                                     {relic ? (
                                         <div className="relic-museum-details">
-                                            <div className="relic-card-era" style={{ color: getSymbolColorHex(relic.era), textShadow: `0 0 8px ${getSymbolColorHex(relic.era)}88` }}>
-                                                {t(ERA_NAME_KEYS[relic.era] ?? 'era.ancient', language)}
+                                            <div className="relic-card-era" style={{ color: getSymbolColorHex(relic.type), textShadow: `0 0 8px ${getSymbolColorHex(relic.type)}88` }}>
+                                                {t(ERA_NAME_KEYS[relic.type] ?? 'era.ancient', language)}
                                             </div>
                                             <div className="relic-card-name" style={{ color: '#fff', textShadow: '0 2px 4px #000, 0 0 10px rgba(0,0,0,0.8)' }}>
                                                 {t(`relic.${relic.id}.name`, language)}

@@ -4,7 +4,7 @@ import type { GameState } from '../../game/state/gameStore';
 import { SPIN_SPEED_CONFIG, COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../game/state/settingsStore';
 import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
-import { getSymbolColor, Era, SymbolType } from '../../game/data/symbolDefinitions';
+import { getSymbolColor, SymbolType } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import { useRelicStore } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
@@ -14,10 +14,11 @@ const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
 const FLOAT_DISTANCE = 30; // px — 위로 이동 거리
 
 const ERA_NAME_KEYS: Record<number, string> = {
-    [Era.SPECIAL]: 'era.special',
-    [Era.ANCIENT]: 'era.ancient',
-    [Era.MEDIEVAL]: 'era.medieval',
-    [Era.MODERN]: 'era.modern',
+    [SymbolType.RELIGION]: 'era.special',
+    [SymbolType.NORMAL]: 'era.ancient',
+    [SymbolType.MEDIEVAL]: 'era.medieval',
+    [SymbolType.MODERN]: 'era.modern',
+    [SymbolType.TERRAIN]: 'era.terrain',
 };
 
 export class PixiGameApp {
@@ -452,7 +453,7 @@ export class PixiGameApp {
                 this.hitContainer.addChild(hitArea);
 
                 const innerW = cellWidth - 6;
-                const rarityColor = getSymbolColor(symDef.era);
+                const rarityColor = getSymbolColor(symDef.type);
 
                 if (symDef.sprite && symDef.sprite !== '-' && symDef.sprite !== '-.png') {
                     const spritePath = `/assets/symbols/${symDef.sprite}`;
@@ -478,7 +479,7 @@ export class PixiGameApp {
                     drawTarget.addChild(nameText);
                 }
 
-                if (symbol.effect_counter > 0 && symDef.symbol_type === SymbolType.FRIENDLY) {
+                if (symbol.effect_counter > 0 && !symDef.tags?.includes('enemy') && symDef.base_hp === undefined) {
                     const counterText = new PIXI.Text({
                         text: String(symbol.effect_counter),
                         style: new PIXI.TextStyle({ fill: '#000000', fontSize: 42 * fs, fontFamily }),
@@ -871,7 +872,7 @@ export class PixiGameApp {
         } else {
             const lang = useSettingsStore.getState().language;
             const symName = t(`symbol.${attackerDef?.id ?? 0}.name`, lang);
-            const rarityColor = attackerDef ? getSymbolColor(attackerDef.era) : 0xffffff;
+            const rarityColor = attackerDef ? getSymbolColor(attackerDef.type) : 0xffffff;
             const container = new PIXI.Container();
             const txt = new PIXI.Text({
                 text: symName,
