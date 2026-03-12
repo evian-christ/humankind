@@ -117,6 +117,14 @@ export interface GameState {
     /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
     rerollsThisTurn: number;
 
+    barbarianSymbolThreat: number;
+    barbarianCampThreat: number;
+    naturalDisasterThreat: number;
+    barbarianSymbolTimer: number | null;
+    barbarianCampTimer: number | null;
+    topTextToggleIndex: number;
+    setTopTextToggleIndex: (val: number) => void;
+
     // Actions
     spinBoard: () => void;
     /** spinning 애니메이션이 끝난 후 호출 — processing 시작 */
@@ -401,15 +409,76 @@ export const useGameStore = create<GameState>((set, get) => ({
     levelBeforeUpgrade: 1,
     isRelicShopOpen: false,
     rerollsThisTurn: 0,
+    
+    barbarianSymbolThreat: 0,
+    barbarianCampThreat: 0,
+    naturalDisasterThreat: 0,
+    barbarianSymbolTimer: null,
+    barbarianCampTimer: null,
+    topTextToggleIndex: 0,
+    setTopTextToggleIndex: (val) => set({ topTextToggleIndex: val }),
 
     spinBoard: () => {
         const state = get();
         if (state.phase !== 'idle') return;
 
+        let {
+            barbarianSymbolThreat,
+            barbarianCampThreat,
+            naturalDisasterThreat,
+            barbarianSymbolTimer,
+            barbarianCampTimer
+        } = state;
+
+        const newPlayerSymbols = [...state.playerSymbols];
+
+        // Threat increment logic
+        if (state.era === 1) { // 1단계는 고대 시대
+            // 1번: 야만인 심볼 한 개 침공
+            if (barbarianSymbolTimer === null) {
+                barbarianSymbolThreat += 3; // +3% per turn
+                if (Math.random() * 100 < barbarianSymbolThreat) {
+                    barbarianSymbolTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
+                    barbarianSymbolThreat = 0;
+                }
+            } else {
+                barbarianSymbolTimer--;
+                if (barbarianSymbolTimer <= 0) {
+                    barbarianSymbolTimer = null;
+                    const enemyDef = SYMBOLS[43]; // Enemy Warrior (적 전사)
+                    if (enemyDef) newPlayerSymbols.push(createInstance(enemyDef));
+                }
+            }
+
+            // 2번: 야만인 주둔지 침공
+            if (barbarianCampTimer === null) {
+                barbarianCampThreat += 1; // +1% per turn
+                if (Math.random() * 100 < barbarianCampThreat) {
+                    barbarianCampTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
+                    barbarianCampThreat = 0;
+                }
+            } else {
+                barbarianCampTimer--;
+                if (barbarianCampTimer <= 0) {
+                    barbarianCampTimer = null;
+                    const campDef = SYMBOLS[40]; // Barbarian Camp
+                    if (campDef) newPlayerSymbols.push(createInstance(campDef));
+                }
+            }
+
+            // 3번: 자연재해 (바로 추가)
+            naturalDisasterThreat += 1; // +1% per turn
+            if (Math.random() * 100 < naturalDisasterThreat) {
+                naturalDisasterThreat = 0;
+                const desertDef = SYMBOLS[27]; // Desert
+                if (desertDef) newPlayerSymbols.push(createInstance(desertDef));
+            }
+        }
+
         // 1. Clear Board & Place Symbols (reuse existing instances to preserve counters)
         const newBoard = createEmptyBoard();
         // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
-        let combatAndEnemy = shuffle(state.playerSymbols
+        let combatAndEnemy = shuffle(newPlayerSymbols
             .filter(s => s.definition.tags?.includes('enemy') || s.definition.base_hp !== undefined));
         // ID 1: 클로비스 투창촉 - 야만인(적) 등장 시 HP -1
         if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
@@ -442,6 +511,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
         // prevBoard: 스핀 전 보드를 저장 (릴 시작점용)
         set({
+            playerSymbols: newPlayerSymbols,
+            barbarianSymbolThreat,
+            barbarianCampThreat,
+            naturalDisasterThreat,
+            barbarianSymbolTimer,
+            barbarianCampTimer,
             prevBoard: state.board,
             board: newBoard,
             turn: newTurn,

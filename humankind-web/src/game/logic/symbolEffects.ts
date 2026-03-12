@@ -361,11 +361,11 @@ export const processSingleSymbolEffects = (
             if (relicEffects.jerichoMonumentBonus) knowledge += 20;
             break;
 
-        case 18: // Omen: 50% chance +40 Food, 50% chance -10 Food
+        case 18: // Omen: 50% chance: +30 Food, 50% chance: -15 Food.
             if (Math.random() < 0.5) {
-                food += 40;
+                food += 30;
             } else {
-                food -= 10;
+                food -= 15;
             }
             break;
 
@@ -580,7 +580,7 @@ export const processSingleSymbolEffects = (
             }
             break;
 
-        case 37: // Camel Caravan: After 1 spin: refreshes relic shop and destroys self
+        case 37: // Relic Caravan: After 1 spin: refreshes relic shop and destroys self
             symbolInstance.is_marked_for_destruction = true;
             triggerRelicRefresh = true;
             break;
@@ -631,6 +631,11 @@ export const processSingleSymbolEffects = (
         case 42: { // Glowing Amber: Destroyed; on destroy: adds random current era relic.
             symbolInstance.is_marked_for_destruction = true;
             triggerRelicSelection = true;
+            break;
+        }
+
+        case 43: { // Enemy Warrior: -5 Food
+            food -= 5;
             break;
         }
     }
