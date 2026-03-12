@@ -12,6 +12,7 @@ import DestroySelection from './components/DestroySelection';
 import PauseMenu from './components/PauseMenu';
 import DevOverlay from './components/DevOverlay';
 import DataBrowser from './components/DataBrowser';
+import SymbolPoolModal from './components/SymbolPoolModal';
 
 function App() {
   const { phase, turn, spinBoard, initializeGame, toggleRelicShop } = useGameStore();
@@ -90,6 +91,9 @@ function App() {
 
       {/* ===== DATA BROWSER (F3) ===== */}
       <DataBrowser />
+
+      {/* ===== SYMBOL POOL PROBABILITY (F4) ===== */}
+      <SymbolPoolModal />
 
       {/* ===== PIXEL ARCADE SPIN BUTTON ===== */}
       <div className="spin-area">
