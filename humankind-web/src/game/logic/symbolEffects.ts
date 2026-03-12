@@ -569,13 +569,13 @@ export const processSingleSymbolEffects = (
         // ── Enemy / Combat Symbols ──
 
         case 35: // Warrior
-            if (symbolInstance.definition.tags?.includes('enemy')) {
+            if (symbolInstance.definition.type === SymbolType.ENEMY) {
                 if (Math.random() < 0.5) food -= 30; else gold -= 10;
             }
             break;
 
         case 36: // Archer
-            if (symbolInstance.definition.tags?.includes('enemy')) {
+            if (symbolInstance.definition.type === SymbolType.ENEMY) {
                 if (Math.random() < 0.5) food -= 20; else gold -= 20;
             }
             break;
@@ -606,7 +606,7 @@ export const processSingleSymbolEffects = (
         case 40: { // Barbarian Camp: Every 10 turns: adds 1 random current era Enemy combat unit.
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 10) {
-                const enemies = [35, 36]; // Warrior, Archer
+                const enemies = [43]; // Enemy Warrior (TODO: add Enemy Archer later)
                 const enemyId = enemies[Math.floor(Math.random() * enemies.length)];
                 addSymbolIds.push(enemyId);
                 symbolInstance.effect_counter -= 10;

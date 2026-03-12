@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS } from '../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL } from '../data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
@@ -218,8 +218,7 @@ const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], play
     return { board, playerSymbols: symbols };
 };
 
-/** 선택 풀에서 제외할 심볼 */
-const EXCLUDED_FROM_CHOICES = new Set<number>([22, 23, 24, 25, 26, 36, 39, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
+
 /** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
 const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
     // 8: [7, 39] // (Disabled: Now adds Tablet as additional symbol)
@@ -246,7 +245,7 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
 
         // 업그레이드로 해금되는 심볼들 예외 처리
-        let isUnlocked = !EXCLUDED_FROM_CHOICES.has(sym.id);
+        let isUnlocked = !EXCLUDED_FROM_BASE_POOL.has(sym.id);
         if (sym.id === 25 && upgrades.includes(1)) isUnlocked = true; // Writing -> Library
         if (sym.id === 36 && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
         if (sym.id === 22 && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
@@ -281,8 +280,14 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         // 3. 만약 이 심볼이 다른 심볼을 대체한 놈인데, 원래는 제외 목록에 있었다면 통과시켜야 함
         // (위의 1번에서 이미 처리됨)
 
-        if (finalSym.tags?.includes('enemy')) continue;
-        const e = finalSym.type as number;
+        if (finalSym.type === SymbolType.ENEMY) continue;
+        let e = finalSym.type as number;
+        
+        // ANCIENT (5) 와 UNIT (6) 기물들은 확률 테이블 상 NORMAL (1)에 편입됨
+        if (e === SymbolType.ANCIENT || e === SymbolType.UNIT) {
+            e = SymbolType.NORMAL;
+        }
+
         if (!result[e]) result[e] = [];
 
         // 중복 방지 (이미 대체된 심볼이 들어와 있을 수 있음)
@@ -479,18 +484,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         const newBoard = createEmptyBoard();
         // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
         let combatAndEnemy = shuffle(newPlayerSymbols
-            .filter(s => s.definition.tags?.includes('enemy') || s.definition.base_hp !== undefined));
+            .filter(s => s.definition.type === SymbolType.ENEMY || s.definition.base_hp !== undefined));
         // ID 1: 클로비스 투창촉 - 야만인(적) 등장 시 HP -1
         if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
             combatAndEnemy = combatAndEnemy.map(sym => {
-                if (sym.definition.tags?.includes('enemy')) {
+                if (sym.definition.type === SymbolType.ENEMY) {
                     return { ...sym, enemy_hp: Math.max(1, (sym.enemy_hp ?? sym.definition.base_hp ?? 1) - 1) };
                 }
                 return sym;
             });
         }
         const friendly = shuffle(state.playerSymbols
-            .filter(s => !(s.definition.tags?.includes('enemy') || s.definition.base_hp !== undefined)));
+            .filter(s => !(s.definition.type === SymbolType.ENEMY || s.definition.base_hp !== undefined)));
         const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
 
         const positions: { x: number, y: number }[] = [];

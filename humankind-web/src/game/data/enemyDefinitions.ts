@@ -10,12 +10,12 @@ export const ENEMIES: Record<number, SymbolDefinition> = {
     35: {
         id: 35,
         name: "symbol.35.name",
-        type: SymbolType.NORMAL,
+        type: SymbolType.ENEMY,
         description: "Enemy Warrior. Assigned a random penalty on spawn.",
         base_attack: 5,
         base_hp: 10,
         sprite: "036.png",
-        tags: ["unit", "enemy", "melee"]
+        tags: ["unit", "melee"]
     },
 };
 

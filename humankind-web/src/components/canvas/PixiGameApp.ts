@@ -306,10 +306,27 @@ export class PixiGameApp {
         const nextCost = calculateFoodCost(nextPaymentTurn);
         const demandMsg = t('game.foodDemand', lang).replace('{turns}', String(turnsUntilPayment)).replace('{amount}', String(nextCost));
 
+        const topMessages: string[] = [demandMsg];
+        if (state.barbarianSymbolTimer !== null && state.barbarianSymbolTimer > 0) {
+            topMessages.push(lang === 'ko' ? `${state.barbarianSymbolTimer}턴 뒤 야만인이 공격합니다` : `Barbarians attack in ${state.barbarianSymbolTimer} turns`);
+        }
+        if (state.barbarianCampTimer !== null && state.barbarianCampTimer > 0) {
+            topMessages.push(lang === 'ko' ? `야만인이 주위에 주둔한다는 소식이 들려옵니다. (${state.barbarianCampTimer}턴 뒤)` : `Rumors of a Barbarian Camp nearby. (in ${state.barbarianCampTimer} turns)`);
+        }
+
+        const validIndex = state.topTextToggleIndex % topMessages.length;
+        const displayMsg = topMessages[validIndex] || demandMsg;
+        const isWarning = validIndex > 0;
+
         const topRowCY = 40 * scale;
         const demandText = new PIXI.Text({
-            text: demandMsg,
-            style: new PIXI.TextStyle({ fill: '#e0e0e0', fontSize: 28 * fs, fontFamily, stroke: { color: '#000000', width: 2 } }),
+            text: displayMsg,
+            style: new PIXI.TextStyle({ 
+                fill: isWarning ? '#ef4444' : '#e0e0e0', // 경고 메시지면 빨간색
+                fontSize: 28 * fs, 
+                fontFamily, 
+                stroke: { color: '#000000', width: 2 } 
+            }),
         });
         demandText.anchor.set(0.5, 0.5);
         demandText.x = w / 2;
@@ -384,7 +401,7 @@ export class PixiGameApp {
                     group.y = yPos;
                     if (def && def.sprite && def.sprite !== '-' && def.sprite !== '-.png') {
                         const spritePath = `/assets/symbols/${def.sprite}`;
-                        const SPRITE_PX = 26;
+                        const SPRITE_PX = 32;
                         const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
                         const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                         const sprite = PIXI.Sprite.from(spritePath);
@@ -457,7 +474,7 @@ export class PixiGameApp {
 
                 if (symDef.sprite && symDef.sprite !== '-' && symDef.sprite !== '-.png') {
                     const spritePath = `/assets/symbols/${symDef.sprite}`;
-                    const SPRITE_PX = 26;
+                    const SPRITE_PX = 32;
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                     const sprite = PIXI.Sprite.from(spritePath);
@@ -479,37 +496,68 @@ export class PixiGameApp {
                     drawTarget.addChild(nameText);
                 }
 
-                if (symbol.effect_counter > 0 && !symDef.tags?.includes('enemy') && symDef.base_hp === undefined) {
+                if (symbol.effect_counter > 0 && symDef.type !== SymbolType.ENEMY && symDef.base_hp === undefined) {
                     const counterText = new PIXI.Text({
                         text: String(symbol.effect_counter),
-                        style: new PIXI.TextStyle({ fill: '#000000', fontSize: 42 * fs, fontFamily }),
+                        style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
                     });
-                    counterText.anchor.set(1, 1);
-                    counterText.x = cellX + cellWidth - 8;
-                    counterText.y = cellY + cellHeight - 8;
+                    counterText.anchor.set(0.5, 0.5);
+                    counterText.x = cellX + cellWidth - 21;
+                    counterText.y = cellY + cellHeight - 24;
                     drawTarget.addChild(counterText);
                 }
 
                 if (symDef.base_attack !== undefined && symDef.base_attack > 0) {
-                    const atkText = new PIXI.Text({
-                        text: `⚔${symDef.base_attack}`,
-                        style: new PIXI.TextStyle({ fill: '#ff8c42', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                    const atkBg = new PIXI.Text({
+                        text: '⚔',
+                        style: new PIXI.TextStyle({ fill: '#ff8c42', fontSize: 60 * fs, fontFamily }),
                     });
-                    atkText.anchor.set(0, 1);
-                    atkText.x = cellX + 6;
-                    atkText.y = cellY + cellHeight - 5;
+                    atkBg.anchor.set(0.5, 0.5);
+                    atkBg.x = cellX + 24;
+                    atkBg.y = cellY + cellHeight - 24;
+                    atkBg.alpha = 0.4;
+                    drawTarget.addChild(atkBg);
+
+                    const atkText = new PIXI.Text({
+                        text: String(symDef.base_attack),
+                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                    });
+                    atkText.anchor.set(0.5, 0.5);
+                    atkText.x = cellX + 25;
+                    atkText.y = cellY + cellHeight - 24;
                     drawTarget.addChild(atkText);
                 }
 
                 if (symDef.base_hp !== undefined && symDef.base_hp > 0) {
-                    const hpText = new PIXI.Text({
-                        text: `♥${symbol.enemy_hp ?? symDef.base_hp}`,
-                        style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                    const hpBg = new PIXI.Text({
+                        text: '♥',
+                        style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: 60 * fs, fontFamily }),
                     });
-                    hpText.anchor.set(1, 1);
-                    hpText.x = cellX + cellWidth - 5;
-                    hpText.y = cellY + cellHeight - 5;
+                    hpBg.anchor.set(0.5, 0.5);
+                    hpBg.x = cellX + cellWidth - 20;
+                    hpBg.y = cellY + cellHeight - 24;
+                    hpBg.alpha = 0.4;
+                    drawTarget.addChild(hpBg);
+
+                    const hpText = new PIXI.Text({
+                        text: String(symbol.enemy_hp ?? symDef.base_hp),
+                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                    });
+                    hpText.anchor.set(0.5, 0.5);
+                    hpText.x = cellX + cellWidth - 21;
+                    hpText.y = cellY + cellHeight - 24;
                     drawTarget.addChild(hpText);
+                }
+
+                if (symDef.id === 40) { // Barbarian Camp
+                    const campCounterText = new PIXI.Text({
+                        text: String(10 - symbol.effect_counter),
+                        style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                    });
+                    campCounterText.anchor.set(0.5, 0.5);
+                    campCounterText.x = cellX + 25;
+                    campCounterText.y = cellY + cellHeight - 24;
+                    drawTarget.addChild(campCounterText);
                 }
 
                 if (state.activeSlot && state.activeSlot.x === x && state.activeSlot.y === y) {

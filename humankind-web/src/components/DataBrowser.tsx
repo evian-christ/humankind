@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { SYMBOLS, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { SYMBOLS, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition, isBasePool, EXCLUDED_FROM_BASE_POOL } from '../game/data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
 import { RELICS } from '../game/data/relicDefinitions';
 import { RELIC_CANDIDATES } from '../game/data/relicCandidates';
@@ -24,14 +24,6 @@ const ERA_KEYS: Record<number, string> = {
     [SymbolType.TERRAIN]: 'terrain',
     [SymbolType.UNIT]: 'unit',
     [SymbolType.ENEMY]: 'enemy',
-};
-
-const EXCLUDED_FROM_BASE_POOL = new Set<number>([22, 23, 24, 25, 26, 36, 39, 41, 42, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60]);
-const isBasePool = (s: SymbolDefinition) => {
-    return (s.type === SymbolType.NORMAL || s.type === SymbolType.TERRAIN || s.type === SymbolType.ANCIENT || s.type === SymbolType.UNIT) &&
-        !s.tags?.includes('enemy') &&
-        !EXCLUDED_FROM_BASE_POOL.has(s.id) &&
-        !RELIGION_DOCTRINE_IDS.has(s.id);
 };
 
 

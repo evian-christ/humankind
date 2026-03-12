@@ -70,10 +70,10 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     39: { id: 39, name: "Stone Tablet", type: SymbolType.NORMAL, description: "+5 Knowledge per relic owned.", sprite: "039.png", tags: [] },
     36: { id: 36, name: "Archer", type: SymbolType.UNIT, description: "Ancient ranged unit.", base_attack: 3, base_hp: 5, sprite: "036.png", tags: ["ranged"] },
     23: { id: 23, name: "Horse", type: SymbolType.NORMAL, description: "+10 Food, +10 Gold; when adjacent to Plains: +20 Food.", sprite: "023.png", tags: [] },
-    40: { id: 40, name: "Barbarian Camp", type: SymbolType.ENEMY, description: "Every 10 turns: adds 1 random current era enemy combat unit; Destroyed; on destroy: adds Loot.", base_hp: 10, sprite: "040.png", tags: ["enemy"] },
+    40: { id: 40, name: "Barbarian Camp", type: SymbolType.ENEMY, description: "Every 10 turns: adds 1 random current era enemy combat unit; Destroyed; on destroy: adds Loot.", base_hp: 10, sprite: "040.png", tags: [] },
     41: { id: 41, name: "Loot", type: SymbolType.NORMAL, description: "Destroyed; on destroy: get random reward.", sprite: "041.png", tags: [] },
     42: { id: 42, name: "Glowing Amber", type: SymbolType.NORMAL, description: "Destroyed; on destroy: adds random current era relic.", sprite: "042.png", tags: [] },
-    43: { id: 43, name: "Enemy Warrior", type: SymbolType.ENEMY, description: "-5 Food.", base_attack: 5, base_hp: 10, sprite: "043.png", tags: ["melee", "enemy"] },
+    43: { id: 43, name: "Enemy Warrior", type: SymbolType.ENEMY, description: "-5 Food.", base_attack: 5, base_hp: 10, sprite: "043.png", tags: ["melee"] },
 
 
     // ── Normal Package Unlocks (Placeholders) ──
@@ -94,6 +94,18 @@ export const RELIGION_SYMBOL_IDS = new Set([12, 16, 17, 31, 32, 33, 34]);
 
 /** 종교 교리 심볼 ID 목록 (패널티 체크용) */
 export const RELIGION_DOCTRINE_IDS = new Set([31, 32, 33, 34]);
+
+/** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
+export const EXCLUDED_FROM_BASE_POOL = new Set<number>([
+    22, 23, 24, 25, 26, 36, 39, 41, 42, 43, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+]);
+
+/** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */
+export const isBasePool = (s: SymbolDefinition) => {
+    return (s.type === SymbolType.NORMAL || s.type === SymbolType.TERRAIN || s.type === SymbolType.ANCIENT || s.type === SymbolType.UNIT) &&
+        !EXCLUDED_FROM_BASE_POOL.has(s.id) &&
+        !RELIGION_DOCTRINE_IDS.has(s.id);
+};
 
 /** Knowledge를 생산하는 심볼 ID 목록 */
 export const KNOWLEDGE_PRODUCING_IDS = new Set([10, 16, 17, 25, 26, 38, 39]);

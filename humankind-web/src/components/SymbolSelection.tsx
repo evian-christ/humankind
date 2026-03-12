@@ -30,7 +30,7 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
                 fontSize: '20px',
                 fontWeight: '900',
                 letterSpacing: '3px',
-                textShadow: `0 0 12px ${eraColor}b3`,
+                textShadow: `-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 12px ${eraColor}b3`,
                 marginBottom: '8px',
                 display: 'inline-block',
                 transform: 'scaleX(1.4)',

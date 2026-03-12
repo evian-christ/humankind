@@ -117,7 +117,16 @@ const GameCanvas = () => {
         return () => unsub();
     }, []);
 
-    // 4. Tooltip positioning
+    // 4. Top Text Toggle Interval
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const state = useGameStore.getState();
+            state.setTopTextToggleIndex(state.topTextToggleIndex + 1);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // 5. Tooltip positioning
     const getTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
         if (!hoveredItem) return { display: 'none' };
         const tooltipW = 280;
