@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useRelicStore } from '../game/state/relicStore';
 import { useSettingsStore } from '../game/state/settingsStore';
+import { useNotificationStore } from '../game/state/notificationStore';
 import { SYMBOLS } from '../game/data/symbolDefinitions';
 import { RELIC_LIST } from '../game/data/relicDefinitions';
 import { t } from '../i18n';
@@ -191,6 +192,35 @@ const DevOverlay = () => {
                     >
                         <span style={{ fontSize: '18px' }}>📚</span>
                         <span>지식 업그레이드</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Test Notification */}
+            <div style={{
+                padding: '8px 14px',
+                borderBottom: '1px solid #333',
+            }}>
+                <div style={{ color: '#888', fontSize: '11px', marginBottom: '6px', letterSpacing: '1px' }}>TEST NOTIFICATION</div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {(['info', 'warning', 'danger'] as const).map(level => (
+                        <button
+                            key={level}
+                            onClick={() => useNotificationStore.getState().push({
+                                type: 'generic',
+                                level,
+                                message: `[${level}] 테스트 알림 메시지입니다.`,
+                            })}
+                            style={btnStyle(level === 'danger' ? '#7f1d1d' : level === 'warning' ? '#78350f' : '#1e3a5f')}
+                        >
+                            {level}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => useNotificationStore.getState().clearAll()}
+                        style={btnStyle('#374151')}
+                    >
+                        clear all
                     </button>
                 </div>
             </div>

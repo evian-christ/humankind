@@ -300,38 +300,8 @@ export class PixiGameApp {
         const fontFamily = 'Mulmaru';
         const fs = 1;
 
-        // Top-center message
-        const turnsUntilPayment = 10 - (state.turn % 10);
-        const nextPaymentTurn = state.turn + turnsUntilPayment;
-        const nextCost = calculateFoodCost(nextPaymentTurn);
-        const demandMsg = t('game.foodDemand', lang).replace('{turns}', String(turnsUntilPayment)).replace('{amount}', String(nextCost));
+        // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
 
-        const topMessages: string[] = [demandMsg];
-        if (state.barbarianSymbolTimer !== null && state.barbarianSymbolTimer > 0) {
-            topMessages.push(lang === 'ko' ? `${state.barbarianSymbolTimer}턴 뒤 야만인이 공격합니다` : `Barbarians attack in ${state.barbarianSymbolTimer} turns`);
-        }
-        if (state.barbarianCampTimer !== null && state.barbarianCampTimer > 0) {
-            topMessages.push(lang === 'ko' ? `야만인이 주위에 주둔한다는 소식이 들려옵니다. (${state.barbarianCampTimer}턴 뒤)` : `Rumors of a Barbarian Camp nearby. (in ${state.barbarianCampTimer} turns)`);
-        }
-
-        const validIndex = state.topTextToggleIndex % topMessages.length;
-        const displayMsg = topMessages[validIndex] || demandMsg;
-        const isWarning = validIndex > 0;
-
-        const topRowCY = 40 * scale;
-        const demandText = new PIXI.Text({
-            text: displayMsg,
-            style: new PIXI.TextStyle({ 
-                fill: isWarning ? '#ef4444' : '#e0e0e0', // 경고 메시지면 빨간색
-                fontSize: 28 * fs, 
-                fontFamily, 
-                stroke: { color: '#000000', width: 2 } 
-            }),
-        });
-        demandText.anchor.set(0.5, 0.5);
-        demandText.x = w / 2;
-        demandText.y = topRowCY;
-        this.bgContainer.addChild(demandText);
 
         const BOARD_SCALE = 0.8;
         const boardW = 1140 * scale * BOARD_SCALE;
@@ -643,7 +613,7 @@ export class PixiGameApp {
         }
 
         // UI bars (Knowledge, Food, Gold)
-        this.renderUI(state, settings, scale, topRowCY, fs);
+        this.renderUI(state, settings, scale, fs);
         this.renderRelics(scale);
     }
 
@@ -743,7 +713,7 @@ export class PixiGameApp {
         }
     }
 
-    private renderUI(state: GameState, settings: SettingsState, scale: number, topRowCY: number, fs: number) {
+    private renderUI(state: GameState, settings: SettingsState, scale: number, fs: number) {
         const lang = settings.language;
         const fontFamily = 'Mulmaru';
         const eraName = t(ERA_NAME_KEYS[state.era] ?? 'era.ancient', lang);
@@ -752,7 +722,7 @@ export class PixiGameApp {
         const knowledgeRatio = knowledgeRequired > 0 ? Math.min(1, knowledgeCurrent / knowledgeRequired) : 0;
 
         const demandFontSize = 28 * fs;
-        const rowCY = topRowCY;
+        const rowCY = 40 * scale; // 상단에서 40px 아래
         const rowH = demandFontSize + 4 * scale;
         const rowY = rowCY - rowH / 2;
         const startPanelX = 32 * scale;
