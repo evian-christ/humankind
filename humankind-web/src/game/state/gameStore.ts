@@ -3,6 +3,7 @@ import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCL
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
+import { useNotificationStore } from './notificationStore';
 
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
@@ -122,8 +123,6 @@ export interface GameState {
     naturalDisasterThreat: number;
     barbarianSymbolTimer: number | null;
     barbarianCampTimer: number | null;
-    topTextToggleIndex: number;
-    setTopTextToggleIndex: (val: number) => void;
 
     // Actions
     spinBoard: () => void;
@@ -252,7 +251,7 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         if (sym.id === 23 && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
         if ((sym.id === 24 || sym.id === 26) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
         if (sym.id === 39 && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
-        if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion
+        if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
 
         // 패키지 업그레이드 해금 및 금지(Ban)
         if (sym.id === 51 && upgrades.includes(201)) isUnlocked = true; // Hunting -> Bear
@@ -282,11 +281,17 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
 
         if (finalSym.type === SymbolType.ENEMY) continue;
         let e = finalSym.type as number;
-        
-        // ANCIENT (5) 와 UNIT (6) 기물들은 확률 테이블 상 NORMAL (1)에 편입됨
+
+        // ANCIENT (5), UNIT (6), RELIGION (0) 기물들은 확률 테이블 상 NORMAL (1)에 편입되거나 
+        // 종교 해금 시 별도 카테고리(0)로 분류됩니다.
         if (e === SymbolType.ANCIENT || e === SymbolType.UNIT) {
             e = SymbolType.NORMAL;
         }
+        
+        // 종교 심볼은 해금되었을 때만 결과 풀에 넣음 (범주 0)
+        // 만약 해금 안 되었는데 지형/고대 등에 섞여있는 종교 관련 심볼이 있다면 NORMAL로 처리할 수도 있지만
+        // 여기서는 명시적인 RELIGION 타입만 0으로 분류
+        if (e === SymbolType.RELIGION && !useGameStore.getState().religionUnlocked) continue;
 
         if (!result[e]) result[e] = [];
 
@@ -298,28 +303,33 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
     return result;
 };
 
-/** 시대 기반 가중치로 심볼 3개 생성 (중복 가능) */
-const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
-    const probTable = religionUnlocked ? ERA_PROBABILITIES_WITH_SPECIAL : ERA_PROBABILITIES_BASE;
-    const probs = probTable[era] ?? probTable[1];
+/** 현재 시대에 등장 가능한 심볼 플랫 풀 빌드 (균등 확률용) */
+const buildFlatPool = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
     const symbolsByEra = getSymbolsByEra();
+    const flat: SymbolDefinition[] = [];
+
+    for (const [catStr, syms] of Object.entries(symbolsByEra)) {
+        if (!syms || syms.length === 0) continue;
+        const cat = Number(catStr);
+        // Category 0 = Religion: 종교 해금 시에만 포함
+        if (cat === SymbolType.RELIGION && !religionUnlocked) continue;
+        // Category 2 = Medieval: era 2 이상
+        if (cat === SymbolType.MEDIEVAL && era < 2) continue;
+        // Category 3 = Modern: era 3 이상
+        if (cat === SymbolType.MODERN && era < 3) continue;
+        flat.push(...syms);
+    }
+
+    return flat;
+};
+
+/** 심볼 3개 생성 — 풀 내 모든 심볼 균등 확률 */
+const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
+    const pool = buildFlatPool(era, religionUnlocked);
     const choices: SymbolDefinition[] = [];
 
     for (let i = 0; i < 3; i++) {
-        const roll = Math.floor(Math.random() * 100);
-        let cumulative = 0;
-        let selectedEra = 1;
-
-        for (const [eraKey, prob] of Object.entries(probs)) {
-            cumulative += prob;
-            if (roll < cumulative) {
-                selectedEra = Number(eraKey);
-                break;
-            }
-        }
-
-        const pool = symbolsByEra[selectedEra];
-        if (pool && pool.length > 0) {
+        if (pool.length > 0) {
             choices.push(pool[Math.floor(Math.random() * pool.length)]);
         } else {
             choices.push(SYMBOLS[1]); // fallback: Wheat
@@ -328,6 +338,19 @@ const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefiniti
 
     return choices;
 };
+
+/** 개발자용: 현재 상태에서 각 심볼이 한 번 픽될 확률(%) 반환 (균등) */
+export const getSymbolPoolProbabilities = (era: number, religionUnlocked: boolean): { id: number; name: string; symbolType: number; probability: number }[] => {
+    const pool = buildFlatPool(era, religionUnlocked);
+    if (pool.length === 0) return [];
+
+    const prob = 100 / pool.length;
+
+    return pool
+        .map(sym => ({ id: sym.id, name: sym.name, symbolType: sym.type, probability: prob }))
+        .sort((a, b) => a.symbolType - b.symbolType || a.id - b.id);
+};
+
 
 const generateRelicChoices = (): RelicDefinition[] => {
     // 3 unique relics
@@ -420,8 +443,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     naturalDisasterThreat: 0,
     barbarianSymbolTimer: null,
     barbarianCampTimer: null,
-    topTextToggleIndex: 0,
-    setTopTextToggleIndex: (val) => set({ topTextToggleIndex: val }),
 
     spinBoard: () => {
         const state = get();
@@ -441,42 +462,76 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (state.era === 1) { // 1단계는 고대 시대
             // 1번: 야만인 심볼 한 개 침공
             if (barbarianSymbolTimer === null) {
-                barbarianSymbolThreat += 3; // +3% per turn
+                barbarianSymbolThreat += 1; // +1% per turn
                 if (Math.random() * 100 < barbarianSymbolThreat) {
-                    barbarianSymbolTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
+                                barbarianSymbolTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
                     barbarianSymbolThreat = 0;
+                    const lang = useSettingsStore.getState().language;
+                    useNotificationStore.getState().push({
+                        type: 'barbarian_unit',
+                        level: 'danger',
+                        message: lang === 'ko'
+                            ? `${barbarianSymbolTimer}턴 후 야만인이 공격합니다!`
+                            : `Barbarians attack in ${barbarianSymbolTimer} turns!`,
+                    });
                 }
             } else {
-                barbarianSymbolTimer--;
+                            barbarianSymbolTimer--;
                 if (barbarianSymbolTimer <= 0) {
                     barbarianSymbolTimer = null;
                     const enemyDef = SYMBOLS[43]; // Enemy Warrior (적 전사)
                     if (enemyDef) newPlayerSymbols.push(createInstance(enemyDef));
+                    const lang = useSettingsStore.getState().language;
+                    useNotificationStore.getState().push({
+                        type: 'barbarian_unit',
+                        level: 'danger',
+                        message: lang === 'ko' ? '야만인이 침공했습니다!' : 'Barbarians have invaded!',
+                    });
                 }
             }
 
             // 2번: 야만인 주둔지 침공
             if (barbarianCampTimer === null) {
-                barbarianCampThreat += 1; // +1% per turn
+                barbarianCampThreat += 0.2; // +0.2% per turn
                 if (Math.random() * 100 < barbarianCampThreat) {
-                    barbarianCampTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
+                                barbarianCampTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
                     barbarianCampThreat = 0;
+                    const lang2 = useSettingsStore.getState().language;
+                    useNotificationStore.getState().push({
+                        type: 'barbarian_camp',
+                        level: 'warning',
+                        message: lang2 === 'ko'
+                            ? `${barbarianCampTimer}턴 후 야만인 주둔지가 출몰할 것 같습니다.`
+                            : `Barbarian Camp spotted in ${barbarianCampTimer} turns.`,
+                    });
                 }
             } else {
-                barbarianCampTimer--;
+                            barbarianCampTimer--;
                 if (barbarianCampTimer <= 0) {
                     barbarianCampTimer = null;
                     const campDef = SYMBOLS[40]; // Barbarian Camp
                     if (campDef) newPlayerSymbols.push(createInstance(campDef));
+                    const lang3 = useSettingsStore.getState().language;
+                    useNotificationStore.getState().push({
+                        type: 'barbarian_camp',
+                        level: 'warning',
+                        message: lang3 === 'ko' ? '야만인 주둔지가 세워졌습니다!' : 'A Barbarian Camp has appeared!',
+                    });
                 }
             }
 
             // 3번: 자연재해 (바로 추가)
-            naturalDisasterThreat += 1; // +1% per turn
-            if (Math.random() * 100 < naturalDisasterThreat) {
+            naturalDisasterThreat += 0.5; // +0.5% per turn
+                        if (Math.random() * 100 < naturalDisasterThreat) {
                 naturalDisasterThreat = 0;
                 const desertDef = SYMBOLS[27]; // Desert
                 if (desertDef) newPlayerSymbols.push(createInstance(desertDef));
+                const lang4 = useSettingsStore.getState().language;
+                useNotificationStore.getState().push({
+                    type: 'natural_disaster',
+                    level: 'warning',
+                    message: lang4 === 'ko' ? '자연재해가 발생했습니다!' : 'A natural disaster has struck!',
+                });
             }
         }
 
@@ -484,7 +539,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const newBoard = createEmptyBoard();
         // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
         let combatAndEnemy = shuffle(newPlayerSymbols
-            .filter(s => s.definition.type === SymbolType.ENEMY || s.definition.base_hp !== undefined));
+            .filter(s => s.definition.type === SymbolType.ENEMY || s.definition.type === SymbolType.UNIT));
         // ID 1: 클로비스 투창촉 - 야만인(적) 등장 시 HP -1
         if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
             combatAndEnemy = combatAndEnemy.map(sym => {
@@ -495,7 +550,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
         }
         const friendly = shuffle(state.playerSymbols
-            .filter(s => !(s.definition.type === SymbolType.ENEMY || s.definition.base_hp !== undefined)));
+            .filter(s => s.definition.type !== SymbolType.ENEMY && s.definition.type !== SymbolType.UNIT));
         const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
 
         const positions: { x: number, y: number }[] = [];
@@ -954,27 +1009,28 @@ export const useGameStore = create<GameState>((set, get) => ({
             }, 600);
         };
 
-        // ── 전투 페이즈: COMBAT ↔ ENEMY 인접 쌍을 하나하나 순차 처리 ─────────
+        // ── 전투 페이즈: UNIT(아군) ↔ ENEMY(적) 인접 쌍을 하나하나 순차 처리 ─────────
         const combatBoard = get().board;
         const combatEvents: { ax: number; ay: number; tx: number; ty: number }[] = [];
         for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let y = 0; y < BOARD_HEIGHT; y++) {
                 const sym = combatBoard[x][y];
-                if (!sym || sym.definition.base_hp === undefined || sym.definition.tags?.includes('enemy')) continue;
+                // 아군 전투 유닛만 공격자: UNIT 타입이고 base_attack 보유
+                if (!sym || sym.definition.type !== SymbolType.UNIT || sym.definition.base_attack === undefined) continue;
 
-                if (sym.definition.id === 36 || sym.definition.id === 107) { // 궁수, 석궁병
+                if (sym.definition.tags?.includes('ranged')) { // 궁수: 보드 전체 사거리
                     for (let tx = 0; tx < BOARD_WIDTH; tx++) {
                         for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
                             const target = combatBoard[tx][ty];
-                            if (target?.definition.tags?.includes('enemy')) {
+                            if (target?.definition.type === SymbolType.ENEMY) {
                                 combatEvents.push({ ax: x, ay: y, tx, ty });
                             }
                         }
                     }
-                } else {
+                } else { // 근접: 인접 칸만
                     for (const adj of getAdjacentCoords(x, y)) {
                         const target = combatBoard[adj.x][adj.y];
-                        if (target?.definition.tags?.includes('enemy')) {
+                        if (target?.definition.type === SymbolType.ENEMY) {
                             combatEvents.push({ ax: x, ay: y, tx: adj.x, ty: adj.y });
                         }
                     }
@@ -1049,8 +1105,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
                 const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => {
                     let hp = sym.definition.base_hp ?? 0;
-                    // 아군 유닛(COMBAT)에게만 업그레이드 체력 보너스 적용
-                    if (!sym.definition.tags?.includes('enemy') && sym.definition.base_hp !== undefined && upgrades.includes(2)) {
+                    // 아군 유닛(UNIT 타입)에게만 업그레이드 체력 보너스 적용
+                    if (sym.definition.type === SymbolType.UNIT && upgrades.includes(2)) {
                         if (sym.definition.id === 35) hp += 10;
                         if (sym.definition.id === 36) hp += 3;
                     }

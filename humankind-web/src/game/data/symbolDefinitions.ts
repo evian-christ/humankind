@@ -50,7 +50,7 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     15: { id: 15, name: "Mountain", type: SymbolType.TERRAIN, description: "+10 Food.", sprite: "015.png", tags: [] },
     16: { id: 16, name: "Totem", type: SymbolType.ANCIENT, description: "In a corner: +20 Knowledge.", sprite: "016.png", tags: [] },
     17: { id: 17, name: "Offering", type: SymbolType.ANCIENT, description: "-10 Food, +10 Knowledge.", sprite: "017.png", tags: [] },
-    18: { id: 18, name: "Omen", type: SymbolType.ANCIENT, description: "50% chance: +30 Food, 50% chance: -15 Food.", sprite: "018.png", tags: [] },
+    18: { id: 18, name: "Omen", type: SymbolType.ANCIENT, description: "50% chance for +30 Food, 50% chance for -15 Food.", sprite: "018.png", tags: [] },
     19: { id: 19, name: "Campfire", type: SymbolType.ANCIENT, description: "+10 Food; 10 turns: destroyed; on destroy: adjacent symbols x2 Food this turn.", sprite: "019.png", tags: [] },
     20: { id: 20, name: "Pottery", type: SymbolType.ANCIENT, description: "Counter +30; on destroy: Food equal to Counter.", sprite: "020.png", tags: [] },
     21: { id: 21, name: "Tribal Village", type: SymbolType.ANCIENT, description: "Destroyed; on destroy: adds 2 random Ancient symbols.", sprite: "021.png", tags: [] },
@@ -89,15 +89,15 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     60: { id: 60, name: "Altar", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
 };
 
-/** Religion 심볼 ID 목록 (Shrine, Totem, Offering + 4대 교리 심볼) */
-export const RELIGION_SYMBOL_IDS = new Set([12, 16, 17, 31, 32, 33, 34]);
+/** 종교 심볼 ID 목록 (4대 교리 심볼) */
+export const RELIGION_SYMBOL_IDS = new Set([31, 32, 33, 34]);
 
 /** 종교 교리 심볼 ID 목록 (패널티 체크용) */
 export const RELIGION_DOCTRINE_IDS = new Set([31, 32, 33, 34]);
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
 export const EXCLUDED_FROM_BASE_POOL = new Set<number>([
-    22, 23, 24, 25, 26, 36, 39, 41, 42, 43, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+    22, 23, 24, 25, 26, 31, 32, 33, 34, 36, 39, 41, 42, 43, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
 ]);
 
 /** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */
