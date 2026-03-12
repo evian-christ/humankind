@@ -149,12 +149,13 @@ const translations: Record<Language, Record<string, string>> = {
 
         'symbol.35.name': 'Warrior',
         'symbol.36.name': 'Archer',
-        'symbol.37.name': 'Camel Caravan',
+        'symbol.37.name': 'Relic Caravan',
         'symbol.38.name': 'Stargazer',
         'symbol.39.name': 'Stone Tablet',
         'symbol.40.name': 'Barbarian Camp',
         'symbol.41.name': 'Loot',
         'symbol.42.name': 'Glowing Amber',
+        'symbol.43.name': 'Enemy Warrior',
 
 
         // ── Symbol Descriptions ──
@@ -200,6 +201,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.40.desc': 'Every 10 turns: adds 1 random current era enemy combat unit; Destroyed; on destroy: adds Loot.',
         'symbol.41.desc': 'Destroy; on destroy: get random reward.',
         'symbol.42.desc': 'Destroyed; on destroy: adds 1 random current era relic.',
+        'symbol.43.desc': '-5 Food.',
 
 
         // ── Relics ──
@@ -464,12 +466,13 @@ const translations: Record<Language, Record<string, string>> = {
 
         'symbol.35.name': '전사',
         'symbol.36.name': '궁수',
-        'symbol.37.name': '낙타 상단',
+        'symbol.37.name': '유물 상단',
         'symbol.38.name': '별 관찰자',
         'symbol.39.name': '석판',
         'symbol.40.name': '야만인 주둔지',
         'symbol.41.name': '전리품',
         'symbol.42.name': '빛나는 호박석',
+        'symbol.43.name': '전사',
 
 
         // ── Symbol Descriptions ──
@@ -515,6 +518,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.40.desc': '10턴마다: 무작위 현재 시대 적 전투 유닛 1개 추가; 파괴; 파괴 시: 전리품 추가.',
         'symbol.41.desc': '파괴; 파괴 시: 무작위 보상 획득.',
         'symbol.42.desc': '파괴; 파괴 시: 무작위 현재 시대 유물 획득.',
+        'symbol.43.desc': '식량 -5.',
 
         // ── Relics ──
         'relic.1.name': '클로비스 투창촉',
