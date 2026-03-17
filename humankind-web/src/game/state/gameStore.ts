@@ -287,7 +287,7 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         if (e === SymbolType.ANCIENT || e === SymbolType.UNIT) {
             e = SymbolType.NORMAL;
         }
-        
+
         // 종교 심볼은 해금되었을 때만 결과 풀에 넣음 (범주 0)
         // 만약 해금 안 되었는데 지형/고대 등에 섞여있는 종교 관련 심볼이 있다면 NORMAL로 처리할 수도 있지만
         // 여기서는 명시적인 RELIGION 타입만 0으로 분류
@@ -437,7 +437,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     levelBeforeUpgrade: 1,
     isRelicShopOpen: false,
     rerollsThisTurn: 0,
-    
+
     barbarianSymbolThreat: 0,
     barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
@@ -458,34 +458,49 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const newPlayerSymbols = [...state.playerSymbols];
 
+        // ── 스핀 시작: 이전 턴의 1회성(oneShot) 알림 삭제 ──
+        useNotificationStore.getState().clearOneShots?.();
+
         // Threat increment logic
         if (state.era === 1) { // 1단계는 고대 시대
-            // 1번: 야만인 심볼 한 개 침공
+            const lang = useSettingsStore.getState().language;
+
+            // 1번: 야만인 전사 침공
             if (barbarianSymbolTimer === null) {
                 barbarianSymbolThreat += 1; // +1% per turn
                 if (Math.random() * 100 < barbarianSymbolThreat) {
-                                barbarianSymbolTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
+                    barbarianSymbolTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
                     barbarianSymbolThreat = 0;
-                    const lang = useSettingsStore.getState().language;
-                    useNotificationStore.getState().push({
+                    // 카운트다운 시작 — upsert로 type 하나 유지
+                    useNotificationStore.getState().upsert({
                         type: 'barbarian_unit',
                         level: 'danger',
                         message: lang === 'ko'
-                            ? `${barbarianSymbolTimer}턴 후 야만인이 공격합니다!`
+                            ? `야만인이 ${barbarianSymbolTimer}턴 후 공격합니다!`
                             : `Barbarians attack in ${barbarianSymbolTimer} turns!`,
                     });
                 }
             } else {
-                            barbarianSymbolTimer--;
+                barbarianSymbolTimer--;
                 if (barbarianSymbolTimer <= 0) {
+                    // 침공 확정 — oneShot으로 전환 (다음 스핀 시 자동 삭제)
                     barbarianSymbolTimer = null;
-                    const enemyDef = SYMBOLS[43]; // Enemy Warrior (적 전사)
+                    const enemyDef = SYMBOLS[43];
                     if (enemyDef) newPlayerSymbols.push(createInstance(enemyDef));
-                    const lang = useSettingsStore.getState().language;
-                    useNotificationStore.getState().push({
+                    useNotificationStore.getState().upsert({
                         type: 'barbarian_unit',
                         level: 'danger',
+                        oneShot: true,
                         message: lang === 'ko' ? '야만인이 침공했습니다!' : 'Barbarians have invaded!',
+                    });
+                } else {
+                    // 카운트다운 갱신
+                    useNotificationStore.getState().upsert({
+                        type: 'barbarian_unit',
+                        level: 'danger',
+                        message: lang === 'ko'
+                            ? `야만인이 ${barbarianSymbolTimer}턴 후 공격합니다!`
+                            : `Barbarians attack in ${barbarianSymbolTimer} turns!`,
                     });
                 }
             }
@@ -494,43 +509,51 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (barbarianCampTimer === null) {
                 barbarianCampThreat += 0.2; // +0.2% per turn
                 if (Math.random() * 100 < barbarianCampThreat) {
-                                barbarianCampTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
+                    barbarianCampTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
                     barbarianCampThreat = 0;
-                    const lang2 = useSettingsStore.getState().language;
-                    useNotificationStore.getState().push({
+                    useNotificationStore.getState().upsert({
                         type: 'barbarian_camp',
                         level: 'warning',
-                        message: lang2 === 'ko'
-                            ? `${barbarianCampTimer}턴 후 야만인 주둔지가 출몰할 것 같습니다.`
-                            : `Barbarian Camp spotted in ${barbarianCampTimer} turns.`,
+                        message: lang === 'ko'
+                            ? `야만인 주둔지가 ${barbarianCampTimer}턴 후 출몰합니다.`
+                            : `Barbarian Camp appears in ${barbarianCampTimer} turns.`,
                     });
                 }
             } else {
-                            barbarianCampTimer--;
+                barbarianCampTimer--;
                 if (barbarianCampTimer <= 0) {
                     barbarianCampTimer = null;
-                    const campDef = SYMBOLS[40]; // Barbarian Camp
+                    const campDef = SYMBOLS[40];
                     if (campDef) newPlayerSymbols.push(createInstance(campDef));
-                    const lang3 = useSettingsStore.getState().language;
-                    useNotificationStore.getState().push({
+                    useNotificationStore.getState().upsert({
                         type: 'barbarian_camp',
                         level: 'warning',
-                        message: lang3 === 'ko' ? '야만인 주둔지가 세워졌습니다!' : 'A Barbarian Camp has appeared!',
+                        oneShot: true,
+                        message: lang === 'ko' ? '야만인 주둔지가 출현했습니다!' : 'A Barbarian Camp has appeared!',
+                    });
+                } else {
+                    // 카운트다운 갱신
+                    useNotificationStore.getState().upsert({
+                        type: 'barbarian_camp',
+                        level: 'warning',
+                        message: lang === 'ko'
+                            ? `야만인 주둔지가 ${barbarianCampTimer}턴 후 출몰합니다.`
+                            : `Barbarian Camp appears in ${barbarianCampTimer} turns.`,
                     });
                 }
             }
 
-            // 3번: 자연재해 (바로 추가)
+            // 3번: 자연재해 — 발생 즉시 oneShot 알림 (다음 턴 자동 삭제)
             naturalDisasterThreat += 0.5; // +0.5% per turn
-                        if (Math.random() * 100 < naturalDisasterThreat) {
+            if (Math.random() * 100 < naturalDisasterThreat) {
                 naturalDisasterThreat = 0;
                 const desertDef = SYMBOLS[27]; // Desert
                 if (desertDef) newPlayerSymbols.push(createInstance(desertDef));
-                const lang4 = useSettingsStore.getState().language;
-                useNotificationStore.getState().push({
+                useNotificationStore.getState().upsert({
                     type: 'natural_disaster',
                     level: 'warning',
-                    message: lang4 === 'ko' ? '자연재해가 발생했습니다!' : 'A natural disaster has struck!',
+                    oneShot: true,
+                    message: lang === 'ko' ? '자연재해가 발생했습니다!' : 'A natural disaster has struck!',
                 });
             }
         }

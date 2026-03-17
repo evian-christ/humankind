@@ -213,21 +213,11 @@ body {
   align-items: center;
 }
 
-/* ===== NOTIFICATION PANEL (right of board, vertical) ===== */
-@keyframes notif-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-18px) scaleY(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scaleY(1);
-  }
-}
-
-.notif-card-wrapper {
-  animation: notif-slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transform-origin: top center;
+/* ===== NOTIFICATION TICKER (above board, hover to expand) ===== */
+.notif-ticker-root {
+  /* prevent text selection flicker on fast hover */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .relic-icon-wrapper {
