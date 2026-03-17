@@ -75,6 +75,9 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     41: { id: 41, name: "Loot", type: SymbolType.NORMAL, description: "Destroyed; on destroy: get random reward.", sprite: "041.png", tags: [] },
     42: { id: 42, name: "Glowing Amber", type: SymbolType.NORMAL, description: "Destroyed; on destroy: adds random current era relic.", sprite: "042.png", tags: [] },
     43: { id: 43, name: "Enemy Warrior", type: SymbolType.ENEMY, description: "-5 Food.", base_attack: 5, base_hp: 10, sprite: "043.png", tags: ["melee"] },
+    44: { id: 44, name: "Flood", type: SymbolType.DISASTER, description: "Disable production of all adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "-", tags: [] },
+    45: { id: 45, name: "Earthquake", type: SymbolType.DISASTER, description: "Destroyed. On destroy: destroy 1 random adjacent symbol.", sprite: "-", tags: [] },
+    46: { id: 46, name: "Drought", type: SymbolType.DISASTER, description: "No effect (occupies space). When counter reaches 0: Destroy.", sprite: "-", tags: [] },
 
 
     // ── Normal Package Unlocks (Placeholders) ──
@@ -98,7 +101,9 @@ export const RELIGION_DOCTRINE_IDS = new Set([31, 32, 33, 34]);
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
 export const EXCLUDED_FROM_BASE_POOL = new Set<number>([
-    22, 23, 24, 25, 26, 31, 32, 33, 34, 36, 39, 41, 42, 43, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
+    22, 23, 24, 25, 26, 31, 32, 33, 34, 36, 39, 41, 42, 43,
+    44, 45, 46,
+    51, 52, 53, 54, 55, 56, 57, 58, 59, 60
 ]);
 
 /** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */

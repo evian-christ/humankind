@@ -547,8 +547,34 @@ export const useGameStore = create<GameState>((set, get) => ({
             naturalDisasterThreat += 0.5; // +0.5% per turn
             if (Math.random() * 100 < naturalDisasterThreat) {
                 naturalDisasterThreat = 0;
-                const desertDef = SYMBOLS[27]; // Desert
-                if (desertDef) newPlayerSymbols.push(createInstance(desertDef));
+                const randInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
+
+                const FLOOD_ID = 44;
+                const EARTHQUAKE_ID = 45;
+                const DROUGHT_ID = 46;
+                const pick = [FLOOD_ID, EARTHQUAKE_ID, DROUGHT_ID][Math.floor(Math.random() * 3)];
+
+                const addWithCounter = (symId: number, counterMin: number, counterMax: number) => {
+                    const def = SYMBOLS[symId];
+                    if (!def) return;
+                    const inst = createInstance(def);
+                    inst.effect_counter = randInt(counterMin, counterMax);
+                    newPlayerSymbols.push(inst);
+                };
+
+                if (pick === FLOOD_ID) {
+                    const count = randInt(2, 3);
+                    for (let i = 0; i < count; i++) addWithCounter(FLOOD_ID, 6, 8);
+                } else if (pick === EARTHQUAKE_ID) {
+                    // 지진은 단 1개만 추가
+                    const def = SYMBOLS[EARTHQUAKE_ID];
+                    if (def) newPlayerSymbols.push(createInstance(def));
+                } else {
+                    // 가뭄은 3~6개 + 턴 카운터 5~8
+                    const count = randInt(3, 6);
+                    for (let i = 0; i < count; i++) addWithCounter(DROUGHT_ID, 5, 8);
+                }
+
                 useNotificationStore.getState().upsert({
                     type: 'natural_disaster',
                     level: 'warning',
@@ -642,6 +668,33 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         set({ phase: 'processing', runningTotals: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
 
+        // ── 홍수(44): 인접 지형 생산 비활성화(순서 무관) ──
+        const FLOOD_ID = 44;
+        const disabledTerrainCoords = new Set<string>();
+        for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+            for (let by = 0; by < BOARD_HEIGHT; by++) {
+                const s = get().board[bx][by];
+                if (!s || s.definition.id !== FLOOD_ID) continue;
+
+                // counter가 0/미설정이면 이번 턴부터 활성(3으로 시작)
+                if (!s.effect_counter || s.effect_counter <= 0) s.effect_counter = 3;
+                if (s.effect_counter <= 0) continue;
+
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nx = bx + dx;
+                        const ny = by + dy;
+                        if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+                        const n = get().board[nx][ny];
+                        if (n?.definition.type === SymbolType.TERRAIN) {
+                            disabledTerrainCoords.add(`${nx},${ny}`);
+                        }
+                    }
+                }
+            }
+        }
+
         // ── 효과 페이즈 인프라 ────────────────────────────────────────────────
         // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
         const slotOrder: { x: number; y: number }[] = [];
@@ -685,7 +738,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             const result = processSingleSymbolEffects(
-                symbol, currentBoard, x, y, buildActiveRelicEffects()
+                symbol, currentBoard, x, y, buildActiveRelicEffects(), disabledTerrainCoords
             );
 
             // ── Campfire 폭발 버프: 이번 스핀 식량 2배 ──
@@ -796,6 +849,32 @@ export const useGameStore = create<GameState>((set, get) => ({
                     const s = currentBoard[x][y];
                     if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
                         bonusFood += (s.effect_counter || 0);
+                    }
+                }
+            }
+
+            // ── Earthquake (45): 파괴 시 무작위 인접 심볼 1개 파괴 ──
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    const s = currentBoard[x][y];
+                    if (!s || s.definition.id !== 45 || !s.is_marked_for_destruction) continue;
+
+                    const candidates: { x: number; y: number }[] = [];
+                    for (let dx = -1; dx <= 1; dx++) {
+                        for (let dy = -1; dy <= 1; dy++) {
+                            if (dx === 0 && dy === 0) continue;
+                            const nx = x + dx, ny = y + dy;
+                            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+                            const nb = currentBoard[nx][ny];
+                            if (!nb || nb.is_marked_for_destruction) continue;
+                            candidates.push({ x: nx, y: ny });
+                        }
+                    }
+
+                    if (candidates.length > 0) {
+                        const pick = candidates[Math.floor(Math.random() * candidates.length)];
+                        const target = currentBoard[pick.x][pick.y];
+                        if (target) target.is_marked_for_destruction = true;
                     }
                 }
             }

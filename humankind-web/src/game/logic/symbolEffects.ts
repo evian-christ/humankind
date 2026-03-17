@@ -131,7 +131,8 @@ export const processSingleSymbolEffects = (
     boardGrid: (PlayerSymbolInstance | null)[][],
     x: number,
     y: number,
-    relicEffects: ActiveRelicEffects = DEFAULT_RELIC_EFFECTS
+    relicEffects: ActiveRelicEffects = DEFAULT_RELIC_EFFECTS,
+    disabledTerrainCoords?: ReadonlySet<string>
 ): EffectResult => {
     const id = symbolInstance.definition.id;
     let food = 0;
@@ -148,7 +149,49 @@ export const processSingleSymbolEffects = (
     const state = useGameStore.getState();
     const upgrades = state.unlockedKnowledgeUpgrades || [];
 
+    // 홍수 등으로 이번 스핀 생산이 비활성화된 지형은 효과를 발동하지 않음 (순서 무관)
+    if (
+        disabledTerrainCoords &&
+        symbolInstance.definition.type === SymbolType.TERRAIN &&
+        disabledTerrainCoords.has(`${x},${y}`)
+    ) {
+        return { food: 0, gold: 0, knowledge: 0 };
+    }
+
     switch (id) {
+        case 44: { // Flood: disable adjacent terrain production; counter reaches 0 -> destroy
+            // counter 초기값(미설정/0)은 3으로 시작
+            if (!symbolInstance.effect_counter || symbolInstance.effect_counter <= 0) {
+                symbolInstance.effect_counter = 3;
+            }
+
+            // 매 스핀 1 감소
+            symbolInstance.effect_counter -= 1;
+            if (symbolInstance.effect_counter <= 0) {
+                symbolInstance.is_marked_for_destruction = true;
+            }
+            break;
+        }
+
+        case 45: { // Earthquake: Destroyed; on destroy: destroys 1 random adjacent symbol
+            symbolInstance.is_marked_for_destruction = true;
+            break;
+        }
+
+        case 46: { // Drought: occupies space; counter reaches 0 -> destroy
+            // counter 초기값(미설정/0)은 3으로 시작
+            if (!symbolInstance.effect_counter || symbolInstance.effect_counter <= 0) {
+                symbolInstance.effect_counter = 3;
+            }
+
+            // 매 스핀 1 감소
+            symbolInstance.effect_counter -= 1;
+            if (symbolInstance.effect_counter <= 0) {
+                symbolInstance.is_marked_for_destruction = true;
+            }
+            break;
+        }
+
         case 1: { // Wheat: Every 4 turns: +100 Food. Grassland adjacency: required turns -1
             let hasGrassland = false;
             adj.forEach(pos => {
