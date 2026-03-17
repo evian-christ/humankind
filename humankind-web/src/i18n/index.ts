@@ -76,7 +76,7 @@ const translations: Record<Language, Record<string, string>> = {
         // Data Browser
         'dataBrowser.title': 'DATA BROWSER',
         'dataBrowser.symbols': 'Symbols',
-        'dataBrowser.symbolCandidates': 'Natural Disasters',
+        'dataBrowser.symbolCandidates': 'Symbol Candidates',
         'dataBrowser.relics': 'Relics',
         'dataBrowser.relicCandidates': 'Relic Candidates',
         'dataBrowser.searchPlaceholder': 'Search (name, desc, ID)...',
@@ -157,6 +157,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.41.name': 'Loot',
         'symbol.42.name': 'Glowing Amber',
         'symbol.43.name': 'Enemy Warrior',
+        'symbol.44.name': 'Flood',
+        'symbol.45.name': 'Earthquake',
+        'symbol.46.name': 'Drought',
 
 
         // ── Symbol Descriptions ──
@@ -203,6 +206,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.41.desc': 'Destroy; on destroy: get random reward.',
         'symbol.42.desc': 'Destroyed; on destroy: adds 1 random current era relic.',
         'symbol.43.desc': '-5 Food.',
+        'symbol.44.desc': 'Disable production of all adjacent terrain symbols. When counter reaches 0: Destroy.',
+        'symbol.45.desc': 'Destroyed. On destroy: destroy 1 random adjacent symbol.',
+        'symbol.46.desc': 'No effect (occupies space). When counter reaches 0: Destroy.',
 
 
         // ── Relics ──
@@ -232,16 +238,10 @@ const translations: Record<Language, Record<string, string>> = {
         'relic.12.desc': 'Symbol destroyed: +30 Gold.',
 
         // ── Natural Disaster Candidates (101-110) ──
-        'symbolCandidate.101.name': 'Flood',
-        'symbolCandidate.101.desc': 'Destroys all adjacent terrain symbols. Adds 1 River symbol per destroyed terrain.',
         'symbolCandidate.102.name': 'Volcano',
         'symbolCandidate.102.desc': 'Destroys 2 random adjacent symbols; on destroy: permanently adds Mountain to collection.',
-        'symbolCandidate.103.name': 'Earthquake',
-        'symbolCandidate.103.desc': 'Every turn: -10 Food. On destroy: gives +300 Food.',
         'symbolCandidate.104.name': 'Locust Swarm',
         'symbolCandidate.104.desc': 'Every turn: adjacent crop symbols produce -50% Food. 5 turns: destroyed.',
-        'symbolCandidate.105.name': 'Drought',
-        'symbolCandidate.105.desc': 'Adjacent Grassland and Plains produce 0 Food. On destroy: all Grassland and Plains produce double for 3 turns.',
         'symbolCandidate.106.name': 'Blizzard',
         'symbolCandidate.106.desc': 'Every spin: -20 Food. Adjacent symbols produce half. 4 turns: destroyed.',
         'symbolCandidate.107.name': 'Wildfire',
@@ -370,7 +370,7 @@ const translations: Record<Language, Record<string, string>> = {
         // Data Browser
         'dataBrowser.title': '데이터 브라우저',
         'dataBrowser.symbols': '심볼',
-        'dataBrowser.symbolCandidates': '자연재해',
+        'dataBrowser.symbolCandidates': '심볼 후보',
         'dataBrowser.relics': '유물',
         'dataBrowser.relicCandidates': '유물 후보',
         'dataBrowser.searchPlaceholder': '검색 (이름, 설명, ID)...',
@@ -450,6 +450,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.41.name': '전리품',
         'symbol.42.name': '빛나는 호박석',
         'symbol.43.name': '전사',
+        'symbol.44.name': '홍수',
+        'symbol.45.name': '지진',
+        'symbol.46.name': '가뭄',
 
 
         // ── Symbol Descriptions ──
@@ -496,6 +499,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.41.desc': '파괴; 파괴 시: 무작위 보상 획득.',
         'symbol.42.desc': '파괴; 파괴 시: 무작위 현재 시대 유물 획득.',
         'symbol.43.desc': '식량 -5.',
+        'symbol.44.desc': '인접한 모든 지형 심볼의 생산을 비활성화 합니다. 카운터 0에 도달 시: 파괴.',
+        'symbol.45.desc': '파괴. 파괴 시: 무작위 인접 심볼 한 개 파괴.',
+        'symbol.46.desc': '효과 없음 (자리만 차지). 카운터 0 도달 시: 파괴',
 
         // ── Relics ──
         'relic.1.name': '클로비스 투창촉',
@@ -524,16 +530,10 @@ const translations: Record<Language, Record<string, string>> = {
         'relic.12.desc': '심볼 파괴 시: 골드 +30.',
 
         // ── Natural Disaster Candidates (101-110) ──
-        'symbolCandidate.101.name': '홍수',
-        'symbolCandidate.101.desc': '인접한 모든 지형 심볼을 파괴합니다. 파괴된 지형 1개당 강 심볼 1개 추가.',
         'symbolCandidate.102.name': '화산',
         'symbolCandidate.102.desc': '무작위 인접 심볼 2개 파괴; 파괴 시: 산을 컬렉션에 영구 추가.',
-        'symbolCandidate.103.name': '지진',
-        'symbolCandidate.103.desc': '매 턴: 식량 -10. 파괴 시: 식량 +300.',
         'symbolCandidate.104.name': '메뚜기 떼',
         'symbolCandidate.104.desc': '매 턴: 인접 작물 심볼 식량 생산 -50%. 5턴 후: 파괴.',
-        'symbolCandidate.105.name': '가뭄',
-        'symbolCandidate.105.desc': '인접한 초원과 평원 식량 생산이 0이 됩니다. 파괴 시: 3턴간 모든 초원·평원 x2 생산.',
         'symbolCandidate.106.name': '눈보라',
         'symbolCandidate.106.desc': '매 스핀: 식량 -20. 인접 심볼 생산 절반. 4턴 후: 파괴.',
         'symbolCandidate.107.name': '들불',
