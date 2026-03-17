@@ -6,7 +6,8 @@ export enum SymbolType {
     TERRAIN = 4,
     ANCIENT = 5,
     UNIT = 6,
-    ENEMY = 7
+    ENEMY = 7,
+    DISASTER = 8
 }
 
 export interface SymbolDefinition {

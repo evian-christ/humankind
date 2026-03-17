@@ -24,11 +24,12 @@ const ERA_KEYS: Record<number, string> = {
     [SymbolType.TERRAIN]: 'terrain',
     [SymbolType.UNIT]: 'unit',
     [SymbolType.ENEMY]: 'enemy',
+    [SymbolType.DISASTER]: 'disaster',
 };
 
 
 
-const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.NORMAL, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION];
+const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.NORMAL, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION];
 
 /** Sortable column header */
 const SortTh = ({ column, label, sort, onSort, className }: {
