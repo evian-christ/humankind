@@ -11,7 +11,7 @@ export interface RelicCandidate {
     description: string;
     cost: number;
     type: SymbolType;
-    /** 효과 유형: passive(매 스핀), on_acquire(획득 시 1회), conditional(조건부) */
+    /** 효과 유형: passive(매 턴), on_acquire(획득 시 1회), conditional(조건부) */
     effect_type: 'passive' | 'on_acquire' | 'conditional';
     sprite: string;
 }

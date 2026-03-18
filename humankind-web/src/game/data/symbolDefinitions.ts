@@ -78,19 +78,6 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     44: { id: 44, name: "Flood", type: SymbolType.DISASTER, description: "Disable production of all adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "-", tags: [] },
     45: { id: 45, name: "Earthquake", type: SymbolType.DISASTER, description: "Destroyed. On destroy: destroy 1 random adjacent symbol.", sprite: "-", tags: [] },
     46: { id: 46, name: "Drought", type: SymbolType.DISASTER, description: "No effect (occupies space). When counter reaches 0: Destroy.", sprite: "-", tags: [] },
-
-
-    // ── Normal Package Unlocks (Placeholders) ──
-    51: { id: 51, name: "Bear", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    52: { id: 52, name: "Bronze", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    53: { id: 53, name: "Spearman", type: SymbolType.NORMAL, description: "To be implemented.", base_attack: 4, base_hp: 12, sprite: "-", tags: ["melee"] },
-    54: { id: 54, name: "Boat", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    55: { id: 55, name: "Shaman", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    56: { id: 56, name: "Loom", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    57: { id: 57, name: "Gem", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    58: { id: 58, name: "Storyteller", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    59: { id: 59, name: "Market", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
-    60: { id: 60, name: "Altar", type: SymbolType.NORMAL, description: "To be implemented.", sprite: "-", tags: [] },
 };
 
 /** 종교 심볼 ID 목록 (4대 교리 심볼) */
@@ -103,7 +90,6 @@ export const RELIGION_DOCTRINE_IDS = new Set([31, 32, 33, 34]);
 export const EXCLUDED_FROM_BASE_POOL = new Set<number>([
     22, 23, 24, 25, 26, 31, 32, 33, 34, 36, 39, 41, 42, 43,
     44, 45, 46,
-    51, 52, 53, 54, 55, 56, 57, 58, 59, 60
 ]);
 
 /** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */

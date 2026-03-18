@@ -7,9 +7,9 @@ export interface EffectResult {
     food: number;
     knowledge: number;
     gold: number;
-    /** 이번 스핀에서 컬렉션에 추가할 심볼 ID 목록 */
+    /** 이번 턴에서 컬렉션에 추가할 심볼 ID 목록 */
     addSymbolIds?: number[];
-    /** 이번 스핀에서 보드에 추가할 심볼 ID 목록 (빈 슬롯에 배치) */
+    /** 이번 턴에서 보드에 추가할 심볼 ID 목록 (빈 슬롯에 배치) */
     spawnOnBoard?: number[];
     /** 강제로 유물 선택 상점을 열어야 하는지 여부 */
     triggerRelicSelection?: boolean;
@@ -29,7 +29,7 @@ export interface ActiveRelicEffects {
     quarryEmptyGold: boolean;
     /** ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 인접한 바나나 당 +20 식량 */
     bananaFossilBonus: boolean;
-    /** ID 103: 가나안의 번제물 - 매 스핀 빈 슬롯마다 식량 -10 */
+    /** ID 103: 가나안의 번제물 - 매 턴 빈 슬롯마다 식량 -10 */
     burnOfferingEmptyPenalty: boolean;
     /** ID 107: 예리코 점토 두개골 - 제단/기념비 지식 +20 추가 */
     jerichoMonumentBonus: boolean;
@@ -149,7 +149,7 @@ export const processSingleSymbolEffects = (
     const state = useGameStore.getState();
     const upgrades = state.unlockedKnowledgeUpgrades || [];
 
-    // 홍수 등으로 이번 스핀 생산이 비활성화된 지형은 효과를 발동하지 않음 (순서 무관)
+    // 홍수 등으로 이번 턴 생산이 비활성화된 지형은 효과를 발동하지 않음 (순서 무관)
     if (
         disabledTerrainCoords &&
         symbolInstance.definition.type === SymbolType.TERRAIN &&
@@ -165,7 +165,7 @@ export const processSingleSymbolEffects = (
                 symbolInstance.effect_counter = 3;
             }
 
-            // 매 스핀 1 감소
+            // 매 턴 1 감소
             symbolInstance.effect_counter -= 1;
             if (symbolInstance.effect_counter <= 0) {
                 symbolInstance.is_marked_for_destruction = true;
@@ -184,7 +184,7 @@ export const processSingleSymbolEffects = (
                 symbolInstance.effect_counter = 3;
             }
 
-            // 매 스핀 1 감소
+            // 매 턴 1 감소
             symbolInstance.effect_counter -= 1;
             if (symbolInstance.effect_counter <= 0) {
                 symbolInstance.is_marked_for_destruction = true;
@@ -360,7 +360,7 @@ export const processSingleSymbolEffects = (
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t && t.definition.id === 4) {
-                    // ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 매 스핀 인접한 바나나 당 식량 +20 생산
+                    // ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 매 턴 인접한 바나나 당 식량 +20 생산
                     if (relicEffects.bananaFossilBonus) {
                         food += 20;
                         contributors.push(pos);

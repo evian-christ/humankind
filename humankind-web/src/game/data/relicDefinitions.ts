@@ -35,7 +35,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     3: {
         id: 3,
         name: "우르의 전차 바퀴",
-        description: "매 스핀 식량 생산량이 제일 낮은 심볼 파괴 및 골드 +50 제공. 5턴 후 제거됩니다.",
+        description: "매 턴 식량 생산량이 제일 낮은 심볼 파괴 및 골드 +50 제공. 5턴 후 제거됩니다.",
         cost: 400,
         type: SymbolType.NORMAL,
         sprite: "003.png",
@@ -67,7 +67,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     7: {
         id: 7,
         name: "쿠크 늪지대 바나나 화석",
-        description: "열대 과수원이 매 스핀 인접한 바나나 당 식량 +20 생산.",
+        description: "열대 과수원이 매 턴 인접한 바나나 당 식량 +20 생산.",
         cost: 350,
         type: SymbolType.NORMAL,
         sprite: "007.png",
@@ -83,7 +83,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     9: {
         id: 9,
         name: "나일 강 비옥한 흑니",
-        description: "획득 후 다음 5스핀 동안 모든 식량 획득량 2배 (이후 소멸).",
+        description: "획득 후 다음 5턴 동안 모든 식량 획득량 2배 (이후 소멸).",
         cost: 800,
         type: SymbolType.NORMAL,
         sprite: "",
