@@ -3,11 +3,10 @@ import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCL
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
-import { useNotificationStore } from './notificationStore';
-
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
 import type { PlayerSymbolInstance } from '../types';
+import { t } from '../../i18n';
 
 export { type PlayerSymbolInstance } from '../types';
 
@@ -81,7 +80,7 @@ export const getEraFromLevel = (level: number): number => {
     return 3;
 };
 
-type GamePhase = 'idle' | 'spinning' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'game_over' | 'victory';
+type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250... -> x10: 1000, 1500, 2000, 2500...) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
@@ -171,13 +170,15 @@ export interface GameState {
     barbarianSymbolThreat: number;
     barbarianCampThreat: number;
     naturalDisasterThreat: number;
-    barbarianSymbolTimer: number | null;
-    barbarianCampTimer: number | null;
+    /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
+    pendingNewThreatFloats: { x: number; y: number; label: string }[];
 
     // Actions
     spinBoard: () => void;
-    /** spinning 애니메이션이 끝난 후 호출 — processing 시작 */
+    /** spinning 애니메이션이 끝난 후 호출 — pendingNewThreatFloats 있으면 먼저 플로팅 표시, 없으면 processing 시작 */
     startProcessing: () => void;
+    /** 플로팅 표시 후 실제 processing 시작 (뷰에서 호출) */
+    continueProcessingAfterNewThreatFloats: () => void;
     selectSymbol: (symbolId: number) => void;
     skipSelection: () => void;
     rerollSymbols: () => void;
@@ -487,9 +488,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     barbarianSymbolThreat: 0,
     barbarianCampThreat: 0,
-    naturalDisasterThreat: 0,
-    barbarianSymbolTimer: null,
-    barbarianCampTimer: null,
+    naturalDisasterThreat: 100, // 개발용: 첫 턴부터 자연재해 100%
+    pendingNewThreatFloats: [],
 
     appendEventLog: (entry) => {
         const MAX = 2000;
@@ -506,140 +506,76 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'idle') return;
 
-        let {
-            barbarianSymbolThreat,
-            barbarianCampThreat,
-            naturalDisasterThreat,
-            barbarianSymbolTimer,
-            barbarianCampTimer
-        } = state;
+        let { barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = state;
 
         const newPlayerSymbols = [...state.playerSymbols];
+        /** 이번 턴 새로 추가된 위협 심볼 (플로팅 라벨용) */
+        const newThreats: { instanceId: string; label: string }[] = [];
 
-        // ── 턴 시작: 이전 턴의 1회성(oneShot) 알림 삭제 ──
-        useNotificationStore.getState().clearOneShots?.();
         get().appendEventLog({ turn: state.turn + 1, kind: 'turn_start' });
 
-        // Threat increment logic
-        if (state.era === 1) { // 1단계는 고대 시대
+        // Threat increment logic (카운트다운 알림 없음 — 첫 배치 시 셀 위 플로팅으로만 표시)
+        if (state.era === 1) {
             const lang = useSettingsStore.getState().language;
+            const threatLabel = (key: string) => t(key, lang);
 
-            // 1번: 야만인 전사 침공
-            if (barbarianSymbolTimer === null) {
-                barbarianSymbolThreat += 1; // +1% per turn
-                if (Math.random() * 100 < barbarianSymbolThreat) {
-                    barbarianSymbolTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
-                    barbarianSymbolThreat = 0;
-                    // 카운트다운 시작 — upsert로 type 하나 유지
-                    useNotificationStore.getState().upsert({
-                        type: 'barbarian_unit',
-                        level: 'danger',
-                        message: lang === 'ko'
-                            ? `야만인이 ${barbarianSymbolTimer}턴 후 공격합니다!`
-                            : `Barbarians attack in ${barbarianSymbolTimer} turns!`,
-                    });
-                }
-            } else {
-                barbarianSymbolTimer--;
-                if (barbarianSymbolTimer <= 0) {
-                    // 침공 확정 — oneShot으로 전환 (다음 턴 시 자동 삭제)
-                    barbarianSymbolTimer = null;
-                    const enemyDef = SYMBOLS[43];
-                    if (enemyDef) newPlayerSymbols.push(createInstance(enemyDef));
-                    useNotificationStore.getState().upsert({
-                        type: 'barbarian_unit',
-                        level: 'danger',
-                        oneShot: true,
-                        message: lang === 'ko' ? '야만인이 침공했습니다!' : 'Barbarians have invaded!',
-                    });
-                } else {
-                    // 카운트다운 갱신
-                    useNotificationStore.getState().upsert({
-                        type: 'barbarian_unit',
-                        level: 'danger',
-                        message: lang === 'ko'
-                            ? `야만인이 ${barbarianSymbolTimer}턴 후 공격합니다!`
-                            : `Barbarians attack in ${barbarianSymbolTimer} turns!`,
-                    });
+            // 1번: 야만인 전사 침공 (확률 통과 시 당 턴 즉시 1기 추가)
+            barbarianSymbolThreat += 1;
+            if (Math.random() * 100 < barbarianSymbolThreat) {
+                barbarianSymbolThreat = 0;
+                const enemyDef = SYMBOLS[43];
+                if (enemyDef) {
+                    const inst = createInstance(enemyDef);
+                    newPlayerSymbols.push(inst);
+                    newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.barbarian_invasion') });
                 }
             }
 
-            // 2번: 야만인 주둔지 침공
-            if (barbarianCampTimer === null) {
-                barbarianCampThreat += 0.2; // +0.2% per turn
-                if (Math.random() * 100 < barbarianCampThreat) {
-                    barbarianCampTimer = 2 + Math.floor(Math.random() * 4); // 2~5 turns
-                    barbarianCampThreat = 0;
-                    useNotificationStore.getState().upsert({
-                        type: 'barbarian_camp',
-                        level: 'warning',
-                        message: lang === 'ko'
-                            ? `야만인 주둔지가 ${barbarianCampTimer}턴 후 출몰합니다.`
-                            : `Barbarian Camp appears in ${barbarianCampTimer} turns.`,
-                    });
-                }
-            } else {
-                barbarianCampTimer--;
-                if (barbarianCampTimer <= 0) {
-                    barbarianCampTimer = null;
-                    const campDef = SYMBOLS[40];
-                    if (campDef) newPlayerSymbols.push(createInstance(campDef));
-                    useNotificationStore.getState().upsert({
-                        type: 'barbarian_camp',
-                        level: 'warning',
-                        oneShot: true,
-                        message: lang === 'ko' ? '야만인 주둔지가 출현했습니다!' : 'A Barbarian Camp has appeared!',
-                    });
-                } else {
-                    // 카운트다운 갱신
-                    useNotificationStore.getState().upsert({
-                        type: 'barbarian_camp',
-                        level: 'warning',
-                        message: lang === 'ko'
-                            ? `야만인 주둔지가 ${barbarianCampTimer}턴 후 출몰합니다.`
-                            : `Barbarian Camp appears in ${barbarianCampTimer} turns.`,
-                    });
+            // 2번: 야만인 주둔지 (확률 통과 시 당 턴 즉시 1기 추가)
+            barbarianCampThreat += 0.2;
+            if (Math.random() * 100 < barbarianCampThreat) {
+                barbarianCampThreat = 0;
+                const campDef = SYMBOLS[40];
+                if (campDef) {
+                    const inst = createInstance(campDef);
+                    newPlayerSymbols.push(inst);
+                    newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.barbarian_camp') });
                 }
             }
 
-            // 3번: 자연재해 — 발생 즉시 oneShot 알림 (다음 턴 자동 삭제)
-            naturalDisasterThreat += 0.5; // +0.5% per turn
+            // 3번: 자연재해
+            naturalDisasterThreat += 0.5;
             if (Math.random() * 100 < naturalDisasterThreat) {
                 naturalDisasterThreat = 0;
                 const randInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
-
                 const FLOOD_ID = 44;
                 const EARTHQUAKE_ID = 45;
                 const DROUGHT_ID = 46;
                 const pick = [FLOOD_ID, EARTHQUAKE_ID, DROUGHT_ID][Math.floor(Math.random() * 3)];
 
-                const addWithCounter = (symId: number, counterMin: number, counterMax: number) => {
+                const addDisaster = (symId: number, counterMin: number, counterMax: number, labelKey: string) => {
                     const def = SYMBOLS[symId];
                     if (!def) return;
                     const inst = createInstance(def);
                     inst.effect_counter = randInt(counterMin, counterMax);
                     newPlayerSymbols.push(inst);
+                    newThreats.push({ instanceId: inst.instanceId, label: threatLabel(labelKey) });
                 };
 
                 if (pick === FLOOD_ID) {
                     const count = randInt(2, 3);
-                    for (let i = 0; i < count; i++) addWithCounter(FLOOD_ID, 6, 8);
+                    for (let i = 0; i < count; i++) addDisaster(FLOOD_ID, 6, 8, 'threat.flood');
                 } else if (pick === EARTHQUAKE_ID) {
-                    // 지진은 단 1개만 추가
                     const def = SYMBOLS[EARTHQUAKE_ID];
-                    if (def) newPlayerSymbols.push(createInstance(def));
+                    if (def) {
+                        const inst = createInstance(def);
+                        newPlayerSymbols.push(inst);
+                        newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.earthquake') });
+                    }
                 } else {
-                    // 가뭄은 3~6개 + 턴 카운터 5~8
                     const count = randInt(3, 6);
-                    for (let i = 0; i < count; i++) addWithCounter(DROUGHT_ID, 5, 8);
+                    for (let i = 0; i < count; i++) addDisaster(DROUGHT_ID, 5, 8, 'threat.drought');
                 }
-
-                useNotificationStore.getState().upsert({
-                    type: 'natural_disaster',
-                    level: 'warning',
-                    oneShot: true,
-                    message: lang === 'ko' ? '자연재해가 발생했습니다!' : 'A natural disaster has struck!',
-                });
             }
         }
 
@@ -657,7 +593,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 return sym;
             });
         }
-        const friendly = shuffle(state.playerSymbols
+        const friendly = shuffle(newPlayerSymbols
             .filter(s => s.definition.type !== SymbolType.ENEMY && s.definition.type !== SymbolType.UNIT));
         const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
 
@@ -674,17 +610,26 @@ export const useGameStore = create<GameState>((set, get) => ({
             newBoard[pos.x][pos.y] = instance;
         });
 
+        const newThreatLabels = new Map<string, string>(newThreats.map(n => [n.instanceId, n.label]));
+        const pendingNewThreatFloats: { x: number; y: number; label: string }[] = [];
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                const inst = newBoard[x][y];
+                if (inst && newThreatLabels.has(inst.instanceId)) {
+                    pendingNewThreatFloats.push({ x, y, label: newThreatLabels.get(inst.instanceId)! });
+                }
+            }
+        }
+
         const newTurn = state.turn + 1;
 
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
-        // prevBoard: 턴 전 보드를 저장 (릴 시작점용)
         set({
             playerSymbols: newPlayerSymbols,
             barbarianSymbolThreat,
             barbarianCampThreat,
             naturalDisasterThreat,
-            barbarianSymbolTimer,
-            barbarianCampTimer,
+            pendingNewThreatFloats,
             prevBoard: state.board,
             board: newBoard,
             turn: newTurn,
@@ -696,7 +641,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             pendingContributors: [],
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
-            rerollsThisTurn: 0,  // 매 턴 리롤 횟수 리셋
+            rerollsThisTurn: 0,
         });
 
         // spinning 애니메이션은 GameCanvas ticker가 처리하고,
@@ -705,6 +650,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     startProcessing: () => {
         const state = get();
+        if (state.pendingNewThreatFloats?.length) {
+            set({ phase: 'showing_new_threats' });
+            return;
+        }
         const upgrades = state.unlockedKnowledgeUpgrades || [];
         const baseKnowledge = (upgrades.includes(1) ? 4 : 2) + (upgrades.includes(10) ? 2 : 0);
         const baseGold = (upgrades.includes(6) ? 2 : 0) + (upgrades.includes(10) ? 2 : 0);
@@ -1404,6 +1353,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         processCombatEvent(0);
     },
 
+    continueProcessingAfterNewThreatFloats: () => {
+        set({ pendingNewThreatFloats: [] });
+        get().startProcessing();
+    },
+
     selectSymbol: (symbolId: number) => {
         const state = get();
         if (state.phase !== 'selection') return;
@@ -1631,6 +1585,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             pendingLevelUpSelection: false,
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
+
+            barbarianSymbolThreat: 0,
+            barbarianCampThreat: 0,
+            naturalDisasterThreat: 100,
+            pendingNewThreatFloats: [],
         });
     },
 

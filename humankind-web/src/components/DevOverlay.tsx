@@ -71,7 +71,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat, barbarianSymbolTimer, barbarianCampTimer } = useGameStore();
+    const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
 
@@ -255,11 +255,11 @@ const DevOverlay = () => {
                     <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>THREAT LEVELS</div>
                     <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span>야만인 유닛</span>
-                        <span>{barbarianSymbolTimer !== null ? `(${barbarianSymbolTimer}턴 뒤)` : `${barbarianSymbolThreat}%`}</span>
+                        <span>{barbarianSymbolThreat}%</span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span>야만인 주둔지</span>
-                        <span>{barbarianCampTimer !== null ? `(${barbarianCampTimer}턴 뒤)` : `${barbarianCampThreat}%`}</span>
+                        <span>{barbarianCampThreat}%</span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span>자연재해</span>

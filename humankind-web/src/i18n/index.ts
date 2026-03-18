@@ -32,6 +32,7 @@ const translations: Record<Language, Record<string, string>> = {
         'game.knowledge': 'KN',
         'game.era': 'Era',
         'game.foodDemand': 'The people demand {amount} food in {turns} turns',
+        'game.foodDemandFlavor': 'In {turns} turns, the people demand {amount} food.',
         'game.gameOver': 'GAME OVER',
         'game.victory': 'VICTORY!',
         'game.notEnoughFood': 'Not enough food',
@@ -42,8 +43,16 @@ const translations: Record<Language, Record<string, string>> = {
         'game.noUpgradesAvailable': 'No upgrades available',
         'game.reroll': 'Reroll',
         'game.skip': 'Skip',
+        'game.back': 'Back',
         'game.attack': 'Attack',
         'game.defense': 'Defense',
+
+        // Threat labels (floating text on first placement)
+        'threat.barbarian_invasion': 'Barbarian invasion',
+        'threat.barbarian_camp': 'Barbarian camp',
+        'threat.flood': 'Flood',
+        'threat.earthquake': 'Earthquake',
+        'threat.drought': 'Drought',
 
         // Era Unlock
         'eraUnlock.title': 'Medieval Era Begins',
@@ -206,9 +215,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.41.desc': 'Destroy; on destroy: get random reward.',
         'symbol.42.desc': 'Destroyed; on destroy: adds 1 random current era relic.',
         'symbol.43.desc': '-5 Food.',
-        'symbol.44.desc': 'Disable production of all adjacent terrain symbols. When counter reaches 0: Destroy.',
+        'symbol.44.desc': 'Disables all adjacent terrain symbols. When counter reaches 0: Destroy.',
         'symbol.45.desc': 'Destroyed. On destroy: destroy 1 random adjacent symbol.',
-        'symbol.46.desc': 'No effect (occupies space). When counter reaches 0: Destroy.',
+        'symbol.46.desc': 'When counter reaches 0: Destroy.',
 
 
         // ── Relics ──
@@ -318,14 +327,15 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.fullscreen.on': '켜짐',
         'settings.fullscreen.off': '꺼짐',
 
-        // Game UI
-        'game.spin': '턴',
+        // Game UI (스핀 = 보드 돌리기 버튼, 턴 = 게임 턴 개념)
+        'game.spin': '스핀',
         'game.turn': '턴',
         'game.food': '식량',
         'game.gold': '골드',
         'game.knowledge': '지식',
         'game.era': '시대',
         'game.foodDemand': '백성이 {turns}턴 후 식량 {amount}을 요구합니다',
+        'game.foodDemandFlavor': '{turns}턴 뒤, 백성이 식량 {amount}을 요구합니다.',
         'game.gameOver': '게임 오버',
         'game.victory': '승리!',
         'game.notEnoughFood': '식량 부족',
@@ -336,8 +346,16 @@ const translations: Record<Language, Record<string, string>> = {
         'game.noUpgradesAvailable': '선택 가능한 업그레이드가 없습니다',
         'game.reroll': '리롤',
         'game.skip': '건너뛰기',
+        'game.back': '뒤로가기',
         'game.attack': '공격력',
         'game.defense': '방어력',
+
+        // Threat labels (첫 배치 시 플로팅 텍스트)
+        'threat.barbarian_invasion': '야만인 침공',
+        'threat.barbarian_camp': '야만인 주둔',
+        'threat.flood': '홍수 발생',
+        'threat.earthquake': '지진 발생',
+        'threat.drought': '가뭄 발생',
 
         // Era Unlock
         'eraUnlock.title': '중세 시대가 열립니다',
@@ -499,9 +517,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.41.desc': '파괴; 파괴 시: 무작위 보상 획득.',
         'symbol.42.desc': '파괴; 파괴 시: 무작위 현재 시대 유물 획득.',
         'symbol.43.desc': '식량 -5.',
-        'symbol.44.desc': '인접한 모든 지형 심볼의 생산을 비활성화 합니다. 카운터 0에 도달 시: 파괴.',
+        'symbol.44.desc': '인접한 모든 지형 심볼을 비활성화 합니다. 카운터 0에 도달 시: 파괴.',
         'symbol.45.desc': '파괴. 파괴 시: 무작위 인접 심볼 한 개 파괴.',
-        'symbol.46.desc': '효과 없음 (자리만 차지). 카운터 0 도달 시: 파괴',
+        'symbol.46.desc': '카운터 0 도달 시: 파괴.',
 
         // ── Relics ──
         'relic.1.name': '클로비스 투창촉',

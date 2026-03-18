@@ -13,6 +13,12 @@ import { loadGameAssets } from './AssetLoader';
 const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
 const FLOAT_DISTANCE = 30; // px — 위로 이동 거리
 
+/** 야만인/재해 플로팅: 우측 이동 후 빠르게 위로 사라짐 */
+const THREAT_FLOAT_DRIFT_MS = 220;
+const THREAT_FLOAT_TOTAL_MS = 1800; // 위로 올라가는 시간 늘려서 글 읽을 여유
+const THREAT_FLOAT_DRIFT_RIGHT = 36;
+const THREAT_FLOAT_UP = 85;
+
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
     [SymbolType.NORMAL]: 'era.ancient',
@@ -34,6 +40,11 @@ export class PixiGameApp {
     private effectsContainer = new PIXI.Container();
     private floatContainer = new PIXI.Container();
     private hitContainer = new PIXI.Container();
+    private hudTopContainer = new PIXI.Container();
+
+    /** 식량 요구 텍스트 (2턴 이하일 때 진동용) */
+    private foodDemandLabel: PIXI.Text | null = null;
+    private foodDemandCenter: { x: number; y: number } = { x: 0, y: 0 };
 
     // Callbacks
     private onHoverSymbol: (symbol: HoveredSymbol | null) => void;
@@ -41,6 +52,8 @@ export class PixiGameApp {
 
     // Refs equivalent state
     private floatingEffects: FloatingEffect[] = [];
+    /** 야만인/재해 전용 플로팅 (우측 → 위로 빠르게) */
+    private threatFloatingEffects: { texts: PIXI.Text[]; startX: number; startY: number; elapsed: number }[] = [];
     private runningTotalTexts: { food: PIXI.Text | null; gold: PIXI.Text | null; knowledge: PIXI.Text | null } = { food: null, gold: null, knowledge: null };
     private prevEffectCount: number = 0;
 
@@ -49,6 +62,7 @@ export class PixiGameApp {
     private spinActive: boolean = false;
 
     private cellLayout: CellLayout | null = null;
+    private pendingNewThreatFloatsShown = false;
     private combatBounce: CombatBounce | null = null;
     private combatShaking: boolean = false;
     private contributorWobbleTime: number = 0;
@@ -133,6 +147,7 @@ export class PixiGameApp {
         this.app.stage.addChild(this.effectsContainer);
         this.app.stage.addChild(this.floatContainer);
         this.app.stage.addChild(this.hitContainer);
+        this.app.stage.addChild(this.hudTopContainer);
 
         this.app.ticker.add((ticker) => this.onTick(ticker));
     }
@@ -182,6 +197,45 @@ export class PixiGameApp {
                     txt.destroy();
                 }
                 this.floatingEffects.splice(i, 1);
+            }
+        }
+
+        // Threat floating: 작은 크기로 시작 → 가로 이동하면서 크기 커짐 → 위로 올라가며 사라짐
+        for (let i = this.threatFloatingEffects.length - 1; i >= 0; i--) {
+            const t = this.threatFloatingEffects[i];
+            t.elapsed += dt;
+            const elapsed = t.elapsed;
+            if (elapsed < THREAT_FLOAT_DRIFT_MS) {
+                const p = elapsed / THREAT_FLOAT_DRIFT_MS;
+                const ease = 1 - (1 - p) * (1 - p);
+                const offsetX = THREAT_FLOAT_DRIFT_RIGHT * ease;
+                const scale = 0.35 + 0.65 * ease; // 작은 크기 → 최종 크기
+                for (const txt of t.texts) {
+                    txt.x = t.startX + offsetX;
+                    txt.y = t.startY;
+                    txt.alpha = 1;
+                    txt.scale.set(scale, scale);
+                }
+            } else {
+                const phase2Len = THREAT_FLOAT_TOTAL_MS - THREAT_FLOAT_DRIFT_MS;
+                const phase2Elapsed = elapsed - THREAT_FLOAT_DRIFT_MS;
+                const p = Math.min(phase2Elapsed / phase2Len, 1);
+                const ease = 1 - (1 - p) * (1 - p);
+                const offsetY = -THREAT_FLOAT_UP * ease;
+                const alpha = p < 0.5 ? 1 : 1 - (p - 0.5) / 0.5;
+                for (const txt of t.texts) {
+                    txt.x = t.startX + THREAT_FLOAT_DRIFT_RIGHT;
+                    txt.y = t.startY + offsetY;
+                    txt.alpha = alpha;
+                    txt.scale.set(1, 1);
+                }
+                if (elapsed >= THREAT_FLOAT_TOTAL_MS) {
+                    for (const txt of t.texts) {
+                        txt.parent?.removeChild(txt);
+                        txt.destroy();
+                    }
+                    this.threatFloatingEffects.splice(i, 1);
+                }
             }
         }
 
@@ -238,6 +292,20 @@ export class PixiGameApp {
             this.combatContainer.x = Math.sin(Date.now() / 20) * 6;
         } else {
             this.combatContainer.x = 0;
+        }
+
+        // 식량 요구 텍스트 진동 (2턴 이하일 때 긴장감)
+        if (this.foodDemandLabel?.parent) {
+            const s = useGameStore.getState();
+            const turnsUntilPayment = s.turn % 10 === 0 ? 10 : 10 - (s.turn % 10);
+            if (turnsUntilPayment <= 2) {
+                const shake = 2;
+                this.foodDemandLabel.x = this.foodDemandCenter.x + (Math.random() - 0.5) * 2 * shake;
+                this.foodDemandLabel.y = this.foodDemandCenter.y + (Math.random() - 0.5) * 2 * shake;
+            } else {
+                this.foodDemandLabel.x = this.foodDemandCenter.x;
+                this.foodDemandLabel.y = this.foodDemandCenter.y;
+            }
         }
 
         // Contributor wobble: phase 2일 때만 타이머 증가·렌더 (phase 3 진입 시 두 번째 wobble 방지)
@@ -322,11 +390,21 @@ export class PixiGameApp {
         const h = this.app.screen?.height || 1080;
 
         this.combatShaking = state.combatShaking;
+        if (state.phase !== 'showing_new_threats') this.pendingNewThreatFloatsShown = false;
 
         this.boardContainer.removeChildren();
         this.effectsContainer.removeChildren();
         this.hitContainer.removeChildren();
         this.bgContainer.removeChildren();
+        this.hudTopContainer.removeChildren();
+        this.foodDemandLabel = null;
+        for (const t of this.threatFloatingEffects) {
+            for (const txt of t.texts) {
+                txt.parent?.removeChild(txt);
+                txt.destroy();
+            }
+        }
+        this.threatFloatingEffects = [];
 
         if (this.onHoverSymbol) this.onHoverSymbol(null);
         if (this.onHoverRelic) this.onHoverRelic(null);
@@ -674,8 +752,37 @@ export class PixiGameApp {
             }
         }
 
+        // ── 첫 배치된 야만인/재해: 셀 위 플로팅 (빨간색+검은테두리, 우측→위로 빠르게) ──
+        if (state.phase === 'showing_new_threats' && state.pendingNewThreatFloats?.length && this.cellLayout && !this.pendingNewThreatFloatsShown) {
+            this.pendingNewThreatFloatsShown = true;
+            const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = this.cellLayout;
+            const rowGap = 0;
+            const threatFloatFontSize = Math.max(28, cellHeight * 0.24) * fs;
+            for (const { x, y, label } of state.pendingNewThreatFloats) {
+                const cx = startX + gridOffsetX + x * (cellWidth + colGap) + cellWidth / 2;
+                const baseY = startY + gridOffsetY + y * (cellHeight + rowGap) + cellHeight * 0.28;
+                const txt = new PIXI.Text({
+                    text: label,
+                    style: new PIXI.TextStyle({
+                        fill: '#ff3333',
+                        fontSize: threatFloatFontSize,
+                        fontWeight: 'bold',
+                        fontFamily: 'Mulmaru',
+                        stroke: { color: '#000000', width: 4 },
+                    }),
+                });
+                txt.anchor.set(0.5, 0);
+                txt.x = cx;
+                txt.y = baseY;
+                txt.scale.set(0.35, 0.35); // 처음엔 작게, 가로 이동하면서 커짐
+                this.floatContainer.addChild(txt);
+                this.threatFloatingEffects.push({ texts: [txt], startX: cx, startY: baseY, elapsed: 0 });
+            }
+            setTimeout(() => useGameStore.getState().continueProcessingAfterNewThreatFloats(), THREAT_FLOAT_TOTAL_MS + 200);
+        }
+
         // UI bars (Knowledge, Food, Gold)
-        this.renderUI(state, settings, scale, fs);
+        this.renderUI(state, settings, scale, fs, w);
         this.renderRelics(scale);
     }
 
@@ -775,7 +882,7 @@ export class PixiGameApp {
         }
     }
 
-    private renderUI(state: GameState, settings: SettingsState, scale: number, fs: number) {
+    private renderUI(state: GameState, settings: SettingsState, scale: number, fs: number, w: number) {
         const lang = settings.language;
         const fontFamily = 'Mulmaru';
         const eraName = t(ERA_NAME_KEYS[state.era] ?? 'era.ancient', lang);
@@ -791,6 +898,28 @@ export class PixiGameApp {
         const barW = 200 * scale;
         const barH = rowH;
         const gap = 12 * scale;
+
+        // 상단 HUD 중앙: 식량 요구 텍스트 (2턴 이하는 ticker에서 진동)
+        const turnsUntilPayment = state.turn % 10 === 0 ? 10 : 10 - (state.turn % 10);
+        const nextCost = calculateFoodCost(state.turn + turnsUntilPayment);
+        const foodDemandRaw = t('game.foodDemandFlavor', lang);
+        const foodDemandText = foodDemandRaw.replace('{turns}', String(turnsUntilPayment)).replace('{amount}', nextCost.toLocaleString());
+        const foodDemandFontSize = Math.round(32 * fs);
+        const foodDemandLabel = new PIXI.Text({
+            text: foodDemandText,
+            style: new PIXI.TextStyle({
+                fill: turnsUntilPayment <= 2 ? '#f87171' : turnsUntilPayment <= 4 ? '#f5c842' : '#a3b8cc',
+                fontSize: foodDemandFontSize,
+                fontFamily,
+                stroke: { color: '#000000', width: 2 },
+            }),
+        });
+        foodDemandLabel.anchor.set(0.5, 0.5);
+        this.foodDemandCenter = { x: w / 2, y: rowCY };
+        foodDemandLabel.x = this.foodDemandCenter.x;
+        foodDemandLabel.y = this.foodDemandCenter.y;
+        this.foodDemandLabel = foodDemandLabel;
+        this.hudTopContainer.addChild(foodDemandLabel);
 
         const eraText = new PIXI.Text({
             text: `Lv.${state.level} ${eraName}`,

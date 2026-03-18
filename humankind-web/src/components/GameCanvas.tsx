@@ -7,7 +7,6 @@ import type { HoveredSymbol, HoveredRelic } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
 import { useRelicStore } from '../game/state/relicStore';
-import NotificationPanel from './NotificationPanel';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -137,8 +136,6 @@ const GameCanvas = () => {
 
     return (
         <div ref={canvasRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-            {/* Notification Panel — right side of board */}
-            <NotificationPanel />
             {hoveredSymbol && (
                 <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
                     <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.definition.id}.name`, language)}</div>
