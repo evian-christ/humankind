@@ -75,9 +75,9 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     41: { id: 41, name: "Loot", type: SymbolType.NORMAL, description: "Destroyed; on destroy: get random reward.", sprite: "041.png", tags: [] },
     42: { id: 42, name: "Glowing Amber", type: SymbolType.NORMAL, description: "Destroyed; on destroy: adds random current era relic.", sprite: "042.png", tags: [] },
     43: { id: 43, name: "Enemy Warrior", type: SymbolType.ENEMY, description: "-5 Food.", base_attack: 5, base_hp: 10, sprite: "043.png", tags: ["melee"] },
-    44: { id: 44, name: "Flood", type: SymbolType.DISASTER, description: "Disable production of all adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "-", tags: [] },
+    44: { id: 44, name: "Flood", type: SymbolType.DISASTER, description: "Disables all adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "044.png", tags: [] },
     45: { id: 45, name: "Earthquake", type: SymbolType.DISASTER, description: "Destroyed. On destroy: destroy 1 random adjacent symbol.", sprite: "-", tags: [] },
-    46: { id: 46, name: "Drought", type: SymbolType.DISASTER, description: "No effect (occupies space). When counter reaches 0: Destroy.", sprite: "-", tags: [] },
+    46: { id: 46, name: "Drought", type: SymbolType.DISASTER, description: "When counter reaches 0: Destroy.", sprite: "-", tags: [] },
 };
 
 /** 종교 심볼 ID 목록 (4대 교리 심볼) */
