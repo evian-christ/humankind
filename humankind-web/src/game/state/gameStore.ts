@@ -488,7 +488,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     barbarianSymbolThreat: 0,
     barbarianCampThreat: 0,
-    naturalDisasterThreat: 100, // 개발용: 첫 턴부터 자연재해 100%
+    naturalDisasterThreat: 0,
     pendingNewThreatFloats: [],
 
     appendEventLog: (entry) => {
@@ -1588,7 +1588,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
-            naturalDisasterThreat: 100,
+            naturalDisasterThreat: 0,
             pendingNewThreatFloats: [],
         });
     },
