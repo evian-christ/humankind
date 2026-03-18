@@ -51,6 +51,46 @@ export class PixiGameApp {
     private cellLayout: CellLayout | null = null;
     private combatBounce: CombatBounce | null = null;
     private combatShaking: boolean = false;
+    private contributorWobbleTime: number = 0;
+
+    private getPulse01() {
+        // 0..1 부드러운 펄스
+        return 0.5 + 0.5 * Math.sin(Date.now() / 140);
+    }
+
+    private drawBackGlow(
+        g: PIXI.Graphics,
+        cx: number,
+        cy: number,
+        baseR: number,
+        color: number,
+        pulse01: number,
+        kind: 'active' | 'contrib'
+    ) {
+        // "진짜 빛" 느낌: filled blob + blur filter + ADD blend.
+        // 테두리(stroke)는 빛이 아니라 원처럼 보이기 쉬워서 사용하지 않는다.
+        const strength = kind === 'active' ? 1 : 0.7;
+        const blobR = baseR * (0.95 + 0.08 * pulse01);
+        const coreR = baseR * (0.45 + 0.05 * pulse01);
+
+        // blur 강도는 반경에 비례 (너무 강하면 뿌옇게만 보임)
+        const blur = Math.max(6, Math.min(22, baseR * 0.22));
+        const BlurFilterCtor = (PIXI as any).BlurFilter;
+        if (BlurFilterCtor) {
+            // filter는 Graphics 단위로 적용
+            g.filters = [new BlurFilterCtor(blur)];
+        }
+        // add(더하기) 블렌딩: 빛 번짐 느낌의 핵심
+        g.blendMode = 'add' as any;
+
+        // outer soft blob
+        g.circle(cx, cy, blobR);
+        g.fill({ color, alpha: (0.22 + 0.14 * pulse01) * strength });
+
+        // inner core (조금 더 밝게)
+        g.circle(cx, cy, coreR);
+        g.fill({ color, alpha: (0.26 + 0.18 * pulse01) * strength });
+    }
 
 
 
@@ -198,6 +238,15 @@ export class PixiGameApp {
             this.combatContainer.x = Math.sin(Date.now() / 20) * 6;
         } else {
             this.combatContainer.x = 0;
+        }
+
+        // Contributor wobble: phase 2일 때만 타이머 증가·렌더 (phase 3 진입 시 두 번째 wobble 방지)
+        const state = useGameStore.getState();
+        if (state.phase === 'processing' && state.effectPhase === 2 && state.activeContributors?.length > 0) {
+            this.contributorWobbleTime += dt;
+            this.renderBoard(state, useSettingsStore.getState());
+        } else {
+            this.contributorWobbleTime = 0;
         }
 
         // Reel spinning
@@ -442,6 +491,30 @@ export class PixiGameApp {
                 const innerW = cellWidth - 6;
                 const rarityColor = getSymbolColor(symDef.type);
 
+                // Processing highlight: 1) 본체만 lift, 2) contributors는 밝은 초록 틴트 + 위아래 흔들림
+                const isProcessing = state.phase === 'processing';
+                const isActive = isProcessing && !!(state.activeSlot && state.activeSlot.x === x && state.activeSlot.y === y);
+                const isContrib = isProcessing && state.activeContributors.some(c => c.x === x && c.y === y);
+                const liftY = isActive ? -cellHeight * 0.14 : 0;
+                // phase 2일 때만 contributor 위아래 2회 왔다갔다 (phase 3에서는 wobble 없음)
+                const wobbleY = isContrib && state.effectPhase === 2 ? Math.sin(this.contributorWobbleTime * (4 * Math.PI / 280)) * 10 : 0;
+                const contribGreenTint = isContrib ? 0x90ee90 : 0xffffff; // 밝은 초록
+
+                // active 심볼: 들린 것 + 바로 아랫쪽에 픽셀 느낌 화살표(머리만, ▲, 밝은 연두 + 검은 테두리)
+                if (isActive) {
+                    const arrowG = new PIXI.Graphics();
+                    const cx = cellX + cellWidth / 2;
+                    const base = cellY + cellHeight * 0.92;
+                    const s = Math.max(5, Math.min(cellWidth, cellHeight) * 0.07);
+                    arrowG.moveTo(cx, base - s);
+                    arrowG.lineTo(cx - s, base + s);
+                    arrowG.lineTo(cx + s, base + s);
+                    arrowG.closePath();
+                    arrowG.fill({ color: 0x7cff7c, alpha: 0.98 });
+                    arrowG.stroke({ color: 0x000000, width: 2, alpha: 1 });
+                    this.effectsContainer.addChild(arrowG);
+                }
+
                 if (symDef.sprite && symDef.sprite !== '-' && symDef.sprite !== '-.png') {
                     const spritePath = `/assets/symbols/${symDef.sprite}`;
                     const SPRITE_PX = 32;
@@ -449,20 +522,22 @@ export class PixiGameApp {
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                     const sprite = PIXI.Sprite.from(spritePath);
                     sprite.x = cellX + cellWidth / 2;
-                    sprite.y = cellY + cellHeight / 2;
+                    sprite.y = cellY + cellHeight / 2 + liftY + wobbleY;
                     sprite.anchor.set(0.5);
                     sprite.width = spriteSize;
                     sprite.height = spriteSize;
+                    if (isContrib) sprite.tint = contribGreenTint;
                     drawTarget.addChild(sprite);
                 } else {
                     const symName = t(`symbol.${symDef.id}.name`, lang);
+                    const fillColor = isContrib ? '#90ee90' : rarityColor;
                     const nameText = new PIXI.Text({
                         text: symName,
-                        style: new PIXI.TextStyle({ fill: rarityColor, fontSize: 32 * fs, fontFamily, stroke: { color: '#000000', width: 2 } }),
+                        style: new PIXI.TextStyle({ fill: fillColor, fontSize: 32 * fs, fontFamily, stroke: { color: '#000000', width: 2 } }),
                     });
                     nameText.anchor.set(0.5);
                     nameText.x = cellX + cellWidth / 2;
-                    nameText.y = cellY + cellHeight / 2;
+                    nameText.y = cellY + cellHeight / 2 + liftY + wobbleY;
                     drawTarget.addChild(nameText);
                 }
 
@@ -473,7 +548,7 @@ export class PixiGameApp {
                     });
                     counterText.anchor.set(0.5, 0.5);
                     counterText.x = cellX + cellWidth - 21;
-                    counterText.y = cellY + cellHeight - 24;
+                    counterText.y = cellY + cellHeight - 24 + liftY + wobbleY;
                     drawTarget.addChild(counterText);
                 }
 
@@ -484,7 +559,7 @@ export class PixiGameApp {
                     });
                     atkBg.anchor.set(0.5, 0.5);
                     atkBg.x = cellX + 24;
-                    atkBg.y = cellY + cellHeight - 24;
+                    atkBg.y = cellY + cellHeight - 24 + liftY + wobbleY;
                     atkBg.alpha = 0.4;
                     drawTarget.addChild(atkBg);
 
@@ -494,7 +569,7 @@ export class PixiGameApp {
                     });
                     atkText.anchor.set(0.5, 0.5);
                     atkText.x = cellX + 25;
-                    atkText.y = cellY + cellHeight - 24;
+                    atkText.y = cellY + cellHeight - 24 + liftY + wobbleY;
                     drawTarget.addChild(atkText);
                 }
 
@@ -505,7 +580,7 @@ export class PixiGameApp {
                     });
                     hpBg.anchor.set(0.5, 0.5);
                     hpBg.x = cellX + cellWidth - 20;
-                    hpBg.y = cellY + cellHeight - 24;
+                    hpBg.y = cellY + cellHeight - 24 + liftY + wobbleY;
                     hpBg.alpha = 0.4;
                     drawTarget.addChild(hpBg);
 
@@ -515,7 +590,7 @@ export class PixiGameApp {
                     });
                     hpText.anchor.set(0.5, 0.5);
                     hpText.x = cellX + cellWidth - 21;
-                    hpText.y = cellY + cellHeight - 24;
+                    hpText.y = cellY + cellHeight - 24 + liftY + wobbleY;
                     drawTarget.addChild(hpText);
                 }
 
@@ -526,41 +601,28 @@ export class PixiGameApp {
                     });
                     campCounterText.anchor.set(0.5, 0.5);
                     campCounterText.x = cellX + 25;
-                    campCounterText.y = cellY + cellHeight - 24;
+                    campCounterText.y = cellY + cellHeight - 24 + liftY + wobbleY;
                     drawTarget.addChild(campCounterText);
                 }
 
-                if (state.activeSlot && state.activeSlot.x === x && state.activeSlot.y === y) {
-                    const highlight = new PIXI.Graphics();
-                    highlight.rect(cellX - 3, cellY - 3, cellWidth + 6, cellHeight + 6);
-                    highlight.stroke({ color: 0xfbbf24, width: 4, alpha: 0.7 });
-                    highlight.rect(cellX, cellY, cellWidth, cellHeight);
-                    highlight.fill({ color: 0xfbbf24, alpha: 0.2 });
-                    drawTarget.addChild(highlight);
-                }
-
-                if (state.activeContributors.some(c => c.x === x && c.y === y)) {
-                    const contrib = new PIXI.Graphics();
-                    contrib.rect(cellX - 2, cellY - 2, cellWidth + 4, cellHeight + 4);
-                    contrib.stroke({ color: 0x60a5fa, width: 3, alpha: 0.8 });
-                    contrib.rect(cellX, cellY, cellWidth, cellHeight);
-                    contrib.fill({ color: 0x60a5fa, alpha: 0.15 });
-                    drawTarget.addChild(contrib);
-                }
-
-                if (state.phase === 'processing' && symbol.is_marked_for_destruction) {
+                // 파괴 X: phase 3 시작 시 생성. 이 셀이 지금 active/contributor/pending으로 wobble 중이면 숨김.
+                // contributor/pending만 wobble로 간주. active(자기 차례)는 lift만 하므로 X 유지
+                const isPending = isProcessing && state.pendingContributors.some(c => c.x === x && c.y === y);
+                const isWobblingThisSlot = (state.effectPhase === 1 || state.effectPhase === 2) && (isContrib || isPending);
+                const showDestroyX = state.phase === 'processing' && symbol.is_marked_for_destruction && (state.effectPhase === 3 || state.effectPhase3ReachedThisRun) && !isWobblingThisSlot;
+                if (showDestroyX) {
                     const destroyOverlay = new PIXI.Graphics();
-                    destroyOverlay.rect(cellX, cellY, cellWidth, cellHeight);
-                    destroyOverlay.fill({ color: 0x000000, alpha: 0.4 });
-                    destroyOverlay.rect(cellX, cellY, cellWidth, cellHeight);
-                    destroyOverlay.stroke({ color: 0xef4444, width: 3, alpha: 0.8 });
-                    const margin = cellWidth * 0.25;
-                    destroyOverlay.moveTo(cellX + margin, cellY + margin);
-                    destroyOverlay.lineTo(cellX + cellWidth - margin, cellY + cellHeight - margin);
-                    destroyOverlay.stroke({ color: 0xef4444, width: 3, alpha: 0.7 });
-                    destroyOverlay.moveTo(cellX + cellWidth - margin, cellY + margin);
-                    destroyOverlay.lineTo(cellX + margin, cellY + cellHeight - margin);
-                    destroyOverlay.stroke({ color: 0xef4444, width: 3, alpha: 0.7 });
+                    const m = Math.min(cellWidth, cellHeight) * 0.22;
+                    const cx = cellX + cellWidth / 2;
+                    const cy = cellY + cellHeight / 2;
+                    const strokeW = Math.max(5, Math.min(cellWidth, cellHeight) * 0.11);
+                    const strokeOpt = { color: 0xef4444, width: strokeW, alpha: 0.78 };
+                    destroyOverlay.moveTo(cx - m, cy - m);
+                    destroyOverlay.lineTo(cx + m, cy + m);
+                    destroyOverlay.stroke(strokeOpt);
+                    destroyOverlay.moveTo(cx + m, cy - m);
+                    destroyOverlay.lineTo(cx - m, cy + m);
+                    destroyOverlay.stroke(strokeOpt);
                     drawTarget.addChild(destroyOverlay);
                 }
             }

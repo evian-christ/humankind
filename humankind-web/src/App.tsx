@@ -13,6 +13,7 @@ import PauseMenu from './components/PauseMenu';
 import DevOverlay from './components/DevOverlay';
 import DataBrowser from './components/DataBrowser';
 import SymbolPoolModal from './components/SymbolPoolModal';
+import EffectLogOverlay from './components/EffectLogOverlay';
 
 function App() {
   const { phase, turn, spinBoard, initializeGame, toggleRelicShop } = useGameStore();
@@ -94,6 +95,9 @@ function App() {
 
       {/* ===== SYMBOL POOL PROBABILITY (F4) ===== */}
       <SymbolPoolModal />
+
+      {/* ===== EFFECT / EVENT LOG (F12) ===== */}
+      <EffectLogOverlay />
 
       {/* ===== PIXEL ARCADE SPIN BUTTON ===== */}
       <div className="spin-area">

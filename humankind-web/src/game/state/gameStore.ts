@@ -15,17 +15,32 @@ export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 export const REROLL_COST = 50;
 
+/** 1→2 단계: 본체만 보여줌(들어올림) 후, activate 보여주기 전 대기(ms) */
+const PHASE1_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
+    '1x': 220,
+    '2x': 150,
+    '4x': 90,
+    'instant': 0,
+};
+/** 2→3 단계: activate(contributors) 보여준 후, 생산량 표시 전 대기(ms) */
+const PHASE2_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
+    '1x': 360,
+    '2x': 280,
+    '4x': 180,
+    'instant': 0,
+};
+
 /** 유물 ID 목록 (relicDefinitions + relicCandidates) */
 const RELIC_ID = {
     CLOVIS_SPEAR: 1,          // 클로비스 투창촉: 적 체력 -1
     LYDIA_COIN: 2,            // 리디아 호박금 주화: 리롤 50% 할인, 턴당 최대 3회
-    UR_WHEEL: 3,              // 우르 전차 바퀴: 매 스핀 최저 식량 심볼 파괴 + G+50, 5턴 후 소멸
+    UR_WHEEL: 3,              // 우르 전차 바퀴: 매 턴 최저 식량 심볼 파괴 + G+50, 5턴 후 소멸
     JOMON_POTTERY: 4,         // 조몬 토기 조각: 토기 인접 파괴
     EGYPT_SAW: 5,             // 이집트 구리 톱: 채석장 빈 슬롯 G+10
     BABYLON_MAP: 6,           // 바빌로니아 세계 지도: 매 턴 F+10, 보드 20번 심볼 -이면 영구 +10
     GOANNA_BANANA: 7,         // 쿠크 늪지대 바나나 화석: 열대 과수원 인접 바나나 F+20
     TEN_COMMANDMENTS: 8,      // 십계명 석판: 돌→석판
-    NILE_SILT: 9,             // 나일 강 흑니: 5스핀 동안 식량 2배
+    NILE_SILT: 9,             // 나일 강 흑니: 5턴 동안 식량 2배
     GOBEKLI_PILLAR: 10,       // 괴베클리 테페 신전 석주: 빈 슬롯당 F+5
     CATALHOYUK: 11,           // 차탈회위크 여신상: 심볼 15개↑ 일 때 F+80
     SCARAB: 12,               // 쇠똥구리 부적: 심볼 파괴 시 G+30
@@ -73,6 +88,33 @@ export const calculateFoodCost = (turn: number): number => {
     return 1000 + (paymentCycle - 1) * 500;
 };
 
+export type GameEventLogKind =
+    | 'turn_start'
+    | 'processing_start'
+    | 'symbol_effect'
+    | 'processing_end'
+    | 'turn_end'
+    | 'combat'
+    | 'relic'
+    | 'system';
+
+export interface GameEventLogEntry {
+    id: string;
+    ts: number;
+    turn: number;
+    kind: GameEventLogKind;
+    /** 주체 슬롯 (있으면) */
+    slot?: { x: number; y: number };
+    /** 주체 심볼 (있으면) */
+    symbolId?: number;
+    /** 수치 변화 (있으면) */
+    delta?: { food: number; gold: number; knowledge: number };
+    /** 기여자 스냅샷 (있으면) */
+    contributors?: Array<{ x: number; y: number; symbolId?: number }>;
+    /** 추가 정보 (디테일용) */
+    meta?: Record<string, unknown>;
+}
+
 export interface GameState {
     food: number;
     gold: number;
@@ -93,6 +135,14 @@ export interface GameState {
     activeSlot: { x: number; y: number } | null;
     /** 현재 슬롯의 효과에 기여한 인접 심볼 좌표 */
     activeContributors: { x: number; y: number }[];
+    /** phase 1 시작 시 미리 저장해두는 이번 슬롯의 예정 contributor 목록 (X 숨김용) */
+    pendingContributors: { x: number; y: number }[];
+    /** 상호작용 표시 단계: 1=들어올림만, 2=contributor wobble 중, 3=wobble 끝남(파괴 X 등 표시 가능) */
+    effectPhase: 1 | 2 | 3 | null;
+    /** 이번 processing에서 phase 3을 한 번이라도 거쳤으면 true → 파괴 X를 계속 표시 */
+    effectPhase3ReachedThisRun: boolean;
+    /** F12 로그 오버레이용 이벤트 로그 (시간순 누적) */
+    eventLog: GameEventLogEntry[];
     /** spinning 시작 직전의 보드 (릴 시작점용) */
     prevBoard: (PlayerSymbolInstance | null)[][];
     /** 전투 애니메이션 트리거 (공격자 → 대상 좌표 + 피해량) */
@@ -145,6 +195,10 @@ export interface GameState {
     devForceScreen: (screen: 'symbol' | 'relic' | 'upgrade') => void;
     confirmDestroySymbols: (instanceIds: string[]) => void;
     finishDestroySelection: () => void;
+
+    /** F12 로그 오버레이용 */
+    appendEventLog: (entry: Omit<GameEventLogEntry, 'id' | 'ts'> & { ts?: number; id?: string }) => void;
+    clearEventLog: () => void;
 }
 
 const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => {
@@ -252,17 +306,6 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         if ((sym.id === 24 || sym.id === 26) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
         if (sym.id === 39 && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
-
-        // 패키지 업그레이드 해금 및 금지(Ban)
-        if (sym.id === 51 && upgrades.includes(201)) isUnlocked = true; // Hunting -> Bear
-        if (sym.id === 52 && upgrades.includes(202)) isUnlocked = true; // Metallurgy -> Bronze
-        if (sym.id === 53 && upgrades.includes(203)) isUnlocked = true; // Spearcraft -> Spearman
-        if (sym.id === 54 && upgrades.includes(204)) isUnlocked = true; // Shipbuilding -> Boat
-        if (sym.id === 55 && upgrades.includes(205)) isUnlocked = true; // Shamanism -> Shaman
-        if (sym.id === 56 && upgrades.includes(206)) isUnlocked = true; // Weaving -> Loom
-        if (sym.id === 57 && upgrades.includes(207)) isUnlocked = true; // Jewelry -> Gem
-        if (sym.id === 58 && upgrades.includes(208)) isUnlocked = true; // Epic Tales -> Storyteller
-        if (sym.id === 59 && upgrades.includes(209)) isUnlocked = true; // Trade -> Market
 
         // 금지(Ban) 목록
         if (sym.id === 4 && upgrades.includes(201)) isUnlocked = false; // Hunting -> Ban Banana
@@ -425,6 +468,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
     activeContributors: [],
+    pendingContributors: [],
+    effectPhase: null,
+    effectPhase3ReachedThisRun: false,
+    eventLog: [],
     prevBoard: createEmptyBoard(),
     combatAnimation: null,
     combatShaking: false,
@@ -444,6 +491,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     barbarianSymbolTimer: null,
     barbarianCampTimer: null,
 
+    appendEventLog: (entry) => {
+        const MAX = 2000;
+        const ts = entry.ts ?? Date.now();
+        const id = entry.id ?? `${ts}-${Math.random().toString(16).slice(2)}`;
+        set((s) => {
+            const next = [...s.eventLog, { ...(entry as any), id, ts } as GameEventLogEntry];
+            return { eventLog: next.length > MAX ? next.slice(next.length - MAX) : next };
+        });
+    },
+    clearEventLog: () => set({ eventLog: [] }),
+
     spinBoard: () => {
         const state = get();
         if (state.phase !== 'idle') return;
@@ -458,8 +516,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const newPlayerSymbols = [...state.playerSymbols];
 
-        // ── 스핀 시작: 이전 턴의 1회성(oneShot) 알림 삭제 ──
+        // ── 턴 시작: 이전 턴의 1회성(oneShot) 알림 삭제 ──
         useNotificationStore.getState().clearOneShots?.();
+        get().appendEventLog({ turn: state.turn + 1, kind: 'turn_start' });
 
         // Threat increment logic
         if (state.era === 1) { // 1단계는 고대 시대
@@ -483,7 +542,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             } else {
                 barbarianSymbolTimer--;
                 if (barbarianSymbolTimer <= 0) {
-                    // 침공 확정 — oneShot으로 전환 (다음 스핀 시 자동 삭제)
+                    // 침공 확정 — oneShot으로 전환 (다음 턴 시 자동 삭제)
                     barbarianSymbolTimer = null;
                     const enemyDef = SYMBOLS[43];
                     if (enemyDef) newPlayerSymbols.push(createInstance(enemyDef));
@@ -618,7 +677,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const newTurn = state.turn + 1;
 
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
-        // prevBoard: 스핀 전 보드를 저장 (릴 시작점용)
+        // prevBoard: 턴 전 보드를 저장 (릴 시작점용)
         set({
             playerSymbols: newPlayerSymbols,
             barbarianSymbolThreat,
@@ -634,7 +693,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
-            rerollsThisTurn: 0,  // 매 스핀 리롤 횟수 리셋
+            pendingContributors: [],
+            effectPhase: null,
+            effectPhase3ReachedThisRun: false,
+            rerollsThisTurn: 0,  // 매 턴 리롤 횟수 리셋
         });
 
         // spinning 애니메이션은 GameCanvas ticker가 처리하고,
@@ -666,7 +728,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (hasTextileSource) startGold += 10;
         }
 
-        set({ phase: 'processing', runningTotals: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
+        set({ phase: 'processing', effectPhase3ReachedThisRun: false, runningTotals: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
+        get().appendEventLog({ turn: state.turn, kind: 'processing_start', meta: { base: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } } });
 
         // ── 홍수(44): 인접 지형 생산 비활성화(순서 무관) ──
         const FLOOD_ID = 44;
@@ -716,8 +779,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const processSlot = (slotIdx: number) => {
             if (slotIdx >= slotOrder.length) {
-                // 마지막 효과 후 0.5초 대기 → 스탯 합산
-                set({ activeSlot: null, activeContributors: [] });
+                // 마지막 효과 후 0.5초 대기 → 스탯 합산. effectPhase/effectPhase3ReachedThisRun은 유지해 X가 0.5초 동안 계속 보이게 하고, finishProcessing에서 보드 제거와 함께 한 번에 초기화
+                set({ activeSlot: null, activeContributors: [], pendingContributors: [] });
                 setTimeout(() => {
                     finishProcessing(totalFood, totalKnowledge, totalGold, symbolsToAdd, symbolsToSpawnOnBoard, accumulatedEffects);
                 }, 500);
@@ -741,7 +804,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 symbol, currentBoard, x, y, buildActiveRelicEffects(), disabledTerrainCoords
             );
 
-            // ── Campfire 폭발 버프: 이번 스핀 식량 2배 ──
+            // ── Campfire 폭발 버프: 이번 턴 식량 2배 ──
             if (symbol.campfire_double_food && result.food > 0) {
                 result.food *= 2;
                 symbol.campfire_double_food = false; // 플래그 소비
@@ -757,25 +820,97 @@ export const useGameStore = create<GameState>((set, get) => ({
                 set({ isRelicShopOpen: true });
             }
 
-            if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
-                accumulatedEffects.push({ x, y, food: result.food, gold: result.gold, knowledge: result.knowledge });
-                totalFood += result.food;
-                totalKnowledge += result.knowledge;
-                totalGold += result.gold;
-            }
+            const effectSpeed = useSettingsStore.getState().effectSpeed;
+            const phase1 = PHASE1_DELAY[effectSpeed];
+            const phase2 = PHASE2_DELAY[effectSpeed];
+            const delay = EFFECT_SPEED_DELAY[effectSpeed];
 
+            // 1) 본체 심볼만 들어올림 (phase 1) — pendingContributors를 미리 설정해 X 숨김 타이밍 정확히 맞춤
             set({
                 activeSlot: { x, y },
-                activeContributors: result.contributors ?? [],
-                lastEffects: [...accumulatedEffects],
-                runningTotals: { food: totalFood, gold: totalGold, knowledge: totalKnowledge },
+                activeContributors: [],
+                pendingContributors: result.contributors ?? [],
+                effectPhase: 1,
             });
 
-            const delay = EFFECT_SPEED_DELAY[useSettingsStore.getState().effectSpeed];
-            if (delay === 0) {
-                processSlot(slotIdx + 1);
+            const hasContributors = (result.contributors ?? []).length > 0;
+
+            const showPhase2 = () => {
+                // 2) activate되는 contributors 보여주기 (phase 2, 밝은 초록 틴트 + 위아래 wobble)
+                set({ activeContributors: result.contributors ?? [], effectPhase: 2 });
+            };
+
+            const applyEffectsAndContinue = () => {
+                set({ effectPhase: 3, effectPhase3ReachedThisRun: true }); // wobble 끝 → 파괴 X 등 표시 가능, 이후 계속 표시
+                if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
+                    accumulatedEffects.push({ x, y, food: result.food, gold: result.gold, knowledge: result.knowledge });
+                    totalFood += result.food;
+                    totalKnowledge += result.knowledge;
+                    totalGold += result.gold;
+                }
+
+                set({
+                    lastEffects: [...accumulatedEffects],
+                    runningTotals: { food: totalFood, gold: totalGold, knowledge: totalKnowledge },
+                });
+
+                // F12 이벤트 로그: 기본 UI는 간단히 유지하고, 상세는 로그 오버레이에서 확인
+                if (
+                    result.food !== 0 || result.gold !== 0 || result.knowledge !== 0 ||
+                    (result.addSymbolIds && result.addSymbolIds.length > 0) ||
+                    (result.spawnOnBoard && result.spawnOnBoard.length > 0) ||
+                    result.triggerRelicRefresh || result.triggerRelicSelection
+                ) {
+                    const contributors = (result.contributors ?? []).map(({ x: cx, y: cy }) => ({
+                        x: cx,
+                        y: cy,
+                        symbolId: currentBoard[cx]?.[cy]?.definition?.id,
+                    }));
+                    get().appendEventLog({
+                        turn: get().turn,
+                        kind: 'symbol_effect',
+                        slot: { x, y },
+                        symbolId: symbol.definition.id,
+                        delta: { food: result.food ?? 0, gold: result.gold ?? 0, knowledge: result.knowledge ?? 0 },
+                        contributors,
+                        meta: {
+                            addSymbolIds: result.addSymbolIds ?? [],
+                            spawnOnBoard: result.spawnOnBoard ?? [],
+                            triggerRelicRefresh: !!result.triggerRelicRefresh,
+                            triggerRelicSelection: !!result.triggerRelicSelection,
+                        },
+                    });
+                }
+
+                if (delay === 0) {
+                    processSlot(slotIdx + 1);
+                } else {
+                    setTimeout(() => processSlot(slotIdx + 1), delay);
+                }
+            };
+
+            // 3단계: phase1 → (phase2 있으면) → phase3(생산량). contributor 없으면 phase2 건너뜀
+            if (!hasContributors) {
+                if (phase1 === 0) {
+                    applyEffectsAndContinue();
+                } else {
+                    setTimeout(applyEffectsAndContinue, phase1);
+                }
+            } else if (phase1 === 0 && phase2 === 0) {
+                showPhase2();
+                applyEffectsAndContinue();
+            } else if (phase1 === 0) {
+                showPhase2();
+                setTimeout(applyEffectsAndContinue, phase2);
             } else {
-                setTimeout(() => processSlot(slotIdx + 1), delay);
+                setTimeout(() => {
+                    showPhase2();
+                    if (phase2 === 0) {
+                        applyEffectsAndContinue();
+                    } else {
+                        setTimeout(applyEffectsAndContinue, phase2);
+                    }
+                }, phase1);
             }
         };
 
@@ -784,6 +919,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             toAdd: number[], toSpawn: number[],
             effects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>
         ) => {
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'processing_end',
+                meta: { totals: { food: tFood, gold: tGold, knowledge: tKnowledge } },
+            });
             const currentBoard = get().board;
             const relics = useRelicStore.getState().relics;
             const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
@@ -903,7 +1043,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             // ── 유물 ID 3: 우르의 전차 바퀴 ──
-            // 매 스핀 식량 생산량 가장 낮은 심볼 파괴 + G+50. 5턴 후 유물 소멸.
+            // 매 턴 식량 생산량 가장 낮은 심볼 파괴 + G+50. 5턴 후 유물 소멸.
             const urWheelRelic = getRelicInst(RELIC_ID.UR_WHEEL);
             if (urWheelRelic) {
                 // 식량 기준 최저 심볼(파괴 안 된 것 중) 찾기
@@ -958,7 +1098,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             // ── 유물 ID 9: 나일 강 비옥한 흑니 ──
-            // 활성 5스핀 후 소멸 (카운터 증가)
+            // 활성 5턴 후 소멸 (카운터 증가)
             const nileRelic = getRelicInst(RELIC_ID.NILE_SILT);
             if (nileRelic && nileRelic.effect_counter < 5) {
                 useRelicStore.getState().incrementRelicCounter(nileRelic.instanceId);
@@ -1074,6 +1214,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                     runningTotals: { food: 0, gold: 0, knowledge: 0 },
                     activeSlot: null,
                     activeContributors: [],
+                    pendingContributors: [],
+                    effectPhase: null,
+                    effectPhase3ReachedThisRun: false,
                     era: newEra,
                     board: cleanBoard,
                     playerSymbols: filteredSymbols,
@@ -1162,7 +1305,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         combatShaking: false,
                     }));
                 }
-                set({ activeSlot: null, activeContributors: [], combatAnimation: null, combatShaking: false });
+                set({ activeSlot: null, activeContributors: [], pendingContributors: [], effectPhase: null, effectPhase3ReachedThisRun: false, combatAnimation: null, combatShaking: false });
 
                 const initialDelay = EFFECT_SPEED_DELAY[effectSpeed];
                 if (initialDelay === 0) {
@@ -1363,13 +1506,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         }
 
-        // 202 Metallurgy: All Copper(8) -> Bronze(52)
-        if (upgradeId === 202) {
-            newPlayerSymbols = newPlayerSymbols.map(s =>
-                s.definition.id === 8 ? { ...s, definition: SYMBOLS[52] } : s
-            );
-        }
-
         // 204 Shipbuilding: All Oasis(11) -> Sea(6)
         if (upgradeId === 204) {
             newPlayerSymbols = newPlayerSymbols.map(s =>
@@ -1383,18 +1519,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (idx !== -1) {
                 newPlayerSymbols.splice(idx, 1);
                 addedKnowledge += 50;
-            }
-        }
-
-        // 209 Trade: Up to 2 Wheat(1) -> Gem(57)
-        if (upgradeId === 209) {
-            let replaced = 0;
-            for (let i = 0; i < newPlayerSymbols.length; i++) {
-                if (newPlayerSymbols[i].definition.id === 1) {
-                    newPlayerSymbols[i] = { ...newPlayerSymbols[i], definition: SYMBOLS[57] };
-                    replaced++;
-                    if (replaced === 2) break;
-                }
             }
         }
 
@@ -1492,6 +1616,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
+            pendingContributors: [],
+            effectPhase: null,
+            effectPhase3ReachedThisRun: false,
+            eventLog: [],
             prevBoard: createEmptyBoard(),
             combatAnimation: null,
             combatShaking: false,
