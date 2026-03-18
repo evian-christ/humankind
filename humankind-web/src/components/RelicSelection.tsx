@@ -32,8 +32,6 @@ const RelicSelection = () => {
 
     return (
         <div className="selection-overlay selection-overlay--relic">
-            <button className="relic-shop-close-btn" onClick={toggleRelicShop}>×</button>
-
             <div className="selection-panel-wrapper" style={{ position: 'relative' }}>
                 <div className="selection-panel" style={{ position: 'relative', zIndex: 1 }}>
                     <div className="selection-title" style={{ marginBottom: '40px' }}>
@@ -109,6 +107,12 @@ const RelicSelection = () => {
                                 </div>
                             ))}
                         </div>
+                    </div>
+
+                    <div className="relic-shop-back-row">
+                        <button className="relic-shop-back-btn" onClick={toggleRelicShop}>
+                            {t('game.back', language)}
+                        </button>
                     </div>
                 </div>
             </div>

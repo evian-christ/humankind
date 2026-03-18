@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useSettingsStore } from './game/state/settingsStore';
-import { useRelicStore } from './game/state/relicStore';
 import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
@@ -26,6 +25,20 @@ function App() {
     setResolution(resolutionWidth, resolutionHeight);
   }, []);
 
+  // 스페이스바로 스핀 (idle일 때만, 입력 필드 포커스 시 무시)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (phase !== 'idle') return;
+      e.preventDefault();
+      spinBoard();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [phase, spinBoard]);
+
   return (
     <>
       {/* ===== GAME BOARD (with integrated UI bars) ===== */}
@@ -33,22 +46,44 @@ function App() {
         <GameCanvas />
       </div>
 
-      {/* ===== MENU BUTTON (top-right corner) ===== */}
-      <button
-        className="menu-btn"
-        onClick={() => setMenuOpen(true)}
-      >
-        ☰
-      </button>
-
-      {/* ===== RELIC SHOP BUTTON (bottom-left corner) ===== */}
-      <button
-        className="relic-shop-btn"
-        onClick={toggleRelicShop}
-        title="유물 상점 (Relic Shop)"
-      >
-        🏺
-      </button>
+      {/* ===== 보드 하단: 왼쪽(유물) · 중앙 고정(스핀) · 오른쪽(⋯, 메뉴) ===== */}
+      <div className="bottom-action-bar">
+        <div className="bottom-action-bar-left">
+          <button
+            className="relic-shop-btn"
+            onClick={toggleRelicShop}
+            title="유물 상점 (Relic Shop)"
+          >
+            🏺
+          </button>
+        </div>
+        <div className="spin-area">
+          <button
+            className="spin-btn"
+            onClick={spinBoard}
+            disabled={phase !== 'idle'}
+            title={t('game.spin', language)}
+          >
+            {t('game.spin', language)}
+          </button>
+        </div>
+        <div className="bottom-action-bar-right">
+          <button
+            className="bottom-right-btn"
+            onClick={() => {}}
+            title=""
+          >
+            ⋯
+          </button>
+          <button
+            className="menu-btn"
+            onClick={() => setMenuOpen(true)}
+            title="메뉴"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
 
       {/* ===== PAUSE MENU OVERLAY ===== */}
       <PauseMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
@@ -98,18 +133,6 @@ function App() {
 
       {/* ===== EFFECT / EVENT LOG (F12) ===== */}
       <EffectLogOverlay />
-
-      {/* ===== PIXEL ARCADE SPIN BUTTON ===== */}
-      <div className="spin-area">
-        <button
-          className="spin-btn"
-          onClick={spinBoard}
-          disabled={phase !== 'idle'}
-          title={t('game.spin', language)}
-        >
-          {t('game.spin', language)}
-        </button>
-      </div>
     </>
   );
 }
