@@ -4,7 +4,7 @@ import type { RelicDefinition } from '../data/relicDefinitions';
 export interface RelicInstance {
     instanceId: string;
     definition: RelicDefinition;
-    /** 유물별 카운터 (예: 우르 전차 바퀴 5턴, 나일 강 흑니 5스핀, 틴타젤 수정 100스핀) */
+    /** 유물별 카운터 (예: 우르 전차 바퀴 5턴, 나일 강 흑니 5턴, 틴타젤 수정 100턴) */
     effect_counter: number;
     /** 유물별 영구 스택 수 (예: 바빌로니아 세계 지도 식량 보너스 누적) */
     bonus_stacks: number;

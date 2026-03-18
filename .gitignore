@@ -1,2 +1,9 @@
 # Godot import files
 *.import
+
+# macOS
+.DS_Store
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
