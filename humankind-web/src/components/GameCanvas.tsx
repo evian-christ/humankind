@@ -3,7 +3,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
-import type { HoveredSymbol, HoveredRelic } from './canvas/types';
+import type { HoveredSymbol, HoveredRelic, HoveredUpgrade } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
 import { useRelicStore } from '../game/state/relicStore';
@@ -22,6 +22,7 @@ const GameCanvas = () => {
     const appRef = useRef<PixiGameApp | null>(null);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredSymbol | null>(null);
     const [hoveredRelic, setHoveredRelic] = useState<HoveredRelic | null>(null);
+    const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
     const language = useSettingsStore((s) => s.language);
 
     const setHoveredSymbolStable = useCallback((val: HoveredSymbol | null) => {
@@ -32,12 +33,16 @@ const GameCanvas = () => {
         setHoveredRelic(val);
     }, []);
 
+    const setHoveredUpgradeStable = useCallback((val: HoveredUpgrade | null) => {
+        setHoveredUpgrade(val);
+    }, []);
+
     // 1. Initialize PixiGameApp
     useEffect(() => {
         if (!canvasRef.current) return;
 
         let destroyed = false;
-        const app = new PixiGameApp(canvasRef.current, setHoveredSymbolStable, setHoveredRelicStable);
+        const app = new PixiGameApp(canvasRef.current, setHoveredSymbolStable, setHoveredRelicStable, setHoveredUpgradeStable);
         appRef.current = app;
 
         let resizeObserver: ResizeObserver;
@@ -76,7 +81,7 @@ const GameCanvas = () => {
                 appRef.current = null;
             }
         };
-    }, [setHoveredSymbolStable]);
+    }, [setHoveredSymbolStable, setHoveredRelicStable, setHoveredUpgradeStable]);
 
     // 2. Subscribe to store changes
     useEffect(() => {
@@ -118,19 +123,37 @@ const GameCanvas = () => {
     }, []);
 
     // 5. Tooltip positioning
+    const TOOLTIP_W = 280;
+    const TOOLTIP_H = 180;
+    const TOOLTIP_MARGIN = 12;
 
     const getTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
         if (!hoveredItem) return { display: 'none' };
-        const tooltipW = 280;
-        const tooltipH = 180;
-        const margin = 12;
-        let left = hoveredItem.screenX + margin;
+        let left = hoveredItem.screenX + TOOLTIP_MARGIN;
         let top = hoveredItem.screenY;
-
-        if (left + tooltipW > 1920) left = hoveredItem.screenX - tooltipW - margin;
-        if (top + tooltipH > 1080) top = 1080 - tooltipH - margin;
+        if (left + TOOLTIP_W > 1920) left = hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN;
+        if (top + TOOLTIP_H > 1080) top = 1080 - TOOLTIP_H - TOOLTIP_MARGIN;
         if (top < 0) top = 0;
+        return { left: `${left}px`, top: `${top}px` };
+    };
 
+    /** 유물 툴팁: 해당 유물 아이콘 우측에 고정 표시 */
+    const getRelicTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
+        if (!hoveredItem) return { display: 'none' };
+        const left = hoveredItem.screenX + TOOLTIP_MARGIN;
+        let top = hoveredItem.screenY;
+        if (top + TOOLTIP_H > 1080) top = 1080 - TOOLTIP_H - TOOLTIP_MARGIN;
+        if (top < 0) top = 0;
+        return { left: `${left}px`, top: `${top}px` };
+    };
+
+    /** 지식 업그레이드 툴팁: 해당 스프라이트 좌측에 고정 표시 */
+    const getUpgradeTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
+        if (!hoveredItem) return { display: 'none' };
+        const left = hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN;
+        let top = hoveredItem.screenY;
+        if (top + TOOLTIP_H > 1080) top = 1080 - TOOLTIP_H - TOOLTIP_MARGIN;
+        if (top < 0) top = 0;
         return { left: `${left}px`, top: `${top}px` };
     };
 
@@ -169,7 +192,7 @@ const GameCanvas = () => {
                 const info = hoveredRelic.relicInfo;
                 const counterMax = (info.definition.id === 3 || info.definition.id === 9) ? 5 : 0;
                 return (
-                    <div className="symbol-tooltip" style={{ ...getTooltipStyle(hoveredRelic), display: 'flex', flexDirection: 'column' }}>
+                    <div className="symbol-tooltip" style={{ ...getRelicTooltipStyle(hoveredRelic), display: 'flex', flexDirection: 'column' }}>
                         <div className="symbol-tooltip-name" style={{ color: '#dcfce7' }}>{t(`relic.${info.definition.id}.name`, language)}</div>
                         <div className="symbol-tooltip-desc">
                             {t(`relic.${info.definition.id}.desc`, language).split('\n').map((line: string, i: number) => (
@@ -189,6 +212,17 @@ const GameCanvas = () => {
                     </div>
                 );
             })()}
+
+            {hoveredUpgrade && (
+                <div className="symbol-tooltip" style={{ ...getUpgradeTooltipStyle(hoveredUpgrade), display: 'flex', flexDirection: 'column' }}>
+                    <div className="symbol-tooltip-name" style={{ color: '#93c5fd' }}>{t(`knowledgeUpgrade.${hoveredUpgrade.upgrade.id}.name`, language)}</div>
+                    <div className="symbol-tooltip-desc">
+                        {t(`knowledgeUpgrade.${hoveredUpgrade.upgrade.id}.desc`, language).split('\n').map((line: string, i: number) => (
+                            <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

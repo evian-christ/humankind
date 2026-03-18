@@ -7,7 +7,8 @@ import { t } from '../../i18n';
 import { getSymbolColor, SymbolType } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import { useRelicStore } from '../../game/state/relicStore';
-import type { HoveredSymbol, HoveredRelic, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
+import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
+import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
 import { loadGameAssets } from './AssetLoader';
 
 const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
@@ -49,6 +50,7 @@ export class PixiGameApp {
     // Callbacks
     private onHoverSymbol: (symbol: HoveredSymbol | null) => void;
     private onHoverRelic: (relic: HoveredRelic | null) => void;
+    private onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void;
 
     // Refs equivalent state
     private floatingEffects: FloatingEffect[] = [];
@@ -108,11 +110,17 @@ export class PixiGameApp {
 
 
 
-    constructor(canvas: HTMLDivElement, onHoverSymbol: (symbol: HoveredSymbol | null) => void, onHoverRelic: (relic: HoveredRelic | null) => void) {
+    constructor(
+        canvas: HTMLDivElement,
+        onHoverSymbol: (symbol: HoveredSymbol | null) => void,
+        onHoverRelic: (relic: HoveredRelic | null) => void,
+        onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void
+    ) {
         this.app = new PIXI.Application();
         this.canvas = canvas;
         this.onHoverSymbol = onHoverSymbol;
         this.onHoverRelic = onHoverRelic;
+        this.onHoverUpgrade = onHoverUpgrade;
         this.hitContainer.eventMode = 'static';
     }
 
@@ -417,7 +425,7 @@ export class PixiGameApp {
         // Render Background
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, w, h);
-        bg.fill({ color: 0x1a1a1a });
+        bg.fill({ color: 0x252525 });
         this.bgContainer.addChild(bg);
 
         const BASE_W = 1920;
@@ -444,10 +452,12 @@ export class PixiGameApp {
         const gridOffsetX = (boardW - totalSlotsWidth) / 2;
         const gridOffsetY = (boardH - totalSlotsHeight) / 2;
 
+        // 가로는 중앙, 세로는 HUD 바로 밑(상단)에 배치
+        const HUD_BOTTOM_OFFSET = 92 * scale; // 상단 HUD 영역 아래 여유
         const startX = (w - boardW) / 2;
-        const startY = (h - boardH) / 2;
+        const startY = HUD_BOTTOM_OFFSET;
 
-        this.cellLayout = { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
+        this.cellLayout = { startX, startY, boardW, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
 
         // Board bg sprite
         const boardBg = PIXI.Sprite.from('/assets/ui/slot_bg.png');
@@ -784,6 +794,7 @@ export class PixiGameApp {
         // UI bars (Knowledge, Food, Gold)
         this.renderUI(state, settings, scale, fs, w);
         this.renderRelics(scale);
+        this.renderKnowledgeUpgrades(state, scale);
     }
 
     private renderRelics(scale: number) {
@@ -820,14 +831,18 @@ export class PixiGameApp {
                 curY += iconSize + gapY;
             }
 
+            // 이벤트 핸들러에서 사용할 좌표는 고정(루프 변수 캡처 버그 방지)
+            const iconX = curX;
+            const iconY = curY;
+
             const hitArea = new PIXI.Graphics();
-            hitArea.rect(curX, curY, iconSize, iconSize);
+            hitArea.rect(iconX, iconY, iconSize, iconSize);
             hitArea.fill({ color: 0x000000, alpha: 0 }); // 투명 히트박스
             hitArea.eventMode = 'static';
             hitArea.cursor = 'help';
 
             hitArea.on('pointerover', () => {
-                this.onHoverRelic({ relicInfo: relic, screenX: curX + iconSize, screenY: curY });
+                this.onHoverRelic({ relicInfo: relic, screenX: iconX + iconSize, screenY: iconY });
             });
             hitArea.on('pointerout', () => this.onHoverRelic(null));
             this.hitContainer.addChild(hitArea);
@@ -836,8 +851,8 @@ export class PixiGameApp {
                 const sp = PIXI.Sprite.from(`/assets/relics/${relic.definition.sprite}`);
                 sp.width = iconSize;
                 sp.height = iconSize;
-                sp.x = curX;
-                sp.y = curY;
+                sp.x = iconX;
+                sp.y = iconY;
                 this.boardContainer.addChild(sp);
             } else {
                 const spPlaceholder = new PIXI.Text({
@@ -845,8 +860,8 @@ export class PixiGameApp {
                     style: new PIXI.TextStyle({ fontSize: iconSize * 0.6 })
                 });
                 spPlaceholder.anchor.set(0.5);
-                spPlaceholder.x = curX + iconSize / 2;
-                spPlaceholder.y = curY + iconSize / 2;
+                spPlaceholder.x = iconX + iconSize / 2;
+                spPlaceholder.y = iconY + iconSize / 2;
                 this.boardContainer.addChild(spPlaceholder);
             }
 
@@ -855,16 +870,16 @@ export class PixiGameApp {
             if (counterMax > 0) {
                 const barH = 8 * scale;
                 const barW = iconSize;
-                const barY = curY + iconSize + 2 * scale;
+                const barY = iconY + iconSize + 2 * scale;
 
                 const bgBar = new PIXI.Graphics();
-                bgBar.rect(curX, barY, barW, barH);
+                bgBar.rect(iconX, barY, barW, barH);
                 bgBar.fill({ color: 0x000000, alpha: 0.6 });
                 this.boardContainer.addChild(bgBar);
 
                 const ratio = Math.min(1, relic.effect_counter / counterMax);
                 const fillBar = new PIXI.Graphics();
-                fillBar.rect(curX, barY, barW * ratio, barH);
+                fillBar.rect(iconX, barY, barW * ratio, barH);
                 fillBar.fill({ color: 0xf59e0b });
                 this.boardContainer.addChild(fillBar);
 
@@ -873,10 +888,76 @@ export class PixiGameApp {
                     style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 14 * scale, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 2 } })
                 });
                 txt.anchor.set(1, 0);
-                txt.x = curX + iconSize;
+                txt.x = iconX + iconSize;
                 txt.y = barY + barH + 2 * scale;
                 this.boardContainer.addChild(txt);
             }
+
+            curX += iconSize + gapX;
+        }
+    }
+
+    private renderKnowledgeUpgrades(state: GameState, scale: number) {
+        if (!this.cellLayout) return;
+        const upgradeIds = state.unlockedKnowledgeUpgrades || [];
+        if (upgradeIds.length === 0) return;
+
+        const { startX, startY, boardW } = this.cellLayout;
+        const w = this.app?.screen?.width ?? 1920;
+        // 지식 업그레이드 선택 카드 64x64 스프라이트를 2배 크기로 표시
+        const iconSize = 128 * scale;
+        const gapX = 24 * scale;
+        const gapY = 24 * scale;
+        const minMargin = 24 * scale;
+
+        // 보드 우측 여백 시작 (전체 업글 묶음 우측 이동)
+        const UPGRADE_PANEL_OFFSET_X = 16 * scale;
+        const startUpgradeX = startX + boardW + minMargin + UPGRADE_PANEL_OFFSET_X;
+        const maxRowWidth = w - startUpgradeX - minMargin;
+        const iconsPerRow = Math.max(1, Math.floor((maxRowWidth + gapX) / (iconSize + gapX)));
+        const actualRowWidth = iconsPerRow * iconSize + (iconsPerRow - 1) * gapX;
+        const rowStartX = startUpgradeX;
+
+        let curX = rowStartX;
+        let curY = startY - 6 * scale;
+
+        for (const id of upgradeIds) {
+            const upgrade = KNOWLEDGE_UPGRADES[id];
+            if (!upgrade) continue;
+
+            if (curX > rowStartX && curX + iconSize > rowStartX + actualRowWidth) {
+                curX = rowStartX;
+                curY += iconSize + gapY;
+            }
+
+            // 이벤트 핸들러에서 사용할 좌표는 고정(루프 변수 캡처 버그 방지)
+            const iconX = curX;
+            const iconY = curY;
+
+            const hitArea = new PIXI.Graphics();
+            hitArea.rect(iconX, iconY, iconSize, iconSize);
+            hitArea.fill({ color: 0x000000, alpha: 0 });
+            hitArea.eventMode = 'static';
+            hitArea.cursor = 'help';
+            hitArea.on('pointerover', () => {
+                this.onHoverUpgrade({ upgrade: { id: upgrade.id }, screenX: iconX, screenY: iconY });
+            });
+            hitArea.on('pointerout', () => this.onHoverUpgrade(null));
+            this.hitContainer.addChild(hitArea);
+
+            // 지식 업그레이드 선택 카드와 동일: /assets/upgrades/ 64x64 스프라이트 (AssetLoader에서 선로드)
+            const upgradeSpritePath = (upgrade.sprite && upgrade.sprite !== '-' && upgrade.sprite !== '-.png')
+                ? `/assets/upgrades/${upgrade.sprite}`
+                : '/assets/upgrades/000.png';
+            const texture = PIXI.Assets.get(upgradeSpritePath);
+            const sp = texture
+                ? new PIXI.Sprite(texture)
+                : PIXI.Sprite.from(upgradeSpritePath); // 캐시 미스 시 비동기 로드
+            sp.width = iconSize;
+            sp.height = iconSize;
+            sp.x = iconX;
+            sp.y = iconY;
+            this.boardContainer.addChild(sp);
 
             curX += iconSize + gapX;
         }

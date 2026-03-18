@@ -13,6 +13,12 @@ export interface HoveredRelic {
     screenY: number;
 }
 
+export interface HoveredUpgrade {
+    upgrade: { id: number };
+    screenX: number;
+    screenY: number;
+}
+
 export interface FloatingEffect {
     texts: PIXI.Text[];
     startY: number;
@@ -32,6 +38,7 @@ export interface CombatBounce {
 
 export interface CellLayout {
     startX: number; startY: number;
+    boardW: number;
     cellWidth: number; cellHeight: number;
     gridOffsetX: number; gridOffsetY: number;
     colGap: number;
