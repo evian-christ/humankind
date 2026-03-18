@@ -20,7 +20,7 @@ export const COMBAT_BOUNCE_DURATION: Record<EffectSpeed, number> = {
     'instant': 0,
 };
 
-/** 스핀 속도 설정: { speed 배수, stopInterval(ms) } */
+/** 턴 속도 설정: { speed 배수, stopInterval(ms) } */
 export const SPIN_SPEED_CONFIG: Record<SpinSpeed, { speedMul: number; stopInterval: number }> = {
     '1x': { speedMul: 3.6, stopInterval: 50 },
     '2x': { speedMul: 6, stopInterval: 50 },
@@ -88,7 +88,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     resolutionWidth: _initW,
     resolutionHeight: _initH,
     language: 'ko',
-    effectSpeed: '4x',
+    effectSpeed: '2x',
     spinSpeed: '4x',
 
     setResolution: (width, height) => {
