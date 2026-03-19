@@ -11,6 +11,8 @@ import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, FloatingEffect, Comba
 import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
 import { loadGameAssets } from './AssetLoader';
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
 const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
 const FLOAT_DISTANCE = 30; // px — 위로 이동 거리
 
@@ -126,6 +128,10 @@ export class PixiGameApp {
 
     public async init() {
         PIXI.TextureSource.defaultOptions.scaleMode = 'nearest';
+        // Tauri 프로토콜 환경에서는 XHR/Fetch에 CORS 헤더가 없을 수 있어서,
+        // Pixi가 이미지 로드 시 crossOrigin 속성을 강제로 붙이지 않도록 합니다.
+        // (React <img>는 표시 자체가 되지만, Pixi 로더는 실패해서 보드 스프라이트가 안 보이는 케이스가 있습니다.)
+        (PIXI.TextureSource.defaultOptions as any).crossOrigin = null;
         await this.app.init({
             background: '#1a1a1a',
             antialias: false,
@@ -460,7 +466,7 @@ export class PixiGameApp {
         this.cellLayout = { startX, startY, boardW, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
 
         // Board bg sprite
-        const boardBg = PIXI.Sprite.from('/assets/ui/slot_bg.png');
+        const boardBg = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/ui/slot_bg.png`);
         const spritePaddingX = 8 * scale;
         const spritePaddingY = 8 * scale;
         boardBg.x = startX - spritePaddingX;
@@ -507,7 +513,7 @@ export class PixiGameApp {
                     group.x = colX;
                     group.y = yPos;
                     if (def && def.sprite && def.sprite !== '-' && def.sprite !== '-.png') {
-                        const spritePath = `/assets/symbols/${def.sprite}`;
+                        const spritePath = `${ASSET_BASE_URL}assets/symbols/${def.sprite}`;
                         const SPRITE_PX = 32;
                         const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
                         const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
@@ -604,7 +610,7 @@ export class PixiGameApp {
                 }
 
                 if (symDef.sprite && symDef.sprite !== '-' && symDef.sprite !== '-.png') {
-                    const spritePath = `/assets/symbols/${symDef.sprite}`;
+                    const spritePath = `${ASSET_BASE_URL}assets/symbols/${symDef.sprite}`;
                     const SPRITE_PX = 32;
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
@@ -848,7 +854,7 @@ export class PixiGameApp {
             this.hitContainer.addChild(hitArea);
 
             if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
-                const sp = PIXI.Sprite.from(`/assets/relics/${relic.definition.sprite}`);
+                const sp = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`);
                 sp.width = iconSize;
                 sp.height = iconSize;
                 sp.x = iconX;
@@ -947,8 +953,8 @@ export class PixiGameApp {
 
             // 지식 업그레이드 선택 카드와 동일: /assets/upgrades/ 64x64 스프라이트 (AssetLoader에서 선로드)
             const upgradeSpritePath = (upgrade.sprite && upgrade.sprite !== '-' && upgrade.sprite !== '-.png')
-                ? `/assets/upgrades/${upgrade.sprite}`
-                : '/assets/upgrades/000.png';
+                ? `${ASSET_BASE_URL}assets/upgrades/${upgrade.sprite}`
+                : `${ASSET_BASE_URL}assets/upgrades/000.png`;
             const texture = PIXI.Assets.get(upgradeSpritePath);
             const sp = texture
                 ? new PIXI.Sprite(texture)
@@ -1154,7 +1160,7 @@ export class PixiGameApp {
             const SPRITE_PX = 32;
             const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
             const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
-            const sp = PIXI.Sprite.from(`/assets/symbols/${attackerDef.sprite}`);
+            const sp = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/symbols/${attackerDef.sprite}`);
             sp.anchor.set(0.5);
             sp.width = spriteSize;
             sp.height = spriteSize;
