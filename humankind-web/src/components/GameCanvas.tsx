@@ -17,9 +17,15 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.TERRAIN]: 'era.terrain',
 };
 
-const GameCanvas = () => {
+interface GameCanvasProps {
+    /** 캔버스 초기화 및 에셋 로드 완료 시 호출 (본게임 페이드인용) */
+    onReady?: () => void;
+}
+
+const GameCanvas = ({ onReady }: GameCanvasProps) => {
     const canvasRef = useRef<HTMLDivElement>(null);
     const appRef = useRef<PixiGameApp | null>(null);
+    const onReadyRef = useRef<GameCanvasProps['onReady']>(onReady);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredSymbol | null>(null);
     const [hoveredRelic, setHoveredRelic] = useState<HoveredRelic | null>(null);
     const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
@@ -36,6 +42,11 @@ const GameCanvas = () => {
     const setHoveredUpgradeStable = useCallback((val: HoveredUpgrade | null) => {
         setHoveredUpgrade(val);
     }, []);
+
+    // onReady는 App에서 매 렌더마다 새 함수가 들어올 수 있으므로 ref로 고정해둠
+    useEffect(() => {
+        onReadyRef.current = onReady;
+    }, [onReady]);
 
     // 1. Initialize PixiGameApp
     useEffect(() => {
@@ -67,6 +78,7 @@ const GameCanvas = () => {
             if (!destroyed && appRef.current) {
                 appRef.current.renderBoard(useGameStore.getState(), useSettingsStore.getState());
             }
+            onReadyRef.current?.();
         };
 
         init();
@@ -85,10 +97,78 @@ const GameCanvas = () => {
 
     // 2. Subscribe to store changes
     useEffect(() => {
+        // PixiGameApp.renderBoard는 내부적으로 컨테이너/스프라이트를 대량 재생성합니다.
+        // 따라서 Zustand의 "어떤 상태든 변경되면" 바로 renderBoard를 호출하면
+        // 스핀/처리 중 깜빡임 + WebGL context loss로 이어질 수 있어, 시각적으로 필요한 변경만 렌더합니다.
+        const initial = useGameStore.getState();
+        let prev = {
+            phase: initial.phase,
+            food: initial.food,
+            gold: initial.gold,
+            knowledge: initial.knowledge,
+            level: initial.level,
+            era: initial.era,
+            turn: initial.turn,
+            board: initial.board,
+            prevBoard: initial.prevBoard,
+            activeSlot: initial.activeSlot,
+            activeContributors: initial.activeContributors,
+            effectPhase: initial.effectPhase,
+            effectPhase3ReachedThisRun: initial.effectPhase3ReachedThisRun,
+            runningTotals: initial.runningTotals,
+            lastEffects: initial.lastEffects,
+            combatAnimation: initial.combatAnimation,
+            combatShaking: initial.combatShaking,
+            pendingNewThreatFloats: initial.pendingNewThreatFloats,
+        };
+
         const unsub1 = useGameStore.subscribe((state) => {
-            if (appRef.current) {
-                appRef.current.renderBoard(state, useSettingsStore.getState());
-            }
+            if (!appRef.current) return;
+
+            const needs =
+                state.phase !== prev.phase ||
+                state.food !== prev.food ||
+                state.gold !== prev.gold ||
+                state.knowledge !== prev.knowledge ||
+                state.level !== prev.level ||
+                state.era !== prev.era ||
+                state.turn !== prev.turn ||
+                state.board !== prev.board ||
+                state.prevBoard !== prev.prevBoard ||
+                state.activeSlot !== prev.activeSlot ||
+                state.activeContributors !== prev.activeContributors ||
+                state.effectPhase !== prev.effectPhase ||
+                state.effectPhase3ReachedThisRun !== prev.effectPhase3ReachedThisRun ||
+                state.runningTotals !== prev.runningTotals ||
+                state.lastEffects !== prev.lastEffects ||
+                state.combatAnimation !== prev.combatAnimation ||
+                state.combatShaking !== prev.combatShaking ||
+                state.pendingNewThreatFloats !== prev.pendingNewThreatFloats;
+
+            if (!needs) return;
+
+            prev = {
+                phase: state.phase,
+                food: state.food,
+                gold: state.gold,
+                knowledge: state.knowledge,
+                level: state.level,
+                era: state.era,
+                turn: state.turn,
+                board: state.board,
+                prevBoard: state.prevBoard,
+                activeSlot: state.activeSlot,
+                activeContributors: state.activeContributors,
+                effectPhase: state.effectPhase,
+                effectPhase3ReachedThisRun: state.effectPhase3ReachedThisRun,
+                runningTotals: state.runningTotals,
+                lastEffects: state.lastEffects,
+                combatAnimation: state.combatAnimation,
+                combatShaking: state.combatShaking,
+                pendingNewThreatFloats: state.pendingNewThreatFloats,
+            };
+
+            appRef.current.renderBoard(state, useSettingsStore.getState());
         });
         const unsub2 = useSettingsStore.subscribe((settings) => {
             if (appRef.current) {

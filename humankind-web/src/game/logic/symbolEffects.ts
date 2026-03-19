@@ -565,35 +565,11 @@ export const processSingleSymbolEffects = (
 
         // ── Religion Doctrine Symbols ──
 
-        case 31: { // Christianity: Food = highest adjacent food. Gold = 3× adjacent knowledge.
-            let maxAdjFood = 0;
-            let adjKnowledge = 0;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t) {
-                    const baseFood = SYMBOL_BASE_FOOD[t.definition.id] ?? 0;
-                    if (baseFood > maxAdjFood) maxAdjFood = baseFood;
-                    adjKnowledge += SYMBOL_BASE_KNOWLEDGE[t.definition.id] ?? 0;
-                    contributors.push(pos);
-                }
-            });
-            food += maxAdjFood;
-            gold += adjKnowledge * 3;
+        case 31: // Christianity: 이번 스핀 인접 심볼 산출량 기반 계산은 gameStore에서 수행(옵션 A)
             break;
-        }
 
-        case 32: { // Islam: Gold = 3× total knowledge produced by adjacent symbols
-            let adjKnowledge = 0;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t) {
-                    adjKnowledge += SYMBOL_BASE_KNOWLEDGE[t.definition.id] ?? 0;
-                    if (KNOWLEDGE_PRODUCING_IDS.has(t.definition.id)) contributors.push(pos);
-                }
-            });
-            gold += adjKnowledge * 3;
+        case 32: // Islam: 이번 스핀 인접 심볼 산출량 기반 계산은 gameStore에서 수행(옵션 A)
             break;
-        }
 
         case 33: { // Buddhism: +2 Food per empty slot on the board
             let emptySlots = 0;

@@ -42,7 +42,7 @@ const EffectLogOverlay = () => {
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.key === 'F12') {
+            if (e.key === 'F11') {
                 e.preventDefault();
                 setOpen(prev => !prev);
             } else if (e.key === 'Escape') {

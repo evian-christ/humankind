@@ -80,7 +80,7 @@ export const getEraFromLevel = (level: number): number => {
     return 3;
 };
 
-type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'game_over' | 'victory';
+type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'draft_selection' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250... -> x10: 1000, 1500, 2000, 2500...) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
@@ -190,6 +190,12 @@ export interface GameState {
     skipUpgradeSelection: () => void;
 
     initializeGame: () => void;
+    /** 프리게임: 드래프트 선택 진입 (첫 선택지 표시) */
+    enterDraftSelection: () => void;
+    /** 프리게임: 다음 드래프트 선택지 3개 갱신 */
+    setSymbolChoicesForDraft: () => void;
+    /** 프리게임: 드래프트 결과 + 리더로 본게임 시작 */
+    startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
     devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => void;
@@ -414,6 +420,7 @@ const generateRelicChoices = (): RelicDefinition[] => {
 
 import { KNOWLEDGE_UPGRADES, type KnowledgeUpgrade } from '../data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
+import { getLeaderStartingRelics, LEADERS } from '../data/leaders';
 
 /** 현재 시대에 맞는 지식 업그레이드 선택지 3개 생성 (이미 업그레이드된 것 제외) */
 const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
@@ -726,10 +733,158 @@ export const useGameStore = create<GameState>((set, get) => ({
         const symbolsToSpawnOnBoard: number[] = [];
         const accumulatedEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }> = [];
 
+        // 종교 심볼(31=Christianity, 32=Islam)은 인접 심볼의 "이번 스핀 산출량"을 기준으로 계산해야 해서,
+        // 기존 symbolEffects.ts의 정적 테이블 계산과 충돌하지 않도록 effectPhase에서 임시 보류 후 여기서 최종 계산한다.
+        const RELIGION_RECALC_IDS = new Set<number>([31, 32]);
+        const religionEffectCache = new Map<string, { food: number; knowledge: number; gold: number }>();
+        const religionSlotsToRecalculate: { x: number; y: number; id: number }[] = [];
+        const relicEffects = buildActiveRelicEffects();
+
+        const getKey = (x: number, y: number) => `${x},${y}`;
+        const computeReligionEffects = () => {
+            if (religionSlotsToRecalculate.length === 0) return;
+
+            // effectPhase 진행 중 심볼 인스턴스의 플래그(campfire_double_food 등)가 변경될 수 있으므로,
+            // 여기서는 "현재 보드 스냅샷"을 기준으로 계산한다.
+            const currentBoardRef = get().board;
+
+            // campfire_double_food는 '이번 스핀 인접 심볼 식량 2배' 버프이므로,
+            // 종교 계산이 끝난 뒤에 동일한 조건(result.food > 0일 때만 플래그 소비)을 맞춰 반영한다.
+            const campfireDoubleFlags = new Map<string, boolean>();
+            const doctrineFood = new Map<string, number>();
+            const doctrineGold = new Map<string, number>();
+
+            for (const s of religionSlotsToRecalculate) {
+                const key = getKey(s.x, s.y);
+                const sym = currentBoardRef[s.x][s.y];
+                campfireDoubleFlags.set(key, !!sym?.campfire_double_food);
+                doctrineFood.set(key, 0);
+                doctrineGold.set(key, 0);
+            }
+
+            // Christianity(31)은 인접 심볼의 food 중 최대값, Islam(32)은 인접 심볼 knowledge의 합(3배).
+            // doctrine끼리 인접해 있으면 max(Christianity)가 서로 영향을 줄 수 있으므로,
+            // 소규모 고정점 반복으로 안정화한다(실전 보드에선 1~2회로 충분할 가능성이 큼).
+            const MAX_ITERS = 4;
+            for (let iter = 0; iter < MAX_ITERS; iter++) {
+                let anyChanged = false;
+
+                for (const slot of religionSlotsToRecalculate) {
+                    const key = getKey(slot.x, slot.y);
+                    const sym = currentBoardRef[slot.x][slot.y];
+                    if (!sym) continue;
+                    if (sym.is_marked_for_destruction) continue;
+
+                    // 빈 슬롯은 식량 0으로 취급한다(텍스트의 "인접 심볼의 Food"를 정량화).
+                    let maxAdjFood = -Infinity;
+                    let sumAdjKnowledge = 0;
+
+                    const adj = getAdjacentCoords(slot.x, slot.y);
+                    for (const pos of adj) {
+                        const adjSym = currentBoardRef[pos.x][pos.y];
+                        if (!adjSym) {
+                            maxAdjFood = Math.max(maxAdjFood, 0);
+                            continue;
+                        }
+                        const adjKey = getKey(pos.x, pos.y);
+
+                        // 이번 스핀에 실제로 계산된 값은 religionEffectCache에 들어있다.
+                        // 종교 심볼(31/32)은 여기서 계산하므로 현재 반복값을 사용한다.
+                        const adjFoodFromCache =
+                            adjSym.definition.id === 31 || adjSym.definition.id === 32
+                                ? (doctrineFood.get(adjKey) ?? 0)
+                                : (religionEffectCache.get(adjKey)?.food ?? 0);
+
+                        const adjKnowledgeFromCache =
+                            adjSym.definition.id === 31 || adjSym.definition.id === 32
+                                ? 0
+                                : (religionEffectCache.get(adjKey)?.knowledge ?? 0);
+
+                        maxAdjFood = Math.max(maxAdjFood, adjFoodFromCache);
+                        sumAdjKnowledge += adjKnowledgeFromCache;
+                    }
+
+                    if (maxAdjFood === -Infinity) maxAdjFood = 0;
+
+                    let food = 0;
+                    let gold = 0;
+                    if (sym.definition.id === 31) {
+                        food = maxAdjFood;
+                    } else if (sym.definition.id === 32) {
+                        gold = sumAdjKnowledge * 3;
+                    }
+
+                    // 교리(종교 심볼) 인접 페널티: 인접한 다른 교리 심볼이 있으면 -500 Food
+                    const hasAdjacentDoctrine = adj.some(pos => {
+                        const t = currentBoardRef[pos.x][pos.y];
+                        return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
+                    });
+                    if (hasAdjacentDoctrine && !relicEffects.gilgameshReligionNoPenalty) {
+                        food -= 500;
+                    }
+
+                    // 유물 ID 9: 나일 강 비옥한 흑니 - 활성 중 식량 2배
+                    if (relicEffects.nileFloodDoubleFood && food > 0) {
+                        food *= 2;
+                    }
+
+                    // campfire 폭발 버프는 "이번 스핀 식량 2배"이며,
+                    // symbolEffects 결과가 양수일 때만 적용된다(기존 engine 로직 준수).
+                    const campfireDouble = campfireDoubleFlags.get(key) ?? false;
+                    if (campfireDouble && food > 0) {
+                        food *= 2;
+                    }
+
+                    const prevFood = doctrineFood.get(key) ?? 0;
+                    const prevGold = doctrineGold.get(key) ?? 0;
+                    if (prevFood !== food || prevGold !== gold) anyChanged = true;
+                    doctrineFood.set(key, food);
+                    doctrineGold.set(key, gold);
+
+                    if (anyChanged && iter === MAX_ITERS - 1) {
+                        // 마지막 반복이라도 변동이 있으면 그대로 최종값을 사용한다.
+                    }
+                }
+
+                if (!anyChanged) break;
+            }
+
+            // 최종값을 totals/lastEffects에 반영
+            for (const slot of religionSlotsToRecalculate) {
+                const key = getKey(slot.x, slot.y);
+                const sym = currentBoardRef[slot.x][slot.y];
+                if (!sym || sym.is_marked_for_destruction) continue;
+
+                const food = doctrineFood.get(key) ?? 0;
+                const gold = doctrineGold.get(key) ?? 0;
+
+                if (food !== 0 || gold !== 0) {
+                    accumulatedEffects.push({ x: slot.x, y: slot.y, food, gold, knowledge: 0 });
+                    totalFood += food;
+                    totalGold += gold;
+                }
+
+                const campfireDouble = campfireDoubleFlags.get(key) ?? false;
+                // 기존 engine과 동일하게 '실제로 2배가 적용된 경우에만' 플래그를 소비한다.
+                if (campfireDouble && food > 0) {
+                    sym.campfire_double_food = false;
+                }
+            }
+
+            // 캐시에는 인접 심볼 계산용 값만 필요하므로, doctrine는 여기서 추가로 채우지 않는다.
+        };
+
         const processSlot = (slotIdx: number) => {
             if (slotIdx >= slotOrder.length) {
+                // effectPhase 종료 직전에 종교 심볼(31/32)을 최종 계산한다.
+                computeReligionEffects();
+
                 // 마지막 효과 후 0.5초 대기 → 스탯 합산. effectPhase/effectPhase3ReachedThisRun은 유지해 X가 0.5초 동안 계속 보이게 하고, finishProcessing에서 보드 제거와 함께 한 번에 초기화
                 set({ activeSlot: null, activeContributors: [], pendingContributors: [] });
+                set({
+                    lastEffects: [...accumulatedEffects],
+                    runningTotals: { food: totalFood, gold: totalGold, knowledge: totalKnowledge },
+                });
                 setTimeout(() => {
                     finishProcessing(totalFood, totalKnowledge, totalGold, symbolsToAdd, symbolsToSpawnOnBoard, accumulatedEffects);
                 }, 500);
@@ -749,14 +904,27 @@ export const useGameStore = create<GameState>((set, get) => ({
                 return;
             }
 
-            const result = processSingleSymbolEffects(
-                symbol, currentBoard, x, y, buildActiveRelicEffects(), disabledTerrainCoords
+            // Christianity/Islam(31/32)은 여기서 임시 보류하고, effectPhase 종료 후 computeReligionEffects()에서
+            // 인접 심볼의 '이번 스핀 실제 산출량'을 기반으로 최종 계산한다.
+            const isReligionRecalc = RELIGION_RECALC_IDS.has(symbol.definition.id);
+            const result = isReligionRecalc ? { food: 0, knowledge: 0, gold: 0 } : processSingleSymbolEffects(
+                symbol, currentBoard, x, y, relicEffects, disabledTerrainCoords
             );
 
             // ── Campfire 폭발 버프: 이번 턴 식량 2배 ──
             if (symbol.campfire_double_food && result.food > 0) {
                 result.food *= 2;
                 symbol.campfire_double_food = false; // 플래그 소비
+            }
+
+            if (isReligionRecalc) {
+                religionSlotsToRecalculate.push({ x, y, id: symbol.definition.id });
+            } else {
+                religionEffectCache.set(getKey(x, y), {
+                    food: result.food,
+                    knowledge: result.knowledge,
+                    gold: result.gold,
+                });
             }
 
             if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
@@ -1586,6 +1754,71 @@ export const useGameStore = create<GameState>((set, get) => ({
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
 
+            barbarianSymbolThreat: 0,
+            barbarianCampThreat: 0,
+            naturalDisasterThreat: 0,
+            pendingNewThreatFloats: [],
+        });
+    },
+
+    enterDraftSelection: () => {
+        const choices = generateChoices(1, false);
+        set({ phase: 'draft_selection', symbolChoices: choices });
+    },
+
+    setSymbolChoicesForDraft: () => {
+        const choices = generateChoices(1, false);
+        set({ symbolChoices: choices });
+    },
+
+    startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => {
+        const relicStore = useRelicStore.getState();
+        const toRemove = relicStore.relics.map((r) => r.instanceId);
+        toRemove.forEach((id) => relicStore.removeRelic(id));
+        const leaderRelics = getLeaderStartingRelics(leaderId);
+        leaderRelics.forEach((def) => relicStore.addRelic(def));
+
+        const leader = LEADERS[leaderId];
+        const startingFood = (leader?.startingFood ?? 0);
+        const startingGold = (leader?.startingGold ?? 0);
+
+        const playerSymbols = symbolIds
+            .map((id) => SYMBOLS[id])
+            .filter((def): def is SymbolDefinition => def != null)
+            .map(createInstance);
+
+        const board = createEmptyBoard();
+
+        set({
+            food: startingFood,
+            gold: startingGold,
+            knowledge: 0,
+            era: 1,
+            level: 1,
+            turn: 0,
+            board,
+            playerSymbols,
+            phase: 'idle',
+            symbolChoices: [],
+            relicChoices: generateRelicChoices(),
+            lastEffects: [],
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            activeSlot: null,
+            activeContributors: [],
+            pendingContributors: [],
+            effectPhase: null,
+            effectPhase3ReachedThisRun: false,
+            eventLog: [],
+            prevBoard: createEmptyBoard(),
+            combatAnimation: null,
+            combatShaking: false,
+            religionUnlocked: false,
+            unlockedKnowledgeUpgrades: [],
+            bonusXpPerTurn: 0,
+            upgradeChoices: [],
+            pendingLevelUpSelection: false,
+            isRelicShopOpen: false,
+            rerollsThisTurn: 0,
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
