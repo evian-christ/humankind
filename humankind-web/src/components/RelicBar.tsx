@@ -2,6 +2,8 @@ import { useRelicStore } from '../game/state/relicStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
 /** 유물 ID별 카운터 표시 설정 */
 const RELIC_COUNTER_CONFIG: Record<number, { max: number; showProgress: boolean }> = {
     3: { max: 5, showProgress: true },   // 우르 전차 바퀴
@@ -28,7 +30,7 @@ const RelicBar = () => {
                 return (
                     <div key={`${relic.instanceId}-${i}`} className="relic-icon-wrapper">
                         {relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png' ? (
-                            <img src={`/assets/relics/${relic.definition.sprite}`} alt={relicName} />
+                            <img src={`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`} alt={relicName} />
                         ) : (
                             <div className="relic-icon-wrapper-placeholder">🏺</div>
                         )}

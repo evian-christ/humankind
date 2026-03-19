@@ -16,6 +16,8 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.TERRAIN]: 'era.terrain',
 };
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
 const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: () => void }) => {
     const language = useSettingsStore((s) => s.language);
     const eraColor = getSymbolColorHex(symbol.type);
@@ -24,7 +26,11 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
     const symDesc = t(`symbol.${symbol.id}.desc`, language);
 
     return (
-        <button className="selection-card" onClick={onClick} style={{ '--card-glow': `${eraColor}cc`, background: 'url("/assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px' } as React.CSSProperties}>
+        <button
+            className="selection-card"
+            onClick={onClick}
+            style={{ '--card-glow': `${eraColor}cc`, background: `url("${ASSET_BASE_URL}assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px` } as React.CSSProperties}
+        >
             {/* 시대 — 스프라이트 위 */}
             <div className="selection-card-rarity" style={{
                 color: eraColor,
@@ -43,7 +49,7 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
             {/* 스프라이트 */}
             {symbol.sprite && symbol.sprite !== '-' && symbol.sprite !== '-.png' ? (
                 <img
-                    src={`/assets/symbols/${symbol.sprite}`}
+                    src={`${ASSET_BASE_URL}assets/symbols/${symbol.sprite}`}
                     alt={symName}
                     className="selection-card-sprite"
                     style={{ imageRendering: 'pixelated' }}

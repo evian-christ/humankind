@@ -4,6 +4,8 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
 type Props = {
     open: boolean;
     onClose: () => void;
@@ -159,7 +161,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                     >
                                         {def.sprite && def.sprite !== '-' && def.sprite !== '-.png' ? (
                                             <img
-                                                src={`/assets/symbols/${def.sprite}`}
+                                                src={`${ASSET_BASE_URL}assets/symbols/${def.sprite}`}
                                                 alt={symName}
                                                 style={{
                                                     width: halfSpriteSize,

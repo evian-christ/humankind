@@ -31,6 +31,8 @@ const ERA_KEYS: Record<number, string> = {
 
 const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.NORMAL, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION];
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
 /** Sortable column header */
 const SortTh = ({ column, label, sort, onSort, className }: {
     column: string; label: React.ReactNode; sort: SortState | null;
@@ -701,7 +703,7 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         {r.sprite && r.sprite !== '-' && r.sprite !== '-.png' ? (
                                             <>
-                                                <img src={`/assets/relics/${r.sprite}`} alt={t(`relic.${r.id}.name`, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'contain' }} />
+                                                <img src={`${ASSET_BASE_URL}assets/relics/${r.sprite}`} alt={t(`relic.${r.id}.name`, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'contain' }} />
                                                 <span style={{ fontSize: '11px', color: '#888' }}>{r.sprite}</span>
                                             </>
                                         ) : '-'}

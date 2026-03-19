@@ -3,6 +3,8 @@ import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
 const DestroySelection = () => {
     const { phase, playerSymbols, finishDestroySelection, confirmDestroySymbols } = useGameStore();
     const language = useSettingsStore((s) => s.language);
@@ -51,7 +53,7 @@ const DestroySelection = () => {
                             }} onClick={() => toggleSymbol(sym.instanceId)}>
                                 {/* render sprite */}
                                 {sym.definition.sprite && sym.definition.sprite !== '-' && sym.definition.sprite !== '-.png' ? (
-                                    <img src={`/assets/symbols/${sym.definition.sprite}`} alt={t(`symbol.${sym.definition.id}.name`, language)} style={{ width: '48px', height: '48px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                                    <img src={`${ASSET_BASE_URL}assets/symbols/${sym.definition.sprite}`} alt={t(`symbol.${sym.definition.id}.name`, language)} style={{ width: '48px', height: '48px', objectFit: 'contain', imageRendering: 'pixelated' }} />
                                 ) : (
                                     <span style={{ fontSize: '24px', opacity: 0.5 }}>?</span>
                                 )}

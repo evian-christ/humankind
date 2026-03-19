@@ -6,6 +6,8 @@ import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
     [SymbolType.NORMAL]: 'era.normal',
@@ -71,7 +73,7 @@ const RelicSelection = () => {
                                     {relic ? (
                                         <div className="relic-sprite-in-case">
                                             {relic.sprite && relic.sprite !== '-' && relic.sprite !== '-.png' ? (
-                                                <img src={`/assets/relics/${relic.sprite}`} alt={t(`relic.${relic.id}.name`, language)} />
+                                                        <img src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`} alt={t(`relic.${relic.id}.name`, language)} />
                                             ) : (
                                                 <div className="placeholder">🏺</div>
                                             )}
