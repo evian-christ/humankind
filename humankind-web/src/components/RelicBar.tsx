@@ -1,6 +1,7 @@
 import { useRelicStore } from '../game/state/relicStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
+import { EffectText } from './EffectText';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -57,7 +58,9 @@ const RelicBar = () => {
                         <div className="relic-icon-tooltip">
                             <div className="relic-icon-tooltip-name">{relicName}</div>
                             <div className="relic-icon-tooltip-desc">
-                                {relicDesc}
+                                {relicDesc.split('\n').map((line, i) => (
+                                    <div key={i} className="relic-icon-tooltip-desc-line"><EffectText text={line} /></div>
+                                ))}
                             </div>
                             {counterCfg && (
                                 <div className="relic-icon-tooltip-counter">

@@ -27,7 +27,7 @@ const renderRelicDesc = (desc: string) => {
 };
 
 const RelicSelection = () => {
-    const { isRelicShopOpen, toggleRelicShop, relicChoices, buyRelic, refreshRelicShop, gold, turn } = useGameStore();
+    const { isRelicShopOpen, toggleRelicShop, relicChoices, buyRelic, refreshRelicShop, gold, turn, unlockedKnowledgeUpgrades, relicHalfPriceRelicId } = useGameStore();
     const language = useSettingsStore((s) => s.language);
 
     if (!isRelicShopOpen) return null;
@@ -47,11 +47,11 @@ const RelicSelection = () => {
                             <span className="relic-selection-gold-val">{gold}</span>
                         </div>
                         <button
-                            className={`relic-shop-refresh-btn ${gold < 50 ? 'disabled' : ''}`}
+                            className={`relic-shop-refresh-btn ${gold < 5 ? 'disabled' : ''}`}
                             onClick={() => refreshRelicShop(false)}
-                            disabled={gold < 50}
+                            disabled={gold < 5}
                         >
-                            <span className="refresh-icon">↺</span> 50G
+                            <span className="refresh-icon">↺</span> 5G
                         </button>
                     </div>
                     {(() => {
@@ -78,7 +78,17 @@ const RelicSelection = () => {
                                                 <div className="placeholder">🏺</div>
                                             )}
                                             <div className="relic-sprite-price">
-                                                <span style={{ color: '#f59e0b', fontSize: '20px' }}>&#9679;</span> {relic.cost}
+                                                <span style={{ color: '#f59e0b', fontSize: '20px' }}>&#9679;</span>{' '}
+                                                {(() => {
+                                                    const hasGoldenTrade = (unlockedKnowledgeUpgrades || []).includes(11);
+                                                    const isHalfPrice = relicHalfPriceRelicId === relic.id;
+                                                    const effectiveCostUnscaled = !hasGoldenTrade
+                                                        ? relic.cost
+                                                        : isHalfPrice
+                                                            ? Math.floor(relic.cost * 0.5)
+                                                            : Math.floor(relic.cost * 0.8);
+                                                    return effectiveCostUnscaled;
+                                                })()}
                                             </div>
                                         </div>
                                     ) : null}

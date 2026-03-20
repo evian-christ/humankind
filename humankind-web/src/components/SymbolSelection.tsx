@@ -101,7 +101,8 @@ const SymbolSelection = () => {
 
     // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
     const hasLydia = relics.some(r => r.definition.id === 2);
-    const rerollCost = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+    const rerollCostUnscaled = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+    const rerollCost = rerollCostUnscaled;
     const maxRerolls = hasLydia ? 3 : Infinity;
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
     const canReroll = gold >= rerollCost && (rerollsLeft === null || rerollsLeft > 0);

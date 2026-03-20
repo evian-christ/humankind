@@ -27,6 +27,8 @@ function App() {
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
+  const didAutoPreGameEnterRef = useRef(false);
+  const didAutoDraftPickRef = useRef(false);
 
   const handleCanvasReady = useCallback(() => {
     setGameCanvasReady(true);
@@ -41,6 +43,55 @@ function App() {
   useEffect(() => {
     setResolution(resolutionWidth, resolutionHeight);
   }, []);
+
+  // 개발 중 프리게임(스테이지/리더/드래프트)을 자동 스킵해서 바로 게임 화면으로 진입
+  // - 목표: 람세스2세 선택 후 드래프트를 자동 완료하고 startGameWithDraft까지 즉시 진행
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (didAutoPreGameEnterRef.current) return;
+    if (preGameScreen !== 'stage') return;
+
+    let enabled = true;
+    try {
+      enabled = (localStorage.getItem('dev.autoStart') ?? '1') !== '0';
+    } catch {
+      // localStorage 접근 불가 환경이면 기본값(켜짐) 유지
+    }
+    if (!enabled) return;
+
+    didAutoPreGameEnterRef.current = true;
+    const pg = usePreGameStore.getState();
+    pg.selectStage(1);
+    // Zustand set은 동기적이지만, 화면 전환 타이밍을 안전하게 한 턴 늦춤
+    setTimeout(() => pg.selectLeader('ramesses'), 0);
+  }, [preGameScreen]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (didAutoDraftPickRef.current) return;
+    if (preGameScreen !== 'draft') return;
+    if (phase !== 'draft_selection') return;
+
+    didAutoDraftPickRef.current = true;
+
+    const pg = usePreGameStore.getState();
+    const gs = useGameStore.getState();
+
+    // draftTotal까지 1개 심볼씩 자동 선택(현재 symbolChoices의 첫 항목)
+    // 6회 드래프트를 가정하지만, 방어적으로 최대 20회만 반복
+    for (let i = 0; i < 20; i++) {
+      const { draftRoundsCompleted, draftTotal } = usePreGameStore.getState();
+      if (draftRoundsCompleted >= draftTotal) break;
+
+      const choice = useGameStore.getState().symbolChoices?.[0];
+      if (!choice) break;
+
+      usePreGameStore.getState().pickDraftSymbol(choice.id);
+
+      // startGameWithDraft로 인해 preGameScreen이 null이 될 수 있으므로 early exit
+      if (usePreGameStore.getState().screen === null) break;
+    }
+  }, [preGameScreen, phase]);
 
   // 스페이스바로 스핀 (idle일 때만, 입력 필드 포커스 시 무시)
   useEffect(() => {

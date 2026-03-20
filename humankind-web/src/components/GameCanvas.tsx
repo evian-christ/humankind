@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
+import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { t } from '../i18n';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
@@ -296,6 +297,46 @@ const GameCanvas = ({ onReady }: GameCanvasProps) => {
             {hoveredUpgrade && (
                 <div className="symbol-tooltip" style={{ ...getUpgradeTooltipStyle(hoveredUpgrade), display: 'flex', flexDirection: 'column' }}>
                     <div className="symbol-tooltip-name" style={{ color: '#93c5fd' }}>{t(`knowledgeUpgrade.${hoveredUpgrade.upgrade.id}.name`, language)}</div>
+                    {(() => {
+                        const def = KNOWLEDGE_UPGRADES[hoveredUpgrade.upgrade.id];
+                        if (!def) return null;
+
+                        if (typeof def.type === 'number') {
+                            const eraLabel = t(ERA_NAME_KEYS[def.type as SymbolType] ?? 'era.ancient', language);
+                            const eraColor = getSymbolColorHex(def.type as SymbolType);
+                            return (
+                                <div
+                                    className="symbol-tooltip-effect"
+                                    style={{
+                                        marginTop: '8px',
+                                        color: eraColor,
+                                        fontWeight: 'bold',
+                                        fontSize: '15px',
+                                        textShadow: `0 0 6px ${eraColor}80`,
+                                    }}
+                                >
+                                    [{eraLabel}]
+                                </div>
+                            );
+                        }
+
+                        const leaderLabel = t(`leader.${def.type}.name`, language);
+                        const leaderColor = def.type === 'ramesses' ? '#f59e0b' : '#60a5fa';
+                        return (
+                            <div
+                                className="symbol-tooltip-effect"
+                                style={{
+                                    marginTop: '8px',
+                                    color: leaderColor,
+                                    fontWeight: 'bold',
+                                    fontSize: '15px',
+                                    textShadow: `0 0 6px ${leaderColor}80`,
+                                }}
+                            >
+                                [{leaderLabel}]
+                            </div>
+                        );
+                    })()}
                     <div className="symbol-tooltip-desc">
                         {t(`knowledgeUpgrade.${hoveredUpgrade.upgrade.id}.desc`, language).split('\n').map((line: string, i: number) => (
                             <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>

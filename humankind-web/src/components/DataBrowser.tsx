@@ -257,7 +257,7 @@ const DataBrowser = () => {
         let list = Object.values(KNOWLEDGE_UPGRADE_CANDIDATES);
 
         if (eraFilter !== 'all') {
-            list = list.filter(u => u.type === eraFilter);
+            list = list.filter(u => typeof u.type === 'number' && u.type === eraFilter);
         }
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -275,7 +275,10 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = tl(`knowledgeUpgradeCandidate.${a.id}.name`, a.name); vb = tl(`knowledgeUpgradeCandidate.${b.id}.name`, b.name); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
+                    case 'era':
+                        va = ERA_ORDER.indexOf((typeof a.type === 'number' ? a.type : -1) as SymbolType);
+                        vb = ERA_ORDER.indexOf((typeof b.type === 'number' ? b.type : -1) as SymbolType);
+                        break;
                     case 'desc': va = tl(`knowledgeUpgradeCandidate.${a.id}.desc`, a.description); vb = tl(`knowledgeUpgradeCandidate.${b.id}.desc`, b.description); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     default: va = a.id; vb = b.id;
@@ -333,7 +336,7 @@ const DataBrowser = () => {
         let list = Object.values(KNOWLEDGE_UPGRADES);
 
         if (eraFilter !== 'all') {
-            list = list.filter(u => u.type === eraFilter);
+            list = list.filter(u => typeof u.type === 'number' && u.type === eraFilter);
         }
         if (search.trim()) {
             const q = search.toLowerCase();
@@ -351,7 +354,10 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = tl(`knowledgeUpgrade.${a.id}.name`, a.name); vb = tl(`knowledgeUpgrade.${b.id}.name`, b.name); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
+                    case 'era':
+                        va = ERA_ORDER.indexOf((typeof a.type === 'number' ? a.type : -1) as SymbolType);
+                        vb = ERA_ORDER.indexOf((typeof b.type === 'number' ? b.type : -1) as SymbolType);
+                        break;
                     case 'desc': va = tl(`knowledgeUpgrade.${a.id}.desc`, a.description); vb = tl(`knowledgeUpgrade.${b.id}.desc`, b.description); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     default: va = a.id; vb = b.id;
@@ -699,7 +705,7 @@ const DataBrowser = () => {
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
-                                    <td className="databrowser-cell--desc">{t(`relic.${r.id}.desc`, language)}</td>
+                                    <td className="databrowser-cell--desc"><EffectText text={t(`relic.${r.id}.desc`, language)} /></td>
                                     <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         {r.sprite && r.sprite !== '-' && r.sprite !== '-.png' ? (
                                             <>
@@ -743,7 +749,7 @@ const DataBrowser = () => {
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
-                                    <td className="databrowser-cell--desc">{r.description}</td>
+                                    <td className="databrowser-cell--desc"><EffectText text={r.description} /></td>
                                     <td className="databrowser-cell--sprite" style={{ color: '#555' }}>
                                         {r.sprite || '-'}
                                     </td>
@@ -770,9 +776,13 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--id">{u.id}</td>
                                     <td className="databrowser-cell--name">{tl(`knowledgeUpgradeCandidate.${u.id}.name`, u.name)}</td>
                                     <td>
-                                        <span style={{ color: getSymbolColorHex(u.type), fontWeight: 'bold' }}>
-                                            [{t(`era.${ERA_KEYS[u.type]}`, language)}]
-                                        </span>
+                                        {typeof u.type === 'number' ? (
+                                            <span style={{ color: getSymbolColorHex(u.type), fontWeight: 'bold' }}>
+                                                [{t(`era.${ERA_KEYS[u.type]}`, language)}]
+                                            </span>
+                                        ) : (
+                                            <span style={{ color: '#9ca3af' }}>—</span>
+                                        )}
                                     </td>
                                     <td className="databrowser-cell--desc"><EffectText text={tl(`knowledgeUpgradeCandidate.${u.id}.desc`, u.description)} /></td>
                                     <td className="databrowser-cell--sprite">{u.sprite || '-'}</td>
@@ -838,9 +848,25 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--id">{u.id}</td>
                                     <td className="databrowser-cell--name">{tl(`knowledgeUpgrade.${u.id}.name`, u.name)}</td>
                                     <td>
-                                        <span style={{ color: getSymbolColorHex(u.type), fontWeight: 'bold' }}>
-                                            [{t(`era.${ERA_KEYS[u.type]}`, language)}]
-                                        </span>
+                                        {(() => {
+                                            if (typeof u.type === 'number') {
+                                                const typeHex = getSymbolColorHex(u.type as SymbolType);
+                                                const eraKey = ERA_KEYS[u.type as SymbolType];
+                                                return (
+                                                    <span style={{ color: typeHex, fontWeight: 'bold' }}>
+                                                        [{t(`era.${eraKey}`, language)}]
+                                                    </span>
+                                                );
+                                            }
+
+                                            const leaderName = t(`leader.${u.type}.name`, language);
+                                            const leaderColor = u.type === 'ramesses' ? '#f59e0b' : '#60a5fa';
+                                            return (
+                                                <span style={{ color: leaderColor, fontWeight: 'bold' }}>
+                                                    [{leaderName}]
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="databrowser-cell--desc"><EffectText text={tl(`knowledgeUpgrade.${u.id}.desc`, u.description)} /></td>
                                     <td className="databrowser-cell--sprite">{u.sprite || '-'}</td>

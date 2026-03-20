@@ -4,7 +4,7 @@ import type { GameState } from '../../game/state/gameStore';
 import { SPIN_SPEED_CONFIG, COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../game/state/settingsStore';
 import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
-import { getSymbolColor, SymbolType } from '../../game/data/symbolDefinitions';
+import { getSymbolColor, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import { useRelicStore } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
@@ -690,7 +690,7 @@ export class PixiGameApp {
 
                 if (symDef.id === 40) { // Barbarian Camp
                     const campCounterText = new PIXI.Text({
-                        text: String(10 - symbol.effect_counter),
+                        text: String(BARBARIAN_CAMP_SPAWN_INTERVAL - symbol.effect_counter),
                         style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
                     });
                     campCounterText.anchor.set(0.5, 0.5);

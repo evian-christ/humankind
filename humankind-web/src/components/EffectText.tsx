@@ -7,6 +7,11 @@ interface EffectTextProps {
 export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
     if (!text) return null;
 
+    const formatScaledNumber = (n: number): string => {
+        const v = Math.round(n * 100) / 100;
+        return Number.isInteger(v) ? String(v) : String(v);
+    };
+
     // 검은색 테두리 (4방향 text-shadow for visibility on light backgrounds)
     const outline = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
 
@@ -15,7 +20,7 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
     // 3: Korean Stat + Num (식량 +20)
     // 4: Standalone Stat (Food/Gold/Knowledge/식량/골드/지식)
     // 5: Standalone number (positive/negative integer or float, or x2, x3)
-    const regex = /([^:.;]+:)|([+-]?\d+)\s*(Food|Gold|Knowledge)|(식량|골드|지식)\s*([+-]?\d+)|(Food|Gold|Knowledge|식량|골드|지식)|(?:[xX])(\d+)|([+-]?\d+)/gi;
+    const regex = /([^:.;]+:)|([+-]?\d+)\s*(Food|Gold|Knowledge)|(식량|골드|지식)'?\s*([+-]?\d+)|(Food|Gold|Knowledge|식량|골드|지식)|(?:[xX])(\d+)|([+-]?\d+)/gi;
 
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -56,15 +61,19 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
             if (isKnowledge) { color = '#60a5fa'; icon = '✦'; }
 
             if (enStat) {
+                const raw = Number(enNum);
+                const scaledStr = formatScaledNumber(raw);
                 parts.push(
                     <span key={`en-${match.index}`} style={{ color, fontWeight: 'bold', textShadow: outline }}>
-                        {enNum}{icon}
+                        {scaledStr}{icon}
                     </span>
                 );
             } else if (koStat) {
+                const raw = Number(koNum);
+                const scaledStr = formatScaledNumber(raw);
                 parts.push(
                     <span key={`ko-${match.index}`} style={{ color, fontWeight: 'bold', textShadow: outline }}>
-                        {icon}{koNum}
+                        {icon}{scaledStr}
                     </span>
                 );
             } else if (standaloneStat) {

@@ -18,25 +18,64 @@ const UpgradeCard = ({
     name,
     description,
     sprite,
-    onClick,
+    onSelect,
+    onReroll,
+    canReroll,
+    rerollUsed,
 }: {
     name: string;
     description: string;
     sprite?: string;
-    onClick: () => void;
+    onSelect: () => void;
+    onReroll: () => void;
+    canReroll: boolean;
+    rerollUsed: boolean;
 }) => {
     const spriteUrl = resolveUpgradeSprite(sprite);
 
     return (
-        <button
+        <div
             className="upgrade-card"
-            onClick={onClick}
+            onClick={onSelect}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') onSelect();
+            }}
             style={{
                 background: `url("${ASSET_BASE_URL}assets/ui/upgradeCard_312x570.png") no-repeat center / ${CARD_W}px ${CARD_H}px`,
                 width: `${CARD_W}px`,
                 height: `${CARD_H}px`,
             } as React.CSSProperties}
         >
+            {canReroll && (
+                <button
+                    type="button"
+                    aria-label="Reroll upgrade card"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onReroll();
+                    }}
+                    disabled={rerollUsed}
+                    style={{
+                        position: 'absolute',
+                        top: 14,
+                        right: 14,
+                        width: 44,
+                        height: 44,
+                        border: 'none',
+                        borderRadius: 0,
+                        cursor: rerollUsed ? 'not-allowed' : 'pointer',
+                        background: rerollUsed ? 'rgba(148,163,184,0.35)' : 'rgba(0,0,0,0.35)',
+                        color: '#e0f2fe',
+                        fontSize: 22,
+                        fontFamily: 'Mulmaru, monospace',
+                        textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+                    }}
+                >
+                    ↺
+                </button>
+            )}
             <div className="upgrade-card-inner">
                 {/* 스프라이트 아이콘 */}
                 <img
@@ -54,15 +93,26 @@ const UpgradeCard = ({
                     ))}
                 </div>
             </div>
-        </button>
+        </div>
     );
 };
 
 const UpgradeSelection = () => {
-    const { phase, upgradeChoices, selectUpgrade, skipUpgradeSelection, level, levelBeforeUpgrade } = useGameStore();
+    const {
+        phase,
+        upgradeChoices,
+        selectUpgrade,
+        level,
+        levelBeforeUpgrade,
+        unlockedKnowledgeUpgrades,
+        knowledgeUpgradeRerollUsed,
+        rerollUpgradeCard,
+    } = useGameStore();
     const language = useSettingsStore((s) => s.language);
 
     if (phase !== 'upgrade_selection') return null;
+
+    const canDemocraticOrder = (unlockedKnowledgeUpgrades || []).includes(14);
 
     return (
         <div className="selection-overlay">
@@ -99,13 +149,16 @@ const UpgradeSelection = () => {
                         }}>⬆ LEVEL UP!</span>
                     </div>
                     <div className="selection-cards upgrade-cards">
-                        {upgradeChoices.map((upgrade) => (
+                        {upgradeChoices.map((upgrade, idx) => (
                             <UpgradeCard
-                                key={upgrade.id}
+                                key={`${upgrade.id}-${idx}`}
                                 name={t(`knowledgeUpgrade.${upgrade.id}.name`, language)}
                                 description={t(`knowledgeUpgrade.${upgrade.id}.desc`, language)}
                                 sprite={upgrade.sprite}
-                                onClick={() => selectUpgrade(upgrade.id)}
+                                onSelect={() => selectUpgrade(upgrade.id)}
+                                canReroll={canDemocraticOrder}
+                                rerollUsed={!!knowledgeUpgradeRerollUsed[idx]}
+                                onReroll={() => rerollUpgradeCard(idx)}
                             />
                         ))}
                         {upgradeChoices.length === 0 && (

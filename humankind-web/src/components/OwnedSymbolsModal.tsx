@@ -1,7 +1,7 @@
 import { useMemo, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { SymbolType } from '../game/data/symbolDefinitions';
+import { SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -262,7 +262,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             </>
                                         )}
 
-                                        {/* Barbarian Camp: 10 - effect_counter */}
+                                        {/* Barbarian Camp: spawn interval - effect_counter */}
                                         {showCampCounter && (
                                             <div
                                                 style={{
@@ -276,7 +276,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                                     fontWeight: 800,
                                                 }}
                                             >
-                                                {10 - sym.effect_counter}
+                                                {BARBARIAN_CAMP_SPAWN_INTERVAL - sym.effect_counter}
                                             </div>
                                         )}
                                     </div>
