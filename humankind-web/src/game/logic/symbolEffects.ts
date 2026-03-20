@@ -1,5 +1,5 @@
 import type { PlayerSymbolInstance } from '../types';
-import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType } from '../data/symbolDefinitions';
+import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../data/symbolDefinitions';
 
 import { useGameStore } from '../state/gameStore';
 
@@ -37,10 +37,8 @@ export interface ActiveRelicEffects {
     gobekliAnimalJackpot: boolean;
     /** ID 112: 길가메시 서사시 토판 - 종교 패널티 무효화 */
     gilgameshReligionNoPenalty: boolean;
-    /** ID 115: 막달레니안 뼈 낚싯바늘 - 물고기가 골드 +10 추가 */
+    /** ID 115: 막달레니안 뼈 낚싯바늘 - 물고기가 골드 +1 추가 */
     fishBoneHookGold: boolean;
-    /** ID 119: 가라만테스 안뜰 수로 - 오아시스 빈 칸 보너스 7→1, 자체 +5 */
-    garamantesOasisReduce: boolean;
     /** ID 120: 나일 강 비옥한 흑니 (활성 중) - 식량 2배 */
     nileFloodDoubleFood: boolean;
     /** 기마술 업그레이드 - 목장 자체 생산량 +10 */
@@ -57,7 +55,6 @@ export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
     gobekliAnimalJackpot: false,
     gilgameshReligionNoPenalty: false,
     fishBoneHookGold: false,
-    garamantesOasisReduce: false,
     nileFloodDoubleFood: false,
     horsemansihpPastureBonus: false,
 };
@@ -103,18 +100,14 @@ const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Se
     return count;
 };
 
-/** 심볼별 기본 식량 생산량 추정치 (Christianity 효과 계산용) -> x10 */
+/** 심볼별 기본 식량 생산량 추정치 (상인 인접 시 저장 골드 산정용). food/gold는 모두 게임 표시 단위(1단위) */
 const SYMBOL_BASE_FOOD: Record<number, number> = {
-    1: 0, 2: 0, 3: 10, 4: 30, 5: 10, 6: 10, 7: 10, 8: 0, 9: 20, 10: 0,
-    11: 0, 12: 0, 13: 10, 14: 10, 15: 10, 16: 0, 17: -10, 18: 10, 19: 10, 20: 0,
-    21: 0, 22: 0, 23: 10, 25: 0, 28: 10, 29: 10, 30: 10,
-};
-
-/** 심볼별 기본 지식 생산량 추정치 (Islam 효과 계산용) -> x10 */
-const SYMBOL_BASE_KNOWLEDGE: Record<number, number> = {
-    10: 5,   // Monument
-    17: 10,  // Offering
-    25: 20,  // Library
+    1: 0, 2: 0, 3: 1, 4: 3, 5: 1, 6: 1, 7: 1, 8: 0, 9: 2, 10: 0,
+    11: 0, 12: 0,     13: 1, 14: 1, 15: 1, 16: 0, 17: -1, 18: 1, 19: 1, 20: 0,
+    21: 0, 22: 0, 23: 1, 25: 0, 28: 0, 29: 1, 30: 1,
+    47: 1,
+    48: 0,
+    49: 1,
 };
 
 /** Era 1 심볼 중 랜덤 하나 반환 (ID 1~21) */
@@ -125,6 +118,14 @@ const randomEra1SymbolId = (): number => {
 
 /** 목장 인접 동물 심볼 태그 */
 const ANIMAL_SYMBOL_IDS = new Set([3, 5, 22]); // Cattle, Fish, Horse
+
+/** 사막이 무작위 파괴하는 대상: 일반·시대 심볼. 지형·유닛·종교 등 제외 */
+const DESERT_DESTRUCTIBLE_TYPES = new Set<SymbolType>([
+    SymbolType.NORMAL,
+    SymbolType.ANCIENT,
+    SymbolType.MEDIEVAL,
+    SymbolType.MODERN,
+]);
 
 export const processSingleSymbolEffects = (
     symbolInstance: PlayerSymbolInstance,
@@ -192,7 +193,7 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 1: { // Wheat: Every 4 turns: +100 Food. Grassland adjacency: required turns -1
+        case 1: { // Wheat: Every 6 turns: +6 Food. Grassland adjacency: accelerates via counter.
             let hasGrassland = false;
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Grassland
@@ -206,14 +207,14 @@ export const processSingleSymbolEffects = (
                 symbolInstance.effect_counter += (1 + irrigationBonus); // speeds up by 1 turn (or 2 with Irrigation)
             }
 
-            if (symbolInstance.effect_counter >= 4) {
-                food += 100;
-                symbolInstance.effect_counter -= 4;
+            if (symbolInstance.effect_counter >= 6) {
+                food += 6;
+                symbolInstance.effect_counter -= 6;
             }
             break;
         }
 
-        case 2: { // Rice: Every 8 turns: +200 Food. Grassland adjacency: required turns -2
+        case 2: { // Rice: Every 12 turns: +15 Food. Grassland adjacency: accelerates via counter.
             let hasGrassland = false;
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 9) { // Grassland
@@ -227,31 +228,32 @@ export const processSingleSymbolEffects = (
                 symbolInstance.effect_counter += (2 + irrigationBonus); // speeds up by 2 turns (or 3 with Irrigation)
             }
 
-            if (symbolInstance.effect_counter >= 8) {
-                food += 200;
-                symbolInstance.effect_counter -= 8;
+            if (symbolInstance.effect_counter >= 12) {
+                food += 15;
+                symbolInstance.effect_counter -= 12;
             }
             break;
         }
 
-        case 3: { // Cattle: +10 Food. +20 Food if adjacent to Plains.
-            food += 10;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id === 14) { food += 20; contributors.push(pos); }
-            });
+        case 3: { // Cattle: +1 Food; if adjacent to any Plains: +2 Food once.
+            food += 1;
+            const plainsAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+            if (plainsAdj) {
+                food += 2;
+                contributors.push(plainsAdj);
+            }
             // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
             if (relicEffects.gobekliAnimalJackpot) {
-                const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+                const nearPasture = !!plainsAdj;
                 if (nearPasture && Math.random() < 0.05) {
-                    food += 150;
+                    food += 15;
                 }
             }
             break;
         }
 
-        case 4: { // Banana: Every spin: +20 Food. Destroyed after 6 spins. Reset if adjacent to Rainforest
-            food += 20;
+        case 4: { // Banana: Every spin: +2 Food. Destroyed after 6 spins. Reset if adjacent to Rainforest
+            food += 2;
             let nearRainforest = false;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -271,50 +273,51 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 5: { // Fish: Every spin: +10 Food. +30 Food if adjacent to Coast
-            food += 10;
-            // ID 115: 막달레니안 뼈 낚싯바늘 - 물고기 골드 +10
-            if (relicEffects.fishBoneHookGold) gold += 10;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 6) { food += 30; contributors.push(pos); }
-            });
+        case 5: { // Fish: when adjacent to Sea: +2 Food (no base)
+            // ID 115: 막달레니안 뼈 낚싯바늘 - 물고기 골드 +1
+            if (relicEffects.fishBoneHookGold) gold += 1;
+            const seaAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 6);
+            if (seaAdj) {
+                food += 2;
+                contributors.push(seaAdj);
+            }
             // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
             if (relicEffects.gobekliAnimalJackpot) {
                 const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
-                if (nearPasture && Math.random() < 0.05) food += 150;
+                if (nearPasture && Math.random() < 0.05) food += 15;
             }
             break;
         }
 
-        case 6: { // Coast: Every spin: +1 Food. +1 Gold per adjacent Coast
-            food += 10;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 6) { gold += 10; contributors.push(pos); }
-            });
+        case 6: { // Sea: +1 Gold per 4 adjacent symbols
+            const occupiedAdj = adj.filter(pos => boardGrid[pos.x][pos.y] != null);
+            const seaGold = Math.floor(occupiedAdj.length / 4);
+            gold += seaGold;
+            if (seaGold > 0) {
+                occupiedAdj.forEach(pos => contributors.push(pos));
+            }
             break;
         }
 
-        case 7: { // Stone: +10 Food, +10 Gold. +30 Gold if adjacent to Mountain.
-            food += 10;
-            gold += 10;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 15) { gold += 30; contributors.push(pos); }
-            });
+        case 7: { // Stone: +1 Gold; if adjacent to any Mountain: +2 Gold once.
+            gold += 1;
+            const mountainAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 15);
+            if (mountainAdj) {
+                gold += 2;
+                contributors.push(mountainAdj);
+            }
             break;
         }
 
-        case 8: { // Copper: +20 Gold. If exactly 3 Copper on board: x3. +20 Gold if adjacent to Mountain.
+        case 8: { // Copper: +1 Gold; if exactly 3 Copper on board: x3
             const copperCount = countOnBoard(boardGrid, 8);
             const multiplier = copperCount === 3 ? 3 : 1;
-            gold += 20 * multiplier;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 15) { gold += 20; contributors.push(pos); }
-            });
+            gold += 1 * multiplier;
             break;
         }
 
-        case 9: // Grassland: Every spin: +20 Food.
-            food += 20;
+        case 9: // Grassland: Every spin: +2 Food.
+            food += 2;
             break;
 
         case 10: // Monument: Every spin: +5 Knowledge
@@ -323,18 +326,9 @@ export const processSingleSymbolEffects = (
             if (relicEffects.jerichoMonumentBonus) knowledge += 20;
             break;
 
-        case 11: { // Oasis: Every spin: +7 Food per adjacent empty slot
-            // ID 119: 가라만테스 안뜰 수로 - 빈 칸 보너스 1, 자체 +5
-            if (relicEffects.garamantesOasisReduce) {
-                food += 5; // 자체 보너스
-                adj.forEach(pos => {
-                    if (!boardGrid[pos.x][pos.y]) food += 1; // 빈 칸당 1
-                });
-            } else {
-                adj.forEach(pos => {
-                    if (!boardGrid[pos.x][pos.y]) food += 7;
-                });
-            }
+        case 11: { // Oasis: +1 Food per 2 adjacent empty slots
+            const emptyAdjCount = adj.filter(pos => !boardGrid[pos.x][pos.y]).length;
+            food += Math.floor(emptyAdjCount / 2);
             break;
         }
 
@@ -355,14 +349,14 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 13: { // Rainforest: Every spin: +10 Food.
-            food += 10;
+        case 13: { // Rainforest: Every spin: +1 Food.
+            food += 1;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t && t.definition.id === 4) {
-                    // ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 매 턴 인접한 바나나 당 식량 +20 생산
+                    // ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 매 턴 인접한 바나나 당 식량 +2 생산
                     if (relicEffects.bananaFossilBonus) {
-                        food += 20;
+                        food += 2;
                         contributors.push(pos);
                     }
                 }
@@ -370,17 +364,17 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 14: // Plains: Every spin: +10 Food (+10 bonus with Horsemanship)
-            food += 10;
-            if (relicEffects.horsemansihpPastureBonus) food += 10;
+        case 14: // Plains: Every spin: +1 Food (+1 bonus with Horsemanship)
+            food += 1;
+            if (relicEffects.horsemansihpPastureBonus) food += 1;
             break;
 
-        case 15: { // Mountain: +10 Food.
-            food += 10;
-            // ID 5: 이집트 구리 톱 - 인접 빈 슬롯마다 골드 +10
+        case 15: { // Mountain: +1 Food.
+            food += 1;
+            // ID 5: 이집트 구리 톱 - 인접 빈 슬롯마다 골드 +1
             if (relicEffects.quarryEmptyGold) {
                 adj.forEach(pos => {
-                    if (!boardGrid[pos.x][pos.y]) { gold += 10; }
+                    if (!boardGrid[pos.x][pos.y]) { gold += 1; }
                 });
             }
             break;
@@ -397,18 +391,18 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 17: // Offering: Every spin: -10 Food, +10 Knowledge
-            food -= 10;
+        case 17: // Offering: Every spin: -1 Food, +10 Knowledge
+            food -= 1;
             knowledge += 10;
             // ID 107: 예리코 점토 두개골 - 제단 지식 +20 추가
             if (relicEffects.jerichoMonumentBonus) knowledge += 20;
             break;
 
-        case 18: // Omen: 50% chance: +30 Food, 50% chance: -15 Food.
+        case 18: // Omen: 50% chance: +3 Food, 50% chance: -1 Food.
             if (Math.random() < 0.5) {
-                food += 30;
+                food += 3;
             } else {
-                food -= 15;
+                food -= 1;
             }
             break;
 
@@ -416,8 +410,8 @@ export const processSingleSymbolEffects = (
             knowledge += relicEffects.relicCount * 5;
             break;
 
-        case 19: { // Campfire: Every spin: +10 Food. After 10 spins: destroyed and adjacent symbols produce double food this spin
-            food += 10;
+        case 19: { // Campfire: Every spin: +1 Food. After 10 spins: destroyed and adjacent symbols produce double food this spin
+            food += 1;
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 10) {
                 symbolInstance.is_marked_for_destruction = true;
@@ -433,8 +427,8 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 20: { // Pottery: stores +30 Food per spin. On destroy: releases stored Food
-            symbolInstance.effect_counter += 30;
+        case 20: { // Pottery: stores +3 Food per spin. On destroy: releases stored Food
+            symbolInstance.effect_counter += 3;
             // ID 4: 조몬 토기 조각 - 인접한 다른 토기를 파괴 표시
             if (relicEffects.potteryDestroyAdjacent) {
                 adj.forEach(pos => {
@@ -490,16 +484,16 @@ export const processSingleSymbolEffects = (
                     contributors.push(pos);
                 }
             });
-            if (adjacentSea) food += 30;
+            if (adjacentSea) food += 3;
             break;
         }
 
-        case 25: { // Library: +5 Knowledge
-            knowledge += 5;
+        case 25: { // Library: +7 Knowledge
+            knowledge += 7;
             break;
         }
 
-        case 26: { // Pearl: +50 Gold if adjacent to Sea.
+        case 26: { // Pearl: +3 Gold if adjacent to Sea.
             let adjacentSea = false;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -508,14 +502,18 @@ export const processSingleSymbolEffects = (
                     contributors.push(pos);
                 }
             });
-            if (adjacentSea) gold += 50;
+            if (adjacentSea) gold += 3;
             break;
         }
 
-        case 27: { // Desert: Destroys a random adjacent Normal symbol.
+        case 27: { // Desert: random adjacent Normal or era symbol
             const validTargets = adj.filter(pos => {
                 const target = boardGrid[pos.x][pos.y];
-                return target && !target.is_marked_for_destruction && target.definition.type === SymbolType.NORMAL;
+                return (
+                    target &&
+                    !target.is_marked_for_destruction &&
+                    DESERT_DESTRUCTIBLE_TYPES.has(target.definition.type)
+                );
             });
             if (validTargets.length > 0) {
                 const randomTarget = validTargets[Math.floor(Math.random() * validTargets.length)];
@@ -523,7 +521,7 @@ export const processSingleSymbolEffects = (
                 if (targetInstance) {
                     targetInstance.is_marked_for_destruction = true;
                     if (targetInstance.definition.id === 30) {
-                        food += 20;
+                        food += 2;
                         addSymbolIds.push(30);
                     }
                     contributors.push(randomTarget);
@@ -532,19 +530,18 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 28: { // Forest: +10 Food; per adjacent Forest: +10 Food.
-            food += 10;
+        case 28: { // Forest: +1 Food per adjacent Forest (no standalone base)
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 28) {
-                    food += 10;
+                    food += 1;
                     contributors.push(pos);
                 }
             });
             break;
         }
 
-        case 29: { // Deer: +10 Food; if 2 or more adjacent Forests: +40 Food.
-            food += 10;
+        case 29: { // Deer: +1 Food; if 2 or more adjacent Forests: +2 Food.
+            food += 1;
             let forestCount = 0;
             adj.forEach(pos => {
                 if (boardGrid[pos.x][pos.y]?.definition.id === 28) {
@@ -553,13 +550,40 @@ export const processSingleSymbolEffects = (
                 }
             });
             if (forestCount >= 2) {
-                food += 40;
+                food += 2;
             }
             break;
         }
 
-        case 30: { // Date: +10 Food.
-            food += 10;
+        case 30: { // Date: +1 Food.
+            food += 1;
+            break;
+        }
+
+        case 47: { // Salt: +1 Food per adjacent terrain symbol
+            let adjacentTerrain = 0;
+            adj.forEach(pos => {
+                const t = boardGrid[pos.x][pos.y];
+                if (t && t.definition.type === SymbolType.TERRAIN) {
+                    adjacentTerrain++;
+                    contributors.push(pos);
+                }
+            });
+            food += adjacentTerrain;
+            break;
+        }
+
+        case 48: { // Honey: After 5 turns: destroy; on destroy: +5 Food.
+            symbolInstance.effect_counter++;
+            if (symbolInstance.effect_counter >= 5) {
+                symbolInstance.is_marked_for_destruction = true;
+                food += 5;
+            }
+            break;
+        }
+
+        case 49: { // Corn: +1 Food
+            food += 1;
             break;
         }
 
@@ -578,24 +602,24 @@ export const processSingleSymbolEffects = (
                     if (!boardGrid[bx][by]) emptySlots++;
                 }
             }
-            food += emptySlots * 20;
+            food += emptySlots * 2;
             break;
         }
 
-        case 34: // Hinduism: destruction bonus handled in gameStore finishProcessing
+        case 34: // Hinduism: per destroyed symbol this turn — bonus in gameStore finishProcessing
             break;
 
         // ── Enemy / Combat Symbols ──
 
         case 35: // Warrior
             if (symbolInstance.definition.type === SymbolType.ENEMY) {
-                if (Math.random() < 0.5) food -= 30; else gold -= 10;
+                if (Math.random() < 0.5) food -= 3; else gold -= 1;
             }
             break;
 
         case 36: // Archer
             if (symbolInstance.definition.type === SymbolType.ENEMY) {
-                if (Math.random() < 0.5) food -= 20; else gold -= 20;
+                if (Math.random() < 0.5) food -= 2; else gold -= 2;
             }
             break;
 
@@ -604,40 +628,42 @@ export const processSingleSymbolEffects = (
             triggerRelicRefresh = true;
             break;
 
-        case 38: { // Stargazer: Every spin: +3 Knowledge per empty slot on the board
+        case 38: { // Stargazer: +2 Knowledge per empty slot on the board
             for (let bx = 0; bx < BOARD_WIDTH; bx++) {
                 for (let by = 0; by < BOARD_HEIGHT; by++) {
-                    if (!boardGrid[bx][by]) knowledge += 3;
+                    if (!boardGrid[bx][by]) knowledge += 2;
                 }
             }
             break;
         }
 
-        case 23: { // Horse: +10 Food, +10 Gold. +20 Food if adjacent to Plains.
-            food += 10;
-            gold += 10;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === 14) { food += 20; contributors.push(pos); }
-            });
+        case 23: { // Horse: +1 Food, +1 Gold; if adjacent to any Plains: +2 Food once.
+            food += 1;
+            gold += 1;
+            const plainsAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+            if (plainsAdj) {
+                food += 2;
+                contributors.push(plainsAdj);
+            }
             break;
         }
 
-        case 40: { // Barbarian Camp: Every 10 turns: adds 1 random current era Enemy combat unit.
+        case 40: { // Barbarian Camp: every N turns: adds 1 random current era Enemy combat unit.
             symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 10) {
+            if (symbolInstance.effect_counter >= BARBARIAN_CAMP_SPAWN_INTERVAL) {
                 const enemies = [43]; // Enemy Warrior (TODO: add Enemy Archer later)
                 const enemyId = enemies[Math.floor(Math.random() * enemies.length)];
                 addSymbolIds.push(enemyId);
-                symbolInstance.effect_counter -= 10;
+                symbolInstance.effect_counter -= BARBARIAN_CAMP_SPAWN_INTERVAL;
             }
             break;
         }
 
         case 41: { // Loot: Destroyed; on destroy: various chances
             symbolInstance.is_marked_for_destruction = true;
-            // 식량 1~100, 골드 1~100, 지식 1~30
-            food += Math.floor(Math.random() * 100) + 1;
-            gold += Math.floor(Math.random() * 100) + 1;
+            // 식량 1~10, 골드 1~10, 지식 1~30
+            food += Math.floor(Math.random() * 10) + 1;
+            gold += Math.floor(Math.random() * 10) + 1;
             knowledge += Math.floor(Math.random() * 30) + 1;
 
             // 1% 확률로 빛나는 호박석
@@ -665,14 +691,14 @@ export const processSingleSymbolEffects = (
         // 심볼별로는 여기서 적용하지 않음 (gameStore에서 처리)
     }
 
-    // ── 교리 패널티: 다른 교리 심볼에 인접 시 -500 Food ──
+    // ── 교리 패널티: 다른 교리 심볼에 인접 시 -50 Food ──
     if (RELIGION_DOCTRINE_IDS.has(id)) {
         const hasAdjacentDoctrine = adj.some(pos => {
             const t = boardGrid[pos.x][pos.y];
             return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
         });
         if (hasAdjacentDoctrine && !relicEffects.gilgameshReligionNoPenalty) {
-            food -= 500;
+            food -= 50;
         }
     }
     // Adjacency and double bonuses moved to individual symbol cases.
@@ -685,10 +711,10 @@ export const processSingleSymbolEffects = (
     // Candidate 203: Masonry (Monument Knowledge x2) -> No, 203 is Spearcraft mapping now.
     // Wait, the previous logic had 203 Masonry. Let's completely replace the Candidate effects logic!
 
-    // Candidate 207: Jewelry (Stone produces -5 Food but +15 Gold)
+    // Candidate 207: Jewelry (Stone produces -0.5 Food but +1.5 Gold)
     if (upgrades.includes(207) && id === 7) {
-        food -= 5;
-        gold += 15;
+        food -= 0.5;
+        gold += 1.5;
     }
 
     const result: EffectResult = { food, knowledge, gold };

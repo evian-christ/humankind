@@ -12,7 +12,16 @@ export { type PlayerSymbolInstance } from '../types';
 
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
-export const REROLL_COST = 50;
+export const REROLL_COST = 5;
+
+/**
+ * 지도자 스킬을 "지식 업그레이드"로 치환한 ID들.
+ * - 이들은 업그레이드 선택지로 등장하지 않도록 `KNOWLEDGE_UPGRADES.type`으로 숨김 처리함.
+ */
+const LEADER_KNOWLEDGE_UPGRADES = {
+    ramesses: { main: 11, sub: 12 },
+    pericles: { main: 13, sub: 14 },
+} as const;
 
 /** 1→2 단계: 본체만 보여줌(들어올림) 후, activate 보여주기 전 대기(ms) */
 const PHASE1_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
@@ -81,10 +90,10 @@ export const getEraFromLevel = (level: number): number => {
 };
 
 type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'draft_selection' | 'game_over' | 'victory';
-/** 10턴마다 식량 납부 비용 (Godot 원본: 100, 150, 200, 250... -> x10: 1000, 1500, 2000, 2500...) */
+/** 10턴마다 식량 납부 비용 (식량 1단위) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
-    return 1000 + (paymentCycle - 1) * 500;
+    return 100 + (paymentCycle - 1) * 50;
 };
 
 export type GameEventLogKind =
@@ -127,6 +136,8 @@ export interface GameState {
     symbolChoices: SymbolDefinition[];
     /** 유물 상점에 표시되는 유물 목록 (3개) */
     relicChoices: (RelicDefinition | null)[];
+    /** 람세스 효과: 이번 상점 새로고침에서 '반값'으로 표시된 유물 ID */
+    relicHalfPriceRelicId: number | null;
     lastEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>;
     /** processing 중 누적 합산 (food, gold, knowledge) */
     runningTotals: { food: number; gold: number; knowledge: number };
@@ -167,6 +178,9 @@ export interface GameState {
     /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
     rerollsThisTurn: number;
 
+    /** 업그레이드 선택에서 (페리클레스) 카드당 1회 리롤 사용 여부 */
+    knowledgeUpgradeRerollUsed: boolean[];
+
     barbarianSymbolThreat: number;
     barbarianCampThreat: number;
     naturalDisasterThreat: number;
@@ -188,6 +202,7 @@ export interface GameState {
     buyRelic: (relicId: number) => void;
     selectUpgrade: (upgradeId: number) => void;
     skipUpgradeSelection: () => void;
+    rerollUpgradeCard: (slotIndex: number) => void;
 
     initializeGame: () => void;
     /** 프리게임: 드래프트 선택 진입 (첫 선택지 표시) */
@@ -418,16 +433,27 @@ const generateRelicChoices = (): RelicDefinition[] => {
     return choices;
 };
 
-import { KNOWLEDGE_UPGRADES, type KnowledgeUpgrade } from '../data/knowledgeUpgrades';
+import { KNOWLEDGE_UPGRADES, type KnowledgeUpgrade, type KnowledgeUpgradeType } from '../data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
 import { getLeaderStartingRelics, LEADERS } from '../data/leaders';
 
 /** 현재 시대에 맞는 지식 업그레이드 선택지 3개 생성 (이미 업그레이드된 것 제외) */
 const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
     // KNOWLEDGE_UPGRADES만 사용 — 후보(CANDIDATES)는 표시하지 않음
-    const pool = Object.values(KNOWLEDGE_UPGRADES).filter(
-        (u) => u.type <= currentEra && !unlocked.includes(u.id)
-    );
+    const upgradeEraByType = (type: KnowledgeUpgradeType): number | null => {
+        if (typeof type !== 'number') return null; // 지도자 전용 타입: 선택지로 등장하지 않게
+        switch (type) {
+            case SymbolType.ANCIENT: return 1;
+            case SymbolType.MEDIEVAL: return 2;
+            case SymbolType.MODERN: return 3;
+            default: return null;
+        }
+    };
+
+    const pool = Object.values(KNOWLEDGE_UPGRADES).filter((u) => {
+        const upgradeEra = upgradeEraByType(u.type);
+        return upgradeEra != null && upgradeEra <= currentEra && !unlocked.includes(u.id);
+    });
     const shuffled = shuffle(pool);
     return shuffled.slice(0, 3);
 };
@@ -454,7 +480,6 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
         gobekliAnimalJackpot: false,
         gilgameshReligionNoPenalty: false,
         fishBoneHookGold: false,
-        garamantesOasisReduce: false,
         nileFloodDoubleFood: nileActive,
         horsemansihpPastureBonus: upgrades.includes(7),
     };
@@ -472,6 +497,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     phase: 'idle' as GamePhase,
     symbolChoices: [],
     relicChoices: generateRelicChoices(),
+    relicHalfPriceRelicId: null,
     lastEffects: [],
     runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
@@ -492,6 +518,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     levelBeforeUpgrade: 1,
     isRelicShopOpen: false,
     rerollsThisTurn: 0,
+    knowledgeUpgradeRerollUsed: [],
 
     barbarianSymbolThreat: 0,
     barbarianCampThreat: 0,
@@ -663,6 +690,16 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
         const upgrades = state.unlockedKnowledgeUpgrades || [];
         const baseKnowledge = (upgrades.includes(1) ? 4 : 2) + (upgrades.includes(10) ? 2 : 0);
+        const leaderBonusKnowledge =
+            (upgrades.includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.sub)
+                ? useRelicStore.getState().relics.length
+                : 0) +
+            (upgrades.includes(LEADER_KNOWLEDGE_UPGRADES.pericles.main)
+                ? (() => {
+                    const distinctSymbolTypes = new Set(state.playerSymbols.map(s => s.definition.type));
+                    return Math.floor(distinctSymbolTypes.size / 5) * 2;
+                })()
+                : 0);
         const baseGold = (upgrades.includes(6) ? 2 : 0) + (upgrades.includes(10) ? 2 : 0);
 
         let startFood = upgrades.includes(10) ? 5 : 0;
@@ -684,8 +721,16 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (hasTextileSource) startGold += 10;
         }
 
-        set({ phase: 'processing', effectPhase3ReachedThisRun: false, runningTotals: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } });
-        get().appendEventLog({ turn: state.turn, kind: 'processing_start', meta: { base: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn } } });
+        set({
+            phase: 'processing',
+            effectPhase3ReachedThisRun: false,
+            runningTotals: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn + leaderBonusKnowledge }
+        });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'processing_start',
+            meta: { base: { food: startFood, gold: startGold, knowledge: baseKnowledge + get().bonusXpPerTurn + leaderBonusKnowledge } }
+        });
 
         // ── 홍수(44): 인접 지형 생산 비활성화(순서 무관) ──
         const FLOOD_ID = 44;
@@ -725,9 +770,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         let totalFood = startFood;
         const upgradesFinish = get().unlockedKnowledgeUpgrades || [];
-        const baseKnowledgeFinish = upgradesFinish.includes(1) ? 4 : 2;
+        const baseKnowledgeFinish =
+            (upgradesFinish.includes(1) ? 4 : 2) +
+            (upgradesFinish.includes(10) ? 2 : 0);
         const baseGoldFinish = startGold;
-        let totalKnowledge = baseKnowledgeFinish + get().bonusXpPerTurn;
+        let totalKnowledge = baseKnowledgeFinish + get().bonusXpPerTurn + leaderBonusKnowledge;
         let totalGold = baseGoldFinish;
         const symbolsToAdd: number[] = [];
         const symbolsToSpawnOnBoard: number[] = [];
@@ -762,7 +809,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 doctrineGold.set(key, 0);
             }
 
-            // Christianity(31)은 인접 심볼의 food 중 최대값, Islam(32)은 인접 심볼 knowledge의 합(3배).
+            // Christianity(31)은 인접 심볼의 food 중 최대값, Islam(32)은 인접 지식 생산 심볼 개수에 비례한 골드.
             // doctrine끼리 인접해 있으면 max(Christianity)가 서로 영향을 줄 수 있으므로,
             // 소규모 고정점 반복으로 안정화한다(실전 보드에선 1~2회로 충분할 가능성이 큼).
             const MAX_ITERS = 4;
@@ -775,9 +822,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                     if (!sym) continue;
                     if (sym.is_marked_for_destruction) continue;
 
-                    // 빈 슬롯은 식량 0으로 취급한다(텍스트의 "인접 심볼의 Food"를 정량화).
+                    // 빈 슬롯은 식량/지식 0으로 취급한다(텍스트의 "인접 심볼"을 정량화).
                     let maxAdjFood = -Infinity;
-                    let sumAdjKnowledge = 0;
+                    let knowledgeProducerCount = 0;
 
                     const adj = getAdjacentCoords(slot.x, slot.y);
                     for (const pos of adj) {
@@ -801,7 +848,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 : (religionEffectCache.get(adjKey)?.knowledge ?? 0);
 
                         maxAdjFood = Math.max(maxAdjFood, adjFoodFromCache);
-                        sumAdjKnowledge += adjKnowledgeFromCache;
+                        if (adjKnowledgeFromCache > 0) knowledgeProducerCount++;
                     }
 
                     if (maxAdjFood === -Infinity) maxAdjFood = 0;
@@ -811,7 +858,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                     if (sym.definition.id === 31) {
                         food = maxAdjFood;
                     } else if (sym.definition.id === 32) {
-                        gold = sumAdjKnowledge * 3;
+                        // 지식을 생산하는 인접 심볼 1개당 골드 +2
+                        gold = knowledgeProducerCount * 2;
                     }
 
                     // 교리(종교 심볼) 인접 페널티: 인접한 다른 교리 심볼이 있으면 -500 Food
@@ -820,7 +868,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
                     });
                     if (hasAdjacentDoctrine && !relicEffects.gilgameshReligionNoPenalty) {
-                        food -= 500;
+                        food -= 50;
                     }
 
                     // 유물 ID 9: 나일 강 비옥한 흑니 - 활성 중 식량 2배
@@ -907,9 +955,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             // Christianity/Islam(31/32)은 여기서 임시 보류하고, effectPhase 종료 후 computeReligionEffects()에서
             // 인접 심볼의 '이번 스핀 실제 산출량'을 기반으로 최종 계산한다.
             const isReligionRecalc = RELIGION_RECALC_IDS.has(symbol.definition.id);
-            const result = isReligionRecalc ? { food: 0, knowledge: 0, gold: 0 } : processSingleSymbolEffects(
+            const rawResult = isReligionRecalc ? { food: 0, knowledge: 0, gold: 0 } : processSingleSymbolEffects(
                 symbol, currentBoard, x, y, relicEffects, disabledTerrainCoords
             );
+            // `processSingleSymbolEffects`의 food/gold는 게임 표시 단위(1단위)입니다.
+            const result = rawResult;
 
             // ── Campfire 폭발 버프: 이번 턴 식량 2배 ──
             if (symbol.campfire_double_food && result.food > 0) {
@@ -1059,6 +1109,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
             let bonusFood = 0;
             let bonusGold = 0;
+            let bonusKnowledge = 0;
 
 
             // ── Pottery (20): 조몬 토기 조각 유물 — 파괴 전파 패스 ──
@@ -1105,7 +1156,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
                     if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
-                        bonusFood += (s.effect_counter || 0);
+                        bonusFood += s.effect_counter || 0;
                     }
                 }
             }
@@ -1136,29 +1187,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
-            // ── Hinduism (34): 인접 심볼이 파괴되면 +50 Knowledge + 복사본 컬렉션 추가 ──
-            let bonusKnowledge = 0;
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                for (let y = 0; y < BOARD_HEIGHT; y++) {
-                    const s = currentBoard[x][y];
-                    if (s && s.definition.id === 34 && !s.is_marked_for_destruction) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            for (let dy = -1; dy <= 1; dy++) {
-                                if (dx === 0 && dy === 0) continue;
-                                const nx = x + dx, ny = y + dy;
-                                if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-                                const adjSym = currentBoard[nx][ny];
-                                if (adjSym && adjSym.is_marked_for_destruction) {
-                                    bonusKnowledge += 50;
-                                    toAdd.push(adjSym.definition.id);
-                                    effects.push({ x, y, food: 0, gold: 0, knowledge: 50 });
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // ── 유물 ID 3: 우르의 전차 바퀴 ──
             // 매 턴 식량 생산량 가장 낮은 심볼 파괴 + G+50. 5턴 후 유물 소멸.
             const urWheelRelic = getRelicInst(RELIC_ID.UR_WHEEL);
@@ -1172,11 +1200,11 @@ export const useGameStore = create<GameState>((set, get) => ({
                         if (!s || s.is_marked_for_destruction) continue;
                         const baseFood = (() => {
                             switch (s.definition.id) {
-                                case 1: return 20; case 2: return 25; case 3: return 10;
-                                case 4: return 20; case 5: return 10; case 6: return 10;
-                                case 7: return 10; case 9: return 20; case 13: return 10;
-                                case 14: return 10; case 19: return 10; case 22: return 20;
-                                case 23: return 10;
+                                case 1: return 2; case 2: return 2; case 3: return 1;
+                                case 4: return 2; case 5: return 0; case 6: return 0;
+                                case 7: return 0; case 9: return 2; case 13: return 1;
+                                case 14: return 1; case 19: return 1; case 22: return 2;
+                                case 23: return 1;
                                 default: return 0;
                             }
                         })();
@@ -1186,8 +1214,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                 if (minSymbol) {
                     const sym = currentBoard[minSymbol.x][minSymbol.y];
                     if (sym) sym.is_marked_for_destruction = true;
-                    bonusGold += 50;
-                    effects.push({ x: minSymbol.x, y: minSymbol.y, food: 0, gold: 50, knowledge: 0 });
+                    bonusGold += 5;
+                    effects.push({ x: minSymbol.x, y: minSymbol.y, food: 0, gold: 5, knowledge: 0 });
                 }
                 // 5턴 후 유물 소멸
                 useRelicStore.getState().incrementRelicCounter(urWheelRelic.instanceId);
@@ -1196,11 +1224,31 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
+            // ── Hinduism (34): 이번 턴 파괴 예정 심볼 1개당 식량/지식 +5 (힌두교 타일마다)
+            let finalDestroyedCount = 0;
+            for (let hx = 0; hx < BOARD_WIDTH; hx++) {
+                for (let hy = 0; hy < BOARD_HEIGHT; hy++) {
+                    if (currentBoard[hx][hy]?.is_marked_for_destruction) finalDestroyedCount++;
+                }
+            }
+            if (finalDestroyedCount > 0) {
+                for (let hx = 0; hx < BOARD_WIDTH; hx++) {
+                    for (let hy = 0; hy < BOARD_HEIGHT; hy++) {
+                        const hs = currentBoard[hx][hy];
+                        if (!hs || hs.definition.id !== 34 || hs.is_marked_for_destruction) continue;
+                        const delta = finalDestroyedCount * 5;
+                        bonusFood += delta;
+                        bonusKnowledge += delta;
+                        effects.push({ x: hx, y: hy, food: delta, gold: 0, knowledge: delta });
+                    }
+                }
+            }
+
             // ── 유물 ID 6: 바빌로니아 세계 지도 ──
             // 매 턴 F+10(+ 누적 보너스). 보드 마지막 슬롯(x=4,y=3) 심볼이 0이하 식량이면 영구 +10.
             const babylonRelic = getRelicInst(RELIC_ID.BABYLON_MAP);
             if (babylonRelic) {
-                const baseBonus = 10 + babylonRelic.bonus_stacks * 10;
+                const baseBonus = 1 + babylonRelic.bonus_stacks;
                 bonusFood += baseBonus;
                 effects.push({ x: 0, y: 0, food: baseBonus, gold: 0, knowledge: 0 });
                 // 보드 마지막 자리 (x=4, y=3) 검사
@@ -1230,7 +1278,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (let x = 0; x < BOARD_WIDTH; x++)
                     for (let y = 0; y < BOARD_HEIGHT; y++)
                         if (!currentBoard[x][y]) emptySlots++;
-                const pillarFood = emptySlots * 5;
+                const pillarFood = emptySlots * 0.5;
                 if (pillarFood > 0) {
                     bonusFood += pillarFood;
                     effects.push({ x: 0, y: 0, food: pillarFood, gold: 0, knowledge: 0 });
@@ -1244,14 +1292,14 @@ export const useGameStore = create<GameState>((set, get) => ({
                     for (let y = 0; y < BOARD_HEIGHT; y++)
                         if (currentBoard[x][y]) symbolCount++;
                 if (symbolCount >= 15) {
-                    bonusFood += 80;
-                    effects.push({ x: 0, y: 0, food: 80, gold: 0, knowledge: 0 });
+                    bonusFood += 8;
+                    effects.push({ x: 0, y: 0, food: 8, gold: 0, knowledge: 0 });
                 }
             }
 
             // ── 유물 ID 18: 고대 이집트 쇠똥구리 부적 — 심볼 파괴 시 G+30 ──
             if (destroyedCount > 0 && hasRelic(RELIC_ID.SCARAB)) {
-                const scarabGold = destroyedCount * 30;
+                const scarabGold = destroyedCount * 3;
                 bonusGold += scarabGold;
                 effects.push({ x: 0, y: 0, food: 0, gold: scarabGold, knowledge: 0 });
             }
@@ -1363,7 +1411,11 @@ export const useGameStore = create<GameState>((set, get) => ({
                     // 레벨업이 있으면 upgrade_selection 먼저, 아니면 바로 selection
                     if (finalState.pendingLevelUpSelection) {
                         const upgradeChoices = generateUpgradeChoices(finalState.unlockedKnowledgeUpgrades || [], finalState.era);
-                        set({ phase: 'upgrade_selection' as GamePhase, upgradeChoices });
+                        set({
+                            phase: 'upgrade_selection' as GamePhase,
+                            upgradeChoices,
+                            knowledgeUpgradeRerollUsed: new Array(upgradeChoices.length).fill(false),
+                        });
                     } else {
                         set({ phase: 'selection' as GamePhase });
                     }
@@ -1553,12 +1605,22 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     refreshRelicShop: (force = false) => {
         const state = get();
-        if (!force && state.gold < 50) return; // 골드 50 소모 (임의 지정, 필요에 따라 수정 가능)
+        if (!force && state.gold < 5) return; // 골드 5 소모 (상점 새로고침)
+
+        const upgrades = state.unlockedKnowledgeUpgrades || [];
+        const hasGoldenTrade = upgrades.includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.main);
+        const isAutoHalfPrice = !!force && state.turn > 0 && state.turn % 10 === 0;
+
+        const newChoices = generateRelicChoices();
+        const nextHalfRelicId =
+            hasGoldenTrade && isAutoHalfPrice && newChoices.length > 0
+                ? newChoices[Math.floor(Math.random() * newChoices.length)]?.id ?? null
+                : null;
 
         if (!force) {
-            set((s) => ({ gold: s.gold - 50, relicChoices: generateRelicChoices() }));
+            set((s) => ({ gold: s.gold - 5, relicChoices: newChoices, relicHalfPriceRelicId: nextHalfRelicId }));
         } else {
-            set({ relicChoices: generateRelicChoices() });
+            set({ relicChoices: newChoices, relicHalfPriceRelicId: nextHalfRelicId });
         }
     },
 
@@ -1568,7 +1630,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (relicIndex === -1) return;
 
         const def = state.relicChoices[relicIndex];
-        if (!def || state.gold < def.cost) return; // 골드 부족
+        if (!def) return;
+
+        const hasGoldenTrade = (state.unlockedKnowledgeUpgrades || []).includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.main);
+        const isHalfPrice = state.relicHalfPriceRelicId === relicId;
+        const effectiveCostUnscaled = !hasGoldenTrade
+            ? def.cost
+            : isHalfPrice
+                ? Math.floor(def.cost * 0.5)
+                : Math.floor(def.cost * 0.8);
+        const effectiveCost = effectiveCostUnscaled;
+
+        if (state.gold < effectiveCost) return; // 골드 부족
 
         useRelicStore.getState().addRelic(def);
 
@@ -1576,8 +1649,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             const newChoices = [...s.relicChoices];
             newChoices[relicIndex] = null; // 품절 처리
             return {
-                gold: s.gold - def.cost,
-                relicChoices: newChoices
+                gold: s.gold - effectiveCost,
+                relicChoices: newChoices,
+                relicHalfPriceRelicId: s.relicHalfPriceRelicId === relicId ? null : s.relicHalfPriceRelicId
             };
         });
 
@@ -1601,6 +1675,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 phase: 'destroy_selection',
                 pendingLevelUpSelection: false,
                 upgradeChoices: [],
+                knowledgeUpgradeRerollUsed: [],
             });
             return;
         }
@@ -1624,7 +1699,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const idx = newPlayerSymbols.findIndex(s => s.definition.id === 4);
             if (idx !== -1) {
                 newPlayerSymbols.splice(idx, 1);
-                addedGold += 100;
+                addedGold += 10;
             }
         }
 
@@ -1665,6 +1740,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             religionUnlocked: religionUnlocked,
             upgradeChoices: [],
             pendingLevelUpSelection: false,
+            knowledgeUpgradeRerollUsed: [],
             board: newBoard,
             playerSymbols: newPlayerSymbols,
             knowledge: state.knowledge + addedKnowledge,
@@ -1679,6 +1755,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({
             upgradeChoices: [],
             pendingLevelUpSelection: false,
+            knowledgeUpgradeRerollUsed: [],
             phase: 'selection' as GamePhase,
         });
     },
@@ -1690,7 +1767,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         const hasLydia = useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.LYDIA_COIN);
 
         // ID 2: 리디아의 호박금 주화 — 비용 50% 할인, 턴당 최대 3회
-        const rerollCost = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+        const rerollCostUnscaled = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+        const rerollCost = rerollCostUnscaled;
         const maxRerolls = hasLydia ? 3 : Infinity;
 
         if (state.rerollsThisTurn >= maxRerolls) return;
@@ -1703,6 +1781,47 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
 
+    rerollUpgradeCard: (slotIndex: number) => {
+        const state = get();
+        if (state.phase !== 'upgrade_selection') return;
+
+        const unlocked = state.unlockedKnowledgeUpgrades || [];
+        const canDemocraticOrder = unlocked.includes(LEADER_KNOWLEDGE_UPGRADES.pericles.sub);
+        if (!canDemocraticOrder) return;
+        if (!state.upgradeChoices[slotIndex]) return;
+        if (state.knowledgeUpgradeRerollUsed[slotIndex]) return;
+
+        const upgradeEraByType = (type: KnowledgeUpgradeType): number | null => {
+            if (typeof type !== 'number') return null; // 지도자 전용 타입: 선택지로 등장하지 않게
+            switch (type) {
+                case SymbolType.ANCIENT: return 1;
+                case SymbolType.MEDIEVAL: return 2;
+                case SymbolType.MODERN: return 3;
+                default: return null;
+            }
+        };
+
+        // 현재 화면의 업그레이드 3개는 제외 (한 번 리롤하면 다른 카드로 교체)
+        const excludedIds = new Set<number>(state.upgradeChoices.map(u => u.id));
+        const pool = Object.values(KNOWLEDGE_UPGRADES).filter(
+            (u) => {
+                const upgradeEra = upgradeEraByType(u.type);
+                return upgradeEra != null && upgradeEra <= state.era && !unlocked.includes(u.id) && !excludedIds.has(u.id);
+            }
+        );
+
+        if (pool.length === 0) return;
+
+        const next = pool[Math.floor(Math.random() * pool.length)];
+        const nextRerollUsed = [...state.knowledgeUpgradeRerollUsed];
+        nextRerollUsed[slotIndex] = true;
+
+        set({
+            upgradeChoices: state.upgradeChoices.map((u, idx) => (idx === slotIndex ? next : u)),
+            knowledgeUpgradeRerollUsed: nextRerollUsed,
+        });
+    },
+
 
     confirmDestroySymbols: (instanceIds: string[]) => {
         const state = get();
@@ -1710,7 +1829,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const newSymbols = state.playerSymbols.filter(s => !instanceIds.includes(s.instanceId));
         set({
             playerSymbols: newSymbols,
-            gold: state.gold + instanceIds.length * 100,
+            gold: state.gold + instanceIds.length * 10,
             phase: 'idle',
         });
     },
@@ -1734,6 +1853,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             phase: 'idle',
             symbolChoices: [],
             relicChoices: generateRelicChoices(),
+            relicHalfPriceRelicId: null,
             lastEffects: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
@@ -1753,6 +1873,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             pendingLevelUpSelection: false,
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
+            knowledgeUpgradeRerollUsed: [],
 
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
@@ -1782,6 +1903,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         const startingFood = (leader?.startingFood ?? 0);
         const startingGold = (leader?.startingGold ?? 0);
 
+        const leaderKnowledgeUpgrades =
+            leaderId === 'ramesses'
+                ? [LEADER_KNOWLEDGE_UPGRADES.ramesses.main, LEADER_KNOWLEDGE_UPGRADES.ramesses.sub]
+                : [LEADER_KNOWLEDGE_UPGRADES.pericles.main, LEADER_KNOWLEDGE_UPGRADES.pericles.sub];
+
         const playerSymbols = symbolIds
             .map((id) => SYMBOLS[id])
             .filter((def): def is SymbolDefinition => def != null)
@@ -1801,6 +1927,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             phase: 'idle',
             symbolChoices: [],
             relicChoices: generateRelicChoices(),
+            relicHalfPriceRelicId: null,
             lastEffects: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
@@ -1813,12 +1940,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             combatAnimation: null,
             combatShaking: false,
             religionUnlocked: false,
-            unlockedKnowledgeUpgrades: [],
+            unlockedKnowledgeUpgrades: leaderKnowledgeUpgrades,
             bonusXpPerTurn: 0,
             upgradeChoices: [],
             pendingLevelUpSelection: false,
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
+            knowledgeUpgradeRerollUsed: [],
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
@@ -1850,10 +1978,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             const choices = generateChoices(state.era, state.religionUnlocked);
             set({ phase: 'selection', symbolChoices: choices });
         } else if (screen === 'relic') {
-            set({ isRelicShopOpen: true, relicChoices: generateRelicChoices() });
+            set({ isRelicShopOpen: true, relicChoices: generateRelicChoices(), relicHalfPriceRelicId: null });
         } else if (screen === 'upgrade') {
             const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades, state.era);
-            set({ phase: 'upgrade_selection', upgradeChoices: choices, pendingLevelUpSelection: true });
+            set({
+                phase: 'upgrade_selection',
+                upgradeChoices: choices,
+                pendingLevelUpSelection: true,
+                knowledgeUpgradeRerollUsed: new Array(choices.length).fill(false),
+            });
         }
     },
 }));
