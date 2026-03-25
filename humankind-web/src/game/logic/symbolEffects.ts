@@ -1,5 +1,6 @@
 import type { PlayerSymbolInstance } from '../types';
 import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../data/symbolDefinitions';
+import { FEUDALISM_UPGRADE_ID } from '../data/knowledgeUpgrades';
 
 import { useGameStore } from '../state/gameStore';
 
@@ -17,6 +18,14 @@ export interface EffectResult {
     triggerRelicRefresh?: boolean;
     /** 이 심볼의 효과에 기여한 인접 심볼 좌표 */
     contributors?: { x: number; y: number }[];
+    /** 영구 턴당 지식 보너스 증가 (gameStore bonusXpPerTurn) */
+    bonusXpPerTurnDelta?: number;
+    /** 다음 심볼 선택지에 지형 1칸 이상 포함 */
+    forceTerrainInNextChoices?: boolean;
+    /** 턴 종료 후 칙령: 보유 심볼 1개 제거 UI */
+    edictRemovalPending?: boolean;
+    /** 다음 심볼 선택 단계에서 소비할 무료 리롤 횟수 */
+    freeSelectionRerolls?: number;
 }
 
 /** 현재 보유 유물의 활성 효과 플래그 (gameStore에서 조합해서 전달) */
@@ -62,6 +71,10 @@ export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
 const BOARD_WIDTH = 5;
 const BOARD_HEIGHT = 4;
 
+const SEA_TERRAIN_ID = 6;
+const HARBOR_ID = 55;
+const AQUEDUCT_ID = 56;
+
 const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => {
     const adj: { x: number; y: number }[] = [];
     for (let dx = -1; dx <= 1; dx++) {
@@ -75,6 +88,25 @@ const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => 
         }
     }
     return adj;
+};
+
+const hasSeaOrHarborAdjacent = (boardGrid: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean =>
+    getAdjacentCoords(x, y).some((p) => {
+        const nid = boardGrid[p.x][p.y]?.definition.id;
+        return nid === SEA_TERRAIN_ID || nid === HARBOR_ID;
+    });
+
+const hasAdjacentAqueduct = (boardGrid: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean =>
+    getAdjacentCoords(x, y).some((p) => boardGrid[p.x][p.y]?.definition.id === AQUEDUCT_ID);
+
+const countPlacedSymbols = (boardGrid: (PlayerSymbolInstance | null)[][]): number => {
+    let n = 0;
+    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+        for (let by = 0; by < BOARD_HEIGHT; by++) {
+            if (boardGrid[bx][by]) n++;
+        }
+    }
+    return n;
 };
 
 /** 보드 전체에서 특정 ID의 심볼 개수 세기 */
@@ -108,6 +140,19 @@ const SYMBOL_BASE_FOOD: Record<number, number> = {
     47: 1,
     48: 0,
     49: 1,
+    50: 2,
+    51: 0,
+    52: 0,
+    53: 0,
+    54: 0,
+    55: 2,
+    56: 0,
+    57: 2,
+    58: 2,
+    59: 2,
+    60: 0,
+    61: 0,
+    64: 0, 65: 0, 66: 0, 67: 0, 68: 0, 69: 0, 70: 0,
 };
 
 /** Era 1 심볼 중 랜덤 하나 반환 (ID 1~21) */
@@ -144,6 +189,10 @@ export const processSingleSymbolEffects = (
     let triggerRelicSelection = false;
     let triggerRelicRefresh = false;
     const contributors: { x: number; y: number }[] = [];
+    let bonusXpPerTurnDelta = 0;
+    let forceTerrainInNextChoices = false;
+    let edictRemovalPendingFlag = false;
+    let freeSelectionRerollsAcc = 0;
 
     symbolInstance.effect_counter = (symbolInstance.effect_counter || 0);
     const adj = getAdjacentCoords(x, y);
@@ -210,6 +259,7 @@ export const processSingleSymbolEffects = (
             if (symbolInstance.effect_counter >= 6) {
                 food += 6;
                 symbolInstance.effect_counter -= 6;
+                if (hasAdjacentAqueduct(boardGrid, x, y)) food *= 2;
             }
             break;
         }
@@ -231,16 +281,24 @@ export const processSingleSymbolEffects = (
             if (symbolInstance.effect_counter >= 12) {
                 food += 15;
                 symbolInstance.effect_counter -= 12;
+                if (hasAdjacentAqueduct(boardGrid, x, y)) food *= 2;
             }
             break;
         }
 
         case 3: { // Cattle: +1 Food; if adjacent to any Plains: +2 Food once.
-            food += 1;
+            food += upgrades.includes(19) ? 3 : 1;
             const plainsAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
             if (plainsAdj) {
                 food += 2;
                 contributors.push(plainsAdj);
+            }
+            if (upgrades.includes(19)) {
+                const grassAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 9);
+                if (grassAdj) {
+                    food += 2;
+                    contributors.push(grassAdj);
+                }
             }
             // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
             if (relicEffects.gobekliAnimalJackpot) {
@@ -276,10 +334,13 @@ export const processSingleSymbolEffects = (
         case 5: { // Fish: when adjacent to Sea: +2 Food (no base)
             // ID 115: 막달레니안 뼈 낚싯바늘 - 물고기 골드 +1
             if (relicEffects.fishBoneHookGold) gold += 1;
-            const seaAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 6);
-            if (seaAdj) {
+            if (hasSeaOrHarborAdjacent(boardGrid, x, y)) {
+                const seaAdj = adj.find(pos => {
+                    const nid = boardGrid[pos.x][pos.y]?.definition.id;
+                    return nid === SEA_TERRAIN_ID || nid === HARBOR_ID;
+                });
                 food += 2;
-                contributors.push(seaAdj);
+                if (seaAdj) contributors.push(seaAdj);
             }
             // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
             if (relicEffects.gobekliAnimalJackpot) {
@@ -371,10 +432,22 @@ export const processSingleSymbolEffects = (
 
         case 15: { // Mountain: +1 Food.
             food += 1;
+            if (upgrades.includes(FEUDALISM_UPGRADE_ID)) food += 1;
             // ID 5: 이집트 구리 톱 - 인접 빈 슬롯마다 골드 +1
             if (relicEffects.quarryEmptyGold) {
                 adj.forEach(pos => {
                     if (!boardGrid[pos.x][pos.y]) { gold += 1; }
+                });
+            }
+            if (upgrades.includes(FEUDALISM_UPGRADE_ID)) {
+                adj.forEach(pos => {
+                    const t = boardGrid[pos.x][pos.y];
+                    if (t && t.definition.type === SymbolType.ENEMY) {
+                        const maxHp = t.definition.base_hp ?? 10;
+                        t.enemy_hp = (t.enemy_hp ?? maxHp) - 3;
+                        if (t.enemy_hp <= 0) t.is_marked_for_destruction = true;
+                        contributors.push(pos);
+                    }
                 });
             }
             break;
@@ -475,11 +548,11 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 24: { // Crab: +30 Food if adjacent to Sea.
+        case 24: { // Crab: +3 Food if adjacent to Sea or Harbor.
             let adjacentSea = false;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id === 6) {
+                if (t && (t.definition.id === SEA_TERRAIN_ID || t.definition.id === HARBOR_ID)) {
                     adjacentSea = true;
                     contributors.push(pos);
                 }
@@ -488,16 +561,16 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 25: { // Library: +7 Knowledge
+        case 25: { // Library: +7 Knowledge (Education → University on board uses id 54)
             knowledge += 7;
             break;
         }
 
-        case 26: { // Pearl: +3 Gold if adjacent to Sea.
+        case 26: { // Pearl: +3 Gold if adjacent to Sea or Harbor.
             let adjacentSea = false;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
-                if (t && t.definition.id === 6) {
+                if (t && (t.definition.id === SEA_TERRAIN_ID || t.definition.id === HARBOR_ID)) {
                     adjacentSea = true;
                     contributors.push(pos);
                 }
@@ -586,6 +659,171 @@ export const processSingleSymbolEffects = (
             food += 1;
             break;
         }
+
+        case 50: { // Wild Berries: +1 Food for adjacent Forest, +1 Food for adjacent Rainforest
+            if (adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 28)) {
+                food += 1;
+            }
+            if (adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 13)) {
+                food += 1;
+            }
+            break;
+        }
+
+        case 51: { // Hay: Plains adjacency grows counter
+            if (adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 14)) {
+                symbolInstance.effect_counter += 1;
+            }
+            break;
+        }
+
+        case 52: { // Spices: +2 Food per different terrain type placed
+            const terrainTypes = new Set<number>();
+            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+                for (let by = 0; by < BOARD_HEIGHT; by++) {
+                    const s = boardGrid[bx][by];
+                    if (s?.definition.type === SymbolType.TERRAIN) {
+                        terrainTypes.add(s.definition.id);
+                    }
+                }
+            }
+            food += terrainTypes.size * 2;
+            if (upgrades.includes(21) && adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 13)) {
+                food += 2;
+                gold += 3;
+            }
+            break;
+        }
+
+        case 54: { // University: +1 Knowledge per symbol on the board
+            knowledge += countPlacedSymbols(boardGrid);
+            break;
+        }
+
+        case 55: { // Harbor: +2 Food; +1 Gold per adjacent symbol
+            food += 2;
+            let adjSym = 0;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]) {
+                    adjSym++;
+                    contributors.push(pos);
+                }
+            });
+            gold += adjSym;
+            break;
+        }
+
+        case 56: // Aqueduct: modifies Wheat/Rice/Rye only
+            break;
+
+        case 57: { // Rye: +2 Food; Plains +2
+            food += 2;
+            const plainsAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+            if (plainsAdj) {
+                food += 2;
+                contributors.push(plainsAdj);
+            }
+            if (hasAdjacentAqueduct(boardGrid, x, y) && food > 0) food *= 2;
+            break;
+        }
+
+        case 58: { // Sheep: +2 Food; Plains +2 Food +2 Gold
+            food += 2;
+            const plainsAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === 14);
+            if (plainsAdj) {
+                food += 2;
+                gold += 2;
+                contributors.push(plainsAdj);
+            }
+            break;
+        }
+
+        case 59: { // Wild Boar: +2 Food; 3+ adjacent Forests: +4 Food
+            food += 2;
+            let fc = 0;
+            adj.forEach(pos => {
+                if (boardGrid[pos.x][pos.y]?.definition.id === 28) {
+                    fc++;
+                    contributors.push(pos);
+                }
+            });
+            if (fc >= 3) food += 4;
+            break;
+        }
+
+        case 60: { // Sawmill: same column — Forest +5 Food each; Mountain +5 Know +5 Gold each
+            for (let yc = 0; yc < BOARD_HEIGHT; yc++) {
+                const s = boardGrid[x][yc];
+                if (!s) continue;
+                if (s.definition.id === 28) food += 5;
+                if (s.definition.id === 15) {
+                    knowledge += 5;
+                    gold += 5;
+                }
+            }
+            break;
+        }
+
+        case 61: // Gold Vein
+            gold += 5;
+            break;
+
+        case 64: { // Scholar: adjacent Ancient → destroy; +10 Knowledge each
+            let n = 0;
+            for (const p of adj) {
+                const t = boardGrid[p.x][p.y];
+                if (t && !t.is_marked_for_destruction && t.definition.type === SymbolType.ANCIENT) {
+                    t.is_marked_for_destruction = true;
+                    n++;
+                    contributors.push(p);
+                }
+            }
+            knowledge += n * 10;
+            break;
+        }
+
+        case 65: { // Holy Relic: +5 Knowledge; adjacent doctrine → counter; at 10 → +5 Knowledge/turn
+            knowledge += 5;
+            const hasDoctrine = adj.some((p) => {
+                const n = boardGrid[p.x][p.y];
+                return n && RELIGION_DOCTRINE_IDS.has(n.definition.id) && !n.is_marked_for_destruction;
+            });
+            if (hasDoctrine) {
+                symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
+                if (symbolInstance.effect_counter >= 10) {
+                    symbolInstance.effect_counter = 0;
+                    bonusXpPerTurnDelta += 5;
+                }
+            }
+            break;
+        }
+
+        case 66: { // Telescope: Knowledge = slot index (1–20, top-left first)
+            knowledge += y * BOARD_WIDTH + x + 1;
+            break;
+        }
+
+        case 67: // Scales
+            knowledge += 8;
+            break;
+
+        case 68: // Pioneer: destroyed; next choices include ≥1 terrain
+            symbolInstance.is_marked_for_destruction = true;
+            forceTerrainInNextChoices = true;
+            break;
+
+        case 69: // Edict: destroyed; post-turn remove 1 owned symbol
+            symbolInstance.is_marked_for_destruction = true;
+            edictRemovalPendingFlag = true;
+            break;
+
+        case 70: // Embassy: destroyed; next selection phase first reroll free
+            symbolInstance.is_marked_for_destruction = true;
+            freeSelectionRerollsAcc += 1;
+            break;
+
+        case 53: // Tax: 골드/식량 정산은 gameStore finishProcessing에서 이번 턴 effects 기준
+            break;
 
         // ── Religion Doctrine Symbols ──
 
@@ -723,5 +961,9 @@ export const processSingleSymbolEffects = (
     if (triggerRelicSelection) result.triggerRelicSelection = true;
     if (triggerRelicRefresh) result.triggerRelicRefresh = true;
     if (contributors.length > 0) result.contributors = contributors;
+    if (bonusXpPerTurnDelta > 0) result.bonusXpPerTurnDelta = bonusXpPerTurnDelta;
+    if (forceTerrainInNextChoices) result.forceTerrainInNextChoices = true;
+    if (edictRemovalPendingFlag) result.edictRemovalPending = true;
+    if (freeSelectionRerollsAcc > 0) result.freeSelectionRerolls = freeSelectionRerollsAcc;
     return result;
 };

@@ -85,7 +85,150 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     48: { id: 48, name: "Honey", type: SymbolType.NORMAL, description: "After 5 turns: destroyed; on destruction: +5 Food.", sprite: "-", tags: [] },
     // 49: Corn
     49: { id: 49, name: "Corn", type: SymbolType.NORMAL, description: "+1 Food.", sprite: "-", tags: [] },
+    // 50: Wild Berries
+    50: { id: 50, name: "Wild Berries", type: SymbolType.NORMAL, description: "When adjacent to Forest: +1 Food. When adjacent to Rainforest: +1 Food.", sprite: "-", tags: [] },
+    // 51: Hay
+    51: { id: 51, name: "Hay", type: SymbolType.NORMAL, description: "When adjacent to Plains: counter +1. On destroy: gain Food equal to Counter.", sprite: "-", tags: [] },
+    // 52: Spices
+    52: { id: 52, name: "Spices", type: SymbolType.NORMAL, description: "+2 Food per different terrain type placed.", sprite: "-", tags: [] },
+    // 53: Tax (Medieval) — 실제 정산은 gameStore finishProcessing에서 이번 턴 effects 기준
+    53: {
+        id: 53,
+        name: "Tax",
+        type: SymbolType.MEDIEVAL,
+        description:
+            "+Gold equal to a random adjacent symbol's Food produced this turn; -Food equal to that amount.",
+        sprite: "-",
+        tags: [],
+    },
+    54: {
+        id: 54,
+        name: "University",
+        type: SymbolType.NORMAL,
+        description: "+1 Knowledge per symbol placed on the board.",
+        sprite: "-",
+        tags: [],
+    },
+    55: {
+        id: 55,
+        name: "Harbor",
+        type: SymbolType.NORMAL,
+        description: "+2 Food. Symbols adjacent to Harbor count as adjacent to Sea. +1 Gold per adjacent symbol.",
+        sprite: "-",
+        tags: ["water"],
+    },
+    56: {
+        id: 56,
+        name: "Aqueduct",
+        type: SymbolType.NORMAL,
+        description: "Adjacent Wheat, Rice, and Rye produce double Food this turn.",
+        sprite: "-",
+        tags: [],
+    },
+    57: { id: 57, name: "Rye", type: SymbolType.NORMAL, description: "+2 Food; when adjacent to Plains: +2 additional Food.", sprite: "-", tags: [] },
+    58: {
+        id: 58,
+        name: "Sheep",
+        type: SymbolType.NORMAL,
+        description: "+2 Food; when adjacent to Plains: +2 additional Food and +2 Gold.",
+        sprite: "-",
+        tags: [],
+    },
+    59: {
+        id: 59,
+        name: "Wild Boar",
+        type: SymbolType.NORMAL,
+        description: "+2 Food; if 3 or more adjacent Forests: +4 additional Food.",
+        sprite: "-",
+        tags: [],
+    },
+    60: {
+        id: 60,
+        name: "Sawmill",
+        type: SymbolType.NORMAL,
+        description: "Per Forest in the same column: +5 Food. Per Mountain in the same column: +5 Knowledge and +5 Gold.",
+        sprite: "-",
+        tags: [],
+    },
+    61: { id: 61, name: "Gold Vein", type: SymbolType.NORMAL, description: "+5 Gold.", sprite: "-", tags: [] },
+    62: {
+        id: 62,
+        name: "Knight",
+        type: SymbolType.UNIT,
+        description: "Medieval melee unit (+3 Attack / +3 HP vs Warrior).",
+        base_attack: 8,
+        base_hp: 13,
+        sprite: "-",
+        tags: ["melee"],
+    },
+    63: {
+        id: 63,
+        name: "Caravel",
+        type: SymbolType.UNIT,
+        description: "Medieval naval unit (+7 HP vs Warrior).",
+        base_attack: 5,
+        base_hp: 17,
+        sprite: "-",
+        tags: ["melee"],
+    },
+    64: {
+        id: 64,
+        name: "Scholar",
+        type: SymbolType.MEDIEVAL,
+        description:
+            "Destroys adjacent Ancient symbols. +10 Knowledge per Ancient symbol destroyed.",
+        sprite: "-",
+        tags: [],
+    },
+    65: {
+        id: 65,
+        name: "Holy Relic",
+        type: SymbolType.MEDIEVAL,
+        description:
+            "+5 Knowledge. Each turn adjacent to a Religion doctrine symbol: +1 toward a counter; at 10: permanently +5 Knowledge per turn and reset counter.",
+        sprite: "-",
+        tags: ["religion"],
+    },
+    66: {
+        id: 66,
+        name: "Telescope",
+        type: SymbolType.MEDIEVAL,
+        description: "+Knowledge equal to this slot number (1–20, top-left first).",
+        sprite: "-",
+        tags: [],
+    },
+    67: { id: 67, name: "Scales", type: SymbolType.MEDIEVAL, description: "+8 Knowledge.", sprite: "-", tags: [] },
+    68: {
+        id: 68,
+        name: "Pioneer",
+        type: SymbolType.MEDIEVAL,
+        description: "Destroyed; on destroy: next symbol selection includes at least one Terrain symbol.",
+        sprite: "-",
+        tags: ["terrain"],
+    },
+    69: {
+        id: 69,
+        name: "Edict",
+        type: SymbolType.MEDIEVAL,
+        description: "Destroyed; on destroy: choose 1 owned symbol to remove (no on-destroy effects).",
+        sprite: "-",
+        tags: [],
+    },
+    70: {
+        id: 70,
+        name: "Embassy",
+        type: SymbolType.MEDIEVAL,
+        description: "Destroyed; on destroy: next turn, the first symbol-selection reroll costs 0 Gold.",
+        sprite: "-",
+        tags: [],
+    },
 };
+
+/** 세금 심볼 ID — 턴 종료 정산 시 인접 슬롯의 이번 턴 식량 합계를 참조 */
+export const TAX_SYMBOL_ID = 53;
+
+/** 칙령(69): 파괴 후 보유 심볼 1개 제거 UI */
+export const EDICT_SYMBOL_ID = 69;
 
 /** 야만인 주둔지(40): 이 턴 수마다 무작위 적 전투 유닛 1기 추가 */
 export const BARBARIAN_CAMP_SPAWN_INTERVAL = 8;
@@ -100,6 +243,7 @@ export const RELIGION_DOCTRINE_IDS = new Set([31, 32, 33, 34]);
 export const EXCLUDED_FROM_BASE_POOL = new Set<number>([
     22, 23, 24, 25, 26, 31, 32, 33, 34, 36, 39, 41, 42, 43,
     44, 45, 46,
+    54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
 ]);
 
 /** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */
@@ -110,10 +254,10 @@ export const isBasePool = (s: SymbolDefinition) => {
 };
 
 /** Knowledge를 생산하는 심볼 ID 목록 */
-export const KNOWLEDGE_PRODUCING_IDS = new Set([10, 16, 17, 25, 26, 38, 39]);
+export const KNOWLEDGE_PRODUCING_IDS = new Set([10, 16, 17, 25, 26, 38, 39, 54, 60, 64, 65, 66, 67]);
 
 /** Gold를 생산하는 심볼 ID 목록 */
-export const GOLD_PRODUCING_IDS = new Set([6, 7, 8, 15, 22]);
+export const GOLD_PRODUCING_IDS = new Set([6, 7, 8, 15, 22, TAX_SYMBOL_ID, 55, 58, 60, 61]);
 
 export const getSymbolColor = (type: SymbolType): number => {
     switch (type) {
