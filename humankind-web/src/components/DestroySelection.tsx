@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
+import { TERRITORIAL_REORG_UPGRADE_ID } from '../game/data/knowledgeUpgrades';
+import { EDICT_SYMBOL_ID } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 const DestroySelection = () => {
-    const { phase, playerSymbols, finishDestroySelection, confirmDestroySymbols } = useGameStore();
+    const {
+        phase,
+        playerSymbols,
+        finishDestroySelection,
+        confirmDestroySymbols,
+        pendingDestroySource,
+        destroySelectionMaxSymbols,
+    } = useGameStore();
     const language = useSettingsStore((s) => s.language);
     const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
 
@@ -15,7 +24,7 @@ const DestroySelection = () => {
     const toggleSymbol = (id: string) => {
         if (selectedInstanceIds.includes(id)) {
             setSelectedInstanceIds(selectedInstanceIds.filter(x => x !== id));
-        } else if (selectedInstanceIds.length < 3) {
+        } else if (selectedInstanceIds.length < (destroySelectionMaxSymbols ?? 3)) {
             setSelectedInstanceIds([...selectedInstanceIds, id]);
         }
     };
@@ -30,14 +39,34 @@ const DestroySelection = () => {
         setSelectedInstanceIds([]);
     };
 
+    const isTerritory = pendingDestroySource === TERRITORIAL_REORG_UPGRADE_ID;
+    const isEdict = pendingDestroySource === EDICT_SYMBOL_ID;
+    const titleKey = isEdict
+        ? 'destroySelection.edictTitle'
+        : isTerritory
+          ? 'destroySelection.territoryTitle'
+          : 'destroySelection.riteTitle';
+    const descKey = isEdict
+        ? 'destroySelection.edictDesc'
+        : isTerritory
+          ? 'destroySelection.territoryDesc'
+          : 'destroySelection.riteDesc';
+
+    const n = selectedInstanceIds.length;
+    const confirmLabel =
+        isEdict && n === 1
+            ? t('destroySelection.edictConfirm', language)
+            : t('destroySelection.confirmSacrifice', language)
+                  .replace('{n}', String(n))
+                  .replace('{gold}', String(n * 10));
+
     return (
         <div className="selection-overlay">
             <div className="selection-panel-wrapper">
                 <div className="selection-panel" style={{ width: '80vw', minWidth: '400px', maxWidth: '800px', padding: '30px', alignItems: 'center' }}>
-                    <div className="selection-title">희생 제의 (파괴할 심볼 선택)</div>
+                    <div className="selection-title">{t(titleKey, language)}</div>
                     <div style={{ color: '#aaa', fontSize: '18px', textAlign: 'center', marginBottom: '20px', fontFamily: 'Mulmaru, sans-serif' }}>
-                        보유 중인 심볼을 최대 3개까지 파괴할 수 있습니다.<br />
-                        선택 후 버튼을 눌러 확정하세요. (파괴한 심볼 하나당 +10 골드)
+                        {t(descKey, language)}
                     </div>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', maxHeight: '50vh', overflowY: 'auto', marginBottom: '30px', padding: '10px' }}>
@@ -64,7 +93,7 @@ const DestroySelection = () => {
                     <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
                         <button className="selection-skip-btn" onClick={handleSkip}>건너뛰기</button>
                         <button className="selection-reroll-btn" style={{ color: selectedInstanceIds.length === 0 ? '#aaa' : '#ef4444', borderColor: selectedInstanceIds.length === 0 ? '#555' : '#ef4444' }} onClick={handleConfirm} disabled={selectedInstanceIds.length === 0}>
-                            {selectedInstanceIds.length}개 파괴 및 {selectedInstanceIds.length * 10} 골드 획득
+                            {confirmLabel}
                         </button>
                     </div>
                 </div>

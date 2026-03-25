@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL } from '../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, TAX_SYMBOL_ID, EDICT_SYMBOL_ID } from '../data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
@@ -187,6 +187,21 @@ export interface GameState {
     /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
     pendingNewThreatFloats: { x: number; y: number; label: string }[];
 
+    /** destroy_selection 진입 시 출처 (8 희생 / 22 영토 / 69 칙령) */
+    pendingDestroySource: typeof SACRIFICIAL_RITE_UPGRADE_ID | typeof TERRITORIAL_REORG_UPGRADE_ID | typeof EDICT_SYMBOL_ID | null;
+    /** 영토 정비(22): 남은 보너스 선택 (첫 턴은 symbolChoices로 이미 지형 3개가 열림) */
+    bonusSelectionQueue: Array<'terrain' | 'any'>;
+    /** 칙령(69) 등: 턴 처리 끝난 뒤 보유 심볼 제거 단계 필요 */
+    edictRemovalPending: boolean;
+    /** 개척자(68): 다음 generateChoices에서 지형 1칸 이상 강제 */
+    forceTerrainInNextSymbolChoices: boolean;
+    /** 사절단(70): 심볼 선택 단계 첫 리롤(들) 무료 */
+    freeSelectionRerolls: number;
+    /** 파괴/제거 선택 시 최대 개수 (희생·영토 3, 칙령 1) */
+    destroySelectionMaxSymbols: number;
+    /** 영토 정비(22) 직후 칙령(69)이 끼어든 경우: 칙령 처리 뒤 지형→심볼 보너스 선택 유지 */
+    territorialAfterEdictPending: boolean;
+
     // Actions
     spinBoard: () => void;
     /** spinning 애니메이션이 끝난 후 호출 — pendingNewThreatFloats 있으면 먼저 플로팅 표시, 없으면 processing 시작 */
@@ -233,6 +248,64 @@ const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => 
         }
     }
     return adj;
+};
+
+/** 등자(19)/조선(21): 전사+말→기사, 전사+바다→캐러벨 (보드 배치 직후) */
+const applyWarriorEliteTransforms = (
+    board: (PlayerSymbolInstance | null)[][],
+    playerSymbols: PlayerSymbolInstance[]
+): { board: (PlayerSymbolInstance | null)[][]; playerSymbols: PlayerSymbolInstance[] } => {
+    const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
+    const b = board.map((col) => [...col]);
+    const symList = [...playerSymbols];
+
+    const removeFromList = (instanceId: string) => {
+        const idx = symList.findIndex((s) => s.instanceId === instanceId);
+        if (idx >= 0) symList.splice(idx, 1);
+    };
+
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+            const cell = b[x][y];
+            if (!cell || cell.definition.id !== 35) continue;
+
+            if (upgrades.includes(19)) {
+                const horsePos = getAdjacentCoords(x, y).find((p) => b[p.x][p.y]?.definition.id === 23);
+                if (horsePos) {
+                    const horseInst = b[horsePos.x][horsePos.y]!;
+                    b[horsePos.x][horsePos.y] = null;
+                    removeFromList(horseInst.instanceId);
+                    const knight: PlayerSymbolInstance = {
+                        ...cell,
+                        definition: SYMBOLS[62],
+                        enemy_hp: SYMBOLS[62].base_hp,
+                        remaining_attacks: SYMBOLS[62].base_attack ? 3 : 0,
+                    };
+                    b[x][y] = knight;
+                    const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
+                    if (wi >= 0) symList[wi] = knight;
+                    continue;
+                }
+            }
+
+            if (upgrades.includes(21)) {
+                const seaAdj = getAdjacentCoords(x, y).some((p) => b[p.x][p.y]?.definition.id === 6);
+                if (seaAdj) {
+                    const caravel: PlayerSymbolInstance = {
+                        ...cell,
+                        definition: SYMBOLS[63],
+                        enemy_hp: SYMBOLS[63].base_hp,
+                        remaining_attacks: SYMBOLS[63].base_attack ? 3 : 0,
+                    };
+                    b[x][y] = caravel;
+                    const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
+                    if (wi >= 0) symList[wi] = caravel;
+                }
+            }
+        }
+    }
+
+    return { board: b, playerSymbols: symList };
 };
 
 const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => {
@@ -318,16 +391,26 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         // 1. 제외 목록에 있고, 어떤 유물의 대체물도 아니라면 건너뜜
         const isReplacementTarget = Array.from(activeReplacements.values()).includes(sym.id);
         const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
+        const feudal = upgrades.includes(FEUDALISM_UPGRADE_ID);
+
+        if (feudal && (sym.type === SymbolType.ANCIENT || sym.id === 35 || sym.id === 36)) continue;
 
         // 업그레이드로 해금되는 심볼들 예외 처리
         let isUnlocked = !EXCLUDED_FROM_BASE_POOL.has(sym.id);
-        if (sym.id === 25 && upgrades.includes(1)) isUnlocked = true; // Writing -> Library
+        if (sym.id === 25 && upgrades.includes(1) && !upgrades.includes(16)) isUnlocked = true; // Writing -> Library
+        if (sym.id === 25 && upgrades.includes(16)) isUnlocked = false;
+        if (sym.id === 54 && upgrades.includes(16)) isUnlocked = true; // Education -> University
         if (sym.id === 36 && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
         if (sym.id === 22 && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === 23 && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
         if ((sym.id === 24 || sym.id === 26) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
         if (sym.id === 39 && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
+        if (sym.id === 55 && upgrades.includes(17)) isUnlocked = true;
+        if ((sym.id === 56 || sym.id === 57) && upgrades.includes(18)) isUnlocked = true;
+        if (sym.id === 58 && upgrades.includes(19)) isUnlocked = true;
+        if ((sym.id === 59 || sym.id === 60) && upgrades.includes(20)) isUnlocked = true;
+        if (sym.id === 61 && upgrades.includes(21)) isUnlocked = true;
 
         // 금지(Ban) 목록
         if (sym.id === 4 && upgrades.includes(201)) isUnlocked = false; // Hunting -> Ban Banana
@@ -372,14 +455,15 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
 const buildFlatPool = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
     const symbolsByEra = getSymbolsByEra();
     const flat: SymbolDefinition[] = [];
+    const feudal = useGameStore.getState().unlockedKnowledgeUpgrades?.includes(FEUDALISM_UPGRADE_ID);
 
     for (const [catStr, syms] of Object.entries(symbolsByEra)) {
         if (!syms || syms.length === 0) continue;
         const cat = Number(catStr);
         // Category 0 = Religion: 종교 해금 시에만 포함
         if (cat === SymbolType.RELIGION && !religionUnlocked) continue;
-        // Category 2 = Medieval: era 2 이상
-        if (cat === SymbolType.MEDIEVAL && era < 2) continue;
+        // Category 2 = Medieval: 시대 2+ 또는 중세시대(15) 해금
+        if (cat === SymbolType.MEDIEVAL && era < 2 && !feudal) continue;
         // Category 3 = Modern: era 3 이상
         if (cat === SymbolType.MODERN && era < 3) continue;
         flat.push(...syms);
@@ -388,19 +472,60 @@ const buildFlatPool = (era: number, religionUnlocked: boolean): SymbolDefinition
     return flat;
 };
 
-/** 심볼 3개 생성 — 풀 내 모든 심볼 균등 확률 */
-const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
-    const pool = buildFlatPool(era, religionUnlocked);
+/** 지형 심볼만 3개 (영토 정비 보너스 선택용) */
+const generateTerrainOnlyChoices = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
+    const pool = buildFlatPool(era, religionUnlocked).filter((s) => s.type === SymbolType.TERRAIN);
     const choices: SymbolDefinition[] = [];
-
     for (let i = 0; i < 3; i++) {
         if (pool.length > 0) {
             choices.push(pool[Math.floor(Math.random() * pool.length)]);
         } else {
-            choices.push(SYMBOLS[1]); // fallback: Wheat
+            choices.push(SYMBOLS[9]);
         }
     }
+    return choices;
+};
 
+/** 심볼 3개 생성 — 중세시대(15) 해금 시 지형 가중 x0.2 */
+const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefinition[] => {
+    const store = useGameStore.getState();
+    const pool = buildFlatPool(era, religionUnlocked);
+    const upgrades = store.unlockedKnowledgeUpgrades || [];
+    const feudalTerrainWeight = upgrades.includes(FEUDALISM_UPGRADE_ID);
+
+    const terrainSyms = pool.filter((s) => s.type === SymbolType.TERRAIN);
+    const otherSyms = pool.filter((s) => s.type !== SymbolType.TERRAIN);
+
+    const pickOne = (): SymbolDefinition => {
+        if (terrainSyms.length === 0 && otherSyms.length === 0) return SYMBOLS[1];
+        if (terrainSyms.length === 0) return otherSyms[Math.floor(Math.random() * otherSyms.length)];
+        if (otherSyms.length === 0) return terrainSyms[Math.floor(Math.random() * terrainSyms.length)];
+        const tw = feudalTerrainWeight ? 0.2 * terrainSyms.length : terrainSyms.length;
+        const ow = otherSyms.length;
+        if (Math.random() * (tw + ow) < tw) {
+            return terrainSyms[Math.floor(Math.random() * terrainSyms.length)];
+        }
+        return otherSyms[Math.floor(Math.random() * otherSyms.length)];
+    };
+
+    if (store.forceTerrainInNextSymbolChoices) {
+        useGameStore.setState({ forceTerrainInNextSymbolChoices: false });
+        const choices: SymbolDefinition[] = [];
+        const tPick =
+            terrainSyms.length > 0
+                ? terrainSyms[Math.floor(Math.random() * terrainSyms.length)]
+                : otherSyms[Math.floor(Math.random() * otherSyms.length)] ?? SYMBOLS[9];
+        choices.push(tPick);
+        while (choices.length < 3) {
+            choices.push(pickOne());
+        }
+        return choices;
+    }
+
+    const choices: SymbolDefinition[] = [];
+    for (let i = 0; i < 3; i++) {
+        choices.push(pickOne());
+    }
     return choices;
 };
 
@@ -433,7 +558,14 @@ const generateRelicChoices = (): RelicDefinition[] => {
     return choices;
 };
 
-import { KNOWLEDGE_UPGRADES, type KnowledgeUpgrade, type KnowledgeUpgradeType } from '../data/knowledgeUpgrades';
+import {
+    KNOWLEDGE_UPGRADES,
+    FEUDALISM_UPGRADE_ID,
+    SACRIFICIAL_RITE_UPGRADE_ID,
+    TERRITORIAL_REORG_UPGRADE_ID,
+    type KnowledgeUpgrade,
+    type KnowledgeUpgradeType,
+} from '../data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
 import { getLeaderStartingRelics, LEADERS } from '../data/leaders';
 
@@ -450,9 +582,21 @@ const generateUpgradeChoices = (unlocked: number[], currentEra: number): Knowled
         }
     };
 
+    const level = useGameStore.getState().level;
+    const medievalUnlocked = unlocked.includes(FEUDALISM_UPGRADE_ID) || currentEra >= 2;
+
     const pool = Object.values(KNOWLEDGE_UPGRADES).filter((u) => {
+        if (unlocked.includes(u.id)) return false;
         const upgradeEra = upgradeEraByType(u.type);
-        return upgradeEra != null && upgradeEra <= currentEra && !unlocked.includes(u.id);
+        if (upgradeEra == null) return false;
+
+        if (u.id === FEUDALISM_UPGRADE_ID) {
+            return level >= 10;
+        }
+        if (u.type === SymbolType.MEDIEVAL) {
+            return medievalUnlocked;
+        }
+        return upgradeEra <= currentEra;
     });
     const shuffled = shuffle(pool);
     return shuffled.slice(0, 3);
@@ -524,6 +668,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
     pendingNewThreatFloats: [],
+    pendingDestroySource: null,
+    bonusSelectionQueue: [],
+    edictRemovalPending: false,
+    forceTerrainInNextSymbolChoices: false,
+    freeSelectionRerolls: 0,
+    destroySelectionMaxSymbols: 3,
+    territorialAfterEdictPending: false,
 
     appendEventLog: (entry) => {
         const MAX = 2000;
@@ -552,9 +703,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (state.era === 1) {
             const lang = useSettingsStore.getState().language;
             const threatLabel = (key: string) => t(key, lang);
+            const castleSlow = (state.unlockedKnowledgeUpgrades || []).includes(23);
 
             // 1번: 야만인 전사 침공 (확률 통과 시 당 턴 즉시 1기 추가)
-            barbarianSymbolThreat += 1;
+            barbarianSymbolThreat += castleSlow ? 0.5 : 1;
             if (Math.random() * 100 < barbarianSymbolThreat) {
                 barbarianSymbolThreat = 0;
                 const enemyDef = SYMBOLS[43];
@@ -566,7 +718,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             // 2번: 야만인 주둔지 (확률 통과 시 당 턴 즉시 1기 추가)
-            barbarianCampThreat += 0.2;
+            barbarianCampThreat += castleSlow ? 0.1 : 0.2;
             if (Math.random() * 100 < barbarianCampThreat) {
                 barbarianCampThreat = 0;
                 const campDef = SYMBOLS[40];
@@ -644,11 +796,16 @@ export const useGameStore = create<GameState>((set, get) => ({
             newBoard[pos.x][pos.y] = instance;
         });
 
+        const { board: placedBoard, playerSymbols: placedSymbols } = applyWarriorEliteTransforms(
+            newBoard,
+            newPlayerSymbols
+        );
+
         const newThreatLabels = new Map<string, string>(newThreats.map(n => [n.instanceId, n.label]));
         const pendingNewThreatFloats: { x: number; y: number; label: string }[] = [];
         for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let y = 0; y < BOARD_HEIGHT; y++) {
-                const inst = newBoard[x][y];
+                const inst = placedBoard[x][y];
                 if (inst && newThreatLabels.has(inst.instanceId)) {
                     pendingNewThreatFloats.push({ x, y, label: newThreatLabels.get(inst.instanceId)! });
                 }
@@ -659,13 +816,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
         set({
-            playerSymbols: newPlayerSymbols,
+            playerSymbols: placedSymbols,
             barbarianSymbolThreat,
             barbarianCampThreat,
             naturalDisasterThreat,
             pendingNewThreatFloats,
             prevBoard: state.board,
-            board: newBoard,
+            board: placedBoard,
             turn: newTurn,
             phase: 'spinning',
             lastEffects: [],
@@ -689,7 +846,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             return;
         }
         const upgrades = state.unlockedKnowledgeUpgrades || [];
-        const baseKnowledge = (upgrades.includes(1) ? 4 : 2) + (upgrades.includes(10) ? 2 : 0);
+        const baseKnowledge =
+            (upgrades.includes(1) ? 4 : 2) +
+            (upgrades.includes(10) ? 2 : 0) +
+            (upgrades.includes(16) ? 2 : 0) +
+            (upgrades.includes(24) ? 5 : 0);
         const leaderBonusKnowledge =
             (upgrades.includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.sub)
                 ? useRelicStore.getState().relics.length
@@ -700,9 +861,10 @@ export const useGameStore = create<GameState>((set, get) => ({
                     return Math.floor(distinctSymbolTypes.size / 5) * 2;
                 })()
                 : 0);
-        const baseGold = (upgrades.includes(6) ? 2 : 0) + (upgrades.includes(10) ? 2 : 0);
+        const baseGold =
+            (upgrades.includes(6) ? 2 : 0) + (upgrades.includes(10) ? 2 : 0) + (upgrades.includes(24) ? 5 : 0);
 
-        let startFood = upgrades.includes(10) ? 5 : 0;
+        let startFood = (upgrades.includes(10) ? 5 : 0) + (upgrades.includes(24) ? 10 : 0);
         let startGold = baseGold;
 
         // 206 Weaving (+10 Gold if you have Farm or Pasture)
@@ -1016,6 +1178,21 @@ export const useGameStore = create<GameState>((set, get) => ({
                     totalGold += result.gold;
                 }
 
+                if (result.bonusXpPerTurnDelta) {
+                    set((s) => ({ bonusXpPerTurn: s.bonusXpPerTurn + result.bonusXpPerTurnDelta! }));
+                }
+                if (result.forceTerrainInNextChoices) {
+                    set({ forceTerrainInNextSymbolChoices: true });
+                }
+                if (result.edictRemovalPending) {
+                    set({ edictRemovalPending: true });
+                }
+                if (result.freeSelectionRerolls) {
+                    set((s) => ({
+                        freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + result.freeSelectionRerolls!,
+                    }));
+                }
+
                 set({
                     lastEffects: [...accumulatedEffects],
                     runningTotals: { food: totalFood, gold: totalGold, knowledge: totalKnowledge },
@@ -1156,6 +1333,16 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
                     if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
+                        bonusFood += s.effect_counter || 0;
+                    }
+                }
+            }
+
+            // ── Hay (51): 파괴 시 저장된 카운터만큼 식량 획득 ──
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    const s = currentBoard[x][y];
+                    if (s && s.definition.id === 51 && s.is_marked_for_destruction) {
                         bonusFood += s.effect_counter || 0;
                     }
                 }
@@ -1303,6 +1490,32 @@ export const useGameStore = create<GameState>((set, get) => ({
                 bonusGold += scarabGold;
                 effects.push({ x: 0, y: 0, food: 0, gold: scarabGold, knowledge: 0 });
             }
+
+            // ── Tax (53): 무작위 인접 심볼 슬롯의 이번 턴 식량 합계만큼 G+, F- (effects 집계 후 정산)
+            const foodBySlotKey = new Map<string, number>();
+            for (const e of effects) {
+                const k = `${e.x},${e.y}`;
+                foodBySlotKey.set(k, (foodBySlotKey.get(k) ?? 0) + e.food);
+            }
+            for (let tx = 0; tx < BOARD_WIDTH; tx++) {
+                for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
+                    const cell = currentBoard[tx][ty];
+                    if (!cell || cell.definition.id !== TAX_SYMBOL_ID || cell.is_marked_for_destruction) continue;
+                    const adjOccupied: { x: number; y: number }[] = [];
+                    for (const pos of getAdjacentCoords(tx, ty)) {
+                        const n = currentBoard[pos.x][pos.y];
+                        if (n && !n.is_marked_for_destruction) adjOccupied.push(pos);
+                    }
+                    if (adjOccupied.length === 0) continue;
+                    const pick = adjOccupied[Math.floor(Math.random() * adjOccupied.length)];
+                    const F = Math.max(0, foodBySlotKey.get(`${pick.x},${pick.y}`) ?? 0);
+                    if (F <= 0) continue;
+                    bonusFood -= F;
+                    bonusGold += F;
+                    effects.push({ x: tx, y: ty, food: -F, gold: F, knowledge: 0 });
+                }
+            }
+
             set((prev) => {
                 let newLevel = prev.level;
                 let newKnowledge = prev.knowledge + tKnowledge + bonusKnowledge;
@@ -1368,7 +1581,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
 
                 const filteredSymbols = newPlayerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
-                const choices = generateChoices(newEra, prev.religionUnlocked);
+                const choices = prev.edictRemovalPending ? [] : generateChoices(newEra, prev.religionUnlocked);
 
                 return {
                     food: prev.food + tFood + bonusFood,
@@ -1408,7 +1621,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         }));
                         get().refreshRelicShop(true); // Auto refresh shop inventory every 10 turns
                     }
-                    // 레벨업이 있으면 upgrade_selection 먼저, 아니면 바로 selection
+                    // 레벨업이 있으면 upgrade_selection 먼저
                     if (finalState.pendingLevelUpSelection) {
                         const upgradeChoices = generateUpgradeChoices(finalState.unlockedKnowledgeUpgrades || [], finalState.era);
                         set({
@@ -1416,9 +1629,19 @@ export const useGameStore = create<GameState>((set, get) => ({
                             upgradeChoices,
                             knowledgeUpgradeRerollUsed: new Array(upgradeChoices.length).fill(false),
                         });
-                    } else {
-                        set({ phase: 'selection' as GamePhase });
+                        return;
                     }
+                    // 칙령(69): 보유 심볼 1개 제거 후 심볼 선택
+                    if (finalState.edictRemovalPending) {
+                        set({
+                            edictRemovalPending: false,
+                            phase: 'destroy_selection' as GamePhase,
+                            pendingDestroySource: EDICT_SYMBOL_ID,
+                            destroySelectionMaxSymbols: 1,
+                        });
+                        return;
+                    }
+                    set({ phase: 'selection' as GamePhase });
                 }
             }, 600);
         };
@@ -1521,7 +1744,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     let hp = sym.definition.base_hp ?? 0;
                     // 아군 유닛(UNIT 타입)에게만 업그레이드 체력 보너스 적용
                     if (sym.definition.type === SymbolType.UNIT && upgrades.includes(2)) {
-                        if (sym.definition.id === 35) hp += 10;
+                        if (sym.definition.id === 35 || sym.definition.id === 62 || sym.definition.id === 63) hp += 10;
                         if (sym.definition.id === 36) hp += 3;
                     }
                     return hp;
@@ -1585,8 +1808,28 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = SYMBOLS[symbolId];
         if (!def) return;
 
+        const newSymbols = [...state.playerSymbols, createInstance(def)];
+        const q = [...(state.bonusSelectionQueue || [])];
+        if (q.length > 0) {
+            q.shift();
+            const nextType = q[0];
+            const nextChoices =
+                q.length === 0
+                    ? []
+                    : nextType === 'terrain'
+                      ? generateTerrainOnlyChoices(state.era, state.religionUnlocked)
+                      : generateChoices(state.era, state.religionUnlocked);
+            set({
+                playerSymbols: newSymbols,
+                bonusSelectionQueue: q,
+                symbolChoices: nextChoices,
+                phase: q.length > 0 ? 'selection' : 'idle',
+            });
+            return;
+        }
+
         set({
-            playerSymbols: [...state.playerSymbols, createInstance(def)],
+            playerSymbols: newSymbols,
             phase: 'idle',
             symbolChoices: [],
         });
@@ -1596,6 +1839,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'selection') return;
 
+        if ((state.bonusSelectionQueue?.length ?? 0) > 0) {
+            set({ phase: 'idle', symbolChoices: [], bonusSelectionQueue: [] });
+            return;
+        }
         set({ phase: 'idle', symbolChoices: [] });
     },
 
@@ -1669,10 +1916,25 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (!upgrade) return;
 
         // ID 8: 희생 제의 -> 파괴 선택 모드로 전환
-        if (upgradeId === 8) {
+        if (upgradeId === SACRIFICIAL_RITE_UPGRADE_ID) {
             set({
                 unlockedKnowledgeUpgrades: [...(state.unlockedKnowledgeUpgrades || []), upgradeId],
                 phase: 'destroy_selection',
+                pendingDestroySource: SACRIFICIAL_RITE_UPGRADE_ID,
+                destroySelectionMaxSymbols: 3,
+                pendingLevelUpSelection: false,
+                upgradeChoices: [],
+                knowledgeUpgradeRerollUsed: [],
+            });
+            return;
+        }
+
+        if (upgradeId === TERRITORIAL_REORG_UPGRADE_ID) {
+            set({
+                unlockedKnowledgeUpgrades: [...(state.unlockedKnowledgeUpgrades || []), upgradeId],
+                phase: 'destroy_selection',
+                pendingDestroySource: TERRITORIAL_REORG_UPGRADE_ID,
+                destroySelectionMaxSymbols: 3,
                 pendingLevelUpSelection: false,
                 upgradeChoices: [],
                 knowledgeUpgradeRerollUsed: [],
@@ -1689,7 +1951,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         let bonusXpDelta = 0;
         if (upgradeId === 1) bonusXpDelta = 2; // Writing System: +2 base Knowledge
 
-        let newBoard = [...state.board.map(row => [...row])];
+        let newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];
         let addedKnowledge = 0;
         let addedGold = 0;
@@ -1719,6 +1981,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         }
 
+        // 16 Education: Library(25) → University(54)
+        if (upgradeId === 16) {
+            newPlayerSymbols = newPlayerSymbols.map((s) =>
+                s.definition.id === 25 ? { ...s, definition: SYMBOLS[54] } : s
+            );
+        }
+
         // newPlayerSymbols에 맞춰 newBoard 갱신
         for (let y = 0; y < state.board.length; y++) {
             for (let x = 0; x < state.board[y].length; x++) {
@@ -1734,6 +2003,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         }
 
+        const edictAfterUpgrade = state.edictRemovalPending;
         set({
             unlockedKnowledgeUpgrades: newUnlocked,
             bonusXpPerTurn: state.bonusXpPerTurn + bonusXpDelta,
@@ -1745,18 +2015,33 @@ export const useGameStore = create<GameState>((set, get) => ({
             playerSymbols: newPlayerSymbols,
             knowledge: state.knowledge + addedKnowledge,
             gold: state.gold + addedGold,
-            phase: 'selection' as GamePhase,
+            ...(edictAfterUpgrade
+                ? {
+                      edictRemovalPending: false,
+                      phase: 'destroy_selection' as GamePhase,
+                      pendingDestroySource: EDICT_SYMBOL_ID,
+                      destroySelectionMaxSymbols: 1,
+                  }
+                : { phase: 'selection' as GamePhase }),
         });
     },
 
     skipUpgradeSelection: () => {
         const state = get();
         if (state.phase !== 'upgrade_selection') return;
+        const edictAfterUpgrade = state.edictRemovalPending;
         set({
             upgradeChoices: [],
             pendingLevelUpSelection: false,
             knowledgeUpgradeRerollUsed: [],
-            phase: 'selection' as GamePhase,
+            ...(edictAfterUpgrade
+                ? {
+                      edictRemovalPending: false,
+                      phase: 'destroy_selection' as GamePhase,
+                      pendingDestroySource: EDICT_SYMBOL_ID,
+                      destroySelectionMaxSymbols: 1,
+                  }
+                : { phase: 'selection' as GamePhase }),
         });
     },
 
@@ -1772,6 +2057,16 @@ export const useGameStore = create<GameState>((set, get) => ({
         const maxRerolls = hasLydia ? 3 : Infinity;
 
         if (state.rerollsThisTurn >= maxRerolls) return;
+
+        const freeLeft = state.freeSelectionRerolls ?? 0;
+        if (freeLeft > 0) {
+            set({
+                freeSelectionRerolls: freeLeft - 1,
+                symbolChoices: generateChoices(state.era, state.religionUnlocked),
+            });
+            return;
+        }
+
         if (state.gold < rerollCost) return;
 
         set({
@@ -1803,12 +2098,16 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 현재 화면의 업그레이드 3개는 제외 (한 번 리롤하면 다른 카드로 교체)
         const excludedIds = new Set<number>(state.upgradeChoices.map(u => u.id));
-        const pool = Object.values(KNOWLEDGE_UPGRADES).filter(
-            (u) => {
-                const upgradeEra = upgradeEraByType(u.type);
-                return upgradeEra != null && upgradeEra <= state.era && !unlocked.includes(u.id) && !excludedIds.has(u.id);
-            }
-        );
+        const level = state.level;
+        const medievalUnlocked = unlocked.includes(FEUDALISM_UPGRADE_ID) || state.era >= 2;
+        const pool = Object.values(KNOWLEDGE_UPGRADES).filter((u) => {
+            if (unlocked.includes(u.id) || excludedIds.has(u.id)) return false;
+            const upgradeEra = upgradeEraByType(u.type);
+            if (upgradeEra == null) return false;
+            if (u.id === FEUDALISM_UPGRADE_ID) return level >= 10;
+            if (u.type === SymbolType.MEDIEVAL) return medievalUnlocked;
+            return upgradeEra <= state.era;
+        });
 
         if (pool.length === 0) return;
 
@@ -1826,17 +2125,92 @@ export const useGameStore = create<GameState>((set, get) => ({
     confirmDestroySymbols: (instanceIds: string[]) => {
         const state = get();
         if (state.phase !== 'destroy_selection') return;
-        const newSymbols = state.playerSymbols.filter(s => !instanceIds.includes(s.instanceId));
+        const newSymbols = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
+        const goldAdd = instanceIds.length * 10;
+        const src = state.pendingDestroySource;
+
+        if (src === EDICT_SYMBOL_ID) {
+            const terr = state.territorialAfterEdictPending;
+            set({
+                playerSymbols: newSymbols,
+                phase: 'selection',
+                pendingDestroySource: null,
+                destroySelectionMaxSymbols: 3,
+                territorialAfterEdictPending: false,
+                symbolChoices: terr
+                    ? generateTerrainOnlyChoices(state.era, state.religionUnlocked)
+                    : generateChoices(state.era, state.religionUnlocked),
+                ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
+            });
+            return;
+        }
+
+        if (src === TERRITORIAL_REORG_UPGRADE_ID) {
+            const edictChain = get().edictRemovalPending;
+            if (edictChain) {
+                set({
+                    playerSymbols: newSymbols,
+                    gold: state.gold + goldAdd,
+                    edictRemovalPending: false,
+                    phase: 'destroy_selection',
+                    pendingDestroySource: EDICT_SYMBOL_ID,
+                    destroySelectionMaxSymbols: 1,
+                    territorialAfterEdictPending: true,
+                    bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
+                });
+                return;
+            }
+            set({
+                playerSymbols: newSymbols,
+                gold: state.gold + goldAdd,
+                phase: 'selection',
+                pendingDestroySource: null,
+                destroySelectionMaxSymbols: 3,
+                symbolChoices: generateTerrainOnlyChoices(state.era, state.religionUnlocked),
+                bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
+            });
+            return;
+        }
+
+        const edictChain = get().edictRemovalPending;
         set({
             playerSymbols: newSymbols,
-            gold: state.gold + instanceIds.length * 10,
-            phase: 'idle',
+            gold: state.gold + goldAdd,
+            phase: edictChain ? 'destroy_selection' : 'idle',
+            pendingDestroySource: edictChain ? EDICT_SYMBOL_ID : null,
+            destroySelectionMaxSymbols: edictChain ? 1 : 3,
+            edictRemovalPending: false,
         });
     },
 
     finishDestroySelection: () => {
         if (get().phase !== 'destroy_selection') return;
-        set({ phase: 'idle' });
+        const src = get().pendingDestroySource;
+        if (src === EDICT_SYMBOL_ID) {
+            const st = get();
+            const terr = st.territorialAfterEdictPending;
+            set({
+                phase: 'selection',
+                pendingDestroySource: null,
+                destroySelectionMaxSymbols: 3,
+                territorialAfterEdictPending: false,
+                symbolChoices: terr
+                    ? generateTerrainOnlyChoices(st.era, st.religionUnlocked)
+                    : generateChoices(st.era, st.religionUnlocked),
+                ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
+            });
+            return;
+        }
+        if (get().edictRemovalPending) {
+            set({
+                phase: 'destroy_selection',
+                pendingDestroySource: EDICT_SYMBOL_ID,
+                destroySelectionMaxSymbols: 1,
+                edictRemovalPending: false,
+            });
+            return;
+        }
+        set({ phase: 'idle', pendingDestroySource: null, destroySelectionMaxSymbols: 3 });
     },
 
     initializeGame: () => {
@@ -1879,6 +2253,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
             pendingNewThreatFloats: [],
+            pendingDestroySource: null,
+            bonusSelectionQueue: [],
+            edictRemovalPending: false,
+            forceTerrainInNextSymbolChoices: false,
+            freeSelectionRerolls: 0,
+            destroySelectionMaxSymbols: 3,
+            territorialAfterEdictPending: false,
         });
     },
 
@@ -1951,6 +2332,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
             pendingNewThreatFloats: [],
+            pendingDestroySource: null,
+            bonusSelectionQueue: [],
+            edictRemovalPending: false,
+            forceTerrainInNextSymbolChoices: false,
+            freeSelectionRerolls: 0,
+            destroySelectionMaxSymbols: 3,
+            territorialAfterEdictPending: false,
         });
     },
 

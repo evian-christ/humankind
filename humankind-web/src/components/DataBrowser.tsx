@@ -102,9 +102,9 @@ const DataBrowser = () => {
         return () => window.removeEventListener('keydown', handler);
     }, []);
 
-    // 심볼 슬롯 뷰 모드: 필터/검색/정렬이 없을 때 ID 1~50 전체 슬롯 표시
+    // 심볼 슬롯 뷰 모드: 필터/검색/정렬이 없을 때 현재 정의된 최대 ID까지 전체 슬롯 표시
     const SYMBOL_SLOT_MIN = 1;
-    const SYMBOL_SLOT_MAX = 50;
+    const SYMBOL_SLOT_MAX = Math.max(...Object.keys(SYMBOLS).map(Number));
     const isSymbolSlotMode = eraFilter === 'all' && !search.trim() && !symbolSort;
 
     // 심볼 목록 (필터 + 검색 + 정렬)
