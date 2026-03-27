@@ -73,15 +73,6 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
                     <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
                 ))}
             </div>
-            {symbol.tags && symbol.tags.length > 0 && (
-                <div className="selection-card-tags" style={{ display: 'flex', gap: '8px', justifyContent: 'center', margin: '16px 0 0 0', flexWrap: 'wrap' }}>
-                    {symbol.tags.map(tag => (
-                        <span key={tag} style={{ background: 'rgba(55, 65, 81, 0.5)', padding: '4px 10px', borderRadius: '0', fontSize: '16px', color: '#e5e7eb', border: '1px solid rgba(75, 85, 99, 0.7)' }}>
-                            {t(`tag.${tag}`, language)}
-                        </span>
-                    ))}
-                </div>
-            )}
         </button>
     );
 };

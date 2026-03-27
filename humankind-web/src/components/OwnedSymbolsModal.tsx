@@ -143,6 +143,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                 const showHp = def.base_hp !== undefined && def.base_hp > 0;
                                 const hpValue = sym.enemy_hp ?? def.base_hp;
                                 const showCampCounter = def.id === 40;
+                                const showMerchantStoredGold = def.id === 22 && (sym.stored_gold ?? 0) > 0;
 
                                 return (
                                     <div
@@ -191,6 +192,24 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                                 }}
                                             >
                                                 {sym.effect_counter}
+                                            </div>
+                                        )}
+
+                                        {/* Merchant(22) stored_gold counter */}
+                                        {showMerchantStoredGold && (
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: 2,
+                                                    bottom: 4,
+                                                    fontSize: 14,
+                                                    fontFamily: 'Mulmaru, sans-serif',
+                                                    lineHeight: 1,
+                                                    color: '#fbbf24',
+                                                    fontWeight: 800,
+                                                }}
+                                            >
+                                                {sym.stored_gold}
                                             </div>
                                         )}
 

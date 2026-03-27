@@ -120,8 +120,7 @@ const DataBrowser = () => {
             list = list.filter(s => {
                 const name = t(`symbol.${s.id}.name`, language).toLowerCase();
                 const desc = t(`symbol.${s.id}.desc`, language).toLowerCase();
-                const tagsMatch = s.tags?.some(tag => t(`tag.${tag}`, language).toLowerCase().includes(q)) ?? false;
-                return name.includes(q) || desc.includes(q) || String(s.id).includes(q) || tagsMatch;
+                return name.includes(q) || desc.includes(q) || String(s.id).includes(q);
             });
         }
 
@@ -134,7 +133,6 @@ const DataBrowser = () => {
                     case 'name': va = t(`symbol.${a.id}.name`, language); vb = t(`symbol.${b.id}.name`, language); break;
                     case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'type': va = a.type; vb = b.type; break;
-                    case 'tags': va = a.tags ? a.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; vb = b.tags ? b.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; break;
                     case 'desc': va = t(`symbol.${a.id}.desc`, language); vb = t(`symbol.${b.id}.desc`, language); break;
                     case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
                     case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
@@ -164,8 +162,7 @@ const DataBrowser = () => {
             list = list.filter(s => {
                 const name = tl(`symbolCandidate.${s.id}.name`, s.name).toLowerCase();
                 const desc = tl(`symbolCandidate.${s.id}.desc`, s.description).toLowerCase();
-                const tagsMatch = s.tags?.some(tag => t(`tag.${tag}`, language).toLowerCase().includes(q)) ?? false;
-                return name.includes(q) || desc.includes(q) || String(s.id).includes(q) || tagsMatch;
+                return name.includes(q) || desc.includes(q) || String(s.id).includes(q);
             });
         }
 
@@ -178,7 +175,6 @@ const DataBrowser = () => {
                     case 'name': va = tl(`symbolCandidate.${a.id}.name`, a.name); vb = tl(`symbolCandidate.${b.id}.name`, b.name); break;
                     case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'type': va = a.type; vb = b.type; break;
-                    case 'tags': va = a.tags ? a.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; vb = b.tags ? b.tags.map(t => typeof t === 'string' ? t : '').join(',') : ''; break;
                     case 'desc': va = tl(`symbolCandidate.${a.id}.desc`, a.description); vb = tl(`symbolCandidate.${b.id}.desc`, b.description); break;
                     case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
                     case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
@@ -505,7 +501,6 @@ const DataBrowser = () => {
                                 <SortTh column="name" label={t('dataBrowser.colName', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--name" />
                                 <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--era" />
 
-                                <SortTh column="tags" label={t('dataBrowser.colTags', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--tags" />
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="basePool" label={t('dataBrowser.colBasePool', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--id" />
                                 <SortTh column="atk" label="ATK" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
@@ -551,17 +546,6 @@ const DataBrowser = () => {
                                                 </span>
                                             </td>
 
-                                            <td className="databrowser-cell--tags">
-                                                {s.tags?.length ? (
-                                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                        {s.tags.map(tag => (
-                                                            <span key={tag} style={{ background: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                                                                {t(`tag.${tag}`, language)}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ) : '-'}
-                                            </td>
                                             <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
                                             <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
                                             <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
@@ -591,17 +575,6 @@ const DataBrowser = () => {
                                             </span>
                                         </td>
 
-                                        <td className="databrowser-cell--tags">
-                                            {s.tags?.length ? (
-                                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                    {s.tags.map(tag => (
-                                                        <span key={tag} style={{ background: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                                                            {t(`tag.${tag}`, language)}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : '-'}
-                                        </td>
                                         <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
                                         <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
                                         <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
@@ -625,7 +598,6 @@ const DataBrowser = () => {
                                 <SortTh column="name" label={t('dataBrowser.colName', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--name" />
                                 <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--era" />
 
-                                <SortTh column="tags" label={t('dataBrowser.colTags', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--tags" />
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="atk" label="ATK" sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="hp" label="HP" sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--stat" />
@@ -652,17 +624,6 @@ const DataBrowser = () => {
                                         </span>
                                     </td>
 
-                                    <td className="databrowser-cell--tags">
-                                        {s.tags?.length ? (
-                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                {s.tags.map(tag => (
-                                                    <span key={tag} style={{ background: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                                                        {t(`tag.${tag}`, language)}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        ) : '-'}
-                                    </td>
                                     <td className="databrowser-cell--desc"><EffectText text={tl(`symbolCandidate.${s.id}.desc`, s.description)} /></td>
                                     <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
                                     <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>

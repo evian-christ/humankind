@@ -257,15 +257,6 @@ const GameCanvas = ({ onReady }: GameCanvasProps) => {
                             <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
                         ))}
                     </div>
-                    {hoveredSymbol.definition.tags && hoveredSymbol.definition.tags.length > 0 && (
-                        <div className="symbol-tooltip-tags" style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-                            {hoveredSymbol.definition.tags.map(tag => (
-                                <span key={tag} style={{ background: 'rgba(55, 65, 81, 0.9)', padding: '4px 10px', borderRadius: '6px', fontSize: '15px', color: '#e5e7eb', border: '1px solid #4b5563', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                                    {t(`tag.${tag}`, language)}
-                                </span>
-                            ))}
-                        </div>
-                    )}
                 </div>
             )}
 

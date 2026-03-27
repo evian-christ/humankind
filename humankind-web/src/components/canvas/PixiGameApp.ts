@@ -646,6 +646,24 @@ export class PixiGameApp {
                     drawTarget.addChild(counterText);
                 }
 
+                // Merchant(22): 저장된 골드를 카운터로 표시
+                if (symDef.id === 22 && (symbol.stored_gold ?? 0) > 0) {
+                    const storedGoldText = new PIXI.Text({
+                        text: String(symbol.stored_gold),
+                        style: new PIXI.TextStyle({
+                            fill: '#fbbf24',
+                            fontSize: 30 * fs,
+                            fontWeight: 'bold',
+                            fontFamily,
+                            stroke: { color: '#000000', width: 3 },
+                        }),
+                    });
+                    storedGoldText.anchor.set(0.5, 0.5);
+                    storedGoldText.x = cellX + cellWidth - 21;
+                    storedGoldText.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                    drawTarget.addChild(storedGoldText);
+                }
+
                 if (symDef.base_attack !== undefined && symDef.base_attack > 0) {
                     const atkBg = new PIXI.Text({
                         text: '⚔',
