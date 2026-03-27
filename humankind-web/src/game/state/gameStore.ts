@@ -89,6 +89,12 @@ export const getEraFromLevel = (level: number): number => {
     return 3;
 };
 
+/** 데모 승리: 이 레벨 이상이면 턴(선택 흐름) 종료 시 victory */
+export const DEMO_VICTORY_LEVEL = 15;
+
+const phaseAfterTurnFlowComplete = (level: number): GamePhase =>
+    level >= DEMO_VICTORY_LEVEL ? 'victory' : 'idle';
+
 type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'draft_selection' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (식량 1단위) */
 export const calculateFoodCost = (turn: number): number => {
@@ -953,20 +959,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         const computeReligionEffects = () => {
             if (religionSlotsToRecalculate.length === 0) return;
 
-            // effectPhase 진행 중 심볼 인스턴스의 플래그(campfire_double_food 등)가 변경될 수 있으므로,
+            // effectPhase 진행 중 심볼 인스턴스의 상태가 변경될 수 있으므로,
             // 여기서는 "현재 보드 스냅샷"을 기준으로 계산한다.
             const currentBoardRef = get().board;
-
-            // campfire_double_food는 '이번 스핀 인접 심볼 식량 2배' 버프이므로,
-            // 종교 계산이 끝난 뒤에 동일한 조건(result.food > 0일 때만 플래그 소비)을 맞춰 반영한다.
-            const campfireDoubleFlags = new Map<string, boolean>();
             const doctrineFood = new Map<string, number>();
             const doctrineGold = new Map<string, number>();
 
             for (const s of religionSlotsToRecalculate) {
                 const key = getKey(s.x, s.y);
-                const sym = currentBoardRef[s.x][s.y];
-                campfireDoubleFlags.set(key, !!sym?.campfire_double_food);
                 doctrineFood.set(key, 0);
                 doctrineGold.set(key, 0);
             }
@@ -1038,13 +1038,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                         food *= 2;
                     }
 
-                    // campfire 폭발 버프는 "이번 스핀 식량 2배"이며,
-                    // symbolEffects 결과가 양수일 때만 적용된다(기존 engine 로직 준수).
-                    const campfireDouble = campfireDoubleFlags.get(key) ?? false;
-                    if (campfireDouble && food > 0) {
-                        food *= 2;
-                    }
-
                     const prevFood = doctrineFood.get(key) ?? 0;
                     const prevGold = doctrineGold.get(key) ?? 0;
                     if (prevFood !== food || prevGold !== gold) anyChanged = true;
@@ -1074,11 +1067,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                     totalGold += gold;
                 }
 
-                const campfireDouble = campfireDoubleFlags.get(key) ?? false;
-                // 기존 engine과 동일하게 '실제로 2배가 적용된 경우에만' 플래그를 소비한다.
-                if (campfireDouble && food > 0) {
-                    sym.campfire_double_food = false;
-                }
             }
 
             // 캐시에는 인접 심볼 계산용 값만 필요하므로, doctrine는 여기서 추가로 채우지 않는다.
@@ -1088,6 +1076,42 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (slotIdx >= slotOrder.length) {
                 // effectPhase 종료 직전에 종교 심볼(31/32)을 최종 계산한다.
                 computeReligionEffects();
+
+                // Merchant(22): 이번 턴의 "실제 인접 심볼 식량"을 기준으로
+                // effectPhase 전체 종료 후 저장값을 갱신한다.
+                {
+                    const foodBySlotKey = new Map<string, number>();
+                    for (const e of accumulatedEffects) {
+                        const k = `${e.x},${e.y}`;
+                        foodBySlotKey.set(k, (foodBySlotKey.get(k) ?? 0) + (e.food ?? 0));
+                    }
+
+                    const currentBoardRef = get().board;
+                    const computeIsCorner = (cx: number, cy: number) =>
+                        (cx === 0 && cy === 0) ||
+                        (cx === 0 && cy === BOARD_HEIGHT - 1) ||
+                        (cx === BOARD_WIDTH - 1 && cy === 0) ||
+                        (cx === BOARD_WIDTH - 1 && cy === BOARD_HEIGHT - 1);
+
+                    for (let mx = 0; mx < BOARD_WIDTH; mx++) {
+                        for (let my = 0; my < BOARD_HEIGHT; my++) {
+                            const sym = currentBoardRef[mx][my];
+                            if (!sym || sym.definition.id !== 22) continue;
+                            if (!sym.merchant_store_pending) continue;
+                            if (computeIsCorner(mx, my)) continue; // 안전장치: corner merchant는 즉시 현금화 처리됨
+
+                            let maxAdjFood = 0;
+                            for (const pos of getAdjacentCoords(mx, my)) {
+                                const adjFood = foodBySlotKey.get(`${pos.x},${pos.y}`) ?? 0;
+                                const adjPositive = Math.max(0, adjFood);
+                                if (adjPositive > maxAdjFood) maxAdjFood = adjPositive;
+                            }
+
+                            sym.stored_gold = (sym.stored_gold ?? 0) + maxAdjFood;
+                            sym.merchant_store_pending = false;
+                        }
+                    }
+                }
 
                 // 마지막 효과 후 0.5초 대기 → 스탯 합산. effectPhase/effectPhase3ReachedThisRun은 유지해 X가 0.5초 동안 계속 보이게 하고, finishProcessing에서 보드 제거와 함께 한 번에 초기화
                 set({ activeSlot: null, activeContributors: [], pendingContributors: [] });
@@ -1122,12 +1146,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             );
             // `processSingleSymbolEffects`의 food/gold는 게임 표시 단위(1단위)입니다.
             const result = rawResult;
-
-            // ── Campfire 폭발 버프: 이번 턴 식량 2배 ──
-            if (symbol.campfire_double_food && result.food > 0) {
-                result.food *= 2;
-                symbol.campfire_double_food = false; // 플래그 소비
-            }
 
             if (isReligionRecalc) {
                 religionSlotsToRecalculate.push({ x, y, id: symbol.definition.id });
@@ -1344,6 +1362,52 @@ export const useGameStore = create<GameState>((set, get) => ({
                     const s = currentBoard[x][y];
                     if (s && s.definition.id === 51 && s.is_marked_for_destruction) {
                         bonusFood += s.effect_counter || 0;
+                    }
+                }
+            }
+
+            // ── Campfire (19): 파괴 시 인접 심볼 중 "이번 턴 식량 생산"이 가장 높은 심볼의 효과 복사 ──
+            // - "이번 턴 식량 생산" 판단은 effects 누적(food 합산) 기준
+            // - 복사는 해당 슬롯의 food/gold/knowledge 수치 결과를 그대로 1회 추가
+            {
+                const effectBySlot = new Map<string, { food: number; gold: number; knowledge: number }>();
+                for (const e of effects) {
+                    const k = `${e.x},${e.y}`;
+                    const prev = effectBySlot.get(k) ?? { food: 0, gold: 0, knowledge: 0 };
+                    effectBySlot.set(k, {
+                        food: prev.food + (e.food ?? 0),
+                        gold: prev.gold + (e.gold ?? 0),
+                        knowledge: prev.knowledge + (e.knowledge ?? 0),
+                    });
+                }
+
+                for (let cx = 0; cx < BOARD_WIDTH; cx++) {
+                    for (let cy = 0; cy < BOARD_HEIGHT; cy++) {
+                        const camp = currentBoard[cx][cy];
+                        if (!camp || camp.definition.id !== 19 || !camp.is_marked_for_destruction) continue;
+
+                        let bestPos: { x: number; y: number } | null = null;
+                        let bestFood = -Infinity;
+                        for (const pos of getAdjacentCoords(cx, cy)) {
+                            const adj = currentBoard[pos.x][pos.y];
+                            if (!adj) continue;
+                            const adjFood = effectBySlot.get(`${pos.x},${pos.y}`)?.food ?? 0;
+                            if (adjFood > bestFood) {
+                                bestFood = adjFood;
+                                bestPos = pos;
+                            }
+                        }
+
+                        if (!bestPos || bestFood <= 0) continue;
+
+                        const src = effectBySlot.get(`${bestPos.x},${bestPos.y}`);
+                        if (!src) continue;
+                        if (src.food === 0 && src.gold === 0 && src.knowledge === 0) continue;
+
+                        bonusFood += src.food;
+                        bonusGold += src.gold;
+                        bonusKnowledge += src.knowledge;
+                        effects.push({ x: cx, y: cy, food: src.food, gold: src.gold, knowledge: src.knowledge });
                     }
                 }
             }
@@ -1655,7 +1719,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 // 아군 전투 유닛만 공격자: UNIT 타입이고 base_attack 보유
                 if (!sym || sym.definition.type !== SymbolType.UNIT || sym.definition.base_attack === undefined) continue;
 
-                if (sym.definition.tags?.includes('ranged')) { // 궁수: 보드 전체 사거리
+                if (sym.definition.id === 36) { // 궁수: 보드 전체 사거리
                     for (let tx = 0; tx < BOARD_WIDTH; tx++) {
                         for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
                             const target = combatBoard[tx][ty];
@@ -1823,14 +1887,14 @@ export const useGameStore = create<GameState>((set, get) => ({
                 playerSymbols: newSymbols,
                 bonusSelectionQueue: q,
                 symbolChoices: nextChoices,
-                phase: q.length > 0 ? 'selection' : 'idle',
+                phase: q.length > 0 ? 'selection' : phaseAfterTurnFlowComplete(state.level),
             });
             return;
         }
 
         set({
             playerSymbols: newSymbols,
-            phase: 'idle',
+            phase: phaseAfterTurnFlowComplete(state.level),
             symbolChoices: [],
         });
     },
@@ -1840,10 +1904,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (state.phase !== 'selection') return;
 
         if ((state.bonusSelectionQueue?.length ?? 0) > 0) {
-            set({ phase: 'idle', symbolChoices: [], bonusSelectionQueue: [] });
+            set({
+                phase: phaseAfterTurnFlowComplete(state.level),
+                symbolChoices: [],
+                bonusSelectionQueue: [],
+            });
             return;
         }
-        set({ phase: 'idle', symbolChoices: [] });
+        set({ phase: phaseAfterTurnFlowComplete(state.level), symbolChoices: [] });
     },
 
     toggleRelicShop: () => {
@@ -2176,7 +2244,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({
             playerSymbols: newSymbols,
             gold: state.gold + goldAdd,
-            phase: edictChain ? 'destroy_selection' : 'idle',
+            phase: edictChain ? 'destroy_selection' : phaseAfterTurnFlowComplete(state.level),
             pendingDestroySource: edictChain ? EDICT_SYMBOL_ID : null,
             destroySelectionMaxSymbols: edictChain ? 1 : 3,
             edictRemovalPending: false,
@@ -2210,7 +2278,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
             return;
         }
-        set({ phase: 'idle', pendingDestroySource: null, destroySelectionMaxSymbols: 3 });
+        set({
+            phase: phaseAfterTurnFlowComplete(get().level),
+            pendingDestroySource: null,
+            destroySelectionMaxSymbols: 3,
+        });
     },
 
     initializeGame: () => {

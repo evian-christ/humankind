@@ -483,19 +483,12 @@ export const processSingleSymbolEffects = (
             knowledge += relicEffects.relicCount * 5;
             break;
 
-        case 19: { // Campfire: Every spin: +1 Food. After 10 spins: destroyed and adjacent symbols produce double food this spin
+        case 19: { // Campfire: +1 Food each turn; after 10 turns destroyed (on-destroy effect handled in gameStore)
             food += 1;
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 10) {
+                symbolInstance.effect_counter = 10;
                 symbolInstance.is_marked_for_destruction = true;
-                // 인접한 심볼들의 식량 2배 버프를 표시 (보드에 플래그 설정)
-                adj.forEach(pos => {
-                    const t = boardGrid[pos.x][pos.y];
-                    if (t) {
-                        t.campfire_double_food = true;
-                        contributors.push(pos);
-                    }
-                });
             }
             break;
         }
@@ -527,23 +520,13 @@ export const processSingleSymbolEffects = (
                 (x === BOARD_WIDTH - 1 && y === BOARD_HEIGHT - 1);
 
             if (!isCorner) {
-                let maxAdjFood = 0;
-                adj.forEach(pos => {
-                    const t = boardGrid[pos.x][pos.y];
-                    if (t) {
-                        const baseFood = SYMBOL_BASE_FOOD[t.definition.id] ?? 0;
-                        if (baseFood > maxAdjFood) {
-                            maxAdjFood = baseFood;
-                        }
-                        if (baseFood > 0) {
-                            contributors.push(pos);
-                        }
-                    }
-                });
-                symbolInstance.stored_gold = (symbolInstance.stored_gold ?? 0) + maxAdjFood;
+                // Merchant는 "모든 효과가 끝난 뒤" 인접 심볼의 이번 턴 실제 식량 생산량을 보고 저장해야 합니다.
+                // 따라서 여기서는 저장 계산만 보류하고, gameStore의 effectPhase 종료 후 후처리에서 처리합니다.
+                symbolInstance.merchant_store_pending = true;
             } else {
                 gold += symbolInstance.stored_gold ?? 0;
                 symbolInstance.stored_gold = 0;
+                symbolInstance.merchant_store_pending = false;
             }
             break;
         }

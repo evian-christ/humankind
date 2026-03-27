@@ -7,8 +7,8 @@ export interface PlayerSymbolInstance {
     is_marked_for_destruction: boolean;
     remaining_attacks?: number;
     enemy_hp?: number;
-    /** Campfire 폭발 시 이번 턴 한정 식량 2배 플래그 */
-    campfire_double_food?: boolean;
     /** 상인 심볼의 누적 골드 저장소 */
     stored_gold?: number;
+    /** Merchants(22)가 이번 턴 저장 계산을 effectPhase 종료 후 수행해야 하는지 */
+    merchant_store_pending?: boolean;
 }
