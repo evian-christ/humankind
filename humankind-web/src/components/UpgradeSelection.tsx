@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
@@ -11,25 +12,20 @@ const resolveUpgradeSprite = (sprite: string | undefined): string => {
     return `${ASSET_BASE_URL}assets/upgrades/000.png`;
 };
 
-const CARD_W = 364;
-const CARD_H = 665;
+/** 기존 364×665 대비 약 1.21배 — CSS `.upgrade-card`와 동일 크기 */
+const CARD_W = 440;
+const CARD_H = Math.round((665 * CARD_W) / 364);
 
 const UpgradeCard = ({
     name,
     description,
     sprite,
     onSelect,
-    onReroll,
-    canReroll,
-    rerollUsed,
 }: {
     name: string;
     description: string;
     sprite?: string;
     onSelect: () => void;
-    onReroll: () => void;
-    canReroll: boolean;
-    rerollUsed: boolean;
 }) => {
     const spriteUrl = resolveUpgradeSprite(sprite);
 
@@ -48,43 +44,16 @@ const UpgradeCard = ({
                 height: `${CARD_H}px`,
             } as React.CSSProperties}
         >
-            {canReroll && (
-                <button
-                    type="button"
-                    aria-label="Reroll upgrade card"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onReroll();
-                    }}
-                    disabled={rerollUsed}
-                    style={{
-                        position: 'absolute',
-                        top: 14,
-                        right: 14,
-                        width: 44,
-                        height: 44,
-                        border: 'none',
-                        borderRadius: 0,
-                        cursor: rerollUsed ? 'not-allowed' : 'pointer',
-                        background: rerollUsed ? 'rgba(148,163,184,0.35)' : 'rgba(0,0,0,0.35)',
-                        color: '#e0f2fe',
-                        fontSize: 22,
-                        fontFamily: 'Mulmaru, monospace',
-                        textShadow: '0 1px 3px rgba(0,0,0,0.6)',
-                    }}
-                >
-                    ↺
-                </button>
-            )}
             <div className="upgrade-card-inner">
-                {/* 스프라이트 아이콘 */}
-                <img
-                    src={spriteUrl}
-                    alt={name}
-                    className="upgrade-card-sprite"
-                    style={{ imageRendering: 'pixelated' }}
-                />
-                <div className="upgrade-card-name">{name}</div>
+                <div className="upgrade-card-header">
+                    <img
+                        src={spriteUrl}
+                        alt={name}
+                        className="upgrade-card-sprite"
+                        style={{ imageRendering: 'pixelated' }}
+                    />
+                    <div className="upgrade-card-name">{name}</div>
+                </div>
                 <div className="upgrade-card-desc">
                     {description.split('\n').map((line, i) => (
                         <div key={i} className="upgrade-card-desc-line">
@@ -104,18 +73,32 @@ const UpgradeSelection = () => {
         selectUpgrade,
         level,
         levelBeforeUpgrade,
-        unlockedKnowledgeUpgrades,
-        knowledgeUpgradeRerollUsed,
-        rerollUpgradeCard,
     } = useGameStore();
     const language = useSettingsStore((s) => s.language);
 
+    useEffect(() => {
+        if (!import.meta.env.DEV) return;
+        if (phase !== 'upgrade_selection') return;
+        const handler = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+            if (e.code === 'KeyR') {
+                e.preventDefault();
+                useGameStore.getState().debugRerollKnowledgeUpgradeChoices();
+            }
+            if (e.key === 'Backspace') {
+                e.preventDefault();
+                useGameStore.getState().skipUpgradeSelection();
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [phase]);
+
     if (phase !== 'upgrade_selection') return null;
 
-    const canDemocraticOrder = (unlockedKnowledgeUpgrades || []).includes(14);
-
     return (
-        <div className="selection-overlay">
+        <div className="selection-overlay selection-overlay--upgrade">
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
                     <div className="selection-title">지식 업그레이드</div>
@@ -156,9 +139,6 @@ const UpgradeSelection = () => {
                                 description={t(`knowledgeUpgrade.${upgrade.id}.desc`, language)}
                                 sprite={upgrade.sprite}
                                 onSelect={() => selectUpgrade(upgrade.id)}
-                                canReroll={canDemocraticOrder}
-                                rerollUsed={!!knowledgeUpgradeRerollUsed[idx]}
-                                onReroll={() => rerollUpgradeCard(idx)}
                             />
                         ))}
                         {upgradeChoices.length === 0 && (
