@@ -20,7 +20,7 @@ export const COMBAT_BOUNCE_DURATION: Record<EffectSpeed, number> = {
     'instant': 0,
 };
 
-/** 턴 속도 설정: { speed 배수, stopInterval(ms) } */
+/** 스핀 속도 설정: { speed 배수, stopInterval(ms) } */
 export const SPIN_SPEED_CONFIG: Record<SpinSpeed, { speedMul: number; stopInterval: number }> = {
     '1x': { speedMul: 3.6, stopInterval: 50 },
     '2x': { speedMul: 6, stopInterval: 50 },
