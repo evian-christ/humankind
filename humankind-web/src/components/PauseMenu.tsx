@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSettingsStore, getResolutionOptions, type Language, type EffectSpeed, type SpinSpeed } from '../game/state/settingsStore';
 import { t } from '../i18n';
+import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 const LANGUAGE_OPTIONS: { value: Language; labelKey: string }[] = [
     { value: 'en', labelKey: 'settings.lang.en' },
@@ -95,6 +96,8 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
             }
         }).catch(console.error);
     };
+
+    useRegisterBoardTooltipBlock('pause-menu', isOpen);
 
     if (!isOpen) return null;
 
@@ -225,10 +228,16 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
                                     <div className="settings-row-label">{t('settings.fullscreen', language)}</div>
                                     <div className="settings-row-controls">
                                         <button
-                                            className={`settings-seg-btn ${isFullscreen ? 'active' : ''}`}
-                                            onClick={toggleFullscreen}
+                                            className={`settings-seg-btn ${!isFullscreen ? 'active' : ''}`}
+                                            onClick={() => { if (isFullscreen) toggleFullscreen(); }}
                                         >
-                                            {isFullscreen ? t('settings.fullscreen.on', language) : t('settings.fullscreen.off', language)}
+                                            {t('settings.fullscreen.off', language)}
+                                        </button>
+                                        <button
+                                            className={`settings-seg-btn ${isFullscreen ? 'active' : ''}`}
+                                            onClick={() => { if (!isFullscreen) toggleFullscreen(); }}
+                                        >
+                                            {t('settings.fullscreen.on', language)}
                                         </button>
                                     </div>
                                 </div>

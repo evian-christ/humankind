@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
+import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 const FOOD_SYM = '⬟';
 const GOLD_SYM = '●';
@@ -62,6 +63,8 @@ const EffectLogOverlay = () => {
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, [clearEventLog]);
+
+    useRegisterBoardTooltipBlock('effect-log-overlay', open);
 
     const rows = useMemo(() => {
         const q = query.trim().toLowerCase();

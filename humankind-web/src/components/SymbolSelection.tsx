@@ -6,6 +6,7 @@ import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/da
 import { useRelicStore } from '../game/state/relicStore';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
+import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -87,6 +88,11 @@ const SymbolSelection = () => {
     const draftTotal = usePreGameStore((s) => s.draftTotal);
     const pickDraftSymbol = usePreGameStore((s) => s.pickDraftSymbol);
     const skipDraftPick = usePreGameStore((s) => s.skipDraftPick);
+
+    /** 드래프트·선택 패널이 보드를 가릴 때만 툴팁 억제; 본게임 ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
+    const blockBoardTooltipsForSelectionUi =
+        phase === 'draft_selection' || (phase === 'selection' && !isPeeked);
+    useRegisterBoardTooltipBlock('symbol-selection-overlay', blockBoardTooltipsForSelectionUi);
 
     if (phase !== 'selection' && phase !== 'draft_selection') return null;
 

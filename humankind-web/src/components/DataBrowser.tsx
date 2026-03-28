@@ -10,6 +10,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
+import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'relicCandidates' | 'knowledgeUpgrades' | 'knowledgeUpgradeCandidates' | 'enemies';
 type SortDir = 'asc' | 'desc';
@@ -101,6 +102,8 @@ const DataBrowser = () => {
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, []);
+
+    useRegisterBoardTooltipBlock('data-browser', open);
 
     // 심볼 슬롯 뷰 모드: 필터/검색/정렬이 없을 때 현재 정의된 최대 ID까지 전체 슬롯 표시
     const SYMBOL_SLOT_MIN = 1;

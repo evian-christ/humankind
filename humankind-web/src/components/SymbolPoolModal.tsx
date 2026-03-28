@@ -3,6 +3,7 @@ import { useGameStore, getSymbolPoolProbabilities } from '../game/state/gameStor
 import { SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { useSettingsStore } from '../game/state/settingsStore';
+import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 const TYPE_META: Record<number, { label: string; labelKo: string; color: string }> = {
     [SymbolType.RELIGION]: { label: 'Religion',  labelKo: '종교',     color: '#c084fc' },
@@ -29,6 +30,8 @@ const SymbolPoolModal = () => {
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
     }, []);
+
+    useRegisterBoardTooltipBlock('symbol-pool-modal', open);
 
     const probabilities = useMemo(() => {
         if (!open) return [];

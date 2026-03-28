@@ -3,6 +3,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
+import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -52,6 +53,8 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [open, onClose]);
+
+    useRegisterBoardTooltipBlock('owned-symbols-modal', open);
 
     if (!open) return null;
 

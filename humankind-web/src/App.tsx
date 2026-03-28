@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from './game/state/gameStore';
+import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore } from './game/state/settingsStore';
 import { usePreGameStore } from './game/state/preGameStore';
 import { t } from './i18n';
@@ -21,7 +22,8 @@ import EffectLogOverlay from './components/EffectLogOverlay';
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
   const returnToStageSelect = usePreGameStore((s) => s.returnToStageSelect);
-  const { phase, turn, spinBoard, toggleRelicShop } = useGameStore();
+  const { phase, turn, spinBoard, toggleRelicShop, isRelicShopOpen } = useGameStore();
+  const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -108,6 +110,15 @@ function App() {
     return () => window.removeEventListener('keydown', handler);
   }, [phase, spinBoard]);
 
+  const boardIsForegroundForTooltips =
+    phase !== 'upgrade_selection' &&
+    phase !== 'destroy_selection' &&
+    phase !== 'game_over' &&
+    phase !== 'victory' &&
+    !isRelicShopOpen;
+
+  const suppressBoardTooltips = !boardIsForegroundForTooltips || fullscreenModalBlocksBoardTooltips;
+
   // 스테이지 선택 화면
   if (preGameScreen === 'stage') {
     return <StageSelectScreen />;
@@ -138,7 +149,7 @@ function App() {
       />
       {/* ===== GAME BOARD (with integrated UI bars) ===== */}
       <div className="game-area">
-        <GameCanvas onReady={handleCanvasReady} />
+        <GameCanvas onReady={handleCanvasReady} suppressBoardTooltips={suppressBoardTooltips} />
       </div>
 
       {/* ===== 보드 하단: 왼쪽(유물) · 중앙 고정(스핀) · 오른쪽(⋯, 메뉴) ===== */}

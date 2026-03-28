@@ -21,26 +21,34 @@ const ERA_NAME_KEYS: Record<number, string> = {
 interface GameCanvasProps {
     /** 캔버스 초기화 및 에셋 로드 완료 시 호출 (본게임 페이드인용) */
     onReady?: () => void;
+    /** 일시정지 메뉴·설정 등 오버레이가 열린 동안 보드 툴팁 비표시 */
+    suppressBoardTooltips?: boolean;
 }
 
-const GameCanvas = ({ onReady }: GameCanvasProps) => {
+const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps) => {
     const canvasRef = useRef<HTMLDivElement>(null);
     const appRef = useRef<PixiGameApp | null>(null);
     const onReadyRef = useRef<GameCanvasProps['onReady']>(onReady);
+    const suppressBoardTooltipsRef = useRef(suppressBoardTooltips);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredSymbol | null>(null);
     const [hoveredRelic, setHoveredRelic] = useState<HoveredRelic | null>(null);
     const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
     const language = useSettingsStore((s) => s.language);
 
+    suppressBoardTooltipsRef.current = suppressBoardTooltips;
+
     const setHoveredSymbolStable = useCallback((val: HoveredSymbol | null) => {
+        if (suppressBoardTooltipsRef.current) return;
         setHoveredSymbol(val);
     }, []);
 
     const setHoveredRelicStable = useCallback((val: HoveredRelic | null) => {
+        if (suppressBoardTooltipsRef.current) return;
         setHoveredRelic(val);
     }, []);
 
     const setHoveredUpgradeStable = useCallback((val: HoveredUpgrade | null) => {
+        if (suppressBoardTooltipsRef.current) return;
         setHoveredUpgrade(val);
     }, []);
 
@@ -95,6 +103,13 @@ const GameCanvas = ({ onReady }: GameCanvasProps) => {
             }
         };
     }, [setHoveredSymbolStable, setHoveredRelicStable, setHoveredUpgradeStable]);
+
+    useEffect(() => {
+        if (!suppressBoardTooltips) return;
+        setHoveredSymbol(null);
+        setHoveredRelic(null);
+        setHoveredUpgrade(null);
+    }, [suppressBoardTooltips]);
 
     // 2. Subscribe to store changes
     useEffect(() => {
@@ -238,9 +253,11 @@ const GameCanvas = ({ onReady }: GameCanvasProps) => {
         return { left: `${left}px`, top: `${top}px` };
     };
 
+    const showBoardTooltips = !suppressBoardTooltips;
+
     return (
         <div ref={canvasRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
-            {hoveredSymbol && (
+            {showBoardTooltips && hoveredSymbol && (
                 <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
                     <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.definition.id}.name`, language)}</div>
                     <div className="symbol-tooltip-rarity" style={{
@@ -260,7 +277,7 @@ const GameCanvas = ({ onReady }: GameCanvasProps) => {
                 </div>
             )}
 
-            {hoveredRelic && (() => {
+            {showBoardTooltips && hoveredRelic && (() => {
                 const info = hoveredRelic.relicInfo;
                 const counterMax = (info.definition.id === 3 || info.definition.id === 9) ? 5 : 0;
                 return (
@@ -285,7 +302,7 @@ const GameCanvas = ({ onReady }: GameCanvasProps) => {
                 );
             })()}
 
-            {hoveredUpgrade && (
+            {showBoardTooltips && hoveredUpgrade && (
                 <div className="symbol-tooltip" style={{ ...getUpgradeTooltipStyle(hoveredUpgrade), display: 'flex', flexDirection: 'column' }}>
                     <div className="symbol-tooltip-name" style={{ color: '#93c5fd' }}>{t(`knowledgeUpgrade.${hoveredUpgrade.upgrade.id}.name`, language)}</div>
                     {(() => {
