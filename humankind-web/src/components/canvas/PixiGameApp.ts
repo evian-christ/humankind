@@ -71,6 +71,11 @@ export class PixiGameApp {
     private combatShaking: boolean = false;
     private contributorWobbleTime: number = 0;
 
+    /** renderBoard가 히트영역을 갈아엎어도 포인터는 그대로일 수 있어, 마지막 호버를 저장 후 재동기화 */
+    private symbolHoverCell: { x: number; y: number } | null = null;
+    private relicHoverSnapshot: { instanceId: string; screenX: number; screenY: number } | null = null;
+    private upgradeHoverSnapshot: { id: number; screenX: number; screenY: number } | null = null;
+
     private getPulse01() {
         // 0..1 부드러운 펄스
         return 0.5 + 0.5 * Math.sin(Date.now() / 140);
@@ -420,9 +425,6 @@ export class PixiGameApp {
         }
         this.threatFloatingEffects = [];
 
-        if (this.onHoverSymbol) this.onHoverSymbol(null);
-        if (this.onHoverRelic) this.onHoverRelic(null);
-
         if (!state.combatAnimation) {
             this.combatContainer.removeChildren();
             this.combatContainer.x = 0;
@@ -577,9 +579,13 @@ export class PixiGameApp {
                 const symDef = symbol.definition;
 
                 hitArea.on('pointerover', () => {
+                    this.symbolHoverCell = { x, y };
                     this.onHoverSymbol({ definition: symDef, screenX: cellX + cellWidth, screenY: cellY });
                 });
-                hitArea.on('pointerout', () => this.onHoverSymbol(null));
+                hitArea.on('pointerout', () => {
+                    this.symbolHoverCell = null;
+                    this.onHoverSymbol(null);
+                });
                 this.hitContainer.addChild(hitArea);
 
                 const innerW = cellWidth - 6;
@@ -819,6 +825,69 @@ export class PixiGameApp {
         this.renderUI(state, settings, scale, fs, w);
         this.renderRelics(scale);
         this.renderKnowledgeUpgrades(state, scale);
+        this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
+    }
+
+    private syncHoverTooltipsAfterBoardRebuild(
+        state: GameState,
+        startX: number,
+        startY: number,
+        cellWidth: number,
+        cellHeight: number,
+        gridOffsetX: number,
+        gridOffsetY: number,
+        colGap: number,
+        rowGap: number
+    ) {
+        if (state.phase === 'spinning') {
+            if (this.symbolHoverCell) {
+                this.symbolHoverCell = null;
+                this.onHoverSymbol?.(null);
+            }
+        } else if (this.symbolHoverCell && this.onHoverSymbol) {
+            const { x, y } = this.symbolHoverCell;
+            const symbol = state.board[x]?.[y];
+            if (!symbol || (state.combatAnimation && state.combatAnimation.ax === x && state.combatAnimation.ay === y)) {
+                this.symbolHoverCell = null;
+                this.onHoverSymbol(null);
+            } else {
+                const cellX = startX + gridOffsetX + x * (cellWidth + colGap);
+                const cellY = startY + gridOffsetY + y * (cellHeight + rowGap);
+                this.onHoverSymbol({
+                    definition: symbol.definition,
+                    screenX: cellX + cellWidth,
+                    screenY: cellY,
+                });
+            }
+        }
+
+        if (this.relicHoverSnapshot && this.onHoverRelic) {
+            const relic = useRelicStore.getState().relics.find((r) => r.instanceId === this.relicHoverSnapshot!.instanceId);
+            if (relic) {
+                this.onHoverRelic({
+                    relicInfo: relic,
+                    screenX: this.relicHoverSnapshot.screenX,
+                    screenY: this.relicHoverSnapshot.screenY,
+                });
+            } else {
+                this.relicHoverSnapshot = null;
+                this.onHoverRelic(null);
+            }
+        }
+
+        if (this.upgradeHoverSnapshot && this.onHoverUpgrade) {
+            const ids = state.unlockedKnowledgeUpgrades || [];
+            if (ids.includes(this.upgradeHoverSnapshot.id)) {
+                this.onHoverUpgrade({
+                    upgrade: { id: this.upgradeHoverSnapshot.id },
+                    screenX: this.upgradeHoverSnapshot.screenX,
+                    screenY: this.upgradeHoverSnapshot.screenY,
+                });
+            } else {
+                this.upgradeHoverSnapshot = null;
+                this.onHoverUpgrade(null);
+            }
+        }
     }
 
     private renderRelics(scale: number) {
@@ -866,9 +935,13 @@ export class PixiGameApp {
             hitArea.cursor = 'help';
 
             hitArea.on('pointerover', () => {
+                this.relicHoverSnapshot = { instanceId: relic.instanceId, screenX: iconX + iconSize, screenY: iconY };
                 this.onHoverRelic({ relicInfo: relic, screenX: iconX + iconSize, screenY: iconY });
             });
-            hitArea.on('pointerout', () => this.onHoverRelic(null));
+            hitArea.on('pointerout', () => {
+                this.relicHoverSnapshot = null;
+                this.onHoverRelic(null);
+            });
             this.hitContainer.addChild(hitArea);
 
             if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
@@ -964,9 +1037,13 @@ export class PixiGameApp {
             hitArea.eventMode = 'static';
             hitArea.cursor = 'help';
             hitArea.on('pointerover', () => {
+                this.upgradeHoverSnapshot = { id: upgrade.id, screenX: iconX, screenY: iconY };
                 this.onHoverUpgrade({ upgrade: { id: upgrade.id }, screenX: iconX, screenY: iconY });
             });
-            hitArea.on('pointerout', () => this.onHoverUpgrade(null));
+            hitArea.on('pointerout', () => {
+                this.upgradeHoverSnapshot = null;
+                this.onHoverUpgrade(null);
+            });
             this.hitContainer.addChild(hitArea);
 
             // 지식 업그레이드 선택 카드와 동일: /assets/upgrades/ 64x64 스프라이트 (AssetLoader에서 선로드)
