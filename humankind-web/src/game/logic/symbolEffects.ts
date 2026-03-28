@@ -660,7 +660,7 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case 52: { // Spices: +2 Food per different terrain type placed
+        case 52: { // Spices: +1 Food per different terrain type placed
             const terrainTypes = new Set<number>();
             for (let bx = 0; bx < BOARD_WIDTH; bx++) {
                 for (let by = 0; by < BOARD_HEIGHT; by++) {
@@ -670,7 +670,7 @@ export const processSingleSymbolEffects = (
                     }
                 }
             }
-            food += terrainTypes.size * 2;
+            food += terrainTypes.size;
             if (upgrades.includes(21) && adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === 13)) {
                 food += 2;
                 gold += 3;

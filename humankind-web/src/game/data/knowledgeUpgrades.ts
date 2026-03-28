@@ -68,7 +68,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: "Caravel",
         type: SymbolType.MEDIEVAL,
         description:
-            "Warrior adjacent to Sea becomes Caravel (+7 HP). Unlocks Gold Vein. Spices: +2 Food per terrain type; when adjacent to Rainforest: +2 Food and +3 Gold.",
+            "Warrior adjacent to Sea becomes Caravel (+7 HP). Unlocks Gold Vein. Spices: +1 Food per terrain type; when adjacent to Rainforest: +2 Food and +3 Gold.",
         sprite: "-",
     },
     22: {

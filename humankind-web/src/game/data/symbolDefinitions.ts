@@ -89,7 +89,7 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
     // 51: Hay
     51: { id: 51, name: "Hay", type: SymbolType.NORMAL, description: "When adjacent to Plains: counter +1. On destroy: gain Food equal to Counter.", sprite: "051.png" },
     // 52: Spices
-    52: { id: 52, name: "Spices", type: SymbolType.NORMAL, description: "+2 Food per different terrain type placed.", sprite: "052.png" },
+    52: { id: 52, name: "Spices", type: SymbolType.NORMAL, description: "+1 Food per different terrain type placed.", sprite: "052.png" },
     // 53: Tax (Medieval) — 실제 정산은 gameStore finishProcessing에서 이번 턴 effects 기준
     53: {
         id: 53,
