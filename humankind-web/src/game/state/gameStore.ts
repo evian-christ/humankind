@@ -186,6 +186,8 @@ export interface GameState {
 
     /** 업그레이드 선택에서 (페리클레스) 카드당 1회 리롤 사용 여부 */
     knowledgeUpgradeRerollUsed: boolean[];
+    /** devForceScreen('upgrade')로 연 경우: 닫을 때 복귀할 phase (null = 일반 레벨업 → 심볼 선택) */
+    returnPhaseAfterDevKnowledgeUpgrade: GamePhase | null;
 
     barbarianSymbolThreat: number;
     barbarianCampThreat: number;
@@ -224,6 +226,8 @@ export interface GameState {
     selectUpgrade: (upgradeId: number) => void;
     skipUpgradeSelection: () => void;
     rerollUpgradeCard: (slotIndex: number) => void;
+    /** DEV: 지식 업그레이드 선택지 전부 다시 뽑기 */
+    debugRerollKnowledgeUpgradeChoices: () => void;
 
     initializeGame: () => void;
     /** 프리게임: 드래프트 선택 진입 (첫 선택지 표시) */
@@ -669,6 +673,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     isRelicShopOpen: false,
     rerollsThisTurn: 0,
     knowledgeUpgradeRerollUsed: [],
+    returnPhaseAfterDevKnowledgeUpgrade: null,
 
     barbarianSymbolThreat: 0,
     barbarianCampThreat: 0,
@@ -1993,6 +1998,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 pendingLevelUpSelection: false,
                 upgradeChoices: [],
                 knowledgeUpgradeRerollUsed: [],
+                returnPhaseAfterDevKnowledgeUpgrade: null,
             });
             return;
         }
@@ -2006,6 +2012,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 pendingLevelUpSelection: false,
                 upgradeChoices: [],
                 knowledgeUpgradeRerollUsed: [],
+                returnPhaseAfterDevKnowledgeUpgrade: null,
             });
             return;
         }
@@ -2089,8 +2096,21 @@ export const useGameStore = create<GameState>((set, get) => ({
                       phase: 'destroy_selection' as GamePhase,
                       pendingDestroySource: EDICT_SYMBOL_ID,
                       destroySelectionMaxSymbols: 1,
+                      returnPhaseAfterDevKnowledgeUpgrade: null,
                   }
-                : { phase: 'selection' as GamePhase }),
+                : state.returnPhaseAfterDevKnowledgeUpgrade != null
+                  ? {
+                        phase: state.returnPhaseAfterDevKnowledgeUpgrade,
+                        returnPhaseAfterDevKnowledgeUpgrade: null,
+                    }
+                  : {
+                        phase: 'selection' as GamePhase,
+                        returnPhaseAfterDevKnowledgeUpgrade: null,
+                        symbolChoices:
+                            state.symbolChoices.length > 0
+                                ? state.symbolChoices
+                                : generateChoices(state.era, state.religionUnlocked),
+                    }),
         });
     },
 
@@ -2108,8 +2128,21 @@ export const useGameStore = create<GameState>((set, get) => ({
                       phase: 'destroy_selection' as GamePhase,
                       pendingDestroySource: EDICT_SYMBOL_ID,
                       destroySelectionMaxSymbols: 1,
+                      returnPhaseAfterDevKnowledgeUpgrade: null,
                   }
-                : { phase: 'selection' as GamePhase }),
+                : state.returnPhaseAfterDevKnowledgeUpgrade != null
+                  ? {
+                        phase: state.returnPhaseAfterDevKnowledgeUpgrade,
+                        returnPhaseAfterDevKnowledgeUpgrade: null,
+                    }
+                  : {
+                        phase: 'selection' as GamePhase,
+                        returnPhaseAfterDevKnowledgeUpgrade: null,
+                        symbolChoices:
+                            state.symbolChoices.length > 0
+                                ? state.symbolChoices
+                                : generateChoices(state.era, state.religionUnlocked),
+                    }),
         });
     },
 
@@ -2189,6 +2222,16 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
 
+    debugRerollKnowledgeUpgradeChoices: () => {
+        if (!import.meta.env.DEV) return;
+        const state = get();
+        if (state.phase !== 'upgrade_selection') return;
+        const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades || [], state.era);
+        set({
+            upgradeChoices: choices,
+            knowledgeUpgradeRerollUsed: new Array(choices.length).fill(false),
+        });
+    },
 
     confirmDestroySymbols: (instanceIds: string[]) => {
         const state = get();
@@ -2332,6 +2375,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             freeSelectionRerolls: 0,
             destroySelectionMaxSymbols: 3,
             territorialAfterEdictPending: false,
+            returnPhaseAfterDevKnowledgeUpgrade: null,
         });
     },
 
@@ -2411,6 +2455,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             freeSelectionRerolls: 0,
             destroySelectionMaxSymbols: 3,
             territorialAfterEdictPending: false,
+            returnPhaseAfterDevKnowledgeUpgrade: null,
         });
     },
 
@@ -2441,11 +2486,14 @@ export const useGameStore = create<GameState>((set, get) => ({
             set({ isRelicShopOpen: true, relicChoices: generateRelicChoices(), relicHalfPriceRelicId: null });
         } else if (screen === 'upgrade') {
             const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades, state.era);
+            const returnPhase: GamePhase =
+                state.phase === 'upgrade_selection' ? 'idle' : state.phase;
             set({
                 phase: 'upgrade_selection',
                 upgradeChoices: choices,
                 pendingLevelUpSelection: true,
                 knowledgeUpgradeRerollUsed: new Array(choices.length).fill(false),
+                returnPhaseAfterDevKnowledgeUpgrade: returnPhase,
             });
         }
     },
