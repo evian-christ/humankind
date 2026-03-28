@@ -20,7 +20,8 @@ import EffectLogOverlay from './components/EffectLogOverlay';
 
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
-  const { phase, turn, spinBoard, initializeGame, toggleRelicShop } = useGameStore();
+  const returnToStageSelect = usePreGameStore((s) => s.returnToStageSelect);
+  const { phase, turn, spinBoard, toggleRelicShop } = useGameStore();
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -200,7 +201,7 @@ function App() {
           <div className="endgame-panel">
             <div className="endgame-title endgame-defeat">{t('game.gameOver', language)}</div>
             <div className="endgame-subtitle">{t('game.turn', language)} {turn} - {t('game.notEnoughFood', language)}</div>
-            <button className="endgame-btn" onClick={initializeGame}>{t('game.restart', language)}</button>
+            <button className="endgame-btn" onClick={returnToStageSelect}>{t('game.restart', language)}</button>
           </div>
         </div>
       )}
@@ -211,7 +212,7 @@ function App() {
           <div className="endgame-panel">
             <div className="endgame-title endgame-victory">{t('game.victory', language)}</div>
             <div className="endgame-subtitle">{t('game.turn', language)} {turn}</div>
-            <button className="endgame-btn" onClick={initializeGame}>{t('game.restart', language)}</button>
+            <button className="endgame-btn" onClick={returnToStageSelect}>{t('game.restart', language)}</button>
           </div>
         </div>
       )}

@@ -27,6 +27,8 @@ interface PreGameState {
   exitPreGame: () => void;
   /** 드래프트 완료 시 게임 시작 */
   finishDraftAndStartGame: () => void;
+  /** 게임오버/승리 후 재진입: 난이도(스테이지) 선택 화면으로 */
+  returnToStageSelect: () => void;
 }
 
 export const usePreGameStore = create<PreGameState>((set, get) => ({
@@ -104,5 +106,16 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
     if (selectedLeaderId == null) return;
     useGameStore.getState().startGameWithDraft(draftPicks, selectedLeaderId);
     usePreGameStore.getState().exitPreGame();
+  },
+
+  returnToStageSelect: () => {
+    set({
+      screen: 'stage',
+      selectedStageId: null,
+      selectedLeaderId: null,
+      draftPicks: [],
+      draftTotal: 0,
+      draftRoundsCompleted: 0,
+    });
   },
 }));
