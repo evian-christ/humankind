@@ -22,6 +22,9 @@ const THREAT_FLOAT_TOTAL_MS = 1800; // 위로 올라가는 시간 늘려서 글 
 const THREAT_FLOAT_DRIFT_RIGHT = 36;
 const THREAT_FLOAT_UP = 85;
 
+/** 클릭으로 발동하는 유물 (gameStore.activateClickableRelic) */
+const CLICKABLE_RELIC_IDS = new Set([4, 13, 15]);
+
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
     [SymbolType.NORMAL]: 'era.ancient',
@@ -932,7 +935,8 @@ export class PixiGameApp {
             hitArea.rect(iconX, iconY, iconSize, iconSize);
             hitArea.fill({ color: 0x000000, alpha: 0 }); // 투명 히트박스
             hitArea.eventMode = 'static';
-            hitArea.cursor = 'help';
+            const relicClickable = CLICKABLE_RELIC_IDS.has(relic.definition.id);
+            hitArea.cursor = relicClickable ? 'pointer' : 'help';
 
             hitArea.on('pointerover', () => {
                 this.relicHoverSnapshot = { instanceId: relic.instanceId, screenX: iconX + iconSize, screenY: iconY };
@@ -942,6 +946,11 @@ export class PixiGameApp {
                 this.relicHoverSnapshot = null;
                 this.onHoverRelic(null);
             });
+            if (relicClickable) {
+                hitArea.on('pointertap', () => {
+                    useGameStore.getState().activateClickableRelic(relic.instanceId);
+                });
+            }
             this.hitContainer.addChild(hitArea);
 
             if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
@@ -962,32 +971,28 @@ export class PixiGameApp {
                 this.boardContainer.addChild(spPlaceholder);
             }
 
-            // 카운터 표시 필요가 있는 경우. 현재 3과 9는 Max 5인 카운터 진행도
-            const counterMax = (relic.definition.id === 3 || relic.definition.id === 9) ? 5 : 0;
-            if (counterMax > 0) {
-                const barH = 8 * scale;
-                const barW = iconSize;
-                const barY = iconY + iconSize + 2 * scale;
-
-                const bgBar = new PIXI.Graphics();
-                bgBar.rect(iconX, barY, barW, barH);
-                bgBar.fill({ color: 0x000000, alpha: 0.6 });
-                this.boardContainer.addChild(bgBar);
-
-                const ratio = Math.min(1, relic.effect_counter / counterMax);
-                const fillBar = new PIXI.Graphics();
-                fillBar.rect(iconX, barY, barW * ratio, barH);
-                fillBar.fill({ color: 0xf59e0b });
-                this.boardContainer.addChild(fillBar);
-
-                const txt = new PIXI.Text({
-                    text: `${relic.effect_counter}/${counterMax}`,
-                    style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 14 * scale, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 2 } })
-                });
-                txt.anchor.set(1, 0);
-                txt.x = iconX + iconSize;
-                txt.y = barY + barH + 2 * scale;
-                this.boardContainer.addChild(txt);
+            // 유물 카운터: 보드 심볼과 같이 우하단, 연회색 글씨 + 검은 테두리 (숫자만)
+            {
+                const rid = relic.definition.id;
+                let counterStr: string | null = null;
+                if (rid === 3 || rid === 9) counterStr = String(relic.effect_counter);
+                else if (rid === 4) counterStr = String(relic.bonus_stacks);
+                if (counterStr !== null) {
+                    const counterText = new PIXI.Text({
+                        text: counterStr,
+                        style: new PIXI.TextStyle({
+                            fill: '#d1d5db',
+                            fontSize: 28 * scale,
+                            fontWeight: 'bold',
+                            fontFamily: 'Mulmaru',
+                            stroke: { color: '#000000', width: 3 },
+                        }),
+                    });
+                    counterText.anchor.set(0.5, 0.5);
+                    counterText.x = iconX + iconSize - 16 * scale;
+                    counterText.y = iconY + iconSize - 18 * scale;
+                    this.boardContainer.addChild(counterText);
+                }
             }
 
             curX += iconSize + gapX;

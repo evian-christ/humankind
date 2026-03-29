@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useGameStore, REROLL_COST } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { usePreGameStore } from '../game/state/preGameStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
 import { t } from '../i18n';
@@ -83,18 +82,12 @@ const SymbolSelection = () => {
     const language = useSettingsStore((s) => s.language);
     const relics = useRelicStore((s) => s.relics);
     const [isPeeked, setIsPeeked] = useState(false);
-    const isDraft = phase === 'draft_selection';
-    const draftRoundsCompleted = usePreGameStore((s) => s.draftRoundsCompleted);
-    const draftTotal = usePreGameStore((s) => s.draftTotal);
-    const pickDraftSymbol = usePreGameStore((s) => s.pickDraftSymbol);
-    const skipDraftPick = usePreGameStore((s) => s.skipDraftPick);
 
-    /** 드래프트·선택 패널이 보드를 가릴 때만 툴팁 억제; 본게임 ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
-    const blockBoardTooltipsForSelectionUi =
-        phase === 'draft_selection' || (phase === 'selection' && !isPeeked);
+    /** 선택 패널이 보드를 가릴 때만 툴팁 억제; 본게임 ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
+    const blockBoardTooltipsForSelectionUi = phase === 'selection' && !isPeeked;
     useRegisterBoardTooltipBlock('symbol-selection-overlay', blockBoardTooltipsForSelectionUi);
 
-    if (phase !== 'selection' && phase !== 'draft_selection') return null;
+    if (phase !== 'selection') return null;
 
     // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
     const hasLydia = relics.some(r => r.definition.id === 2);
@@ -105,35 +98,25 @@ const SymbolSelection = () => {
     const canReroll = gold >= rerollCost && (rerollsLeft === null || rerollsLeft > 0);
 
     const handleCardClick = (symbolId: number) => {
-        if (isDraft) pickDraftSymbol(symbolId);
-        else selectSymbol(symbolId);
+        selectSymbol(symbolId);
     };
-
-    const draftProgressText = isDraft && draftTotal > 0
-        ? t('pregame.draftProgress', language).replace('{current}', String(draftRoundsCompleted + 1)).replace('{total}', String(draftTotal))
-        : null;
 
     return (
         <div
-            className={`selection-overlay${isPeeked ? ' selection-overlay--peeked' : ''}${isDraft ? ' selection-overlay--draft' : ''}`}
+            className={`selection-overlay${isPeeked ? ' selection-overlay--peeked' : ''}`}
         >
-            {!isDraft && (
-                <button
-                    className="selection-peek-handle"
-                    onClick={() => setIsPeeked((v) => !v)}
-                    title={isPeeked ? 'Show selection panel' : 'Peek at board'}
-                >
-                    {isPeeked ? '▲ 돌아오기' : '▼ 보드 보기'}
-                </button>
-            )}
+            <button
+                className="selection-peek-handle"
+                onClick={() => setIsPeeked((v) => !v)}
+                title={isPeeked ? 'Show selection panel' : 'Peek at board'}
+            >
+                {isPeeked ? '▲ 돌아오기' : '▼ 보드 보기'}
+            </button>
 
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
                     <div className="selection-title">
-                        {isDraft ? t('pregame.draftTitle', language) : t('game.chooseSymbol', language)}
-                        {draftProgressText != null && (
-                            <span className="selection-title-draft-progress">{draftProgressText}</span>
-                        )}
+                        {t('game.chooseSymbol', language)}
                     </div>
                     <div className="selection-cards">
                         {symbolChoices.map((sym, i) => (
@@ -144,34 +127,26 @@ const SymbolSelection = () => {
                             />
                         ))}
                     </div>
-                    {isDraft ? (
-                        <div className="selection-actions">
-                            <button className="selection-skip-btn" onClick={skipDraftPick}>
-                                {t('game.skip', language)}
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="selection-actions">
-                            <button
-                                className="selection-reroll-btn"
-                                onClick={rerollSymbols}
-                                disabled={!canReroll}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                            >
-                                <span>{t('game.reroll', language)}</span>
-                                <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>
-                                <span style={{ color: '#fbbf24', fontWeight: '900' }}>{rerollCost}</span>
-                                {rerollsLeft !== null && (
-                                    <span style={{ marginLeft: '4px', opacity: 0.75, fontSize: '0.75em' }}>
-                                        {rerollsLeft}/{maxRerolls}
-                                    </span>
-                                )}
-                            </button>
-                            <button className="selection-skip-btn" onClick={skipSelection}>
-                                {t('game.skip', language)}
-                            </button>
-                        </div>
-                    )}
+                    <div className="selection-actions">
+                        <button
+                            className="selection-reroll-btn"
+                            onClick={rerollSymbols}
+                            disabled={!canReroll}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        >
+                            <span>{t('game.reroll', language)}</span>
+                            <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>
+                            <span style={{ color: '#fbbf24', fontWeight: '900' }}>{rerollCost}</span>
+                            {rerollsLeft !== null && (
+                                <span style={{ marginLeft: '4px', opacity: 0.75, fontSize: '0.75em' }}>
+                                    {rerollsLeft}/{maxRerolls}
+                                </span>
+                            )}
+                        </button>
+                        <button className="selection-skip-btn" onClick={skipSelection}>
+                            {t('game.skip', language)}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
