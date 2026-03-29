@@ -3,7 +3,7 @@ import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCL
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
-import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
+import { RELIC_LIST, RELICS, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
 import type { PlayerSymbolInstance } from '../types';
 import { t } from '../../i18n';
@@ -40,19 +40,28 @@ const PHASE2_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
 
 /** 유물 ID 목록 (relicDefinitions + relicCandidates) */
 const RELIC_ID = {
-    CLOVIS_SPEAR: 1,          // 클로비스 투창촉: 적 체력 -1
+    CLOVIS_SPEAR: 1,          // 클로비스 투창촉: 매 턴 전투 직전 무작위 적 체력 -1
     LYDIA_COIN: 2,            // 리디아 호박금 주화: 리롤 50% 할인, 턴당 최대 3회
-    UR_WHEEL: 3,              // 우르 전차 바퀴: 매 턴 최저 식량 심볼 파괴 + G+50, 5턴 후 소멸
-    JOMON_POTTERY: 4,         // 조몬 토기 조각: 토기 인접 파괴
+    UR_WHEEL: 3,              // 우르 전차 바퀴: 3턴간 매 턴 최저 식량 심볼 파괴·파괴당 G+10
+    JOMON_POTTERY: 4,         // 조몬 토기 조각: 유물에 식량 저장(턴당+1), 클릭 시 2배 지급 후 제거
     EGYPT_SAW: 5,             // 이집트 구리 톱: 채석장 빈 슬롯 G+10
     BABYLON_MAP: 6,           // 바빌로니아 세계 지도: 매 턴 F+10, 보드 20번 심볼 -이면 영구 +10
     GOANNA_BANANA: 7,         // 쿠크 늪지대 바나나 화석: 열대 과수원 인접 바나나 F+20
     TEN_COMMANDMENTS: 8,      // 십계명 석판: 돌→석판
-    NILE_SILT: 9,             // 나일 강 흑니: 5턴 동안 식량 2배
-    GOBEKLI_PILLAR: 10,       // 괴베클리 테페 신전 석주: 빈 슬롯당 F+5
-    CATALHOYUK: 11,           // 차탈회위크 여신상: 심볼 15개↑ 일 때 F+80
+    NILE_SILT: 9,             // 나일 흑니: 3턴간 이번 턴 보드 식량 합만큼 추가 생산 후 제거
+    GOBEKLI_PILLAR: 10,       // 괴베클리 석주: 빈 슬롯당 식량 +1
+    CATALHOYUK: 11,           // 차탈회위크 여신상: 심볼 15개↑ 일 때 식량 +5
     SCARAB: 12,               // 쇠똥구리 부적: 심볼 파괴 시 G+30
+    ANCIENT_RELIC_DEBRIS: 13, // 고대 유물 잔해: 클릭 시 심볼 선택 1회 후 제거
+    EPICURUS_PLAQUE: 14,      // 에피쿠로스 명판: 보드에 종교 없으면 지식 +3
+    OBLIVION_FURNACE: 15,     // 망각의 화로: 클릭 → 보유 심볼 1 파괴 후 유물 제거
+    TERRA_FOSSIL_GRAPE: 16,   // 테라 화석 포도: 자연재해 심볼 식량 +2
+    ANTONINIANUS: 17,         // 안토니니아누스 은화: 심볼 선택 스킵 시 골드 +2
+    ANDEAN_CHUNO: 18,         // 안데스의 추뇨: 매 턴 식량 +2
 } as const;
+
+/** destroy_selection 출처: 망각의 화로(15) — `RELIC_ID.OBLIVION_FURNACE` 와 동일 */
+export const OBLIVION_FURNACE_PENDING = RELIC_ID.OBLIVION_FURNACE;
 
 
 /** 작물 심볼 ID 목록 (카르멜 산 화덕 재 효과용) */
@@ -95,7 +104,7 @@ export const DEMO_VICTORY_LEVEL = 15;
 const phaseAfterTurnFlowComplete = (level: number): GamePhase =>
     level >= DEMO_VICTORY_LEVEL ? 'victory' : 'idle';
 
-type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'draft_selection' | 'game_over' | 'victory';
+type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'game_over' | 'victory';
 /** 10턴마다 식량 납부 비용 (식량 1단위) */
 export const calculateFoodCost = (turn: number): number => {
     const paymentCycle = Math.floor(turn / 10);
@@ -195,8 +204,10 @@ export interface GameState {
     /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
     pendingNewThreatFloats: { x: number; y: number; label: string }[];
 
-    /** destroy_selection 진입 시 출처 (8 희생 / 22 영토 / 69 칙령) */
-    pendingDestroySource: typeof SACRIFICIAL_RITE_UPGRADE_ID | typeof TERRITORIAL_REORG_UPGRADE_ID | typeof EDICT_SYMBOL_ID | null;
+    /** destroy_selection 진입 시 출처 (8 희생 / 22 영토 / 69 칙령 / 망각의 화로) */
+    pendingDestroySource: typeof SACRIFICIAL_RITE_UPGRADE_ID | typeof TERRITORIAL_REORG_UPGRADE_ID | typeof EDICT_SYMBOL_ID | typeof OBLIVION_FURNACE_PENDING | null;
+    /** 망각의 화로 발동 시 제거할 유물 instanceId */
+    pendingOblivionFurnaceRelicId: string | null;
     /** 영토 정비(22): 남은 보너스 선택 (첫 턴은 symbolChoices로 이미 지형 3개가 열림) */
     bonusSelectionQueue: Array<'terrain' | 'any'>;
     /** 칙령(69) 등: 턴 처리 끝난 뒤 보유 심볼 제거 단계 필요 */
@@ -230,11 +241,7 @@ export interface GameState {
     debugRerollKnowledgeUpgradeChoices: () => void;
 
     initializeGame: () => void;
-    /** 프리게임: 드래프트 선택 진입 (첫 선택지 표시) */
-    enterDraftSelection: () => void;
-    /** 프리게임: 다음 드래프트 선택지 3개 갱신 */
-    setSymbolChoicesForDraft: () => void;
-    /** 프리게임: 드래프트 결과 + 리더로 본게임 시작 */
+    /** 프리게임: 보유 심볼(symbolIds) + 리더 + 고대 유물 잔해 6개로 본게임 시작 */
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
@@ -242,6 +249,8 @@ export interface GameState {
     devForceScreen: (screen: 'symbol' | 'upgrade') => void;
     confirmDestroySymbols: (instanceIds: string[]) => void;
     finishDestroySelection: () => void;
+    /** 조몬 토기 조각·고대 유물 잔해 등 클릭 발동 유물 */
+    activateClickableRelic: (instanceId: string) => void;
 
     /** F12 로그 오버레이용 */
     appendEventLog: (entry: Omit<GameEventLogEntry, 'id' | 'ts'> & { ts?: number; id?: string }) => void;
@@ -592,6 +601,7 @@ const upgradeEraByType = (type: KnowledgeUpgradeType): number | null => {
 /**
  * 현재 화면에 나온 ID·이미 해금된 ID를 제외한, 시대·레벨 규칙에 맞는 지식 업그레이드 후보 풀.
  * (generateUpgradeChoices / 리롤이 동일 규칙 사용)
+ * Lv.11+ (중세 시대 진입 후): 고대(SymbolType.ANCIENT) 업그레이드는 풀에서 제외하고 중세만 노출.
  */
 function buildKnowledgeUpgradeAlternativesPool(
     unlocked: number[],
@@ -604,6 +614,9 @@ function buildKnowledgeUpgradeAlternativesPool(
         if (unlocked.includes(u.id) || excludeIds.has(u.id)) return false;
         const upgradeEra = upgradeEraByType(u.type);
         if (upgradeEra == null) return false;
+        if (level >= 11) {
+            return u.type === SymbolType.MEDIEVAL && medievalUnlocked;
+        }
         if (u.id === FEUDALISM_UPGRADE_ID) return level >= 10;
         if (u.type === SymbolType.MEDIEVAL) return medievalUnlocked;
         return upgradeEra <= currentEra;
@@ -640,15 +653,10 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
     const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
     const getRelicInstance = (id: number) => relics.find(r => r.definition.id === id);
 
-    // ID 9: 나일 강 흑니 — effect_counter < 5 인 동안 활성
-    const nileRelic = getRelicInstance(RELIC_ID.NILE_SILT);
-    const nileActive = nileRelic ? nileRelic.effect_counter < 5 : false;
-
     const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
 
     return {
         relicCount: relics.length,
-        potteryDestroyAdjacent: hasRelic(RELIC_ID.JOMON_POTTERY),
         quarryEmptyGold: hasRelic(RELIC_ID.EGYPT_SAW),
         bananaFossilBonus: hasRelic(RELIC_ID.GOANNA_BANANA),
         burnOfferingEmptyPenalty: false,
@@ -656,8 +664,8 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
         gobekliAnimalJackpot: false,
         gilgameshReligionNoPenalty: false,
         fishBoneHookGold: false,
-        nileFloodDoubleFood: nileActive,
         horsemansihpPastureBonus: upgrades.includes(7),
+        terraFossilDisasterFood: hasRelic(RELIC_ID.TERRA_FOSSIL_GRAPE),
     };
 };
 
@@ -702,6 +710,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     naturalDisasterThreat: 0,
     pendingNewThreatFloats: [],
     pendingDestroySource: null,
+    pendingOblivionFurnaceRelicId: null,
     bonusSelectionQueue: [],
     edictRemovalPending: false,
     forceTerrainInNextSymbolChoices: false,
@@ -801,17 +810,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         // 1. Clear Board & Place Symbols (reuse existing instances to preserve counters)
         const newBoard = createEmptyBoard();
         // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
-        let combatAndEnemy = shuffle(newPlayerSymbols
+        const combatAndEnemy = shuffle(newPlayerSymbols
             .filter(s => s.definition.type === SymbolType.ENEMY || s.definition.type === SymbolType.UNIT));
-        // ID 1: 클로비스 투창촉 - 야만인(적) 등장 시 HP -1
-        if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
-            combatAndEnemy = combatAndEnemy.map(sym => {
-                if (sym.definition.type === SymbolType.ENEMY) {
-                    return { ...sym, enemy_hp: Math.max(1, (sym.enemy_hp ?? sym.definition.base_hp ?? 1) - 1) };
-                }
-                return sym;
-            });
-        }
         const friendly = shuffle(newPlayerSymbols
             .filter(s => s.definition.type !== SymbolType.ENEMY && s.definition.type !== SymbolType.UNIT));
         const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
@@ -1058,11 +1058,6 @@ export const useGameStore = create<GameState>((set, get) => ({
                     });
                     if (hasAdjacentDoctrine && !relicEffects.gilgameshReligionNoPenalty) {
                         food -= 50;
-                    }
-
-                    // 유물 ID 9: 나일 강 비옥한 흑니 - 활성 중 식량 2배
-                    if (relicEffects.nileFloodDoubleFood && food > 0) {
-                        food *= 2;
                     }
 
                     const prevFood = doctrineFood.get(key) ?? 0;
@@ -1333,33 +1328,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             let bonusGold = 0;
             let bonusKnowledge = 0;
 
-
-            // ── Pottery (20): 조몬 토기 조각 유물 — 파괴 전파 패스 ──
-            // processSlot에서 이미 파괴 표시된 심볼은 스킵되므로,
-            // 여기서 파괴 예정 토기 → 인접 토기 전파를 한 번 더 돌린다.
-            if (hasRelic(RELIC_ID.JOMON_POTTERY)) {
-                let changed = true;
-                while (changed) {
-                    changed = false;
-                    for (let x = 0; x < BOARD_WIDTH; x++) {
-                        for (let y = 0; y < BOARD_HEIGHT; y++) {
-                            const s = currentBoard[x][y];
-                            if (!s || s.definition.id !== 20 || !s.is_marked_for_destruction) continue;
-                            // 파괴 예정인 토기 → 인접 토기 파괴 표시
-                            for (let dx = -1; dx <= 1; dx++) {
-                                for (let dy = -1; dy <= 1; dy++) {
-                                    if (dx === 0 && dy === 0) continue;
-                                    const nx = x + dx, ny = y + dy;
-                                    if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-                                    const nb = currentBoard[nx][ny];
-                                    if (nb && nb.definition.id === 20 && !nb.is_marked_for_destruction) {
-                                        nb.is_marked_for_destruction = true;
-                                        changed = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
+            // ── 유물 ID 9: 나일 강 비옥한 흑니 — 효과 페이즈 집계 `effects`의 식량 합만큼 추가(3턴 후 제거는 하단에서 카운터 처리)
+            const nileRelicInst = getRelicInst(RELIC_ID.NILE_SILT);
+            if (nileRelicInst && nileRelicInst.effect_counter > 0) {
+                const boardFoodProduced = effects.reduce((s, e) => s + (e.food ?? 0), 0);
+                if (boardFoodProduced !== 0) {
+                    bonusFood += boardFoodProduced;
+                    effects.push({ x: 0, y: 0, food: boardFoodProduced, gold: 0, knowledge: 0 });
                 }
             }
 
@@ -1373,7 +1348,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
-            // ── Pottery (20): 파괴 시 저장된 식량 방출 ──
+            // ── Pottery (20): 파괴 시 저장 식량 방출
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
@@ -1381,6 +1356,12 @@ export const useGameStore = create<GameState>((set, get) => ({
                         bonusFood += s.effect_counter || 0;
                     }
                 }
+            }
+
+            // ── 유물 ID 4: 조몬 토기 조각 — 매 턴 유물에 식량 1 저장(bonus_stacks)
+            const jomonRelicInst = getRelicInst(RELIC_ID.JOMON_POTTERY);
+            if (jomonRelicInst) {
+                useRelicStore.getState().incrementRelicBonus(jomonRelicInst.instanceId, 1);
             }
 
             // ── Hay (51): 파괴 시 저장된 카운터만큼 식량 획득 ──
@@ -1465,11 +1446,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
-            // ── 유물 ID 3: 우르의 전차 바퀴 ──
-            // 매 턴 식량 생산량 가장 낮은 심볼 파괴 + G+50. 5턴 후 유물 소멸.
+            // ── 유물 ID 3: 우르의 전차 바퀴 — 남은 턴(effect_counter) 동안 매 턴 최저 식량 심볼 파괴, 파괴 1개당 G+10; 턴 끝마다 카운터 -1, 0이면 제거
             const urWheelRelic = getRelicInst(RELIC_ID.UR_WHEEL);
-            if (urWheelRelic) {
-                // 식량 기준 최저 심볼(파괴 안 된 것 중) 찾기
+            if (urWheelRelic && urWheelRelic.effect_counter > 0) {
                 let minFood = Infinity;
                 let minSymbol: { x: number; y: number } | null = null;
                 for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -1482,7 +1461,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 case 4: return 2; case 5: return 0; case 6: return 0;
                                 case 7: return 0; case 9: return 2; case 13: return 1;
                                 case 14: return 1; case 19: return 1; case 22: return 2;
-                                case 23: return 1;
+                                case 23: return 1; case 71: return 1;
                                 default: return 0;
                             }
                         })();
@@ -1492,14 +1471,10 @@ export const useGameStore = create<GameState>((set, get) => ({
                 if (minSymbol) {
                     const sym = currentBoard[minSymbol.x][minSymbol.y];
                     if (sym) sym.is_marked_for_destruction = true;
-                    bonusGold += 5;
-                    effects.push({ x: minSymbol.x, y: minSymbol.y, food: 0, gold: 5, knowledge: 0 });
+                    bonusGold += 10;
+                    effects.push({ x: minSymbol.x, y: minSymbol.y, food: 0, gold: 10, knowledge: 0 });
                 }
-                // 5턴 후 유물 소멸
-                useRelicStore.getState().incrementRelicCounter(urWheelRelic.instanceId);
-                if (urWheelRelic.effect_counter + 1 >= 5) {
-                    useRelicStore.getState().removeRelic(urWheelRelic.instanceId);
-                }
+                useRelicStore.getState().decrementRelicCounterOrRemove(urWheelRelic.instanceId);
             }
 
             // ── Hinduism (34): 이번 턴 파괴 예정 심볼 1개당 식량/지식 +5 (힌두교 타일마다)
@@ -1540,42 +1515,62 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
-            // ── 유물 ID 9: 나일 강 비옥한 흑니 ──
-            // 활성 5턴 후 소멸 (카운터 증가)
-            const nileRelic = getRelicInst(RELIC_ID.NILE_SILT);
-            if (nileRelic && nileRelic.effect_counter < 5) {
-                useRelicStore.getState().incrementRelicCounter(nileRelic.instanceId);
-                if (nileRelic.effect_counter + 1 >= 5) {
-                    useRelicStore.getState().removeRelic(nileRelic.instanceId);
-                }
+            // ── 유물 ID 9: 나일 강 비옥한 흑니 — 턴 끝마다 남은 턴(effect_counter) -1, 0이면 제거 (식량 보너스는 상단에서 처리)
+            const nileForDecrement = getRelicInst(RELIC_ID.NILE_SILT);
+            if (nileForDecrement && nileForDecrement.effect_counter > 0) {
+                useRelicStore.getState().decrementRelicCounterOrRemove(nileForDecrement.instanceId);
             }
 
-            // ── 유물 ID 10: 괴베클리 테페 신전 석주 — 빈 슬롯당 F+5 ──
+            // ── 유물 ID 10: 괴베클리 테페 신전 석주 — 빈 슬롯당 식량 +1 ──
             if (hasRelic(RELIC_ID.GOBEKLI_PILLAR)) {
                 let emptySlots = 0;
                 for (let x = 0; x < BOARD_WIDTH; x++)
                     for (let y = 0; y < BOARD_HEIGHT; y++)
                         if (!currentBoard[x][y]) emptySlots++;
-                const pillarFood = emptySlots * 0.5;
-                if (pillarFood > 0) {
-                    bonusFood += pillarFood;
-                    effects.push({ x: 0, y: 0, food: pillarFood, gold: 0, knowledge: 0 });
+                if (emptySlots > 0) {
+                    bonusFood += emptySlots;
+                    effects.push({ x: 0, y: 0, food: emptySlots, gold: 0, knowledge: 0 });
                 }
             }
 
-            // ── 유물 ID 16: 차탈회위크 여신상 — 보드 심볼 15개 이상 시 F+80 ──
+            // ── 유물 ID 11: 차탈회위크 여신상 — 보드 심볼 15개 이상 시 식량 +5 ──
             if (hasRelic(RELIC_ID.CATALHOYUK)) {
                 let symbolCount = 0;
                 for (let x = 0; x < BOARD_WIDTH; x++)
                     for (let y = 0; y < BOARD_HEIGHT; y++)
                         if (currentBoard[x][y]) symbolCount++;
                 if (symbolCount >= 15) {
-                    bonusFood += 8;
-                    effects.push({ x: 0, y: 0, food: 8, gold: 0, knowledge: 0 });
+                    bonusFood += 5;
+                    effects.push({ x: 0, y: 0, food: 5, gold: 0, knowledge: 0 });
                 }
             }
 
-            // ── 유물 ID 18: 고대 이집트 쇠똥구리 부적 — 심볼 파괴 시 G+30 ──
+            // ── 유물 ID 14: 에피쿠로스의 원자론 명판 — 보드에 종교 심볼이 없으면 지식 +3 ──
+            if (hasRelic(RELIC_ID.EPICURUS_PLAQUE)) {
+                let hasReligionOnBoard = false;
+                for (let rx = 0; rx < BOARD_WIDTH; rx++) {
+                    for (let ry = 0; ry < BOARD_HEIGHT; ry++) {
+                        const c = currentBoard[rx][ry];
+                        if (c && c.definition.type === SymbolType.RELIGION) {
+                            hasReligionOnBoard = true;
+                            break;
+                        }
+                    }
+                    if (hasReligionOnBoard) break;
+                }
+                if (!hasReligionOnBoard) {
+                    bonusKnowledge += 3;
+                    effects.push({ x: 0, y: 0, food: 0, gold: 0, knowledge: 3 });
+                }
+            }
+
+            // ── 유물 ID 18: 안데스의 추뇨 — 매 턴 식량 +2 ──
+            if (hasRelic(RELIC_ID.ANDEAN_CHUNO)) {
+                bonusFood += 2;
+                effects.push({ x: 0, y: 0, food: 2, gold: 0, knowledge: 0 });
+            }
+
+            // ── 유물 ID 12: 고대 이집트 쇠똥구리 부적 — 심볼 파괴 시 G+30 ──
             if (destroyedCount > 0 && hasRelic(RELIC_ID.SCARAB)) {
                 const scarabGold = destroyedCount * 3;
                 bonusGold += scarabGold;
@@ -1739,6 +1734,28 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // ── 전투 페이즈: UNIT(아군) ↔ ENEMY(적) 인접 쌍을 하나하나 순차 처리 ─────────
         const combatBoard = get().board;
+        // ID 1: 클로비스 투창촉 — 전투 이벤트 집계 직전(전투 페이즈 시작 시점) 무작위 적 1기 체력 -1
+        if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
+            const enemyPositions: { x: number; y: number }[] = [];
+            for (let cx = 0; cx < BOARD_WIDTH; cx++) {
+                for (let cy = 0; cy < BOARD_HEIGHT; cy++) {
+                    const sym = combatBoard[cx][cy];
+                    if (sym?.definition.type === SymbolType.ENEMY && !sym.is_marked_for_destruction) {
+                        enemyPositions.push({ x: cx, y: cy });
+                    }
+                }
+            }
+            if (enemyPositions.length > 0) {
+                const pick = enemyPositions[Math.floor(Math.random() * enemyPositions.length)];
+                const target = combatBoard[pick.x][pick.y];
+                if (target) {
+                    const maxHP = target.definition.base_hp ?? 0;
+                    const cur = target.enemy_hp ?? maxHP;
+                    target.enemy_hp = cur - 1;
+                    if (target.enemy_hp <= 0) target.is_marked_for_destruction = true;
+                }
+            }
+        }
         const combatEvents: { ax: number; ay: number; tx: number; ty: number }[] = [];
         for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -1930,15 +1947,23 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'selection') return;
 
+        const skipGold =
+            useRelicStore.getState().relics.some((r) => r.definition.id === RELIC_ID.ANTONINIANUS) ? 2 : 0;
+
         if ((state.bonusSelectionQueue?.length ?? 0) > 0) {
             set({
                 phase: phaseAfterTurnFlowComplete(state.level),
                 symbolChoices: [],
                 bonusSelectionQueue: [],
+                gold: state.gold + skipGold,
             });
             return;
         }
-        set({ phase: phaseAfterTurnFlowComplete(state.level), symbolChoices: [] });
+        set({
+            phase: phaseAfterTurnFlowComplete(state.level),
+            symbolChoices: [],
+            gold: state.gold + skipGold,
+        });
     },
 
     toggleRelicShop: () => {
@@ -2231,9 +2256,25 @@ export const useGameStore = create<GameState>((set, get) => ({
     confirmDestroySymbols: (instanceIds: string[]) => {
         const state = get();
         if (state.phase !== 'destroy_selection') return;
+        const src = state.pendingDestroySource;
+
+        if (src === OBLIVION_FURNACE_PENDING) {
+            const relicInstId = state.pendingOblivionFurnaceRelicId;
+            if (!relicInstId || instanceIds.length !== 1) return;
+            const newSymbols = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
+            useRelicStore.getState().removeRelic(relicInstId);
+            set({
+                playerSymbols: newSymbols,
+                phase: phaseAfterTurnFlowComplete(state.level),
+                pendingDestroySource: null,
+                pendingOblivionFurnaceRelicId: null,
+                destroySelectionMaxSymbols: 3,
+            });
+            return;
+        }
+
         const newSymbols = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
         const goldAdd = instanceIds.length * 10;
-        const src = state.pendingDestroySource;
 
         if (src === EDICT_SYMBOL_ID) {
             const terr = state.territorialAfterEdictPending;
@@ -2292,6 +2333,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     finishDestroySelection: () => {
         if (get().phase !== 'destroy_selection') return;
         const src = get().pendingDestroySource;
+        if (src === OBLIVION_FURNACE_PENDING) {
+            set({
+                phase: phaseAfterTurnFlowComplete(get().level),
+                pendingDestroySource: null,
+                pendingOblivionFurnaceRelicId: null,
+                destroySelectionMaxSymbols: 3,
+            });
+            return;
+        }
         if (src === EDICT_SYMBOL_ID) {
             const st = get();
             const terr = st.territorialAfterEdictPending;
@@ -2321,6 +2371,53 @@ export const useGameStore = create<GameState>((set, get) => ({
             pendingDestroySource: null,
             destroySelectionMaxSymbols: 3,
         });
+    },
+
+    activateClickableRelic: (instanceId: string) => {
+        const state = get();
+        if (state.phase !== 'idle') return;
+        const relic = useRelicStore.getState().relics.find((r) => r.instanceId === instanceId);
+        if (!relic) return;
+        const defId = relic.definition.id;
+
+        if (defId === RELIC_ID.OBLIVION_FURNACE) {
+            if (state.playerSymbols.length === 0) return;
+            set({
+                phase: 'destroy_selection',
+                pendingDestroySource: OBLIVION_FURNACE_PENDING,
+                pendingOblivionFurnaceRelicId: instanceId,
+                destroySelectionMaxSymbols: 1,
+            });
+            return;
+        }
+
+        if (defId === RELIC_ID.JOMON_POTTERY) {
+            const stored = relic.bonus_stacks;
+            const foodGain = stored * 2;
+            useRelicStore.getState().removeRelic(instanceId);
+            set({ food: state.food + foodGain });
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'relic',
+                delta: { food: foodGain, gold: 0, knowledge: 0 },
+                meta: { relicId: defId, action: 'jomon_cashout' },
+            });
+            return;
+        }
+
+        if (defId === RELIC_ID.ANCIENT_RELIC_DEBRIS) {
+            useRelicStore.getState().removeRelic(instanceId);
+            const choices = generateChoices(state.era, state.religionUnlocked);
+            set({
+                phase: 'selection',
+                symbolChoices: choices,
+            });
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'relic',
+                meta: { relicId: defId, action: 'debris_symbol_pick' },
+            });
+        }
     },
 
     initializeGame: () => {
@@ -2364,6 +2461,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             naturalDisasterThreat: 0,
             pendingNewThreatFloats: [],
             pendingDestroySource: null,
+            pendingOblivionFurnaceRelicId: null,
             bonusSelectionQueue: [],
             edictRemovalPending: false,
             forceTerrainInNextSymbolChoices: false,
@@ -2374,22 +2472,16 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
 
-    enterDraftSelection: () => {
-        const choices = generateChoices(1, false);
-        set({ phase: 'draft_selection', symbolChoices: choices });
-    },
-
-    setSymbolChoicesForDraft: () => {
-        const choices = generateChoices(1, false);
-        set({ symbolChoices: choices });
-    },
-
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => {
         const relicStore = useRelicStore.getState();
         const toRemove = relicStore.relics.map((r) => r.instanceId);
         toRemove.forEach((id) => relicStore.removeRelic(id));
         const leaderRelics = getLeaderStartingRelics(leaderId);
         leaderRelics.forEach((def) => relicStore.addRelic(def));
+        const debrisDef = RELICS[RELIC_ID.ANCIENT_RELIC_DEBRIS];
+        if (debrisDef) {
+            for (let i = 0; i < 6; i++) relicStore.addRelic(debrisDef);
+        }
 
         const leader = LEADERS[leaderId];
         const startingFood = (leader?.startingFood ?? 0);
@@ -2444,6 +2536,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             naturalDisasterThreat: 0,
             pendingNewThreatFloats: [],
             pendingDestroySource: null,
+            pendingOblivionFurnaceRelicId: null,
             bonusSelectionQueue: [],
             edictRemovalPending: false,
             forceTerrainInNextSymbolChoices: false,
