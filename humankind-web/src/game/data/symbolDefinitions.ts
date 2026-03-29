@@ -206,6 +206,13 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
         description: "Destroyed; on destroy: next turn, the first symbol-selection reroll costs 0 Gold.",
         sprite: "070.png",
     },
+    71: {
+        id: 71,
+        name: "Wild Seeds",
+        type: SymbolType.ANCIENT,
+        description: "+1 Food. Destroyed after 5 turns.",
+        sprite: "071.png",
+    },
 };
 
 /** 세금 심볼 ID — 턴 종료 정산 시 인접 슬롯의 이번 턴 식량 합계를 참조 */

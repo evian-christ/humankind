@@ -32,8 +32,6 @@ export interface EffectResult {
 export interface ActiveRelicEffects {
     /** 유물 보유 수 (석판 효과용) */
     relicCount: number;
-    /** ID 4: 조몬 토기 조각 - 토기가 인접한 다른 토기를 파괴 */
-    potteryDestroyAdjacent: boolean;
     /** ID 5: 이집트 구리 톱 - 채석장 인접 빈 슬롯마다 골드 +10 */
     quarryEmptyGold: boolean;
     /** ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 인접한 바나나 당 +20 식량 */
@@ -48,15 +46,14 @@ export interface ActiveRelicEffects {
     gilgameshReligionNoPenalty: boolean;
     /** ID 115: 막달레니안 뼈 낚싯바늘 - 물고기가 골드 +1 추가 */
     fishBoneHookGold: boolean;
-    /** ID 120: 나일 강 비옥한 흑니 (활성 중) - 식량 2배 */
-    nileFloodDoubleFood: boolean;
     /** 기마술 업그레이드 - 목장 자체 생산량 +10 */
     horsemansihpPastureBonus: boolean;
+    /** ID 16: 테라의 화석 포도 — 자연재해(44~46) 식량 +2 */
+    terraFossilDisasterFood: boolean;
 }
 
 export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
     relicCount: 0,
-    potteryDestroyAdjacent: false,
     quarryEmptyGold: false,
     bananaFossilBonus: false,
     burnOfferingEmptyPenalty: false,
@@ -64,8 +61,8 @@ export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
     gobekliAnimalJackpot: false,
     gilgameshReligionNoPenalty: false,
     fishBoneHookGold: false,
-    nileFloodDoubleFood: false,
     horsemansihpPastureBonus: false,
+    terraFossilDisasterFood: false,
 };
 
 const BOARD_WIDTH = 5;
@@ -153,6 +150,7 @@ const SYMBOL_BASE_FOOD: Record<number, number> = {
     60: 0,
     61: 0,
     64: 0, 65: 0, 66: 0, 67: 0, 68: 0, 69: 0, 70: 0,
+    71: 1,
 };
 
 /** Era 1 심볼 중 랜덤 하나 반환 (ID 1~21) */
@@ -220,10 +218,12 @@ export const processSingleSymbolEffects = (
             if (symbolInstance.effect_counter <= 0) {
                 symbolInstance.is_marked_for_destruction = true;
             }
+            if (relicEffects.terraFossilDisasterFood) food += 2;
             break;
         }
 
         case 45: { // Earthquake: Destroyed; on destroy: destroys 1 random adjacent symbol
+            if (relicEffects.terraFossilDisasterFood) food += 2;
             symbolInstance.is_marked_for_destruction = true;
             break;
         }
@@ -239,6 +239,7 @@ export const processSingleSymbolEffects = (
             if (symbolInstance.effect_counter <= 0) {
                 symbolInstance.is_marked_for_destruction = true;
             }
+            if (relicEffects.terraFossilDisasterFood) food += 2;
             break;
         }
 
@@ -493,18 +494,18 @@ export const processSingleSymbolEffects = (
             break;
         }
 
+        case 71: { // Wild Seeds: +1 Food each turn; after 5 turns destroyed
+            food += 1;
+            symbolInstance.effect_counter++;
+            if (symbolInstance.effect_counter >= 5) {
+                symbolInstance.effect_counter = 5;
+                symbolInstance.is_marked_for_destruction = true;
+            }
+            break;
+        }
+
         case 20: { // Pottery: stores +3 Food per spin. On destroy: releases stored Food
             symbolInstance.effect_counter += 3;
-            // ID 4: 조몬 토기 조각 - 인접한 다른 토기를 파괴 표시
-            if (relicEffects.potteryDestroyAdjacent) {
-                adj.forEach(pos => {
-                    const t = boardGrid[pos.x][pos.y];
-                    if (t && t.definition.id === 20 && !t.is_marked_for_destruction) {
-                        t.is_marked_for_destruction = true;
-                        contributors.push(pos);
-                    }
-                });
-            }
             break;
         }
 
@@ -923,11 +924,6 @@ export const processSingleSymbolEffects = (
         }
     }
     // Adjacency and double bonuses moved to individual symbol cases.
-
-    // ── ID 120: 나일 강 비옥한 흑니 - 활성 중 식량 2배 ──
-    if (relicEffects.nileFloodDoubleFood && food > 0) {
-        food *= 2;
-    }
 
     // Candidate 203: Masonry (Monument Knowledge x2) -> No, 203 is Spearcraft mapping now.
     // Wait, the previous logic had 203 Masonry. Let's completely replace the Candidate effects logic!
