@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useRelicStore } from '../game/state/relicStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { useNotificationStore } from '../game/state/notificationStore';
 import { SYMBOLS } from '../game/data/symbolDefinitions';
 import { RELIC_LIST } from '../game/data/relicDefinitions';
 import { t } from '../i18n';
@@ -24,11 +23,13 @@ const StatRow = ({
     value,
     onAdjust,
     onSet,
+    deltas = [-100, -10, 10, 100],
 }: {
     label: string;
     value: number;
     onAdjust: (delta: number) => void;
     onSet: (v: number) => void;
+    deltas?: number[];
 }) => {
     const [inputVal, setInputVal] = useState(String(value));
 
@@ -59,10 +60,15 @@ const StatRow = ({
                     textAlign: 'right',
                 }}
             />
-            <button style={btnStyle('#374151')} onClick={() => onAdjust(-100)}>-100</button>
-            <button style={btnStyle('#374151')} onClick={() => onAdjust(-10)}>-10</button>
-            <button style={btnStyle('#166534')} onClick={() => onAdjust(10)}>+10</button>
-            <button style={btnStyle('#166534')} onClick={() => onAdjust(100)}>+100</button>
+            {deltas.map((d) => (
+                <button
+                    key={d}
+                    style={btnStyle(d < 0 ? '#374151' : '#166534')}
+                    onClick={() => onAdjust(d)}
+                >
+                    {d > 0 ? `+${d}` : `${d}`}
+                </button>
+            ))}
         </div>
     );
 };
@@ -71,7 +77,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = useGameStore();
+    const { food, gold, knowledge, level, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
 
@@ -137,6 +143,7 @@ const DevOverlay = () => {
                         onClick={() => devForceScreen('symbol')}
                         style={{
                             flex: '1',
+                            minWidth: '140px',
                             background: '#1d4ed8',
                             color: '#fff',
                             border: 'none',
@@ -154,29 +161,10 @@ const DevOverlay = () => {
                         <span>심볼 선택</span>
                     </button>
                     <button
-                        onClick={() => devForceScreen('relic')}
-                        style={{
-                            flex: '1',
-                            background: '#7c3aed',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '7px 4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            borderRadius: '4px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '3px',
-                        }}
-                    >
-                        <span style={{ fontSize: '18px' }}>🏺</span>
-                        <span>유물 선택</span>
-                    </button>
-                    <button
                         onClick={() => devForceScreen('upgrade')}
                         style={{
                             flex: '1',
+                            minWidth: '140px',
                             background: '#065f46',
                             color: '#fff',
                             border: 'none',
@@ -192,35 +180,6 @@ const DevOverlay = () => {
                     >
                         <span style={{ fontSize: '18px' }}>📚</span>
                         <span>지식 업그레이드</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Test Notification */}
-            <div style={{
-                padding: '8px 14px',
-                borderBottom: '1px solid #333',
-            }}>
-                <div style={{ color: '#888', fontSize: '11px', marginBottom: '6px', letterSpacing: '1px' }}>TEST NOTIFICATION</div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {(['info', 'warning', 'danger'] as const).map(level => (
-                        <button
-                            key={level}
-                            onClick={() => useNotificationStore.getState().push({
-                                type: 'generic',
-                                level,
-                                message: `[${level}] 테스트 알림 메시지입니다.`,
-                            })}
-                            style={btnStyle(level === 'danger' ? '#7f1d1d' : level === 'warning' ? '#78350f' : '#1e3a5f')}
-                        >
-                            {level}
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => useNotificationStore.getState().clearAll()}
-                        style={btnStyle('#374151')}
-                    >
-                        clear all
                     </button>
                 </div>
             </div>
@@ -249,7 +208,14 @@ const DevOverlay = () => {
                     onAdjust={d => devSetStat('knowledge', knowledge + d)}
                     onSet={v => devSetStat('knowledge', v)}
                 />
-                
+                <StatRow
+                    label="Level"
+                    value={level}
+                    onAdjust={d => devSetStat('level', level + d)}
+                    onSet={v => devSetStat('level', v)}
+                    deltas={[-5, -1, 1, 5]}
+                />
+
                 {/* 하단에 현재 위협 게이지 확률 표시 */}
                 <div style={{ marginTop: '10px' }}>
                     <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>THREAT LEVELS</div>
