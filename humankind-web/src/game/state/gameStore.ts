@@ -184,8 +184,8 @@ export interface GameState {
     /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
     rerollsThisTurn: number;
 
-    /** 업그레이드 선택에서 (페리클레스) 카드당 1회 리롤 사용 여부 */
-    knowledgeUpgradeRerollUsed: boolean[];
+    /** 이번 지식 업그레이드 선택 화면에서 전역 리롤 1회 소비 여부 (한 슬롯만 바꿀 수 있음) */
+    knowledgeUpgradeGlobalRerollUsed: boolean;
     /** devForceScreen('upgrade')로 연 경우: 닫을 때 복귀할 phase (null = 일반 레벨업 → 심볼 선택) */
     returnPhaseAfterDevKnowledgeUpgrade: GamePhase | null;
 
@@ -238,8 +238,8 @@ export interface GameState {
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => void;
-    devForceScreen: (screen: 'symbol' | 'relic' | 'upgrade') => void;
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level', value: number) => void;
+    devForceScreen: (screen: 'symbol' | 'upgrade') => void;
     confirmDestroySymbols: (instanceIds: string[]) => void;
     finishDestroySelection: () => void;
 
@@ -579,35 +579,57 @@ import {
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
 import { getLeaderStartingRelics, LEADERS } from '../data/leaders';
 
-/** 현재 시대에 맞는 지식 업그레이드 선택지 3개 생성 (이미 업그레이드된 것 제외) */
-const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
-    // KNOWLEDGE_UPGRADES만 사용 — 후보(CANDIDATES)는 표시하지 않음
-    const upgradeEraByType = (type: KnowledgeUpgradeType): number | null => {
-        if (typeof type !== 'number') return null; // 지도자 전용 타입: 선택지로 등장하지 않게
-        switch (type) {
-            case SymbolType.ANCIENT: return 1;
-            case SymbolType.MEDIEVAL: return 2;
-            case SymbolType.MODERN: return 3;
-            default: return null;
-        }
-    };
+const upgradeEraByType = (type: KnowledgeUpgradeType): number | null => {
+    if (typeof type !== 'number') return null;
+    switch (type) {
+        case SymbolType.ANCIENT: return 1;
+        case SymbolType.MEDIEVAL: return 2;
+        case SymbolType.MODERN: return 3;
+        default: return null;
+    }
+};
 
-    const level = useGameStore.getState().level;
+/**
+ * 현재 화면에 나온 ID·이미 해금된 ID를 제외한, 시대·레벨 규칙에 맞는 지식 업그레이드 후보 풀.
+ * (generateUpgradeChoices / 리롤이 동일 규칙 사용)
+ */
+function buildKnowledgeUpgradeAlternativesPool(
+    unlocked: number[],
+    currentEra: number,
+    level: number,
+    excludeIds: Set<number>,
+): KnowledgeUpgrade[] {
     const medievalUnlocked = unlocked.includes(FEUDALISM_UPGRADE_ID) || currentEra >= 2;
-
-    const pool = Object.values(KNOWLEDGE_UPGRADES).filter((u) => {
-        if (unlocked.includes(u.id)) return false;
+    return Object.values(KNOWLEDGE_UPGRADES).filter((u) => {
+        if (unlocked.includes(u.id) || excludeIds.has(u.id)) return false;
         const upgradeEra = upgradeEraByType(u.type);
         if (upgradeEra == null) return false;
-
-        if (u.id === FEUDALISM_UPGRADE_ID) {
-            return level >= 10;
-        }
-        if (u.type === SymbolType.MEDIEVAL) {
-            return medievalUnlocked;
-        }
+        if (u.id === FEUDALISM_UPGRADE_ID) return level >= 10;
+        if (u.type === SymbolType.MEDIEVAL) return medievalUnlocked;
         return upgradeEra <= currentEra;
     });
+}
+
+/** 리롤 가능한 대체 후보 개수 (현재 선택지 ID 제외) */
+export function countKnowledgeUpgradeRerollAlternatives(
+    unlocked: number[],
+    era: number,
+    level: number,
+    currentChoiceIds: number[],
+): number {
+    return buildKnowledgeUpgradeAlternativesPool(unlocked, era, level, new Set(currentChoiceIds)).length;
+}
+
+/** 현재 시대에 맞는 지식 업그레이드 선택지 3개 생성 (이미 업그레이드된 것 제외) */
+const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
+    const level = useGameStore.getState().level;
+    /** 레벨 10 도달 시(중세시대 미선택): 선택지는 중세시대 카드 1장만 */
+    if (level === 10 && !unlocked.includes(FEUDALISM_UPGRADE_ID)) {
+        const feudal = KNOWLEDGE_UPGRADES[FEUDALISM_UPGRADE_ID];
+        return feudal ? [feudal] : [];
+    }
+
+    const pool = buildKnowledgeUpgradeAlternativesPool(unlocked, currentEra, level, new Set());
     const shuffled = shuffle(pool);
     return shuffled.slice(0, 3);
 };
@@ -672,7 +694,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     levelBeforeUpgrade: 1,
     isRelicShopOpen: false,
     rerollsThisTurn: 0,
-    knowledgeUpgradeRerollUsed: [],
+    knowledgeUpgradeGlobalRerollUsed: false,
     returnPhaseAfterDevKnowledgeUpgrade: null,
 
     barbarianSymbolThreat: 0,
@@ -1696,7 +1718,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         set({
                             phase: 'upgrade_selection' as GamePhase,
                             upgradeChoices,
-                            knowledgeUpgradeRerollUsed: new Array(upgradeChoices.length).fill(false),
+                            knowledgeUpgradeGlobalRerollUsed: false,
                         });
                         return;
                     }
@@ -1997,7 +2019,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 destroySelectionMaxSymbols: 3,
                 pendingLevelUpSelection: false,
                 upgradeChoices: [],
-                knowledgeUpgradeRerollUsed: [],
+                knowledgeUpgradeGlobalRerollUsed: false,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
             });
             return;
@@ -2011,7 +2033,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 destroySelectionMaxSymbols: 3,
                 pendingLevelUpSelection: false,
                 upgradeChoices: [],
-                knowledgeUpgradeRerollUsed: [],
+                knowledgeUpgradeGlobalRerollUsed: false,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
             });
             return;
@@ -2085,7 +2107,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             religionUnlocked: religionUnlocked,
             upgradeChoices: [],
             pendingLevelUpSelection: false,
-            knowledgeUpgradeRerollUsed: [],
+            knowledgeUpgradeGlobalRerollUsed: false,
             board: newBoard,
             playerSymbols: newPlayerSymbols,
             knowledge: state.knowledge + addedKnowledge,
@@ -2121,7 +2143,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({
             upgradeChoices: [],
             pendingLevelUpSelection: false,
-            knowledgeUpgradeRerollUsed: [],
+            knowledgeUpgradeGlobalRerollUsed: false,
             ...(edictAfterUpgrade
                 ? {
                       edictRemovalPending: false,
@@ -2180,45 +2202,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     rerollUpgradeCard: (slotIndex: number) => {
         const state = get();
         if (state.phase !== 'upgrade_selection') return;
+        if (state.knowledgeUpgradeGlobalRerollUsed) return;
+        if (!state.upgradeChoices[slotIndex]) return;
 
         const unlocked = state.unlockedKnowledgeUpgrades || [];
-        const canDemocraticOrder = unlocked.includes(LEADER_KNOWLEDGE_UPGRADES.pericles.sub);
-        if (!canDemocraticOrder) return;
-        if (!state.upgradeChoices[slotIndex]) return;
-        if (state.knowledgeUpgradeRerollUsed[slotIndex]) return;
-
-        const upgradeEraByType = (type: KnowledgeUpgradeType): number | null => {
-            if (typeof type !== 'number') return null; // 지도자 전용 타입: 선택지로 등장하지 않게
-            switch (type) {
-                case SymbolType.ANCIENT: return 1;
-                case SymbolType.MEDIEVAL: return 2;
-                case SymbolType.MODERN: return 3;
-                default: return null;
-            }
-        };
-
-        // 현재 화면의 업그레이드 3개는 제외 (한 번 리롤하면 다른 카드로 교체)
-        const excludedIds = new Set<number>(state.upgradeChoices.map(u => u.id));
-        const level = state.level;
-        const medievalUnlocked = unlocked.includes(FEUDALISM_UPGRADE_ID) || state.era >= 2;
-        const pool = Object.values(KNOWLEDGE_UPGRADES).filter((u) => {
-            if (unlocked.includes(u.id) || excludedIds.has(u.id)) return false;
-            const upgradeEra = upgradeEraByType(u.type);
-            if (upgradeEra == null) return false;
-            if (u.id === FEUDALISM_UPGRADE_ID) return level >= 10;
-            if (u.type === SymbolType.MEDIEVAL) return medievalUnlocked;
-            return upgradeEra <= state.era;
-        });
-
+        const excludedIds = new Set(state.upgradeChoices.map((u) => u.id));
+        const pool = buildKnowledgeUpgradeAlternativesPool(unlocked, state.era, state.level, excludedIds);
         if (pool.length === 0) return;
 
         const next = pool[Math.floor(Math.random() * pool.length)];
-        const nextRerollUsed = [...state.knowledgeUpgradeRerollUsed];
-        nextRerollUsed[slotIndex] = true;
-
         set({
             upgradeChoices: state.upgradeChoices.map((u, idx) => (idx === slotIndex ? next : u)),
-            knowledgeUpgradeRerollUsed: nextRerollUsed,
+            knowledgeUpgradeGlobalRerollUsed: true,
         });
     },
 
@@ -2229,7 +2224,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades || [], state.era);
         set({
             upgradeChoices: choices,
-            knowledgeUpgradeRerollUsed: new Array(choices.length).fill(false),
+            knowledgeUpgradeGlobalRerollUsed: false,
         });
     },
 
@@ -2362,7 +2357,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             pendingLevelUpSelection: false,
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
-            knowledgeUpgradeRerollUsed: [],
+            knowledgeUpgradeGlobalRerollUsed: false,
 
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
@@ -2443,7 +2438,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             pendingLevelUpSelection: false,
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
-            knowledgeUpgradeRerollUsed: [],
+            knowledgeUpgradeGlobalRerollUsed: false,
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
@@ -2473,17 +2468,20 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
     },
 
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge', value: number) => {
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level', value: number) => {
+        if (stat === 'level') {
+            const L = Math.max(1, Math.min(30, Math.round(value)));
+            set({ level: L, era: getEraFromLevel(L) });
+            return;
+        }
         set({ [stat]: Math.max(0, value) });
     },
 
-    devForceScreen: (screen: 'symbol' | 'relic' | 'upgrade') => {
+    devForceScreen: (screen: 'symbol' | 'upgrade') => {
         const state = get();
         if (screen === 'symbol') {
             const choices = generateChoices(state.era, state.religionUnlocked);
             set({ phase: 'selection', symbolChoices: choices });
-        } else if (screen === 'relic') {
-            set({ isRelicShopOpen: true, relicChoices: generateRelicChoices(), relicHalfPriceRelicId: null });
         } else if (screen === 'upgrade') {
             const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades, state.era);
             const returnPhase: GamePhase =
@@ -2492,7 +2490,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 phase: 'upgrade_selection',
                 upgradeChoices: choices,
                 pendingLevelUpSelection: true,
-                knowledgeUpgradeRerollUsed: new Array(choices.length).fill(false),
+                knowledgeUpgradeGlobalRerollUsed: false,
                 returnPhaseAfterDevKnowledgeUpgrade: returnPhase,
             });
         }
