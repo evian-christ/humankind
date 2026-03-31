@@ -21,25 +21,30 @@ const getUpgradeSpritePaths = (): string[] => {
 export const loadGameAssets = async () => {
     if (assetsLoaded) return;
 
-    try {
-        const symbolPaths = Object.values(SYMBOLS)
-            .filter(s => s.sprite && s.sprite !== '-' && s.sprite !== '-.png')
-            .map(s => `${ASSET_BASE_URL}assets/symbols/${s.sprite}`);
-        const relicPaths = Object.values(RELICS)
-            .filter(r => r.sprite && r.sprite !== '-' && r.sprite !== '-.png')
-            .map(r => `${ASSET_BASE_URL}assets/relics/${r.sprite}`);
-        const upgradePaths = getUpgradeSpritePaths();
+    const symbolPaths = Object.values(SYMBOLS)
+        .filter(s => s.sprite && s.sprite !== '-' && s.sprite !== '-.png')
+        .map(s => `${ASSET_BASE_URL}assets/symbols/${s.sprite}`);
+    const relicPaths = Object.values(RELICS)
+        .filter(r => r.sprite && r.sprite !== '-' && r.sprite !== '-.png')
+        .map(r => `${ASSET_BASE_URL}assets/relics/${r.sprite}`);
+    const upgradePaths = getUpgradeSpritePaths();
 
-        await PIXI.Assets.load([
-            `${ASSET_BASE_URL}assets/ui/slot_bg.png`,
-            `${ASSET_BASE_URL}assets/ui/buttons/menu0.png`,
-            `${ASSET_BASE_URL}assets/ui/buttons/menu1.png`,
-            ...symbolPaths,
-            ...relicPaths,
-            ...upgradePaths,
-        ]);
-        assetsLoaded = true;
-    } catch (error) {
-        console.warn("Some assets failed to load, proceeding anyway:", error);
+    const allPaths = [
+        `${ASSET_BASE_URL}assets/ui/slot_bg.png`,
+        `${ASSET_BASE_URL}assets/ui/buttons/menu0.png`,
+        `${ASSET_BASE_URL}assets/ui/buttons/menu1.png`,
+        ...symbolPaths,
+        ...relicPaths,
+        ...upgradePaths,
+    ];
+
+    // 한 파일이 없어도 나머지(특히 slot_bg)는 캐시에 올려야 보드가 보인다.
+    const results = await Promise.allSettled(allPaths.map((url) => PIXI.Assets.load(url)));
+    const failed = results
+        .map((r, i) => (r.status === 'rejected' ? allPaths[i] : null))
+        .filter(Boolean) as string[];
+    if (failed.length > 0) {
+        console.warn('Some assets failed to load:', failed.length, 'file(s); proceeding anyway.');
     }
+    assetsLoaded = true;
 };

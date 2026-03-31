@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useGameStore, countKnowledgeUpgradeRerollAlternatives } from '../game/state/gameStore';
+import { useGameStore, countKnowledgeUpgradeRerollAlternatives, getEraFromLevel } from '../game/state/gameStore';
 import { useSettingsStore, type Language } from '../game/state/settingsStore';
 import { getSymbolColorHex, SYMBOLS, SymbolType } from '../game/data/symbolDefinitions';
 import type { KnowledgeUpgradeDescSymbol, KnowledgeUpgradeSymbolRelation } from '../game/data/knowledgeUpgrades';
@@ -301,19 +301,24 @@ const UpgradeSelection = () => {
         selectUpgrade,
         level,
         levelBeforeUpgrade,
-        era,
         unlockedKnowledgeUpgrades,
         knowledgeUpgradeGlobalRerollUsed,
         rerollUpgradeCard,
     } = useGameStore();
+    const knowledgeUpgradePickQueue = useGameStore((s) => s.knowledgeUpgradePickQueue ?? []);
     const language = useSettingsStore((s) => s.language);
+
+    const pickLevel = knowledgeUpgradePickQueue[0] ?? level;
+    const eraForPick = getEraFromLevel(pickLevel);
+    const displayLevelFrom = knowledgeUpgradePickQueue.length > 0 ? pickLevel - 1 : levelBeforeUpgrade;
+    const displayLevelTo = knowledgeUpgradePickQueue.length > 0 ? pickLevel : level;
 
     const rerollAlternatives =
         phase === 'upgrade_selection'
             ? countKnowledgeUpgradeRerollAlternatives(
                   unlockedKnowledgeUpgrades || [],
-                  era,
-                  level,
+                  eraForPick,
+                  pickLevel,
                   upgradeChoices.map((u) => u.id),
               )
             : 0;
@@ -357,7 +362,7 @@ const UpgradeSelection = () => {
                             fontSize: '26px',
                             color: '#94a3b8',
                             letterSpacing: '2px',
-                        }}>Lv.{levelBeforeUpgrade}</span>
+                        }}>Lv.{displayLevelFrom}</span>
                         <span style={{ fontSize: '26px', color: '#60a5fa' }}>→</span>
                         <span style={{
                             fontFamily: 'Mulmaru, monospace',
@@ -366,7 +371,7 @@ const UpgradeSelection = () => {
                             color: '#93c5fd',
                             letterSpacing: '2px',
                             textShadow: '0 0 12px rgba(147, 197, 253, 0.6)',
-                        }}>Lv.{level}</span>
+                        }}>Lv.{displayLevelTo}</span>
                         <span style={{
                             fontFamily: 'Mulmaru, monospace',
                             fontSize: '20px',

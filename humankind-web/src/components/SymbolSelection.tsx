@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useGameStore, REROLL_COST } from '../game/state/gameStore';
+import { useGameStore, getRerollCost } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
@@ -78,7 +78,7 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
 };
 
 const SymbolSelection = () => {
-    const { phase, symbolChoices, gold, rerollsThisTurn, selectSymbol, skipSelection, rerollSymbols } = useGameStore();
+    const { phase, symbolChoices, gold, rerollsThisTurn, level, selectSymbol, skipSelection, rerollSymbols } = useGameStore();
     const language = useSettingsStore((s) => s.language);
     const relics = useRelicStore((s) => s.relics);
     const [isPeeked, setIsPeeked] = useState(false);
@@ -91,7 +91,8 @@ const SymbolSelection = () => {
 
     // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
     const hasLydia = relics.some(r => r.definition.id === 2);
-    const rerollCostUnscaled = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+    const baseRerollCost = getRerollCost(level);
+    const rerollCostUnscaled = hasLydia ? Math.floor(baseRerollCost * 0.5) : baseRerollCost;
     const rerollCost = rerollCostUnscaled;
     const maxRerolls = hasLydia ? 3 : Infinity;
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;

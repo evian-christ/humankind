@@ -37,6 +37,8 @@ export class PixiGameApp {
     public app: PIXI.Application;
     private canvas: HTMLDivElement;
     private destroyed = false;
+    /** init() 완료 전 destroy 시 ResizePlugin 등이 미초기화라 Pixi destroy가 터질 수 있음 (React Strict Mode 등) */
+    private pixiInitComplete = false;
 
     // Containers
     private bgContainer = new PIXI.Container();
@@ -145,6 +147,7 @@ export class PixiGameApp {
             antialias: false,
             roundPixels: true,
         });
+        this.pixiInitComplete = true;
 
         if (this.destroyed) {
             try {
@@ -178,8 +181,10 @@ export class PixiGameApp {
         this.destroyed = true;
         if (this.app) {
             try {
-                if (this.app.resizeTo) (this.app as any).resizeTo = null;
-                this.app.destroy(true);
+                if (this.pixiInitComplete && this.app.renderer) {
+                    if (this.app.resizeTo) (this.app as any).resizeTo = null;
+                    this.app.destroy(true);
+                }
             } catch (e) {
                 console.warn("Error destroying PIXI app:", e);
             }
@@ -188,6 +193,7 @@ export class PixiGameApp {
                 if (this.canvas) this.canvas.innerHTML = '';
             } catch (e) { }
         }
+        this.pixiInitComplete = false;
     }
 
     public resize(width: number, height: number) {

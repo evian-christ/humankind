@@ -12,7 +12,8 @@ export { type PlayerSymbolInstance } from '../types';
 
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
-export const REROLL_COST = 5;
+/** 레벨에 따라 증가하는 리롤 비용: 2G(Lv1) → 5G(Lv10+) */
+export const getRerollCost = (level: number): number => Math.min(2 + Math.floor((level - 1) / 3), 5);
 
 /**
  * 지도자 스킬을 "지식 업그레이드"로 치환한 ID들.
@@ -180,13 +181,15 @@ export interface GameState {
     unlockedKnowledgeUpgrades: number[];
     /** 매 턴 영구 지식 보너스 */
     bonusXpPerTurn: number;
-    /** 중세 시대 등 진입 시 선택 대기 중 (추후 레벨업 보상으로 통합 가능) */
 
     /** 지식 업그레이드 선택지 */
     upgradeChoices: import('../data/knowledgeUpgrades').KnowledgeUpgrade[];
-    /** 레벨업 선택 대기 중 */
-    pendingLevelUpSelection: boolean;
-    /** 레벨업 직전의 레벨 (업그레이드 화면에서 "Lv.X → Lv.Y" 표시용) */
+    /**
+     * 이번 턴에 남은 지식 업그레이드 선택 횟수 (한 번에 레벨이 여러 번 오르면 길이만큼 연속 선택).
+     * 각 요소는 해당 선택이 대응하는 **도달 레벨** (예: 5→7이면 [6, 7]).
+     */
+    knowledgeUpgradePickQueue: number[];
+    /** 레벨업 직전의 레벨 (업그레이드 화면 백업 표시용; 화면은 pickQueue[0] 우선) */
     levelBeforeUpgrade: number;
     /** 유물 상점 오버레이 열림 여부 */
     isRelicShopOpen: boolean;
@@ -586,7 +589,7 @@ import {
     type KnowledgeUpgradeType,
 } from '../data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
-import { getLeaderStartingRelics, LEADERS } from '../data/leaders';
+import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
 
 const upgradeEraByType = (type: KnowledgeUpgradeType): number | null => {
     if (typeof type !== 'number') return null;
@@ -634,15 +637,14 @@ export function countKnowledgeUpgradeRerollAlternatives(
 }
 
 /** 현재 시대에 맞는 지식 업그레이드 선택지 3개 생성 (이미 업그레이드된 것 제외) */
-const generateUpgradeChoices = (unlocked: number[], currentEra: number): KnowledgeUpgrade[] => {
-    const level = useGameStore.getState().level;
+const generateUpgradeChoices = (unlocked: number[], eraForPick: number, levelForPick: number): KnowledgeUpgrade[] => {
     /** 레벨 10 도달 시(중세시대 미선택): 선택지는 중세시대 카드 1장만 */
-    if (level === 10 && !unlocked.includes(FEUDALISM_UPGRADE_ID)) {
+    if (levelForPick === 10 && !unlocked.includes(FEUDALISM_UPGRADE_ID)) {
         const feudal = KNOWLEDGE_UPGRADES[FEUDALISM_UPGRADE_ID];
         return feudal ? [feudal] : [];
     }
 
-    const pool = buildKnowledgeUpgradeAlternativesPool(unlocked, currentEra, level, new Set());
+    const pool = buildKnowledgeUpgradeAlternativesPool(unlocked, eraForPick, levelForPick, new Set());
     const shuffled = shuffle(pool);
     return shuffled.slice(0, 3);
 };
@@ -698,7 +700,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     bonusXpPerTurn: 0,
 
     upgradeChoices: [],
-    pendingLevelUpSelection: false,
+    knowledgeUpgradePickQueue: [],
     levelBeforeUpgrade: 1,
     isRelicShopOpen: false,
     rerollsThisTurn: 0,
@@ -1605,14 +1607,14 @@ export const useGameStore = create<GameState>((set, get) => ({
             set((prev) => {
                 let newLevel = prev.level;
                 let newKnowledge = prev.knowledge + tKnowledge + bonusKnowledge;
-                let pendingLevelUp = false;
+                const knowledgeUpgradePickQueue: number[] = [];
 
                 while (newLevel < 30) {
                     const required = getKnowledgeRequiredForLevel(newLevel);
                     if (newKnowledge < required) break;
                     newKnowledge -= required;
                     newLevel++;
-                    pendingLevelUp = true;
+                    knowledgeUpgradePickQueue.push(newLevel);
                 }
 
                 const newEra = getEraFromLevel(newLevel);
@@ -1674,7 +1676,10 @@ export const useGameStore = create<GameState>((set, get) => ({
                     gold: prev.gold + tGold + bonusGold,
                     knowledge: newKnowledge,
                     level: newLevel,
-                    levelBeforeUpgrade: pendingLevelUp ? prev.level : prev.levelBeforeUpgrade,
+                    levelBeforeUpgrade:
+                        knowledgeUpgradePickQueue.length > 0
+                            ? knowledgeUpgradePickQueue[0] - 1
+                            : prev.levelBeforeUpgrade,
                     runningTotals: { food: 0, gold: 0, knowledge: 0 },
                     activeSlot: null,
                     activeContributors: [],
@@ -1687,7 +1692,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     lastEffects: [...effects],
                     phase: 'processing' as GamePhase,
                     symbolChoices: choices,
-                    pendingLevelUpSelection: pendingLevelUp,
+                    knowledgeUpgradePickQueue,
                 };
             });
 
@@ -1707,13 +1712,19 @@ export const useGameStore = create<GameState>((set, get) => ({
                         }));
                         get().refreshRelicShop(true); // Auto refresh shop inventory every 10 turns
                     }
-                    // 레벨업이 있으면 upgrade_selection 먼저
-                    if (finalState.pendingLevelUpSelection) {
-                        const upgradeChoices = generateUpgradeChoices(finalState.unlockedKnowledgeUpgrades || [], finalState.era);
+                    // 레벨업이 있으면 (여러 레벨이면 큐만큼 연속) upgrade_selection 먼저
+                    if (finalState.knowledgeUpgradePickQueue.length > 0) {
+                        const pickLevel = finalState.knowledgeUpgradePickQueue[0];
+                        const upgradeChoices = generateUpgradeChoices(
+                            finalState.unlockedKnowledgeUpgrades || [],
+                            getEraFromLevel(pickLevel),
+                            pickLevel,
+                        );
                         set({
                             phase: 'upgrade_selection' as GamePhase,
                             upgradeChoices,
                             knowledgeUpgradeGlobalRerollUsed: false,
+                            levelBeforeUpgrade: pickLevel - 1,
                         });
                         return;
                     }
@@ -2042,7 +2053,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 phase: 'destroy_selection',
                 pendingDestroySource: SACRIFICIAL_RITE_UPGRADE_ID,
                 destroySelectionMaxSymbols: 3,
-                pendingLevelUpSelection: false,
+                knowledgeUpgradePickQueue: (state.knowledgeUpgradePickQueue || []).slice(1),
                 upgradeChoices: [],
                 knowledgeUpgradeGlobalRerollUsed: false,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
@@ -2056,7 +2067,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 phase: 'destroy_selection',
                 pendingDestroySource: TERRITORIAL_REORG_UPGRADE_ID,
                 destroySelectionMaxSymbols: 3,
-                pendingLevelUpSelection: false,
+                knowledgeUpgradePickQueue: (state.knowledgeUpgradePickQueue || []).slice(1),
                 upgradeChoices: [],
                 knowledgeUpgradeGlobalRerollUsed: false,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
@@ -2126,38 +2137,82 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         const edictAfterUpgrade = state.edictRemovalPending;
-        set({
+        const restQueue = (state.knowledgeUpgradePickQueue || []).slice(1);
+        const baseUnlock = {
             unlockedKnowledgeUpgrades: newUnlocked,
             bonusXpPerTurn: state.bonusXpPerTurn + bonusXpDelta,
             religionUnlocked: religionUnlocked,
-            upgradeChoices: [],
-            pendingLevelUpSelection: false,
-            knowledgeUpgradeGlobalRerollUsed: false,
             board: newBoard,
             playerSymbols: newPlayerSymbols,
             knowledge: state.knowledge + addedKnowledge,
             gold: state.gold + addedGold,
-            ...(edictAfterUpgrade
-                ? {
-                      edictRemovalPending: false,
-                      phase: 'destroy_selection' as GamePhase,
-                      pendingDestroySource: EDICT_SYMBOL_ID,
-                      destroySelectionMaxSymbols: 1,
-                      returnPhaseAfterDevKnowledgeUpgrade: null,
-                  }
-                : state.returnPhaseAfterDevKnowledgeUpgrade != null
-                  ? {
-                        phase: state.returnPhaseAfterDevKnowledgeUpgrade,
-                        returnPhaseAfterDevKnowledgeUpgrade: null,
-                    }
-                  : {
-                        phase: 'selection' as GamePhase,
-                        returnPhaseAfterDevKnowledgeUpgrade: null,
-                        symbolChoices:
-                            state.symbolChoices.length > 0
-                                ? state.symbolChoices
-                                : generateChoices(state.era, state.religionUnlocked),
-                    }),
+        };
+
+        if (edictAfterUpgrade) {
+            set({
+                ...baseUnlock,
+                upgradeChoices: [],
+                knowledgeUpgradePickQueue: restQueue,
+                knowledgeUpgradeGlobalRerollUsed: false,
+                edictRemovalPending: false,
+                phase: 'destroy_selection' as GamePhase,
+                pendingDestroySource: EDICT_SYMBOL_ID,
+                destroySelectionMaxSymbols: 1,
+                returnPhaseAfterDevKnowledgeUpgrade: null,
+            });
+            return;
+        }
+
+        if (state.returnPhaseAfterDevKnowledgeUpgrade != null) {
+            const pickLevel = restQueue[0];
+            if (restQueue.length > 0) {
+                set({
+                    ...baseUnlock,
+                    upgradeChoices: generateUpgradeChoices(newUnlocked, getEraFromLevel(pickLevel), pickLevel),
+                    knowledgeUpgradePickQueue: restQueue,
+                    knowledgeUpgradeGlobalRerollUsed: false,
+                    levelBeforeUpgrade: pickLevel - 1,
+                    phase: 'upgrade_selection' as GamePhase,
+                    returnPhaseAfterDevKnowledgeUpgrade: null,
+                });
+            } else {
+                set({
+                    ...baseUnlock,
+                    upgradeChoices: [],
+                    knowledgeUpgradePickQueue: [],
+                    knowledgeUpgradeGlobalRerollUsed: false,
+                    phase: state.returnPhaseAfterDevKnowledgeUpgrade,
+                    returnPhaseAfterDevKnowledgeUpgrade: null,
+                });
+            }
+            return;
+        }
+
+        if (restQueue.length > 0) {
+            const pickLevel = restQueue[0];
+            set({
+                ...baseUnlock,
+                upgradeChoices: generateUpgradeChoices(newUnlocked, getEraFromLevel(pickLevel), pickLevel),
+                knowledgeUpgradePickQueue: restQueue,
+                knowledgeUpgradeGlobalRerollUsed: false,
+                levelBeforeUpgrade: pickLevel - 1,
+                phase: 'upgrade_selection' as GamePhase,
+                returnPhaseAfterDevKnowledgeUpgrade: null,
+            });
+            return;
+        }
+
+        set({
+            ...baseUnlock,
+            upgradeChoices: [],
+            knowledgeUpgradePickQueue: [],
+            knowledgeUpgradeGlobalRerollUsed: false,
+            phase: 'selection' as GamePhase,
+            returnPhaseAfterDevKnowledgeUpgrade: null,
+            symbolChoices:
+                state.symbolChoices.length > 0
+                    ? state.symbolChoices
+                    : generateChoices(state.era, state.religionUnlocked),
         });
     },
 
@@ -2165,31 +2220,76 @@ export const useGameStore = create<GameState>((set, get) => ({
         const state = get();
         if (state.phase !== 'upgrade_selection') return;
         const edictAfterUpgrade = state.edictRemovalPending;
+        const restQueue = (state.knowledgeUpgradePickQueue || []).slice(1);
+
+        if (edictAfterUpgrade) {
+            set({
+                upgradeChoices: [],
+                knowledgeUpgradePickQueue: restQueue,
+                knowledgeUpgradeGlobalRerollUsed: false,
+                edictRemovalPending: false,
+                phase: 'destroy_selection' as GamePhase,
+                pendingDestroySource: EDICT_SYMBOL_ID,
+                destroySelectionMaxSymbols: 1,
+                returnPhaseAfterDevKnowledgeUpgrade: null,
+            });
+            return;
+        }
+
+        if (state.returnPhaseAfterDevKnowledgeUpgrade != null) {
+            const pickLevel = restQueue[0];
+            if (restQueue.length > 0) {
+                set({
+                    upgradeChoices: generateUpgradeChoices(
+                        state.unlockedKnowledgeUpgrades || [],
+                        getEraFromLevel(pickLevel),
+                        pickLevel,
+                    ),
+                    knowledgeUpgradePickQueue: restQueue,
+                    knowledgeUpgradeGlobalRerollUsed: false,
+                    levelBeforeUpgrade: pickLevel - 1,
+                    phase: 'upgrade_selection' as GamePhase,
+                    returnPhaseAfterDevKnowledgeUpgrade: null,
+                });
+            } else {
+                set({
+                    upgradeChoices: [],
+                    knowledgeUpgradePickQueue: [],
+                    knowledgeUpgradeGlobalRerollUsed: false,
+                    phase: state.returnPhaseAfterDevKnowledgeUpgrade,
+                    returnPhaseAfterDevKnowledgeUpgrade: null,
+                });
+            }
+            return;
+        }
+
+        if (restQueue.length > 0) {
+            const pickLevel = restQueue[0];
+            set({
+                upgradeChoices: generateUpgradeChoices(
+                    state.unlockedKnowledgeUpgrades || [],
+                    getEraFromLevel(pickLevel),
+                    pickLevel,
+                ),
+                knowledgeUpgradePickQueue: restQueue,
+                knowledgeUpgradeGlobalRerollUsed: false,
+                levelBeforeUpgrade: pickLevel - 1,
+                phase: 'upgrade_selection' as GamePhase,
+                returnPhaseAfterDevKnowledgeUpgrade: null,
+            });
+            return;
+        }
+
         set({
             upgradeChoices: [],
-            pendingLevelUpSelection: false,
+            knowledgeUpgradePickQueue: [],
             knowledgeUpgradeGlobalRerollUsed: false,
-            ...(edictAfterUpgrade
-                ? {
-                      edictRemovalPending: false,
-                      phase: 'destroy_selection' as GamePhase,
-                      pendingDestroySource: EDICT_SYMBOL_ID,
-                      destroySelectionMaxSymbols: 1,
-                      returnPhaseAfterDevKnowledgeUpgrade: null,
-                  }
-                : state.returnPhaseAfterDevKnowledgeUpgrade != null
-                  ? {
-                        phase: state.returnPhaseAfterDevKnowledgeUpgrade,
-                        returnPhaseAfterDevKnowledgeUpgrade: null,
-                    }
-                  : {
-                        phase: 'selection' as GamePhase,
-                        returnPhaseAfterDevKnowledgeUpgrade: null,
-                        symbolChoices:
-                            state.symbolChoices.length > 0
-                                ? state.symbolChoices
-                                : generateChoices(state.era, state.religionUnlocked),
-                    }),
+            phase: 'selection' as GamePhase,
+            returnPhaseAfterDevKnowledgeUpgrade: null,
+            symbolChoices:
+                state.symbolChoices.length > 0
+                    ? state.symbolChoices
+                    : generateChoices(state.era, state.religionUnlocked),
         });
     },
 
@@ -2200,7 +2300,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         const hasLydia = useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.LYDIA_COIN);
 
         // ID 2: 리디아의 호박금 주화 — 비용 50% 할인, 턴당 최대 3회
-        const rerollCostUnscaled = hasLydia ? Math.floor(REROLL_COST * 0.5) : REROLL_COST;
+        const baseRerollCost = getRerollCost(state.level);
+        const rerollCostUnscaled = hasLydia ? Math.floor(baseRerollCost * 0.5) : baseRerollCost;
         const rerollCost = rerollCostUnscaled;
         const maxRerolls = hasLydia ? 3 : Infinity;
 
@@ -2230,9 +2331,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (state.knowledgeUpgradeGlobalRerollUsed) return;
         if (!state.upgradeChoices[slotIndex]) return;
 
+        const pickLevel = state.knowledgeUpgradePickQueue?.[0] ?? state.level;
+        const eraForPick = getEraFromLevel(pickLevel);
         const unlocked = state.unlockedKnowledgeUpgrades || [];
         const excludedIds = new Set(state.upgradeChoices.map((u) => u.id));
-        const pool = buildKnowledgeUpgradeAlternativesPool(unlocked, state.era, state.level, excludedIds);
+        const pool = buildKnowledgeUpgradeAlternativesPool(unlocked, eraForPick, pickLevel, excludedIds);
         if (pool.length === 0) return;
 
         const next = pool[Math.floor(Math.random() * pool.length)];
@@ -2246,7 +2349,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (!import.meta.env.DEV) return;
         const state = get();
         if (state.phase !== 'upgrade_selection') return;
-        const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades || [], state.era);
+        const pickLevel = state.knowledgeUpgradePickQueue?.[0] ?? state.level;
+        const choices = generateUpgradeChoices(
+            state.unlockedKnowledgeUpgrades || [],
+            getEraFromLevel(pickLevel),
+            pickLevel,
+        );
         set({
             upgradeChoices: choices,
             knowledgeUpgradeGlobalRerollUsed: false,
@@ -2278,6 +2386,26 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         if (src === EDICT_SYMBOL_ID) {
             const terr = state.territorialAfterEdictPending;
+            const q = state.knowledgeUpgradePickQueue || [];
+            if (q.length > 0) {
+                const pickLevel = q[0];
+                set({
+                    playerSymbols: newSymbols,
+                    phase: 'upgrade_selection',
+                    pendingDestroySource: null,
+                    destroySelectionMaxSymbols: 3,
+                    territorialAfterEdictPending: false,
+                    upgradeChoices: generateUpgradeChoices(
+                        state.unlockedKnowledgeUpgrades || [],
+                        getEraFromLevel(pickLevel),
+                        pickLevel,
+                    ),
+                    levelBeforeUpgrade: pickLevel - 1,
+                    knowledgeUpgradeGlobalRerollUsed: false,
+                    knowledgeUpgradePickQueue: q,
+                });
+                return;
+            }
             set({
                 playerSymbols: newSymbols,
                 phase: 'selection',
@@ -2307,6 +2435,27 @@ export const useGameStore = create<GameState>((set, get) => ({
                 });
                 return;
             }
+            const qUp = state.knowledgeUpgradePickQueue || [];
+            if (qUp.length > 0) {
+                const pickLevel = qUp[0];
+                set({
+                    playerSymbols: newSymbols,
+                    gold: state.gold + goldAdd,
+                    phase: 'upgrade_selection',
+                    pendingDestroySource: null,
+                    destroySelectionMaxSymbols: 3,
+                    upgradeChoices: generateUpgradeChoices(
+                        state.unlockedKnowledgeUpgrades || [],
+                        getEraFromLevel(pickLevel),
+                        pickLevel,
+                    ),
+                    levelBeforeUpgrade: pickLevel - 1,
+                    knowledgeUpgradeGlobalRerollUsed: false,
+                    knowledgeUpgradePickQueue: qUp,
+                    bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
+                });
+                return;
+            }
             set({
                 playerSymbols: newSymbols,
                 gold: state.gold + goldAdd,
@@ -2315,6 +2464,28 @@ export const useGameStore = create<GameState>((set, get) => ({
                 destroySelectionMaxSymbols: 3,
                 symbolChoices: generateTerrainOnlyChoices(state.era, state.religionUnlocked),
                 bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
+            });
+            return;
+        }
+
+        const qSac = state.knowledgeUpgradePickQueue || [];
+        if (qSac.length > 0 && src === SACRIFICIAL_RITE_UPGRADE_ID) {
+            const pickLevel = qSac[0];
+            set({
+                playerSymbols: newSymbols,
+                gold: state.gold + goldAdd,
+                phase: 'upgrade_selection',
+                upgradeChoices: generateUpgradeChoices(
+                    state.unlockedKnowledgeUpgrades || [],
+                    getEraFromLevel(pickLevel),
+                    pickLevel,
+                ),
+                levelBeforeUpgrade: pickLevel - 1,
+                knowledgeUpgradeGlobalRerollUsed: false,
+                pendingDestroySource: null,
+                destroySelectionMaxSymbols: 3,
+                edictRemovalPending: false,
+                knowledgeUpgradePickQueue: qSac,
             });
             return;
         }
@@ -2345,6 +2516,25 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (src === EDICT_SYMBOL_ID) {
             const st = get();
             const terr = st.territorialAfterEdictPending;
+            const q = st.knowledgeUpgradePickQueue || [];
+            if (q.length > 0) {
+                const pickLevel = q[0];
+                set({
+                    phase: 'upgrade_selection',
+                    pendingDestroySource: null,
+                    destroySelectionMaxSymbols: 3,
+                    territorialAfterEdictPending: false,
+                    upgradeChoices: generateUpgradeChoices(
+                        st.unlockedKnowledgeUpgrades || [],
+                        getEraFromLevel(pickLevel),
+                        pickLevel,
+                    ),
+                    levelBeforeUpgrade: pickLevel - 1,
+                    knowledgeUpgradeGlobalRerollUsed: false,
+                    knowledgeUpgradePickQueue: q,
+                });
+                return;
+            }
             set({
                 phase: 'selection',
                 pendingDestroySource: null,
@@ -2451,7 +2641,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             bonusXpPerTurn: 0,
 
             upgradeChoices: [],
-            pendingLevelUpSelection: false,
+            knowledgeUpgradePickQueue: [],
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
             knowledgeUpgradeGlobalRerollUsed: false,
@@ -2469,10 +2659,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             destroySelectionMaxSymbols: 3,
             territorialAfterEdictPending: false,
             returnPhaseAfterDevKnowledgeUpgrade: null,
+            levelBeforeUpgrade: 1,
         });
     },
 
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => {
+        if (!isLeaderPlayable(leaderId)) return;
         const relicStore = useRelicStore.getState();
         const toRemove = relicStore.relics.map((r) => r.instanceId);
         toRemove.forEach((id) => relicStore.removeRelic(id));
@@ -2527,7 +2719,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             unlockedKnowledgeUpgrades: leaderKnowledgeUpgrades,
             bonusXpPerTurn: 0,
             upgradeChoices: [],
-            pendingLevelUpSelection: false,
+            knowledgeUpgradePickQueue: [],
             isRelicShopOpen: false,
             rerollsThisTurn: 0,
             knowledgeUpgradeGlobalRerollUsed: false,
@@ -2544,6 +2736,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             destroySelectionMaxSymbols: 3,
             territorialAfterEdictPending: false,
             returnPhaseAfterDevKnowledgeUpgrade: null,
+            levelBeforeUpgrade: 1,
         });
     },
 
@@ -2576,13 +2769,19 @@ export const useGameStore = create<GameState>((set, get) => ({
             const choices = generateChoices(state.era, state.religionUnlocked);
             set({ phase: 'selection', symbolChoices: choices });
         } else if (screen === 'upgrade') {
-            const choices = generateUpgradeChoices(state.unlockedKnowledgeUpgrades, state.era);
+            const L = state.level;
+            const choices = generateUpgradeChoices(
+                state.unlockedKnowledgeUpgrades || [],
+                getEraFromLevel(L),
+                L,
+            );
             const returnPhase: GamePhase =
                 state.phase === 'upgrade_selection' ? 'idle' : state.phase;
             set({
                 phase: 'upgrade_selection',
                 upgradeChoices: choices,
-                pendingLevelUpSelection: true,
+                knowledgeUpgradePickQueue: [L],
+                levelBeforeUpgrade: L - 1,
                 knowledgeUpgradeGlobalRerollUsed: false,
                 returnPhaseAfterDevKnowledgeUpgrade: returnPhase,
             });
