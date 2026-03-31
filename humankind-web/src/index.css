@@ -379,7 +379,18 @@ body {
   pointer-events: auto;
 }
 
-/* 스핀 버튼: 화면 가로 정중앙 고정 (380px 기준 절반 190px + gap 12px = 202px) */
+/* 하단 3버튼(좌/스핀/우) 총합 = 보드 폭(기준) */
+.bottom-action-bar {
+  /* Pixi 보드 폭: 1140 * 0.8 = 912 (BASE 1920 기준) */
+  --board-action-total-w: 912px;
+  --bottom-action-gap: 12px;
+  --spin-action-w: 560px;
+  /* 좌 + gap + spin + gap + 우 = board */
+  --side-action-w: calc((var(--board-action-total-w) - var(--spin-action-w) - (var(--bottom-action-gap) * 2)) / 2);
+  --side-anchor-offset: calc((var(--spin-action-w) / 2) + var(--bottom-action-gap));
+}
+
+/* 스핀 버튼: 화면 가로 정중앙 고정 */
 .spin-area {
   position: absolute;
   left: 50%;
@@ -393,7 +404,7 @@ body {
 /* 유물: 스핀 왼쪽에 12px 간격으로 붙임 */
 .bottom-action-bar-left {
   position: absolute;
-  right: calc(50% + 202px);
+  right: calc(50% + var(--side-anchor-offset));
   bottom: 0;
   display: flex;
   flex-direction: row;
@@ -404,7 +415,7 @@ body {
 /* ⋯·메뉴: 스핀 오른쪽에 12px 간격으로 붙임 */
 .bottom-action-bar-right {
   position: absolute;
-  left: calc(50% + 202px);
+  left: calc(50% + var(--side-anchor-offset));
   bottom: 0;
   display: flex;
   flex-direction: row;
@@ -414,7 +425,7 @@ body {
 
 /* 테두리 연한 회색(#555)으로 양옆 버튼과 통일 — 안쪽이 튀어나온 느낌 */
 .spin-btn {
-  width: 380px;
+  width: var(--spin-action-w);
   height: 100px;
   box-sizing: border-box;
   background: #4f6d1b;
@@ -899,14 +910,20 @@ body {
 }
 
 /* 양옆 유물만 바깥으로 밀어 가운데와 간격 확대 (중앙 슬롯 위치·배경 박스는 그대로) */
-.relic-museum-slot:first-child,
-.relic-museum-info-slot:first-child {
-  transform: translateX(-132px);
+.relic-museum-slot:first-child {
+  transform: translateX(-135px);
 }
 
-.relic-museum-slot:last-child,
+.relic-museum-slot:last-child {
+  transform: translateX(135px);
+}
+
+.relic-museum-info-slot:first-child {
+  transform: translateX(-148px);
+}
+
 .relic-museum-info-slot:last-child {
-  transform: translateX(138px);
+  transform: translateX(154px);
 }
 
 .relic-museum-bg::before {
@@ -2236,7 +2253,52 @@ body {
   font-weight: bold;
 }
 
-/* ===== MENU BUTTON (top-right) ===== */
+/* ===== 일시정지 버튼 (상단바 우측) ===== */
+.pause-btn-top {
+  position: fixed;
+  top: max(12px, calc(8px + env(safe-area-inset-top, 0px)));
+  right: max(12px, calc(8px + env(safe-area-inset-right, 0px)));
+  z-index: 101;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  box-sizing: border-box;
+  background: rgba(30, 30, 30, 0.85);
+  border: none;
+  border-radius: 0;
+  color: rgba(220, 220, 220, 0.85);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.1s ease;
+  box-shadow:
+    inset 0 0 0 4px #555,
+    0 6px 0 0 #444,
+    0 6px 10px rgba(0, 0, 0, 0.4);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pause-btn-top:hover {
+  background: rgba(50, 50, 50, 0.95);
+  color: rgba(255, 255, 255, 0.95);
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 0 0 4px #666,
+    0 5px 0 0 #555,
+    0 5px 10px rgba(0, 0, 0, 0.4);
+}
+
+.pause-btn-top:active {
+  transform: translateY(5px);
+  box-shadow:
+    inset 0 0 0 4px #555,
+    0 1px 0 0 #444,
+    0 1px 6px rgba(0, 0, 0, 0.4);
+}
+
 /* ===== 메뉴 버튼 (하단 버튼 모음 최우단, 유물/⋯와 동일 사이즈) ===== */
 .menu-btn {
   width: 100px;
@@ -2281,7 +2343,7 @@ body {
 
 /* ===== 유물 상점 버튼 (정사각형, 스핀 왼쪽) ===== */
 .relic-shop-btn {
-  width: 100px;
+  width: var(--side-action-w);
   height: 100px;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -2323,7 +2385,7 @@ body {
 
 /* ===== 오른쪽 보조 버튼 (정사각형, 스핀 오른쪽) ===== */
 .bottom-right-btn {
-  width: 100px;
+  width: var(--side-action-w);
   height: 100px;
   flex-shrink: 0;
   box-sizing: border-box;

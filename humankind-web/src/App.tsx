@@ -87,6 +87,15 @@ function App() {
         className={`game-screen-black${gameCanvasReady ? ' game-screen-black--fade-out' : ''}`}
         aria-hidden="true"
       />
+      {/* ===== 상단바 우측: 일시정지 버튼 ===== */}
+      <button
+        className="pause-btn-top"
+        onClick={() => setMenuOpen(true)}
+        title="일시정지"
+        aria-label="일시정지"
+      >
+        ⏸
+      </button>
       {/* ===== GAME BOARD (with integrated UI bars) ===== */}
       <div className="game-area">
         <GameCanvas onReady={handleCanvasReady} suppressBoardTooltips={suppressBoardTooltips} />
@@ -120,13 +129,6 @@ function App() {
             title="보유 심볼 목록"
           >
             ▦
-          </button>
-          <button
-            className="menu-btn"
-            onClick={() => setMenuOpen(true)}
-            title="메뉴"
-          >
-            ☰
           </button>
         </div>
       </div>
