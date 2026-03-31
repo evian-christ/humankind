@@ -190,3 +190,10 @@ export function getLeaderStartingRelics(leaderId: LeaderId): RelicDefinition[] {
 export function isLeaderPlayable(leaderId: LeaderId): boolean {
   return LEADERS[leaderId]?.enabled === true;
 }
+
+/** `public/assets/leaders/*.png` 초상화가 있는 지도자. 나머지는 선택 화면에서 UI 플레이스홀더로 표시 */
+const LEADER_IDS_WITH_PORTRAIT_SPRITE: ReadonlySet<LeaderId> = new Set(['ramesses']);
+
+export function leaderHasPortraitSprite(id: LeaderId): boolean {
+  return LEADER_IDS_WITH_PORTRAIT_SPRITE.has(id);
+}

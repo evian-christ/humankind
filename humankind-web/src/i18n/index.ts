@@ -66,7 +66,8 @@ const translations: Record<Language, Record<string, string>> = {
         // Pre-game: Stage & Leader
         'pregame.stageTitle': 'Select Difficulty',
         'pregame.difficultyLabel': 'Difficulty',
-        'pregame.leaderTitle': 'Select Leader',
+        'pregame.leaderTitle': 'Please select a leader',
+        'pregame.leaderPortraitPlaceholder': 'No portrait',
         'pregame.leaderPlay': 'Play',
         'pregame.draftTitle': 'Choose your starting symbols',
         'pregame.draftProgress': 'Pick {current} / {total}',
@@ -518,7 +519,8 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Pre-game: Stage & Leader
         'pregame.stageTitle': '난이도 선택',
-        'pregame.leaderTitle': '지도자 선택',
+        'pregame.leaderTitle': '지도자를 선택하세요',
+        'pregame.leaderPortraitPlaceholder': '초상화 없음',
         'pregame.leaderPlay': '플레이',
         'pregame.difficultyLabel': '난이도',
         'pregame.draftTitle': '시작 심볼을 고르세요',

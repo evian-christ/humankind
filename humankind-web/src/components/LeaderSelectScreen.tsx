@@ -1,16 +1,63 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePreGameStore } from '../game/state/preGameStore';
-import { isLeaderPlayable, LEADER_LIST, type LeaderId, type LeaderDefinition } from '../game/data/leaders';
+import {
+  isLeaderPlayable,
+  leaderHasPortraitSprite,
+  LEADER_LIST,
+  type LeaderId,
+  type LeaderDefinition,
+} from '../game/data/leaders';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
-const LEADER_PORTRAIT_FALLBACK = `${ASSET_BASE_URL}assets/leaders/000.png`;
 
-function leaderPortraitUrl(id: LeaderId): string {
-  // leaders 폴더는 현재 숫자 파일명(000, 001, ...) 기반
+function leaderPortraitSrc(id: LeaderId): string | null {
   if (id === 'ramesses') return `${ASSET_BASE_URL}assets/leaders/001.png`;
-  return LEADER_PORTRAIT_FALLBACK;
+  return null;
+}
+
+function LeaderPortrait({
+  leaderId,
+  alt,
+  enabled,
+  noPortraitLabel,
+}: {
+  leaderId: LeaderId;
+  alt: string;
+  enabled: boolean;
+  noPortraitLabel: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const src = leaderPortraitSrc(leaderId);
+  const showImg = leaderHasPortraitSprite(leaderId) && src && !imgFailed;
+
+  if (!enabled) {
+    /* 언어 설정과 무관하게 항상 영어 */
+    return (
+      <div className="leader-portrait-placeholder leader-portrait-placeholder--soon" role="img" aria-label="Coming soon">
+        <span className="leader-portrait-placeholder__soon-line">Coming</span>
+        <span className="leader-portrait-placeholder__soon-line">soon</span>
+      </div>
+    );
+  }
+
+  if (!showImg) {
+    return (
+      <div className="leader-portrait-placeholder leader-portrait-placeholder--q" role="img" aria-label={noPortraitLabel}>
+        ?
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      draggable={false}
+      onError={() => setImgFailed(true)}
+    />
+  );
 }
 
 export default function LeaderSelectScreen() {
@@ -68,13 +115,11 @@ export default function LeaderSelectScreen() {
                   setChosenLeaderId(leader.id);
                 }}
               >
-                <img
-                  src={leader.enabled ? leaderPortraitUrl(leader.id) : LEADER_PORTRAIT_FALLBACK}
+                <LeaderPortrait
+                  leaderId={leader.id}
                   alt={t(leader.nameKey, language)}
-                  draggable={false}
-                  onError={(e) => {
-                    e.currentTarget.src = LEADER_PORTRAIT_FALLBACK;
-                  }}
+                  enabled={leader.enabled}
+                  noPortraitLabel={t('pregame.leaderPortraitPlaceholder', language)}
                 />
               </button>
             );
@@ -83,42 +128,44 @@ export default function LeaderSelectScreen() {
 
         <div className="leader-select-detail-col">
           <div className="leader-select-preview">
-            <div className="leader-preview-name">
-              {previewLeader ? t(previewLeader.nameKey, language) : '-'}
+            <div className="leader-select-preview-scroll">
+              <div className="leader-preview-name">
+                {previewLeader ? t(previewLeader.nameKey, language) : '-'}
+              </div>
+
+              {previewLeader && (
+                <div className="leader-preview-effects">
+                  <div className="leader-preview-effect">
+                    <div className="leader-preview-effect-title">
+                      {t(previewLeader.mainEffectNameKey, language)}
+                    </div>
+                    <div className="leader-preview-effect-desc">
+                      {t(previewLeader.mainEffectDescKey, language)}
+                    </div>
+                  </div>
+
+                  <div className="leader-preview-effect">
+                    <div className="leader-preview-effect-title">
+                      {t(previewLeader.subEffectNameKey, language)}
+                    </div>
+                    <div className="leader-preview-effect-desc">
+                      {t(previewLeader.subEffectDescKey, language)}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {previewLeader && (
-              <div className="leader-preview-effects">
-                <div className="leader-preview-effect">
-                  <div className="leader-preview-effect-title">
-                    {t(previewLeader.mainEffectNameKey, language)}
-                  </div>
-                  <div className="leader-preview-effect-desc">
-                    {t(previewLeader.mainEffectDescKey, language)}
-                  </div>
-                </div>
-
-                <div className="leader-preview-effect">
-                  <div className="leader-preview-effect-title">
-                    {t(previewLeader.subEffectNameKey, language)}
-                  </div>
-                  <div className="leader-preview-effect-desc">
-                    {t(previewLeader.subEffectDescKey, language)}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="leader-select-detail-footer">
-            <button
-              type="button"
-              className="leader-select-play"
-              onClick={handlePlay}
-              disabled={chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)}
-            >
-              {t('pregame.leaderPlay', language)}
-            </button>
+            <div className="leader-select-preview-footer">
+              <button
+                type="button"
+                className="leader-select-play"
+                onClick={handlePlay}
+                disabled={chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)}
+              >
+                {t('pregame.leaderPlay', language)}
+              </button>
+            </div>
           </div>
         </div>
       </div>
