@@ -1982,12 +1982,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     refreshRelicShop: (force = false) => {
+        if (!force) return; // 수동 새로고침(5G) 제거 — 10턴마다 자동(force: true)만
+
         const state = get();
-        if (!force && state.gold < 5) return; // 골드 5 소모 (상점 새로고침)
 
         const upgrades = state.unlockedKnowledgeUpgrades || [];
         const hasGoldenTrade = upgrades.includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.main);
-        const isAutoHalfPrice = !!force && state.turn > 0 && state.turn % 10 === 0;
+        const isAutoHalfPrice = state.turn > 0 && state.turn % 10 === 0;
 
         const newChoices = generateRelicChoices();
         const nextHalfRelicId =
@@ -1995,11 +1996,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 ? newChoices[Math.floor(Math.random() * newChoices.length)]?.id ?? null
                 : null;
 
-        if (!force) {
-            set((s) => ({ gold: s.gold - 5, relicChoices: newChoices, relicHalfPriceRelicId: nextHalfRelicId }));
-        } else {
-            set({ relicChoices: newChoices, relicHalfPriceRelicId: nextHalfRelicId });
-        }
+        set({ relicChoices: newChoices, relicHalfPriceRelicId: nextHalfRelicId });
     },
 
     buyRelic: (relicId: number) => {

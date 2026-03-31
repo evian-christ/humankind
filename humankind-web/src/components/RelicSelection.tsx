@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore, type Language } from '../game/state/settingsStore';
-import { type RelicDefinition } from '../game/data/relicDefinitions';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
@@ -27,44 +25,52 @@ const renderRelicDesc = (desc: string) => {
 };
 
 const RelicSelection = () => {
-    const { isRelicShopOpen, toggleRelicShop, relicChoices, buyRelic, refreshRelicShop, gold, turn, unlockedKnowledgeUpgrades, relicHalfPriceRelicId } = useGameStore();
+    const { isRelicShopOpen, toggleRelicShop, relicChoices, buyRelic, gold, turn, unlockedKnowledgeUpgrades, relicHalfPriceRelicId } = useGameStore();
     const language = useSettingsStore((s) => s.language);
 
     if (!isRelicShopOpen) return null;
 
+    const turnsUntilRefresh = 10 - (turn % 10);
+    const relicShopTitle = t('game.relicShopTitle', language).replace('{turns}', String(turnsUntilRefresh));
+    const hasGoldenTrade = (unlockedKnowledgeUpgrades || []).includes(11);
+
+    const getEffectiveRelicCost = (relic: { id: number; cost: number }) => {
+        const isHalfPrice = relicHalfPriceRelicId === relic.id;
+        return !hasGoldenTrade
+            ? relic.cost
+            : isHalfPrice
+                ? Math.floor(relic.cost * 0.5)
+                : Math.floor(relic.cost * 0.8);
+    };
+
     return (
         <div className="selection-overlay selection-overlay--relic">
-            <div className="selection-panel-wrapper" style={{ position: 'relative' }}>
-                <div className="selection-panel" style={{ position: 'relative', zIndex: 1 }}>
-                    <div className="selection-title" style={{ marginBottom: '40px' }}>
-                        {t('game.chooseRelic', language)} <span style={{ fontSize: '18px', color: '#999' }}>(상점)</span>
+            <header className="relic-shop-header">
+                <div className="relic-shop-header-main">
+                    <div className="relic-shop-header-start">
+                        <button
+                            type="button"
+                            className="relic-shop-back-btn"
+                            onClick={toggleRelicShop}
+                            aria-label={t('game.back', language)}
+                        >
+                            <span className="relic-shop-back-icon" aria-hidden>
+                                ←
+                            </span>
+                            <span className="relic-shop-back-label">{t('game.back', language)}</span>
+                        </button>
                     </div>
-
-                    {/* 골드 표시 및 새로고침 */}
-                    <div className="relic-shop-action-bar">
-                        <div className="relic-selection-gold">
+                    <h1 className="selection-title selection-title--relic-shop">{relicShopTitle}</h1>
+                    <div className="relic-shop-header-end">
+                        <div className="relic-selection-gold relic-selection-gold--header">
                             <span className="relic-selection-gold-icon">&#9679;</span>
                             <span className="relic-selection-gold-val">{gold}</span>
                         </div>
-                        <button
-                            className={`relic-shop-refresh-btn ${gold < 5 ? 'disabled' : ''}`}
-                            onClick={() => refreshRelicShop(false)}
-                            disabled={gold < 5}
-                        >
-                            <span className="refresh-icon">↺</span> 5G
-                        </button>
                     </div>
-                    {(() => {
-                        const turnsUntilRefresh = 10 - (turn % 10);
-                        return (
-                            <div className="relic-shop-refresh-timer">
-                                {language === 'ko'
-                                    ? `새로운 유물 입고까지 ${turnsUntilRefresh}턴 남음`
-                                    : `${turnsUntilRefresh} turns until new relics arrive`}
-                            </div>
-                        );
-                    })()}
-
+                </div>
+            </header>
+            <div className="selection-panel-wrapper selection-panel-wrapper--relic-shop" style={{ position: 'relative' }}>
+                <div className="selection-panel" style={{ position: 'relative', zIndex: 1 }}>
                     <div className="relic-museum-wrapper">
                         <div className="relic-museum-bg">
                             {relicChoices.map((relic, i) => (
@@ -73,23 +79,10 @@ const RelicSelection = () => {
                                     {relic ? (
                                         <div className="relic-sprite-in-case">
                                             {relic.sprite && relic.sprite !== '-' && relic.sprite !== '-.png' ? (
-                                                        <img src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`} alt={t(`relic.${relic.id}.name`, language)} />
+                                                <img src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`} alt={t(`relic.${relic.id}.name`, language)} />
                                             ) : (
                                                 <div className="placeholder">🏺</div>
                                             )}
-                                            <div className="relic-sprite-price">
-                                                <span style={{ color: '#f59e0b', fontSize: '20px' }}>&#9679;</span>{' '}
-                                                {(() => {
-                                                    const hasGoldenTrade = (unlockedKnowledgeUpgrades || []).includes(11);
-                                                    const isHalfPrice = relicHalfPriceRelicId === relic.id;
-                                                    const effectiveCostUnscaled = !hasGoldenTrade
-                                                        ? relic.cost
-                                                        : isHalfPrice
-                                                            ? Math.floor(relic.cost * 0.5)
-                                                            : Math.floor(relic.cost * 0.8);
-                                                    return effectiveCostUnscaled;
-                                                })()}
-                                            </div>
                                         </div>
                                     ) : null}
                                 </div>
@@ -109,8 +102,13 @@ const RelicSelection = () => {
                                             <div className="relic-card-desc">
                                                 {renderRelicDesc(t(`relic.${relic.id}.desc`, language))}
                                             </div>
-                                            <button className="relic-card-buy-btn" onClick={() => buyRelic(relic.id)}>
-                                                {language === 'ko' ? '구매' : 'Buy'}
+                                            <button type="button" className="relic-card-buy-btn" onClick={() => buyRelic(relic.id)}>
+                                                <span className="relic-card-buy-price">
+                                                    <span className="relic-card-buy-price-icon" aria-hidden>
+                                                        &#9679;
+                                                    </span>
+                                                    <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
+                                                </span>
                                             </button>
                                         </div>
                                     ) : (
@@ -119,12 +117,6 @@ const RelicSelection = () => {
                                 </div>
                             ))}
                         </div>
-                    </div>
-
-                    <div className="relic-shop-back-row">
-                        <button className="relic-shop-back-btn" onClick={toggleRelicShop}>
-                            {t('game.back', language)}
-                        </button>
                     </div>
                 </div>
             </div>
