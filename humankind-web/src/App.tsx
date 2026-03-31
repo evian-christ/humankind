@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore } from './game/state/settingsStore';
@@ -30,7 +30,6 @@ function App() {
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
-  const didAutoPreGameEnterRef = useRef(false);
 
   const handleCanvasReady = useCallback(() => {
     setGameCanvasReady(true);
@@ -45,27 +44,6 @@ function App() {
   useEffect(() => {
     setResolution(resolutionWidth, resolutionHeight);
   }, []);
-
-  // 개발 중 프리게임(스테이지/리더)을 자동 스킵해서 바로 게임 화면으로 진입
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    if (didAutoPreGameEnterRef.current) return;
-    if (preGameScreen !== 'stage') return;
-
-    let enabled = true;
-    try {
-      enabled = (localStorage.getItem('dev.autoStart') ?? '1') !== '0';
-    } catch {
-      // localStorage 접근 불가 환경이면 기본값(켜짐) 유지
-    }
-    if (!enabled) return;
-
-    didAutoPreGameEnterRef.current = true;
-    const pg = usePreGameStore.getState();
-    pg.selectStage(1);
-    // Zustand set은 동기적이지만, 화면 전환 타이밍을 안전하게 한 턴 늦춤
-    setTimeout(() => pg.selectLeader('ramesses'), 0);
-  }, [preGameScreen]);
 
   // 스페이스바로 스핀 (idle일 때만, 입력 필드 포커스 시 무시)
   useEffect(() => {
