@@ -65,6 +65,8 @@ export class PixiGameApp {
     private threatFloatingEffects: { texts: PIXI.Text[]; startX: number; startY: number; elapsed: number }[] = [];
     private runningTotalTexts: { food: PIXI.Text | null; gold: PIXI.Text | null; knowledge: PIXI.Text | null } = { food: null, gold: null, knowledge: null };
     private prevEffectCount: number = 0;
+    private prevCombatFloatCount: number = 0;
+    private prevRelicFloatCount: number = 0;
 
     private reels: ReelState[] = [];
     private spinElapsed: number = 0;
@@ -345,6 +347,11 @@ export class PixiGameApp {
             this.contributorWobbleTime = 0;
         }
 
+        // Pre-combat shake (e.g., Clovis relic): 흔들림은 시간 기반이므로 매 프레임 렌더가 필요
+        if (state.preCombatShakeTarget || state.preCombatShakeRelicDefId) {
+            this.renderBoard(state, useSettingsStore.getState());
+        }
+
         // Reel spinning
         if (this.spinActive) {
             const spinConfig = SPIN_SPEED_CONFIG[useSettingsStore.getState().spinSpeed];
@@ -580,6 +587,13 @@ export class PixiGameApp {
                 const isShakingDeath = state.combatShaking && symbol.is_marked_for_destruction;
                 const drawTarget = isShakingDeath ? this.combatContainer : this.boardContainer;
 
+                const isPreCombatShakeTarget =
+                    !!state.preCombatShakeTarget &&
+                    state.preCombatShakeTarget.x === x &&
+                    state.preCombatShakeTarget.y === y;
+                const preShakeX = isPreCombatShakeTarget ? Math.sin(Date.now() / 22) * 5 : 0;
+                const preShakeY = isPreCombatShakeTarget ? Math.cos(Date.now() / 18) * 4 : 0;
+
                 const hitArea = new PIXI.Graphics();
                 hitArea.rect(cellX, cellY, cellWidth, cellHeight);
                 hitArea.fill({ color: 0x000000, alpha: 0 });
@@ -630,8 +644,8 @@ export class PixiGameApp {
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                     const sprite = PIXI.Sprite.from(spritePath);
-                    sprite.x = cellX + cellWidth / 2;
-                    sprite.y = cellY + cellHeight / 2 + liftY + wobbleY;
+                    sprite.x = cellX + cellWidth / 2 + preShakeX;
+                    sprite.y = cellY + cellHeight / 2 + liftY + wobbleY + preShakeY;
                     sprite.anchor.set(0.5);
                     sprite.width = spriteSize;
                     sprite.height = spriteSize;
@@ -645,8 +659,8 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: fillColor, fontSize: 32 * fs, fontFamily, stroke: { color: '#000000', width: 2 } }),
                     });
                     nameText.anchor.set(0.5);
-                    nameText.x = cellX + cellWidth / 2;
-                    nameText.y = cellY + cellHeight / 2 + liftY + wobbleY;
+                    nameText.x = cellX + cellWidth / 2 + preShakeX;
+                    nameText.y = cellY + cellHeight / 2 + liftY + wobbleY + preShakeY;
                     drawTarget.addChild(nameText);
                 }
 
@@ -801,6 +815,35 @@ export class PixiGameApp {
             }
         }
 
+        // ── Combat/relic float texts (e.g., Clovis -1) ──
+        if (!state.combatFloats || state.combatFloats.length === 0) {
+            this.prevCombatFloatCount = 0;
+        } else if (state.combatFloats.length > this.prevCombatFloatCount) {
+            const newFloats = state.combatFloats.slice(this.prevCombatFloatCount);
+            this.prevCombatFloatCount = state.combatFloats.length;
+            const fontSize = Math.max(28, cellHeight * 0.28) * fs;
+            for (const f of newFloats) {
+                const fx = startX + gridOffsetX + f.x * (cellWidth + colGap) + cellWidth / 2;
+                const fy = startY + gridOffsetY + f.y * (cellHeight + rowGap) + cellHeight * 0.25;
+                const txt = new PIXI.Text({
+                    text: f.text,
+                    style: new PIXI.TextStyle({
+                        fill: f.color ?? '#ef4444',
+                        fontSize,
+                        fontWeight: 'bold',
+                        fontFamily: 'Mulmaru',
+                        stroke: { color: '#000000', width: 4 },
+                    }),
+                });
+                txt.anchor.set(0.5, 0);
+                txt.x = fx;
+                txt.y = fy;
+                (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                this.floatContainer.addChild(txt);
+                this.floatingEffects.push({ texts: [txt], startY: fy, elapsed: 0 });
+            }
+        }
+
         // ── 첫 배치된 야만인/재해: 셀 위 플로팅 (빨간색+검은테두리, 우측→위로 빠르게) ──
         if (state.phase === 'showing_new_threats' && state.pendingNewThreatFloats?.length && this.cellLayout && !this.pendingNewThreatFloatsShown) {
             this.pendingNewThreatFloatsShown = true;
@@ -905,6 +948,8 @@ export class PixiGameApp {
         if (relics.length === 0) return;
 
         const { startX, startY } = this.cellLayout;
+        const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
+        const state = useGameStore.getState();
 
         const iconSize = 96 * scale;
         const gapX = 16 * scale;
@@ -925,6 +970,7 @@ export class PixiGameApp {
         const startRelicY = startY + 12 * scale;
         let curX = startRelicX;
         let curY = startRelicY;
+        const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
 
         for (const relic of relics) {
             // 이번 유물을 현재 줄에 그릴 공간이 없다면 줄바꿈 (단, 첫 열이 아닐 때만)
@@ -936,6 +982,13 @@ export class PixiGameApp {
             // 이벤트 핸들러에서 사용할 좌표는 고정(루프 변수 캡처 버그 방지)
             const iconX = curX;
             const iconY = curY;
+            const isShakingThisRelic = shakeRelicDefId === relic.definition.id;
+            const shakeX = isShakingThisRelic ? Math.sin(Date.now() / 20) * (5 * scale) : 0;
+            const shakeY = isShakingThisRelic ? Math.cos(Date.now() / 17) * (4 * scale) : 0;
+            relicCenterByInstanceId.set(relic.instanceId, {
+                x: iconX + iconSize / 2 + shakeX,
+                y: iconY + iconSize / 2 + shakeY,
+            });
 
             const hitArea = new PIXI.Graphics();
             hitArea.rect(iconX, iconY, iconSize, iconSize);
@@ -963,8 +1016,8 @@ export class PixiGameApp {
                 const sp = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`);
                 sp.width = iconSize;
                 sp.height = iconSize;
-                sp.x = iconX;
-                sp.y = iconY;
+                sp.x = iconX + shakeX;
+                sp.y = iconY + shakeY;
                 this.boardContainer.addChild(sp);
             } else {
                 const spPlaceholder = new PIXI.Text({
@@ -972,8 +1025,8 @@ export class PixiGameApp {
                     style: new PIXI.TextStyle({ fontSize: iconSize * 0.6 })
                 });
                 spPlaceholder.anchor.set(0.5);
-                spPlaceholder.x = iconX + iconSize / 2;
-                spPlaceholder.y = iconY + iconSize / 2;
+                spPlaceholder.x = iconX + iconSize / 2 + shakeX;
+                spPlaceholder.y = iconY + iconSize / 2 + shakeY;
                 this.boardContainer.addChild(spPlaceholder);
             }
 
@@ -1002,6 +1055,35 @@ export class PixiGameApp {
             }
 
             curX += iconSize + gapX;
+        }
+
+        // ── Relic floats (e.g., Jomon cashout +Food) ──
+        if (!state.relicFloats || state.relicFloats.length === 0) {
+            this.prevRelicFloatCount = 0;
+        } else if (state.relicFloats.length > this.prevRelicFloatCount) {
+            const newFloats = state.relicFloats.slice(this.prevRelicFloatCount);
+            this.prevRelicFloatCount = state.relicFloats.length;
+            const fontSize = Math.max(26, iconSize * 0.32);
+            for (const f of newFloats) {
+                const c = relicCenterByInstanceId.get(f.relicInstanceId);
+                if (!c) continue;
+                const txt = new PIXI.Text({
+                    text: f.text,
+                    style: new PIXI.TextStyle({
+                        fill: f.color ?? '#ffffff',
+                        fontSize,
+                        fontWeight: 'bold',
+                        fontFamily: 'Mulmaru',
+                        stroke: { color: '#000000', width: 4 },
+                    }),
+                });
+                txt.anchor.set(0.5, 0.5);
+                txt.x = c.x;
+                txt.y = c.y - iconSize * 0.15;
+                (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                this.floatContainer.addChild(txt);
+                this.floatingEffects.push({ texts: [txt], startY: txt.y, elapsed: 0 });
+            }
         }
     }
 

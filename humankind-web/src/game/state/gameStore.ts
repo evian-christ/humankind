@@ -175,6 +175,14 @@ export interface GameState {
     combatAnimation: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number } | null;
     /** 전투 후 삭제 직전 진동 표시 */
     combatShaking: boolean;
+    /** 전투 직전(유물 등) 특정 적 심볼 흔들림 연출 */
+    preCombatShakeTarget: { x: number; y: number } | null;
+    /** 전투 직전(유물 발동) 흔들릴 유물 definition id */
+    preCombatShakeRelicDefId: number | null;
+    /** 전투 중/직전 전용 플로팅 텍스트 */
+    combatFloats: Array<{ x: number; y: number; text: string; color?: string }>;
+    /** 유물 클릭 발동 등: 유물 아이콘 위치 플로팅 텍스트 */
+    relicFloats: Array<{ relicInstanceId: string; text: string; color?: string }>;
     /** 종교 심볼이 선택 풀에 해금되었는지 */
     religionUnlocked: boolean;
     /** 플레이어가 획득한 지식 업그레이드 ID 목록 */
@@ -695,6 +703,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     prevBoard: createEmptyBoard(),
     combatAnimation: null,
     combatShaking: false,
+    preCombatShakeTarget: null,
+    preCombatShakeRelicDefId: null,
+    combatFloats: [],
+    relicFloats: [],
     religionUnlocked: false,
     unlockedKnowledgeUpgrades: [],
     bonusXpPerTurn: 0,
@@ -1745,8 +1757,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // ── 전투 페이즈: UNIT(아군) ↔ ENEMY(적) 인접 쌍을 하나하나 순차 처리 ─────────
         const combatBoard = get().board;
-        // ID 1: 클로비스 투창촉 — 전투 이벤트 집계 직전(전투 페이즈 시작 시점) 무작위 적 1기 체력 -1
-        if (useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR)) {
+        // ID 1: 클로비스 투창촉 — 전투 시작 직전 연출(흔들림 2회) 후 무작위 적 1기 체력 -1 + 플로팅 -1
+        const hasClovis = useRelicStore.getState().relics.some(r => r.definition.id === RELIC_ID.CLOVIS_SPEAR);
+        const pickRandomLivingEnemy = (): { x: number; y: number } | null => {
             const enemyPositions: { x: number; y: number }[] = [];
             for (let cx = 0; cx < BOARD_WIDTH; cx++) {
                 for (let cy = 0; cy < BOARD_HEIGHT; cy++) {
@@ -1756,17 +1769,23 @@ export const useGameStore = create<GameState>((set, get) => ({
                     }
                 }
             }
-            if (enemyPositions.length > 0) {
-                const pick = enemyPositions[Math.floor(Math.random() * enemyPositions.length)];
-                const target = combatBoard[pick.x][pick.y];
-                if (target) {
-                    const maxHP = target.definition.base_hp ?? 0;
-                    const cur = target.enemy_hp ?? maxHP;
-                    target.enemy_hp = cur - 1;
-                    if (target.enemy_hp <= 0) target.is_marked_for_destruction = true;
-                }
-            }
-        }
+            if (enemyPositions.length === 0) return null;
+            return enemyPositions[Math.floor(Math.random() * enemyPositions.length)];
+        };
+
+        const applyClovisDamage = (pos: { x: number; y: number }) => {
+            const target = combatBoard[pos.x][pos.y];
+            if (!target || target.is_marked_for_destruction || target.definition.type !== SymbolType.ENEMY) return;
+            const maxHP = target.definition.base_hp ?? 0;
+            const cur = target.enemy_hp ?? maxHP;
+            target.enemy_hp = cur - 1;
+            if (target.enemy_hp <= 0) target.is_marked_for_destruction = true;
+            // 플로팅 -1
+            set((s) => {
+                const next = [...(s.combatFloats ?? []), { x: pos.x, y: pos.y, text: '-1', color: '#ef4444' }];
+                return { combatFloats: next.length > 80 ? next.slice(next.length - 80) : next };
+            });
+        };
         const combatEvents: { ax: number; ay: number; tx: number; ty: number }[] = [];
         for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -1912,7 +1931,33 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         };
 
-        processCombatEvent(0);
+        // 클로비스 연출이 있으면 먼저 처리 후 전투 진행
+        if (hasClovis) {
+            const pos = pickRandomLivingEnemy();
+            const effectSpeed = useSettingsStore.getState().effectSpeed;
+            const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
+
+            // instant 모드: 연출 없이 즉시 반영
+            if (!pos || bounceDur === 0) {
+                if (pos) applyClovisDamage(pos);
+                set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: null });
+                processCombatEvent(0);
+            } else {
+                // 약 2번 흔들리도록 짧게 흔들림 상태 유지
+                const SHAKE_MS = 360;
+                const AFTER_DAMAGE_PAUSE_MS = 180;
+                // 흔들림은 '피해 대상'이 아니라 '유물 아이콘'이 흔들려야 함
+                set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: RELIC_ID.CLOVIS_SPEAR });
+                setTimeout(() => {
+                    set({ preCombatShakeRelicDefId: null });
+                    if (pos) applyClovisDamage(pos);
+                    setTimeout(() => processCombatEvent(0), AFTER_DAMAGE_PAUSE_MS);
+                }, SHAKE_MS);
+            }
+        } else {
+            set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: null });
+            processCombatEvent(0);
+        }
     },
 
     continueProcessingAfterNewThreatFloats: () => {
@@ -2581,8 +2626,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (defId === RELIC_ID.JOMON_POTTERY) {
             const stored = relic.bonus_stacks;
             const foodGain = stored * 2;
-            useRelicStore.getState().removeRelic(instanceId);
-            set({ food: state.food + foodGain });
+            if (stored <= 0) return;
+            // 플로팅을 띄우기 위해 아이콘은 잠깐 유지한 뒤 제거
+            set((s) => ({
+                food: s.food + foodGain,
+                relicFloats: [...(s.relicFloats ?? []), { relicInstanceId: instanceId, text: `+${foodGain}`, color: '#4ade80' }],
+            }));
+            // 중복 클릭 방지: 저장량을 즉시 0으로 만들고, 약간의 연출 후 제거
+            useRelicStore.getState().incrementRelicBonus(instanceId, -stored);
+            setTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
             get().appendEventLog({
                 turn: state.turn,
                 kind: 'relic',
@@ -2633,6 +2685,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             prevBoard: createEmptyBoard(),
             combatAnimation: null,
             combatShaking: false,
+            preCombatShakeTarget: null,
+            preCombatShakeRelicDefId: null,
+            combatFloats: [],
+            relicFloats: [],
             religionUnlocked: false,
             unlockedKnowledgeUpgrades: [],
             bonusXpPerTurn: 0,
