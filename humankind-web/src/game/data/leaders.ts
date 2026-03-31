@@ -5,21 +5,28 @@
 import type { RelicDefinition } from './relicDefinitions';
 import { RELICS } from './relicDefinitions';
 
-export type LeaderId = 'ramesses' | 'pericles';
+export type LeaderId =
+  | 'ramesses'
+  | 'pericles'
+  | 'locked_3'
+  | 'locked_4'
+  | 'locked_5'
+  | 'locked_6'
+  | 'locked_7'
+  | 'locked_8'
+  | 'locked_9'
+  | 'locked_10';
 
 export interface LeaderDefinition {
   id: LeaderId;
-  nameKey: string; // i18n key
+  /** false면 선택·게임 시작 불가(자리 표시자) */
+  enabled: boolean;
+  nameKey: string;
   descriptionKey: string;
-  /** 메인 효과 i18n key */
   mainEffectNameKey: string;
   mainEffectDescKey: string;
-  /** 서브 효과 i18n key */
   subEffectNameKey: string;
   subEffectDescKey: string;
-
-  // 시작 보너스는 현재 기준으로 모든 리더가 동일한 값이므로,
-  // 게임 시작 로직 호환을 위해 필드를 유지(값만 중립화)한다.
   startingRelicIds: number[];
   startingGold?: number;
   startingFood?: number;
@@ -28,6 +35,7 @@ export interface LeaderDefinition {
 export const LEADERS: Record<LeaderId, LeaderDefinition> = {
   ramesses: {
     id: 'ramesses',
+    enabled: true,
     nameKey: 'leader.ramesses.name',
     descriptionKey: 'leader.ramesses.desc',
     mainEffectNameKey: 'leader.ramesses.main.name',
@@ -40,6 +48,7 @@ export const LEADERS: Record<LeaderId, LeaderDefinition> = {
   },
   pericles: {
     id: 'pericles',
+    enabled: true,
     nameKey: 'leader.pericles.name',
     descriptionKey: 'leader.pericles.desc',
     mainEffectNameKey: 'leader.pericles.main.name',
@@ -50,9 +59,125 @@ export const LEADERS: Record<LeaderId, LeaderDefinition> = {
     startingGold: 0,
     startingFood: 0,
   },
+  locked_3: {
+    id: 'locked_3',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_4: {
+    id: 'locked_4',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_5: {
+    id: 'locked_5',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_6: {
+    id: 'locked_6',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_7: {
+    id: 'locked_7',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_8: {
+    id: 'locked_8',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_9: {
+    id: 'locked_9',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_10: {
+    id: 'locked_10',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
 };
 
-export const LEADER_LIST = Object.values(LEADERS);
+/** UI 표시 순서(10칸) */
+export const LEADER_LIST: LeaderDefinition[] = [
+  LEADERS.ramesses,
+  LEADERS.pericles,
+  LEADERS.locked_3,
+  LEADERS.locked_4,
+  LEADERS.locked_5,
+  LEADERS.locked_6,
+  LEADERS.locked_7,
+  LEADERS.locked_8,
+  LEADERS.locked_9,
+  LEADERS.locked_10,
+];
 
 export function getLeaderStartingRelics(leaderId: LeaderId): RelicDefinition[] {
   const leader = LEADERS[leaderId];
@@ -60,4 +185,8 @@ export function getLeaderStartingRelics(leaderId: LeaderId): RelicDefinition[] {
   return leader.startingRelicIds
     .map((id) => RELICS[id])
     .filter((r): r is RelicDefinition => r != null);
+}
+
+export function isLeaderPlayable(leaderId: LeaderId): boolean {
+  return LEADERS[leaderId]?.enabled === true;
 }

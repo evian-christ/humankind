@@ -66,6 +66,7 @@ const translations: Record<Language, Record<string, string>> = {
         'pregame.stageTitle': 'Select Difficulty',
         'pregame.difficultyLabel': 'Difficulty',
         'pregame.leaderTitle': 'Select Leader',
+        'pregame.leaderPlay': 'Play',
         'pregame.draftTitle': 'Choose your starting symbols',
         'pregame.draftProgress': 'Pick {current} / {total}',
         'pregame.picks': 'picks',
@@ -87,6 +88,12 @@ const translations: Record<Language, Record<string, string>> = {
         'leader.pericles.main.desc': 'For every 5 different symbol types on the board: +2 Knowledge per turn.',
         'leader.pericles.sub.name': 'Democratic Order',
         'leader.pericles.sub.desc': 'When choosing a Knowledge Upgrade card: you can refresh each card once.',
+        'leader.locked.name': '???',
+        'leader.locked.desc': 'Not available yet.',
+        'leader.locked.main.name': '—',
+        'leader.locked.main.desc': 'This leader will be added in a future update.',
+        'leader.locked.sub.name': '—',
+        'leader.locked.sub.desc': '—',
 
         // Threat labels (floating text on first placement)
         'threat.barbarian_invasion': 'Barbarian invasion',
@@ -509,7 +516,8 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Pre-game: Stage & Leader
         'pregame.stageTitle': '난이도 선택',
-        'pregame.leaderTitle': '리더 선택',
+        'pregame.leaderTitle': '지도자 선택',
+        'pregame.leaderPlay': '플레이',
         'pregame.difficultyLabel': '난이도',
         'pregame.draftTitle': '시작 심볼을 고르세요',
         'pregame.draftProgress': '{current} / {total} 선택',
@@ -532,6 +540,12 @@ const translations: Record<Language, Record<string, string>> = {
         'leader.pericles.main.desc': '보드 위에 존재하는 서로 다른 심볼 종류가 5종당 매 턴 지식 +2를 얻습니다.',
         'leader.pericles.sub.name': '민주정의 선택',
         'leader.pericles.sub.desc': '지식 업그레이드 카드 선택 시, 각 카드를 1회 새로고침할 수 있습니다.',
+        'leader.locked.name': '???',
+        'leader.locked.desc': '아직 선택할 수 없습니다.',
+        'leader.locked.main.name': '—',
+        'leader.locked.main.desc': '추후 업데이트에서 추가될 예정입니다.',
+        'leader.locked.sub.name': '—',
+        'leader.locked.sub.desc': '—',
 
         // Threat labels (첫 배치 시 플로팅 텍스트)
         'threat.barbarian_invasion': '야만인 침공',

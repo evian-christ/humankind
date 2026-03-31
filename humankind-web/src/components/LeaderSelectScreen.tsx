@@ -1,39 +1,88 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePreGameStore } from '../game/state/preGameStore';
-import { LEADER_LIST, type LeaderId, type LeaderDefinition } from '../game/data/leaders';
+import { isLeaderPlayable, LEADER_LIST, type LeaderId, type LeaderDefinition } from '../game/data/leaders';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
+const LEADER_PORTRAIT_FALLBACK = `${ASSET_BASE_URL}assets/leaders/000.png`;
+
+function leaderPortraitUrl(id: LeaderId): string {
+  // leaders 폴더는 현재 숫자 파일명(000, 001, ...) 기반
+  if (id === 'ramesses') return `${ASSET_BASE_URL}assets/leaders/001.png`;
+  return LEADER_PORTRAIT_FALLBACK;
+}
+
 export default function LeaderSelectScreen() {
   const language = useSettingsStore((s) => s.language);
-  const selectLeader = usePreGameStore((s) => s.selectLeader);
-  const selectedLeaderId = usePreGameStore((s) => s.selectedLeaderId);
+  const startWithLeader = usePreGameStore((s) => s.selectLeader);
 
-  const initialLeaderId = useMemo(() => LEADER_LIST[0]?.id ?? null, []);
-  const [hoveredLeaderId, setHoveredLeaderId] = useState<LeaderId | null>(initialLeaderId);
+  const defaultLeaderId = useMemo(
+    () => LEADER_LIST.find((l) => l.enabled)?.id ?? null,
+    [],
+  );
+  const [chosenLeaderId, setChosenLeaderId] = useState<LeaderId | null>(defaultLeaderId);
 
   useEffect(() => {
-    // 화면 진입 시 기본 미리보기는 첫 리더
-    setHoveredLeaderId(initialLeaderId);
-  }, [initialLeaderId]);
+    if (defaultLeaderId != null) setChosenLeaderId(defaultLeaderId);
+  }, [defaultLeaderId]);
 
   const getLeaderById = (id: LeaderId | null): LeaderDefinition | null => {
     if (id == null) return null;
     return LEADER_LIST.find((l) => l.id === id) ?? null;
   };
 
-  const previewLeader = getLeaderById(hoveredLeaderId);
+  const previewLeader = getLeaderById(chosenLeaderId);
+
+  const handlePlay = () => {
+    if (chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)) return;
+    startWithLeader(chosenLeaderId);
+  };
 
   return (
-    <div className="pregame-overlay pregame-overlay--select">
-      <div className="pregame-panel pregame-panel--leaders-v2">
-        <h1 className="pregame-title">{t('pregame.leaderTitle', language)}</h1>
-        <div className="leader-select-layout">
-          {/* 좌측: 리더 프리뷰 */}
-          <div className="leader-preview">
-            <div className="leader-portrait-placeholder" aria-hidden="true">
-            </div>
+    <div className="leader-select-root">
+      <header className="leader-select-header">
+        <h1 className="pregame-title leader-select-title">{t('pregame.leaderTitle', language)}</h1>
+      </header>
 
+      <div className="leader-select-body">
+        <div className="leader-select-portrait-grid" aria-label={t('pregame.leaderTitle', language)}>
+          {LEADER_LIST.map((leader) => {
+            const selected = leader.enabled && chosenLeaderId === leader.id;
+            return (
+              <button
+                key={leader.id}
+                type="button"
+                disabled={!leader.enabled}
+                aria-pressed={selected}
+                aria-disabled={!leader.enabled}
+                className={[
+                  'leader-portrait-btn',
+                  selected ? 'leader-portrait-btn--selected' : '',
+                  !leader.enabled ? 'leader-portrait-btn--locked' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => {
+                  if (!leader.enabled) return;
+                  setChosenLeaderId(leader.id);
+                }}
+              >
+                <img
+                  src={leader.enabled ? leaderPortraitUrl(leader.id) : LEADER_PORTRAIT_FALLBACK}
+                  alt={t(leader.nameKey, language)}
+                  draggable={false}
+                  onError={(e) => {
+                    e.currentTarget.src = LEADER_PORTRAIT_FALLBACK;
+                  }}
+                />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="leader-select-detail-col">
+          <div className="leader-select-preview">
             <div className="leader-preview-name">
               {previewLeader ? t(previewLeader.nameKey, language) : '-'}
             </div>
@@ -61,32 +110,15 @@ export default function LeaderSelectScreen() {
             )}
           </div>
 
-          {/* 우측: 리더 리스트 */}
-          <div className="leader-list" role="listbox" aria-label="leader list">
-            {LEADER_LIST.map((leader) => {
-              const isSelected = selectedLeaderId === leader.id;
-              const isActive = hoveredLeaderId === leader.id && !isSelected;
-              return (
-                <button
-                  key={leader.id}
-                  type="button"
-                  className={[
-                    'leader-list-item',
-                    isSelected ? 'leader-list-item--selected' : '',
-                    isActive ? 'leader-list-item--active' : '',
-                  ].join(' ')}
-                  onMouseEnter={() => setHoveredLeaderId(leader.id)}
-                  onFocus={() => setHoveredLeaderId(leader.id)}
-                  onMouseLeave={() => {
-                    // 호버를 떼도 좌측 프리뷰는 마지막으로 호버링한 리더를 유지
-                  }}
-                  onClick={() => selectLeader(leader.id)}
-                  aria-selected={isSelected}
-                >
-                  <div className="leader-list-item-name">{t(leader.nameKey, language)}</div>
-                </button>
-              );
-            })}
+          <div className="leader-select-detail-footer">
+            <button
+              type="button"
+              className="leader-select-play"
+              onClick={handlePlay}
+              disabled={chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)}
+            >
+              {t('pregame.leaderPlay', language)}
+            </button>
           </div>
         </div>
       </div>
