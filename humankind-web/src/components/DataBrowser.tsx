@@ -824,7 +824,8 @@ const DataBrowser = () => {
                                             }
 
                                             const leaderName = t(`leader.${u.type}.name`, language);
-                                            const leaderColor = u.type === 'ramesses' ? '#f59e0b' : '#60a5fa';
+                                            const leaderColor =
+                                                u.type === 'ramesses' ? '#f59e0b' : u.type === 'shihuang' ? '#dc2626' : '#60a5fa';
                                             return (
                                                 <span style={{ color: leaderColor, fontWeight: 'bold' }}>
                                                     [{leaderName}]

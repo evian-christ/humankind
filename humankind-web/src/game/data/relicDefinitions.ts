@@ -86,7 +86,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "획득 후 3턴 동안 이번 턴 보드에서 생산된 식량만큼 식량을 추가로 생산한 뒤 파괴됩니다.",
         cost: 75,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "009.png",
     },
     10: {
         id: 10,
@@ -94,7 +94,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "빈 슬롯 하나당 매 턴 식량 1을 생산합니다.",
         cost: 30,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "010.png",
     },
     11: {
         id: 11,
@@ -102,15 +102,15 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드에 심볼이 15개 이상이면 매 턴 식량 5를 생산합니다.",
         cost: 40,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "011.png",
     },
     12: {
         id: 12,
         name: "고대 이집트 쇠똥구리 부적",
-        description: "심볼이 파괴될 때마다 골드 +3을 획득합니다.",
+        description: "이번 턴에 파괴된 심볼 하나당, 턴 종료 시 골드 3을 생산합니다.",
         cost: 25,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "012.png",
     },
     13: {
         id: 13,
@@ -118,7 +118,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "심볼 선택을 1회 할 수 있습니다. 클릭하여 발동합니다.",
         cost: 15,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "013.png",
     },
     14: {
         id: 14,
@@ -126,7 +126,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드에 종교 심볼이 없으면 매 턴 지식 +3.",
         cost: 40,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "014.png",
     },
     15: {
         id: 15,
@@ -134,7 +134,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "클릭하여 발동. 보유 심볼 중 하나를 선택해 파괴합니다.",
         cost: 20,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "015.png",
     },
     16: {
         id: 16,
@@ -142,7 +142,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "자연재해 심볼이 식량 +2를 추가로 생산합니다.",
         cost: 15,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "016.png",
     },
     17: {
         id: 17,
@@ -150,7 +150,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "심볼 선택을 건너뛰면 골드 +2.",
         cost: 20,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "017.png",
     },
     18: {
         id: 18,
@@ -158,7 +158,15 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 식량 +2.",
         cost: 25,
         type: SymbolType.NORMAL,
-        sprite: "",
+        sprite: "018.png",
+    },
+    19: {
+        id: 19,
+        name: "고대 부족 합류",
+        description: "지형 선택을 1회 합니다. 클릭하여 사용.",
+        cost: 18,
+        type: SymbolType.NORMAL,
+        sprite: "019.png",
     },
 };
 

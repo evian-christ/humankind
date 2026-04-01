@@ -35,3 +35,40 @@ export const STAGES: Record<number, StageDefinition> = {
 };
 
 export const STAGE_LIST = Object.values(STAGES);
+
+/** 10·20·30…턴 식량 납부: 첫 납부 금액(이후 +50씩) */
+export function getStageFoodPaymentBase(stageId: number): number {
+  if (stageId === 1 || stageId === 2) return 50;
+  if (stageId === 3 || stageId === 4) return 100;
+  return 100;
+}
+
+/** 런 시작 시 고대 유물 잔해·고대 부족 합류 유물 개수 */
+export function getStageStartingRelicCounts(stageId: number): { debris: number; tribe: number } {
+  switch (stageId) {
+    case 1:
+      return { debris: 4, tribe: 2 };
+    case 2:
+    case 3:
+      return { debris: 3, tribe: 2 };
+    case 4:
+      return { debris: 2, tribe: 1 };
+    default:
+      return { debris: 6, tribe: 0 };
+  }
+}
+
+/** HUD 기본 생산(턴 시작 패시브)에 더하는 난이도 보너스 — 보드 심볼 효과 제외 */
+export function getStagePassiveBonus(stageId: number): { food: number; gold: number; knowledge: number } {
+  switch (stageId) {
+    case 1:
+      return { knowledge: 2, food: 5, gold: 2 };
+    case 2:
+    case 3:
+      return { knowledge: 2, food: 2, gold: 2 };
+    case 4:
+      return { knowledge: 2, food: 0, gold: 0 };
+    default:
+      return { knowledge: 0, food: 0, gold: 0 };
+  }
+}

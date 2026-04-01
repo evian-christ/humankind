@@ -36,12 +36,11 @@ const RelicSelection = () => {
 
     const getEffectiveRelicCost = (relic: { id: number; cost: number }) => {
         const isHalfPrice = relicHalfPriceRelicId === relic.id;
-        return !hasGoldenTrade
-            ? relic.cost
-            : isHalfPrice
-                ? Math.floor(relic.cost * 0.5)
-                : Math.floor(relic.cost * 0.8);
+        return hasGoldenTrade && isHalfPrice ? Math.floor(relic.cost * 0.5) : relic.cost;
     };
+
+    const isGoldenTradeDiscount = (relic: { id: number; cost: number }) =>
+        hasGoldenTrade && relicHalfPriceRelicId === relic.id;
 
     return (
         <div className="selection-overlay selection-overlay--relic">
@@ -102,14 +101,6 @@ const RelicSelection = () => {
                                             <div className="relic-card-desc">
                                                 {renderRelicDesc(t(`relic.${relic.id}.desc`, language))}
                                             </div>
-                                            <button type="button" className="relic-card-buy-btn" onClick={() => buyRelic(relic.id)}>
-                                                <span className="relic-card-buy-price">
-                                                    <span className="relic-card-buy-price-icon" aria-hidden>
-                                                        &#9679;
-                                                    </span>
-                                                    <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
-                                                </span>
-                                            </button>
                                         </div>
                                     ) : (
                                         <div className="relic-sold-out">품절</div>
@@ -118,6 +109,52 @@ const RelicSelection = () => {
                             ))}
                         </div>
                     </div>
+                </div>
+            </div>
+            <div className="relic-museum-buy-bar">
+                <div className="relic-museum-buy-bar-inner">
+                    {relicChoices.map((relic, i) => (
+                        <div className="relic-museum-buy-slot" key={`buy-${i}`}>
+                            {relic ? (
+                                <button
+                                    type="button"
+                                    className="relic-card-buy-btn"
+                                    onClick={() => buyRelic(relic.id)}
+                                    aria-label={
+                                        isGoldenTradeDiscount(relic)
+                                            ? t('game.relicShopBuyDiscountAria', language)
+                                                .replace('{sale}', String(getEffectiveRelicCost(relic)))
+                                                .replace('{original}', String(relic.cost))
+                                            : undefined
+                                    }
+                                >
+                                    {isGoldenTradeDiscount(relic) ? (
+                                        <span className="relic-card-buy-price relic-card-buy-price--discount">
+                                            <span className="relic-card-buy-price-was">
+                                                <span className="relic-card-buy-price-icon relic-card-buy-price-icon--was" aria-hidden>
+                                                    &#9679;
+                                                </span>
+                                                <span className="relic-card-buy-price-num relic-card-buy-price-num--struck">{relic.cost}</span>
+                                            </span>
+                                            <span className="relic-card-buy-price-now">
+                                                <span className="relic-card-buy-price-icon" aria-hidden>
+                                                    &#9679;
+                                                </span>
+                                                <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
+                                            </span>
+                                        </span>
+                                    ) : (
+                                        <span className="relic-card-buy-price">
+                                            <span className="relic-card-buy-price-icon" aria-hidden>
+                                                &#9679;
+                                            </span>
+                                            <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
+                                        </span>
+                                    )}
+                                </button>
+                            ) : null}
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

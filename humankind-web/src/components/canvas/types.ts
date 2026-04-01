@@ -19,6 +19,15 @@ export interface HoveredUpgrade {
     screenY: number;
 }
 
+export type HoveredHudStatKind = 'knowledge' | 'food' | 'gold';
+
+/** clientX/clientY: 브라우저 뷰포트 기준(고정 위치 툴팁용) */
+export interface HoveredHudStat {
+    kind: HoveredHudStatKind;
+    clientX: number;
+    clientY: number;
+}
+
 export interface FloatingEffect {
     texts: PIXI.Text[];
     startY: number;

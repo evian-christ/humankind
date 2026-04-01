@@ -38,7 +38,7 @@ export interface KnowledgeUpgrade {
     descSymbols?: KnowledgeUpgradeDescSymbol[];
 }
 
-export type KnowledgeUpgradeType = SymbolType | 'ramesses' | 'pericles';
+export type KnowledgeUpgradeType = SymbolType | 'ramesses' | 'shihuang';
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -251,7 +251,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Golden Trade',
         type: 'ramesses',
         description:
-            'Relic Shop prices are 20% cheaper. In addition, when the shop refreshes every 10 turns, one random relic appears at half price.',
+            'Whenever the Relic Shop restocks, one random relic in stock is 50% off.',
         sprite: '-',
     },
     12: {
@@ -263,16 +263,18 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     },
     13: {
         id: 13,
-        name: 'Delian League',
-        type: 'pericles',
-        description: 'For every 5 different symbol types on the board: +2 Knowledge per turn.',
+        name: 'Heaven and Earth Prosper',
+        type: 'shihuang',
+        description:
+            'Per 2 symbols on the board: +1 Food per turn. Per 2 empty board slots: +1 Knowledge per turn.',
         sprite: '-',
     },
     14: {
         id: 14,
-        name: 'Democratic Order',
-        type: 'pericles',
-        description: 'When choosing a Knowledge Upgrade card: you can refresh each card once.',
+        name: 'Foundations of Unification',
+        type: 'shihuang',
+        description:
+            'Each time you enter a new era, gain 1 Ancient Relic Debris and 1 Ancient Tribal Joining.',
         sprite: '-',
     },
 };

@@ -7,7 +7,7 @@ import { RELICS } from './relicDefinitions';
 
 export type LeaderId =
   | 'ramesses'
-  | 'pericles'
+  | 'shihuang'
   | 'locked_3'
   | 'locked_4'
   | 'locked_5'
@@ -46,15 +46,15 @@ export const LEADERS: Record<LeaderId, LeaderDefinition> = {
     startingGold: 0,
     startingFood: 0,
   },
-  pericles: {
-    id: 'pericles',
+  shihuang: {
+    id: 'shihuang',
     enabled: true,
-    nameKey: 'leader.pericles.name',
-    descriptionKey: 'leader.pericles.desc',
-    mainEffectNameKey: 'leader.pericles.main.name',
-    mainEffectDescKey: 'leader.pericles.main.desc',
-    subEffectNameKey: 'leader.pericles.sub.name',
-    subEffectDescKey: 'leader.pericles.sub.desc',
+    nameKey: 'leader.shihuang.name',
+    descriptionKey: 'leader.shihuang.desc',
+    mainEffectNameKey: 'leader.shihuang.main.name',
+    mainEffectDescKey: 'leader.shihuang.main.desc',
+    subEffectNameKey: 'leader.shihuang.sub.name',
+    subEffectDescKey: 'leader.shihuang.sub.desc',
     startingRelicIds: [],
     startingGold: 0,
     startingFood: 0,
@@ -168,7 +168,7 @@ export const LEADERS: Record<LeaderId, LeaderDefinition> = {
 /** UI 표시 순서(10칸) */
 export const LEADER_LIST: LeaderDefinition[] = [
   LEADERS.ramesses,
-  LEADERS.pericles,
+  LEADERS.shihuang,
   LEADERS.locked_3,
   LEADERS.locked_4,
   LEADERS.locked_5,
@@ -192,7 +192,7 @@ export function isLeaderPlayable(leaderId: LeaderId): boolean {
 }
 
 /** `public/assets/leaders/*.png` 초상화가 있는 지도자. 나머지는 선택 화면에서 UI 플레이스홀더로 표시 */
-const LEADER_IDS_WITH_PORTRAIT_SPRITE: ReadonlySet<LeaderId> = new Set(['ramesses']);
+const LEADER_IDS_WITH_PORTRAIT_SPRITE: ReadonlySet<LeaderId> = new Set(['ramesses', 'shihuang']);
 
 export function leaderHasPortraitSprite(id: LeaderId): boolean {
   return LEADER_IDS_WITH_PORTRAIT_SPRITE.has(id);

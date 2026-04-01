@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useGameStore } from '../game/state/gameStore';
+import { createPortal } from 'react-dom';
+import { useShallow } from 'zustand/react/shallow';
+import { useGameStore, getHudTurnStartPassiveTotals } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { t } from '../i18n';
-import type { HoveredSymbol, HoveredRelic, HoveredUpgrade } from './canvas/types';
+import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
 import { useRelicStore } from '../game/state/relicStore';
@@ -33,6 +35,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredSymbol | null>(null);
     const [hoveredRelic, setHoveredRelic] = useState<HoveredRelic | null>(null);
     const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
+    const [hoveredHudStat, setHoveredHudStat] = useState<HoveredHudStat | null>(null);
     const language = useSettingsStore((s) => s.language);
 
     suppressBoardTooltipsRef.current = suppressBoardTooltips;
@@ -52,6 +55,21 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         setHoveredUpgrade(val);
     }, []);
 
+    const setHoveredHudStatStable = useCallback((val: HoveredHudStat | null) => {
+        if (suppressBoardTooltipsRef.current) return;
+        setHoveredHudStat(val);
+    }, []);
+
+    /** HUD 기본 생산 툴팁: 보드·업그레이드·보너스XP·유물 개수 변화 시 갱신 */
+    useGameStore(
+        useShallow((s) => ({
+            board: s.board,
+            unlockedKnowledgeUpgrades: s.unlockedKnowledgeUpgrades,
+            bonusXpPerTurn: s.bonusXpPerTurn,
+        })),
+    );
+    useRelicStore((s) => s.relics.length); // 유물 금고(람세스) 지식 반영
+
     // onReady는 App에서 매 렌더마다 새 함수가 들어올 수 있으므로 ref로 고정해둠
     useEffect(() => {
         onReadyRef.current = onReady;
@@ -62,7 +80,13 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         if (!canvasRef.current) return;
 
         let destroyed = false;
-        const app = new PixiGameApp(canvasRef.current, setHoveredSymbolStable, setHoveredRelicStable, setHoveredUpgradeStable);
+        const app = new PixiGameApp(
+            canvasRef.current,
+            setHoveredSymbolStable,
+            setHoveredRelicStable,
+            setHoveredUpgradeStable,
+            setHoveredHudStatStable,
+        );
         appRef.current = app;
 
         let resizeObserver: ResizeObserver;
@@ -102,13 +126,15 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 appRef.current = null;
             }
         };
-    }, [setHoveredSymbolStable, setHoveredRelicStable, setHoveredUpgradeStable]);
+    }, [setHoveredSymbolStable, setHoveredRelicStable, setHoveredUpgradeStable, setHoveredHudStatStable]);
 
     useEffect(() => {
         if (!suppressBoardTooltips) return;
         setHoveredSymbol(null);
         setHoveredRelic(null);
         setHoveredUpgrade(null);
+        setHoveredHudStat(null);
+        appRef.current?.clearHudHover();
     }, [suppressBoardTooltips]);
 
     // 2. Subscribe to store changes
@@ -136,6 +162,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             combatAnimation: initial.combatAnimation,
             combatShaking: initial.combatShaking,
             pendingNewThreatFloats: initial.pendingNewThreatFloats,
+            unlockedKnowledgeUpgrades: initial.unlockedKnowledgeUpgrades,
+            bonusXpPerTurn: initial.bonusXpPerTurn,
         };
 
         const unsub1 = useGameStore.subscribe((state) => {
@@ -159,7 +187,9 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 state.lastEffects !== prev.lastEffects ||
                 state.combatAnimation !== prev.combatAnimation ||
                 state.combatShaking !== prev.combatShaking ||
-                state.pendingNewThreatFloats !== prev.pendingNewThreatFloats;
+                state.pendingNewThreatFloats !== prev.pendingNewThreatFloats ||
+                state.unlockedKnowledgeUpgrades !== prev.unlockedKnowledgeUpgrades ||
+                state.bonusXpPerTurn !== prev.bonusXpPerTurn;
 
             if (!needs) return;
 
@@ -182,6 +212,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 combatAnimation: state.combatAnimation,
                 combatShaking: state.combatShaking,
                 pendingNewThreatFloats: state.pendingNewThreatFloats,
+                unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
+                bonusXpPerTurn: state.bonusXpPerTurn,
             };
 
             appRef.current.renderBoard(state, useSettingsStore.getState());
@@ -253,9 +285,49 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         return { left: `${left}px`, top: `${top}px` };
     };
 
+    /** HUD 기본 생산: 뷰포트 고정, 가로는 커서 기준 중앙, 세로는 커서 위 */
+    const HUD_GAP_ABOVE_POINTER = 8;
+    const getHudStatTooltipStyle = (hoveredItem: { clientX: number; clientY: number } | null): React.CSSProperties => {
+        if (!hoveredItem) return { display: 'none' };
+        return {
+            position: 'fixed',
+            left: hoveredItem.clientX,
+            top: hoveredItem.clientY,
+            transform: `translate(-50%, calc(-100% - ${HUD_GAP_ABOVE_POINTER}px))`,
+            whiteSpace: 'nowrap',
+            zIndex: 400,
+        };
+    };
+
     const showBoardTooltips = !suppressBoardTooltips;
 
+    const hudPassiveTotals = hoveredHudStat ? getHudTurnStartPassiveTotals(useGameStore.getState()) : null;
+    const hudStatTooltip = showBoardTooltips && hoveredHudStat && hudPassiveTotals && (() => {
+        const hudStatGlyph: Record<HoveredHudStat['kind'], { ch: string; color: string }> = {
+            knowledge: { ch: '✦', color: '#60a5fa' },
+            food: { ch: '⬟', color: '#4ade80' },
+            gold: { ch: '●', color: '#fbbf24' },
+        };
+        const g = hudStatGlyph[hoveredHudStat.kind];
+        const n =
+            hoveredHudStat.kind === 'knowledge'
+                ? hudPassiveTotals.knowledge
+                : hoveredHudStat.kind === 'food'
+                  ? hudPassiveTotals.food
+                  : hudPassiveTotals.gold;
+        const line = t('game.hudBaseProductionShort', language).replace('{n}', String(n));
+        return (
+            <div className="hud-stat-tooltip" style={getHudStatTooltipStyle(hoveredHudStat)}>
+                <div className="hud-stat-tooltip-inner">
+                    <span style={{ color: g.color, fontWeight: 900, fontSize: '40px', lineHeight: 1 }}>{g.ch}</span>
+                    <span style={{ color: '#e5e5e5' }}>{line}</span>
+                </div>
+            </div>
+        );
+    })();
+
     return (
+        <>
         <div ref={canvasRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
             {showBoardTooltips && hoveredSymbol && (
                 <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
@@ -329,7 +401,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                         }
 
                         const leaderLabel = t(`leader.${def.type}.name`, language);
-                        const leaderColor = def.type === 'ramesses' ? '#f59e0b' : '#60a5fa';
+                        const leaderColor =
+                            def.type === 'ramesses' ? '#f59e0b' : def.type === 'shihuang' ? '#dc2626' : '#60a5fa';
                         return (
                             <div
                                 className="symbol-tooltip-effect"
@@ -353,6 +426,10 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 </div>
             )}
         </div>
+        {hudStatTooltip && typeof document !== 'undefined'
+            ? createPortal(hudStatTooltip, document.body)
+            : null}
+        </>
     );
 };
 

@@ -740,6 +740,18 @@ body {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.selection-relic-source-banner {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(255, 220, 170, 0.95);
+  letter-spacing: 4px;
+  text-align: center;
+  margin-top: 12px;
+  margin-bottom: 0;
+  text-shadow: 0 0 24px rgba(255, 200, 120, 0.35);
+}
+
 .selection-title {
   font-family: 'Mulmaru', sans-serif;
   font-size: 28px;
@@ -924,6 +936,52 @@ body {
 
 .relic-museum-info-slot:last-child {
   transform: translateX(154px);
+}
+
+/* 구매 버튼 행: 가상 루트(스케일) 기준 하단 고정 — 배경 스프라이트·텍스트 블록 높이와 무관 */
+.relic-museum-buy-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: max(32px, calc(22px + env(safe-area-inset-bottom, 0px)));
+  z-index: 502;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.relic-museum-buy-bar-inner {
+  width: 990px;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 15px;
+  pointer-events: none;
+}
+
+.relic-museum-buy-slot {
+  width: 310px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 6px;
+  pointer-events: none;
+}
+
+.relic-museum-buy-slot:first-child {
+  transform: translateX(-148px);
+}
+
+.relic-museum-buy-slot:last-child {
+  transform: translateX(154px);
+}
+
+.relic-museum-buy-slot .relic-card-buy-btn {
+  pointer-events: auto;
 }
 
 .relic-museum-bg::before {
@@ -1129,11 +1187,8 @@ body {
   line-height: 1.3;
 }
 
-/* 구매 버튼 — 슬롯 기준 절대 위치, 효과 텍스트 길이와 무관하게 고정 */
+/* 구매 버튼 — relic-museum-buy-bar 슬롯 너비에 맞춤 (세로는 화면/루트 하단 고정) */
 .relic-card-buy-btn {
-  position: absolute;
-  bottom: -190px;
-  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1194,6 +1249,41 @@ body {
 .relic-card-buy-price-num {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+}
+
+.relic-card-buy-price--discount {
+  gap: 10px;
+  justify-content: center;
+}
+
+.relic-card-buy-price-was,
+.relic-card-buy-price-now {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.relic-card-buy-price-was {
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.relic-card-buy-price-num--struck {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.relic-card-buy-price-icon--was {
+  color: rgba(251, 191, 36, 0.45);
+  font-size: 20px;
+}
+
+.relic-card-buy-price-now {
+  font-size: 30px;
+  font-weight: 900;
 }
 
 .relic-card-buy-gold {
@@ -1621,6 +1711,185 @@ body {
   padding: clamp(12px, 1.9%, 26px) var(--leader-select-gutter);
 }
 
+.demo-start-root {
+  position: absolute;
+  inset: 0;
+  z-index: 550;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top, rgba(120, 120, 120, 0.12), transparent 45%),
+    rgba(0, 0, 0, 0.9);
+  padding: clamp(28px, 4vw, 72px);
+}
+
+.demo-start-panel {
+  width: min(100%, 1080px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: clamp(28px, 3vw, 44px);
+  background: rgba(12, 12, 12, 0.82);
+  border: 1px solid rgba(140, 140, 140, 0.25);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
+}
+
+.demo-start-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  text-align: center;
+}
+
+.demo-start-title {
+  font-size: clamp(34px, 3vw, 54px);
+  letter-spacing: 0.06em;
+}
+
+.demo-start-tutorial {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(20px, 2vw, 28px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(150, 150, 150, 0.18);
+}
+
+.demo-start-section-title {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: clamp(24px, 2vw, 34px);
+  letter-spacing: 0.08em;
+  color: #f3f4f6;
+}
+
+.demo-start-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.demo-start-list-item {
+  font-size: clamp(19px, 1.35vw, 24px);
+  line-height: 1.65;
+  color: rgba(232, 232, 232, 0.92);
+  padding-left: 24px;
+  position: relative;
+}
+
+.demo-start-list-item::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #d6c38d;
+}
+
+.demo-inline-code {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  margin: 0 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(180, 180, 180, 0.2);
+  color: #f3f4f6;
+  letter-spacing: 0.06em;
+}
+
+.demo-resource {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.demo-resource-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.9em;
+  line-height: 1;
+  transform: translateY(-0.01em);
+}
+
+.demo-resource--food {
+  color: #86efac;
+}
+
+.demo-resource--gold {
+  color: #fbbf24;
+}
+
+.demo-resource--knowledge {
+  color: #7dd3fc;
+}
+
+.demo-start-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.demo-start-play-button {
+  min-width: 320px;
+  min-height: 84px;
+  padding: 22px 36px;
+}
+
+.demo-start-play-button .pregame-card-name {
+  font-size: clamp(22px, 1.7vw, 30px);
+}
+
+.stage-select-root {
+  position: absolute;
+  inset: 0;
+  z-index: 550;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 28px;
+  background: rgba(0, 0, 0, 0.88);
+  padding: clamp(28px, 4vw, 72px);
+}
+
+.stage-select-header {
+  width: min(100%, 540px);
+}
+
+.stage-select-title {
+  font-size: clamp(34px, 3.2vw, 56px);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.stage-select-list {
+  width: min(100%, 540px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.stage-select-card {
+  width: 100%;
+  min-width: 0;
+  min-height: 74px;
+  padding: 18px 24px;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage-select-card .pregame-card-name {
+  font-size: clamp(20px, 1.5vw, 26px);
+  line-height: 1.1;
+}
+
 .leader-select-header {
   flex-shrink: 0;
   width: 100%;
@@ -1799,7 +2068,7 @@ body {
   width: 100%;
   box-sizing: border-box;
   font-family: 'Mulmaru', sans-serif;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 900;
   letter-spacing: 0.14em;
   /* 가로 패딩(20px)에 세로 맞춤 */
@@ -1816,6 +2085,14 @@ body {
     0 10px 22px rgba(0, 0, 0, 0.42);
   transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
   flex-shrink: 0;
+}
+
+.leader-select-play-label {
+  display: inline-block;
+  font-size: 1.12em;
+  line-height: 1;
+  transform: scaleX(1.2);
+  transform-origin: center;
 }
 
 .leader-select-play:hover:not(:disabled) {
@@ -2251,6 +2528,32 @@ body {
   font-size: 17px;
   color: #ef4444;
   font-weight: bold;
+}
+
+/* HUD 기본 생산: 내용 너비만; position/z-index는 인라인(fixed)로 덮음 */
+.hud-stat-tooltip {
+  width: max-content;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(15, 15, 15, 0.95);
+  border: 1px solid #555;
+  pointer-events: none;
+  font-family: 'Mulmaru', sans-serif;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.hud-stat-tooltip-inner {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  margin: 0;
+  font-size: 34px;
 }
 
 /* ===== 일시정지 버튼 (상단바 우측) ===== */

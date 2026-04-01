@@ -8,24 +8,24 @@ export default function StageSelectScreen() {
   const selectStage = usePreGameStore((s) => s.selectStage);
 
   return (
-    <div className="pregame-overlay pregame-overlay--select">
-      <div className="pregame-panel">
-        <h1 className="pregame-title">{t('pregame.stageTitle', language)}</h1>
-        <div className="pregame-cards">
+    <div className="stage-select-root">
+      <div className="stage-select-header">
+        <h1 className="pregame-title stage-select-title">{t('pregame.stageTitle', language)}</h1>
+      </div>
+      <div className="stage-select-list">
           {STAGE_LIST.slice().sort((a, b) => a.id - b.id).map((stage) => (
             <button
               key={stage.id}
               type="button"
-              className="pregame-card"
-              disabled={stage.id !== 1}
+              className="pregame-card stage-select-card"
+              disabled={stage.id < 1 || stage.id > 4}
               onClick={() => {
-                if (stage.id === 1) selectStage(stage.id);
+                if (stage.id >= 1 && stage.id <= 4) selectStage(stage.id);
               }}
             >
               <span className="pregame-card-name">{t(stage.nameKey, language)}</span>
             </button>
           ))}
-        </div>
       </div>
     </div>
   );

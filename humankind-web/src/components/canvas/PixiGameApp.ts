@@ -7,8 +7,9 @@ import { t } from '../../i18n';
 import { getSymbolColor, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import { useRelicStore } from '../../game/state/relicStore';
-import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
+import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
 import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
+import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../../game/data/knowledgeUpgradeCandidates';
 import { loadGameAssets } from './AssetLoader';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -23,7 +24,7 @@ const THREAT_FLOAT_DRIFT_RIGHT = 36;
 const THREAT_FLOAT_UP = 85;
 
 /** 클릭으로 발동하는 유물 (gameStore.activateClickableRelic) */
-const CLICKABLE_RELIC_IDS = new Set([4, 13, 15]);
+const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19]);
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -58,6 +59,8 @@ export class PixiGameApp {
     private onHoverSymbol: (symbol: HoveredSymbol | null) => void;
     private onHoverRelic: (relic: HoveredRelic | null) => void;
     private onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void;
+    private onHoverHudStat!: (stat: HoveredHudStat | null) => void;
+    private hudHoverSnapshot: HoveredHudStat | null = null;
 
     // Refs equivalent state
     private floatingEffects: FloatingEffect[] = [];
@@ -67,6 +70,7 @@ export class PixiGameApp {
     private prevEffectCount: number = 0;
     private prevCombatFloatCount: number = 0;
     private prevRelicFloatCount: number = 0;
+    private prevKnowledgeUpgradeFloatCount: number = 0;
 
     private reels: ReelState[] = [];
     private spinElapsed: number = 0;
@@ -128,13 +132,15 @@ export class PixiGameApp {
         canvas: HTMLDivElement,
         onHoverSymbol: (symbol: HoveredSymbol | null) => void,
         onHoverRelic: (relic: HoveredRelic | null) => void,
-        onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void
+        onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void,
+        onHoverHudStat: (stat: HoveredHudStat | null) => void
     ) {
         this.app = new PIXI.Application();
         this.canvas = canvas;
         this.onHoverSymbol = onHoverSymbol;
         this.onHoverRelic = onHoverRelic;
         this.onHoverUpgrade = onHoverUpgrade;
+        this.onHoverHudStat = onHoverHudStat;
         this.hitContainer.eventMode = 'static';
     }
 
@@ -202,6 +208,12 @@ export class PixiGameApp {
         if (!this.destroyed && this.app && this.app.renderer) {
             this.app.renderer.resize(width, height);
         }
+    }
+
+    /** 오버레이 열림 등으로 보드 툴팁을 끌 때 HUD 스냅샷도 초기화 */
+    public clearHudHover() {
+        this.hudHoverSnapshot = null;
+        this.onHoverHudStat?.(null);
     }
 
     private onTick(ticker: PIXI.Ticker) {
@@ -476,8 +488,8 @@ export class PixiGameApp {
         const gridOffsetX = (boardW - totalSlotsWidth) / 2;
         const gridOffsetY = (boardH - totalSlotsHeight) / 2;
 
-        // 가로는 중앙, 세로는 HUD 바로 밑(상단)에 배치
-        const HUD_BOTTOM_OFFSET = 92 * scale; // 상단 HUD 영역 아래 여유
+        // 가로는 중앙, 세로는 상단(식량 납부 안내) 아래에 배치 — 스탯 HUD는 하단(스핀 위)으로 이동
+        const HUD_BOTTOM_OFFSET = 88 * scale;
         const startX = (w - boardW) / 2;
         const startY = HUD_BOTTOM_OFFSET;
 
@@ -873,8 +885,8 @@ export class PixiGameApp {
             setTimeout(() => useGameStore.getState().continueProcessingAfterNewThreatFloats(), THREAT_FLOAT_TOTAL_MS + 200);
         }
 
-        // UI bars (Knowledge, Food, Gold)
-        this.renderUI(state, settings, scale, fs, w);
+        // UI bars (Knowledge, Food, Gold) — 하단 스핀 버튼 위쪽 중앙
+        this.renderUI(state, settings, scale, fs, w, h, startX, startY, boardW, boardH);
         this.renderRelics(scale);
         this.renderKnowledgeUpgrades(state, scale);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
@@ -940,6 +952,10 @@ export class PixiGameApp {
                 this.onHoverUpgrade(null);
             }
         }
+
+        if (this.hudHoverSnapshot && this.onHoverHudStat) {
+            this.onHoverHudStat(this.hudHoverSnapshot);
+        }
     }
 
     private renderRelics(scale: number) {
@@ -951,16 +967,20 @@ export class PixiGameApp {
         const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
         const state = useGameStore.getState();
 
-        const iconSize = 96 * scale;
-        const gapX = 16 * scale;
-        const gapY = 32 * scale;
-
-        // 한 줄에 들어갈 수 있는 최대 아이콘 수 계산 (양쪽 최소 여백 24px)
+        const gapX = 18 * scale;
+        const gapY = 36 * scale;
+        const RELICS_PER_ROW = 3;
         const minMargin = 24 * scale;
         const maxRowWidth = startX - minMargin * 2;
-        const iconsPerRow = Math.max(1, Math.floor((maxRowWidth + gapX) / (iconSize + gapX)));
 
-        // 실제 한 줄의 폭 계산
+        // 한 줄 3개 고정, 기본은 이전(96)보다 큰 128 기준 — 좁으면 가용 폭에 맞게 축소
+        let iconSize = 128 * scale;
+        const rowWidthAtTarget = RELICS_PER_ROW * iconSize + (RELICS_PER_ROW - 1) * gapX;
+        if (rowWidthAtTarget > maxRowWidth && maxRowWidth > 0) {
+            iconSize = (maxRowWidth - (RELICS_PER_ROW - 1) * gapX) / RELICS_PER_ROW;
+        }
+        const iconsPerRow = RELICS_PER_ROW;
+
         const actualRowWidth = iconsPerRow * iconSize + (iconsPerRow - 1) * gapX;
 
         // 왼쪽 가장자리와 보드 사이 공간의 정중앙에 배치
@@ -1036,6 +1056,7 @@ export class PixiGameApp {
                 let counterStr: string | null = null;
                 if (rid === 3 || rid === 9) counterStr = String(relic.effect_counter);
                 else if (rid === 4) counterStr = String(relic.bonus_stacks);
+                else if (rid === 6) counterStr = String(1 + (relic.bonus_stacks ?? 0));
                 if (counterStr !== null) {
                     const counterText = new PIXI.Text({
                         text: counterStr,
@@ -1111,8 +1132,10 @@ export class PixiGameApp {
         let curX = rowStartX;
         let curY = startY - 6 * scale;
 
+        const upgradeCenterByUpgradeId = new Map<number, { x: number; y: number }>();
+
         for (const id of upgradeIds) {
-            const upgrade = KNOWLEDGE_UPGRADES[id];
+            const upgrade = KNOWLEDGE_UPGRADES[id] ?? KNOWLEDGE_UPGRADE_CANDIDATES[id];
             if (!upgrade) continue;
 
             if (curX > rowStartX && curX + iconSize > rowStartX + actualRowWidth) {
@@ -1153,11 +1176,87 @@ export class PixiGameApp {
             sp.y = iconY;
             this.boardContainer.addChild(sp);
 
+            upgradeCenterByUpgradeId.set(id, { x: iconX + iconSize / 2, y: iconY + iconSize / 2 });
+
             curX += iconSize + gapX;
+        }
+
+        const storeState = useGameStore.getState();
+        if (!storeState.knowledgeUpgradeFloats || storeState.knowledgeUpgradeFloats.length === 0) {
+            this.prevKnowledgeUpgradeFloatCount = 0;
+        } else if (storeState.knowledgeUpgradeFloats.length > this.prevKnowledgeUpgradeFloatCount) {
+            const newFloats = storeState.knowledgeUpgradeFloats.slice(this.prevKnowledgeUpgradeFloatCount);
+            this.prevKnowledgeUpgradeFloatCount = storeState.knowledgeUpgradeFloats.length;
+            const fontSize = Math.max(26, iconSize * 0.32);
+            const stackInBatch = new Map<number, number>();
+            const textStyleBase = {
+                fontSize,
+                fontWeight: 'bold' as const,
+                fontFamily: 'Mulmaru',
+                stroke: { color: '#000000', width: 4 },
+            };
+            for (const f of newFloats) {
+                const c = upgradeCenterByUpgradeId.get(f.upgradeId);
+                if (!c) continue;
+                const stackIdx = stackInBatch.get(f.upgradeId) ?? 0;
+                stackInBatch.set(f.upgradeId, stackIdx + 1);
+                const baseY = c.y - iconSize * 0.15 - 20 * scale * stackIdx;
+
+                if ('inlineParts' in f && f.inlineParts.length > 0) {
+                    const gapBetween = 6 * scale;
+                    const row: PIXI.Text[] = [];
+                    for (const p of f.inlineParts) {
+                        row.push(
+                            new PIXI.Text({
+                                text: p.text,
+                                style: new PIXI.TextStyle({ ...textStyleBase, fill: p.color }),
+                            }),
+                        );
+                    }
+                    const totalW =
+                        row.reduce((sum, t) => sum + t.width, 0) + gapBetween * Math.max(0, row.length - 1);
+                    let curX = c.x - totalW / 2;
+                    for (let i = 0; i < row.length; i++) {
+                        const txt = row[i];
+                        txt.anchor.set(0, 0.5);
+                        txt.x = curX;
+                        txt.y = baseY;
+                        (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                        curX += txt.width + (i < row.length - 1 ? gapBetween : 0);
+                        this.floatContainer.addChild(txt);
+                    }
+                    this.floatingEffects.push({ texts: row, startY: baseY, elapsed: 0 });
+                } else if ('text' in f) {
+                    const txt = new PIXI.Text({
+                        text: f.text,
+                        style: new PIXI.TextStyle({
+                            ...textStyleBase,
+                            fill: f.color ?? '#ffffff',
+                        }),
+                    });
+                    txt.anchor.set(0.5, 0.5);
+                    txt.x = c.x;
+                    txt.y = baseY;
+                    (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                    this.floatContainer.addChild(txt);
+                    this.floatingEffects.push({ texts: [txt], startY: txt.y, elapsed: 0 });
+                }
+            }
         }
     }
 
-    private renderUI(state: GameState, settings: SettingsState, scale: number, fs: number, w: number) {
+    private renderUI(
+        state: GameState,
+        settings: SettingsState,
+        scale: number,
+        fs: number,
+        w: number,
+        h: number,
+        boardStartX: number,
+        boardStartY: number,
+        boardW: number,
+        boardH: number
+    ) {
         const lang = settings.language;
         const fontFamily = 'Mulmaru';
         const eraName = t(ERA_NAME_KEYS[state.era] ?? 'era.ancient', lang);
@@ -1165,18 +1264,30 @@ export class PixiGameApp {
         const knowledgeCurrent = state.knowledge;
         const knowledgeRatio = knowledgeRequired > 0 ? Math.min(1, knowledgeCurrent / knowledgeRequired) : 0;
 
-        const demandFontSize = 28 * fs;
-        const rowCY = 40 * scale; // 상단에서 40px 아래
-        const rowH = demandFontSize + 4 * scale;
-        const rowY = rowCY - rowH / 2;
-        const startPanelX = 32 * scale;
-        const barW = 200 * scale;
+        /** 하단 스탯 HUD: 요소 간 비율 유지한 채 전체 확대 */
+        const HUD_ROW_SCALE = 1.65;
+        const HUD_UPSHIFT = 84 * scale;
+        const demandFontSize = 28 * fs * HUD_ROW_SCALE;
+        const rowH = demandFontSize + 4 * scale * HUD_ROW_SCALE;
+        const barW = 162 * scale * HUD_ROW_SCALE;
         const barH = rowH;
-        const gap = 12 * scale;
+        const gap = 12 * scale * HUD_ROW_SCALE;
+        const eraStroke = Math.max(2, Math.round(2 * HUD_ROW_SCALE));
+        const barStrokeW = 1.5 * HUD_ROW_SCALE;
+        /** CSS `.bottom-action-bar`: bottom 32px + height 100px — 캔버스 좌표와 동일한 논리 픽셀 기준 */
+        const BOTTOM_SPIN_RESERVE = 132;
+        const STATS_ABOVE_SPIN_GAP = 18 * scale * HUD_ROW_SCALE;
+        let rowCY = h - BOTTOM_SPIN_RESERVE - STATS_ABOVE_SPIN_GAP - rowH / 2 - HUD_UPSHIFT;
+        const minStatsCY = boardStartY + boardH + 1 * scale + rowH / 2;
+        const maxStatsCY = h - BOTTOM_SPIN_RESERVE - STATS_ABOVE_SPIN_GAP - rowH / 2 - HUD_UPSHIFT;
+        if (rowCY < minStatsCY) rowCY = minStatsCY;
+        if (rowCY > maxStatsCY) rowCY = maxStatsCY;
+        const rowY = rowCY - rowH / 2;
 
-        // 상단 HUD 중앙: 식량 요구 텍스트 (2턴 이하는 ticker에서 진동)
+        // 상단 중앙: 식량 납부 안내 (2턴 이하는 ticker에서 진동)
+        const foodDemandTopY = 44 * scale;
         const turnsUntilPayment = state.turn % 10 === 0 ? 10 : 10 - (state.turn % 10);
-        const nextCost = calculateFoodCost(state.turn + turnsUntilPayment);
+        const nextCost = calculateFoodCost(state.turn + turnsUntilPayment, state.stageId);
         const foodDemandRaw = t('game.foodDemandFlavor', lang);
         const foodDemandText = foodDemandRaw.replace('{turns}', String(turnsUntilPayment)).replace('{amount}', nextCost.toLocaleString());
         const foodDemandFontSize = Math.round(32 * fs);
@@ -1190,7 +1301,7 @@ export class PixiGameApp {
             }),
         });
         foodDemandLabel.anchor.set(0.5, 0.5);
-        this.foodDemandCenter = { x: w / 2, y: rowCY };
+        this.foodDemandCenter = { x: w / 2, y: foodDemandTopY };
         foodDemandLabel.x = this.foodDemandCenter.x;
         foodDemandLabel.y = this.foodDemandCenter.y;
         this.foodDemandLabel = foodDemandLabel;
@@ -1198,20 +1309,60 @@ export class PixiGameApp {
 
         const eraText = new PIXI.Text({
             text: `Lv.${state.level} ${eraName}`,
-            style: new PIXI.TextStyle({ fill: '#e2e8f0', fontSize: demandFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
+            style: new PIXI.TextStyle({ fill: '#e2e8f0', fontSize: demandFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: eraStroke } }),
         });
         eraText.anchor.set(0, 0.5);
-        eraText.x = startPanelX;
+
+        const statsFontSize = demandFontSize;
+
+        const foodSym = new PIXI.Text({
+            text: '⬟',
+            style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: statsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: eraStroke } }),
+        });
+        foodSym.anchor.set(0, 0.5);
+
+        const foodNum = new PIXI.Text({
+            text: ` ${state.food}`,
+            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: statsFontSize, fontFamily, stroke: { color: '#000000', width: eraStroke } }),
+        });
+        foodNum.anchor.set(0, 0.5);
+
+        const goldSym = new PIXI.Text({
+            text: '●',
+            style: new PIXI.TextStyle({ fill: '#fbbf24', fontSize: statsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: eraStroke } }),
+        });
+        goldSym.anchor.set(0, 0.5);
+
+        const goldNum = new PIXI.Text({
+            text: ` ${state.gold}`,
+            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: statsFontSize, fontFamily, stroke: { color: '#000000', width: eraStroke } }),
+        });
+        goldNum.anchor.set(0, 0.5);
+
+        // 보드 너비 안에 3구역: (1) 레벨·시대·경험치바 (2) 식량 (3) 골드 — 구역 사이 간격 동일, 골드 우측 미세 패딩
+        const hudStatPadRight = 22 * scale * HUD_ROW_SCALE;
+        const flexTrackW = boardW - hudStatPadRight;
+        const wKnowledge = eraText.width + gap + barW;
+        const wFood = foodSym.width + foodNum.width;
+        const wGold = goldSym.width + goldNum.width;
+        let flexGap = (flexTrackW - wKnowledge - wFood - wGold) / 2;
+        if (!Number.isFinite(flexGap) || flexGap < 0) flexGap = 0;
+
+        const xKnowledge = boardStartX;
+        const xFood = boardStartX + wKnowledge + flexGap;
+        const xGold = boardStartX + wKnowledge + flexGap + wFood + flexGap;
+
+        eraText.x = xKnowledge;
         eraText.y = rowCY;
         this.bgContainer.addChild(eraText);
 
-        const barX = startPanelX + eraText.width + gap;
+        const barX = xKnowledge + eraText.width + gap;
         const barY2 = rowY;
         const barBg = new PIXI.Graphics();
         barBg.rect(barX, barY2, barW, barH);
         barBg.fill({ color: 0x1e3a5f, alpha: 0.9 });
         barBg.rect(barX, barY2, barW, barH);
-        barBg.stroke({ color: 0x3b82f6, width: 1.5, alpha: 0.7 });
+        barBg.stroke({ color: 0x3b82f6, width: barStrokeW, alpha: 0.7 });
         this.bgContainer.addChild(barBg);
 
         if (knowledgeRatio > 0) {
@@ -1221,58 +1372,35 @@ export class PixiGameApp {
             this.bgContainer.addChild(barFill);
         }
 
+        const fracStroke = Math.max(2, Math.round(3 * HUD_ROW_SCALE));
         const fracLabel = new PIXI.Text({
             text: `✦ ${knowledgeCurrent}/${knowledgeRequired}`,
-            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 22 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 22 * fs * HUD_ROW_SCALE, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: fracStroke } }),
         });
         fracLabel.anchor.set(0.5, 0.5);
         fracLabel.x = barX + barW / 2;
         fracLabel.y = rowCY;
         this.bgContainer.addChild(fracLabel);
 
-        // Food & Gold — same row, right of knowledge bar
-        const statsFontSize = demandFontSize;
-        const statGap = 16 * scale;
-        const statsStartX = barX + barW + gap * 2;
-
-        const foodSym = new PIXI.Text({
-            text: '⬟',
-            style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: statsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
-        });
-        foodSym.anchor.set(0, 0.5);
-        foodSym.x = statsStartX;
-        foodSym.y = rowCY - 2 * scale;
+        foodSym.x = xFood;
+        foodSym.y = rowCY - 2 * scale * HUD_ROW_SCALE;
         this.bgContainer.addChild(foodSym);
 
-        const foodNum = new PIXI.Text({
-            text: ` ${state.food}`,
-            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: statsFontSize, fontFamily, stroke: { color: '#000000', width: 2 } }),
-        });
-        foodNum.anchor.set(0, 0.5);
         foodNum.x = foodSym.x + foodSym.width;
         foodNum.y = rowCY;
         this.bgContainer.addChild(foodNum);
 
-        const goldSym = new PIXI.Text({
-            text: '●',
-            style: new PIXI.TextStyle({ fill: '#fbbf24', fontSize: statsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
-        });
-        goldSym.anchor.set(0, 0.5);
-        goldSym.x = foodNum.x + foodNum.width + statGap;
+        goldSym.x = xGold;
         goldSym.y = rowCY;
         this.bgContainer.addChild(goldSym);
 
-        const goldNum = new PIXI.Text({
-            text: ` ${state.gold}`,
-            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: statsFontSize, fontFamily, stroke: { color: '#000000', width: 2 } }),
-        });
-        goldNum.anchor.set(0, 0.5);
         goldNum.x = goldSym.x + goldSym.width;
         goldNum.y = rowCY;
         this.bgContainer.addChild(goldNum);
 
         const rt = state.runningTotals;
-        const totalsFontSize = 26 * fs;
+        const totalsFontSize = 26 * fs * HUD_ROW_SCALE;
+        const totalsStroke = Math.max(2, Math.round(2 * HUD_ROW_SCALE));
         const rtTexts = this.runningTotalTexts;
         if (rtTexts.food) { rtTexts.food.parent?.removeChild(rtTexts.food); rtTexts.food.destroy(); rtTexts.food = null; }
         if (rtTexts.gold) { rtTexts.gold.parent?.removeChild(rtTexts.gold); rtTexts.gold.destroy(); rtTexts.gold = null; }
@@ -1282,37 +1410,74 @@ export class PixiGameApp {
             if (rt.knowledge !== 0) {
                 const txt = new PIXI.Text({
                     text: `${rt.knowledge > 0 ? '+' : ''}${rt.knowledge}`,
-                    style: new PIXI.TextStyle({ fill: rt.knowledge > 0 ? '#60a5fa' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
+                    style: new PIXI.TextStyle({ fill: rt.knowledge > 0 ? '#60a5fa' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: totalsStroke } }),
                 });
                 txt.anchor.set(0.5, 0);
                 txt.x = barX + barW / 2;
-                txt.y = barY2 + barH + 4 * scale;
+                txt.y = barY2 + barH + 4 * scale * HUD_ROW_SCALE;
                 this.effectsContainer.addChild(txt);
                 rtTexts.knowledge = txt;
             }
             if (rt.food !== 0) {
                 const txt = new PIXI.Text({
                     text: `${rt.food > 0 ? '+' : ''}${rt.food}`,
-                    style: new PIXI.TextStyle({ fill: rt.food > 0 ? '#4ade80' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
+                    style: new PIXI.TextStyle({ fill: rt.food > 0 ? '#4ade80' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: totalsStroke } }),
                 });
                 txt.anchor.set(0.5, 0);
                 txt.x = foodSym.x + (foodNum.x + foodNum.width - foodSym.x) / 2;
-                txt.y = rowCY + rowH / 2 + 4 * scale;
+                txt.y = rowCY + rowH / 2 + 4 * scale * HUD_ROW_SCALE;
                 this.effectsContainer.addChild(txt);
                 rtTexts.food = txt;
             }
             if (rt.gold !== 0) {
                 const txt = new PIXI.Text({
                     text: `${rt.gold > 0 ? '+' : ''}${rt.gold}`,
-                    style: new PIXI.TextStyle({ fill: rt.gold > 0 ? '#fbbf24' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 2 } }),
+                    style: new PIXI.TextStyle({ fill: rt.gold > 0 ? '#fbbf24' : '#ef4444', fontSize: totalsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: totalsStroke } }),
                 });
                 txt.anchor.set(0.5, 0);
                 txt.x = goldSym.x + (goldNum.x + goldNum.width - goldSym.x) / 2;
-                txt.y = rowCY + rowH / 2 + 4 * scale;
+                txt.y = rowCY + rowH / 2 + 4 * scale * HUD_ROW_SCALE;
                 this.effectsContainer.addChild(txt);
                 rtTexts.gold = txt;
             }
         }
+
+        const padHit = 6 * scale * HUD_ROW_SCALE;
+        const addHudHit = (kind: HoveredHudStat['kind'], hx: number, hy: number, hw: number, hh: number) => {
+            const g = new PIXI.Graphics();
+            g.rect(hx, hy, hw, hh);
+            g.fill({ color: 0x000000, alpha: 0.001 });
+            g.eventMode = 'static';
+            g.cursor = 'help';
+            const emit = (e: PIXI.FederatedPointerEvent) => {
+                const clientX = e.clientX;
+                const clientY = e.clientY;
+                this.hudHoverSnapshot = { kind, clientX, clientY };
+                this.onHoverHudStat({ kind, clientX, clientY });
+            };
+            g.on('pointerover', emit);
+            g.on('pointermove', (e) => {
+                if (this.hudHoverSnapshot?.kind !== kind) return;
+                emit(e);
+            });
+            g.on('pointerout', () => {
+                if (this.hudHoverSnapshot?.kind === kind) {
+                    this.hudHoverSnapshot = null;
+                    this.onHoverHudStat(null);
+                }
+            });
+            this.hitContainer.addChild(g);
+        };
+
+        addHudHit('knowledge', barX - padHit, barY2 - padHit, barW + padHit * 2, barH + padHit * 2);
+
+        const foodHitW = foodNum.x + foodNum.width - foodSym.x + padHit * 2;
+        const foodHitH = rowH + padHit * 2;
+        addHudHit('food', foodSym.x - padHit, rowCY - foodHitH / 2, foodHitW, foodHitH);
+
+        const goldHitW = goldNum.x + goldNum.width - goldSym.x + padHit * 2;
+        const goldHitH = rowH + padHit * 2;
+        addHudHit('gold', goldSym.x - padHit, rowCY - goldHitH / 2, goldHitW, goldHitH);
     }
 
     public triggerCombatAnimation(anim: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number }) {

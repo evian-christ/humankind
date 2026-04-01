@@ -18,6 +18,10 @@ const ERA_NAME_KEYS: Record<number, string> = {
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
+/** gameStore RELIC_ID: 고대 유물 잔해 / 고대 부족 합류 — 심볼 선택 UI 전용 표시·리롤 숨김 */
+const RELIC_ANCIENT_DEBRIS = 13;
+const RELIC_ANCIENT_TRIBE_JOIN = 19;
+
 const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: () => void }) => {
     const language = useSettingsStore((s) => s.language);
     const eraColor = getSymbolColorHex(symbol.type);
@@ -78,7 +82,17 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
 };
 
 const SymbolSelection = () => {
-    const { phase, symbolChoices, gold, rerollsThisTurn, level, selectSymbol, skipSelection, rerollSymbols } = useGameStore();
+    const {
+        phase,
+        symbolChoices,
+        gold,
+        rerollsThisTurn,
+        level,
+        selectSymbol,
+        skipSelection,
+        rerollSymbols,
+        symbolSelectionRelicSourceId,
+    } = useGameStore();
     const language = useSettingsStore((s) => s.language);
     const relics = useRelicStore((s) => s.relics);
     const [isPeeked, setIsPeeked] = useState(false);
@@ -98,6 +112,14 @@ const SymbolSelection = () => {
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
     const canReroll = gold >= rerollCost && (rerollsLeft === null || rerollsLeft > 0);
 
+    const hideRerollFromRelicSource =
+        symbolSelectionRelicSourceId === RELIC_ANCIENT_DEBRIS ||
+        symbolSelectionRelicSourceId === RELIC_ANCIENT_TRIBE_JOIN;
+    const relicSourceLabelKey =
+        hideRerollFromRelicSource && symbolSelectionRelicSourceId != null
+            ? (`relic.${symbolSelectionRelicSourceId}.name` as const)
+            : null;
+
     const handleCardClick = (symbolId: number) => {
         selectSymbol(symbolId);
     };
@@ -116,6 +138,9 @@ const SymbolSelection = () => {
 
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
+                    {relicSourceLabelKey && (
+                        <div className="selection-relic-source-banner">{t(relicSourceLabelKey, language)}</div>
+                    )}
                     <div className="selection-title">
                         {t('game.chooseSymbol', language)}
                     </div>
@@ -129,21 +154,23 @@ const SymbolSelection = () => {
                         ))}
                     </div>
                     <div className="selection-actions">
-                        <button
-                            className="selection-reroll-btn"
-                            onClick={rerollSymbols}
-                            disabled={!canReroll}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                        >
-                            <span>{t('game.reroll', language)}</span>
-                            <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>
-                            <span style={{ color: '#fbbf24', fontWeight: '900' }}>{rerollCost}</span>
-                            {rerollsLeft !== null && (
-                                <span style={{ marginLeft: '4px', opacity: 0.75, fontSize: '0.75em' }}>
-                                    {rerollsLeft}/{maxRerolls}
-                                </span>
-                            )}
-                        </button>
+                        {!hideRerollFromRelicSource && (
+                            <button
+                                className="selection-reroll-btn"
+                                onClick={rerollSymbols}
+                                disabled={!canReroll}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            >
+                                <span>{t('game.reroll', language)}</span>
+                                <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>
+                                <span style={{ color: '#fbbf24', fontWeight: '900' }}>{rerollCost}</span>
+                                {rerollsLeft !== null && (
+                                    <span style={{ marginLeft: '4px', opacity: 0.75, fontSize: '0.75em' }}>
+                                        {rerollsLeft}/{maxRerolls}
+                                    </span>
+                                )}
+                            </button>
+                        )}
                         <button className="selection-skip-btn" onClick={skipSelection}>
                             {t('game.skip', language)}
                         </button>

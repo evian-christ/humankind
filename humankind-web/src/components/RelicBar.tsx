@@ -11,10 +11,11 @@ function getRelicCornerCounterValue(relic: { definition: { id: number }; effect_
     const id = relic.definition.id;
     if (id === 3 || id === 9) return String(relic.effect_counter);
     if (id === 4) return String(relic.bonus_stacks);
+    if (id === 6) return String(1 + (relic.bonus_stacks ?? 0));
     return null;
 }
 
-const CLICKABLE_RELIC_IDS = new Set([4, 13, 15]);
+const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19]);
 
 const RelicBar = () => {
     const relics = useRelicStore(state => state.relics);
