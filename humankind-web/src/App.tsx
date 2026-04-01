@@ -9,6 +9,7 @@ import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
 import UpgradeSelection from './components/UpgradeSelection';
 import DestroySelection from './components/DestroySelection';
+import DemoStartScreen from './components/DemoStartScreen';
 import StageSelectScreen from './components/StageSelectScreen';
 import LeaderSelectScreen from './components/LeaderSelectScreen';
 
@@ -67,6 +68,11 @@ function App() {
     !isRelicShopOpen;
 
   const suppressBoardTooltips = !boardIsForegroundForTooltips || fullscreenModalBlocksBoardTooltips;
+
+  // 스테이지 선택 화면
+  if (preGameScreen === 'intro') {
+    return <DemoStartScreen />;
+  }
 
   // 스테이지 선택 화면
   if (preGameScreen === 'stage') {

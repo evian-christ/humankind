@@ -2,13 +2,14 @@ import { create } from 'zustand';
 import type { LeaderId } from '../data/leaders';
 import { useGameStore } from './gameStore';
 
-export type PreGameScreen = 'stage' | 'leader' | null;
+export type PreGameScreen = 'intro' | 'stage' | 'leader' | null;
 
 interface PreGameState {
   screen: PreGameScreen;
   selectedStageId: number | null;
   selectedLeaderId: LeaderId | null;
 
+  proceedToStageSelect: () => void;
   selectStage: (stageId: number) => void;
   selectLeader: (leaderId: LeaderId) => void;
   exitPreGame: () => void;
@@ -17,17 +18,22 @@ interface PreGameState {
 }
 
 export const usePreGameStore = create<PreGameState>((set, get) => ({
-  screen: 'stage',
+  screen: 'intro',
   selectedStageId: null,
   selectedLeaderId: null,
+
+  proceedToStageSelect: () => {
+    set({ screen: 'stage' });
+  },
 
   selectStage: (stageId) => {
     set({ selectedStageId: stageId, screen: 'leader' });
   },
 
   selectLeader: (leaderId) => {
-    if (get().selectedStageId == null) return;
-    useGameStore.getState().startGameWithDraft([], leaderId);
+    const stageId = get().selectedStageId;
+    if (stageId == null) return;
+    useGameStore.getState().startGameWithDraft([], leaderId, stageId);
     get().exitPreGame();
   },
 

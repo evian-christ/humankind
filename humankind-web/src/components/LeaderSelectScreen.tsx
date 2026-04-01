@@ -14,6 +14,7 @@ const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 function leaderPortraitSrc(id: LeaderId): string | null {
   if (id === 'ramesses') return `${ASSET_BASE_URL}assets/leaders/001.png`;
+  if (id === 'shihuang') return `${ASSET_BASE_URL}assets/leaders/002.png`;
   return null;
 }
 
@@ -163,7 +164,7 @@ export default function LeaderSelectScreen() {
                 onClick={handlePlay}
                 disabled={chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)}
               >
-                {t('pregame.leaderPlay', language)}
+                <span className="leader-select-play-label">{t('pregame.leaderPlay', language)}</span>
               </button>
             </div>
           </div>

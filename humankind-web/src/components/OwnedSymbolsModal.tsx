@@ -1,33 +1,49 @@
-import { useMemo, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../game/data/symbolDefinitions';
+import { BARBARIAN_CAMP_SPAWN_INTERVAL, getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
+import { EffectText } from './EffectText';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
+const BASE_W = 1920;
+const BASE_H = 1080;
+const BOARD_SCALE = 0.8;
+const SPRITE_PX = 32;
+const TOOLTIP_W = 280;
+const TOOLTIP_H = 180;
+const TOOLTIP_MARGIN = 12;
+
+const ERA_NAME_KEYS: Record<number, string> = {
+    [SymbolType.RELIGION]: 'era.special',
+    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.ANCIENT]: 'era.ancient',
+    [SymbolType.MEDIEVAL]: 'era.medieval',
+    [SymbolType.MODERN]: 'era.modern',
+    [SymbolType.TERRAIN]: 'era.terrain',
+};
 
 type Props = {
     open: boolean;
     onClose: () => void;
 };
 
-const BASE_W = 1920;
-const BASE_H = 1080;
-const BOARD_SCALE = 0.8;
-const SPRITE_PX = 32;
+type HoveredOwnedSymbol = {
+    symbolId: number;
+    symbolType: number;
+    x: number;
+    y: number;
+} | null;
 
 function computeBoardMetrics(resW: number, resH: number) {
-    // PixiGameApp.ts 의 메트릭을 React에서도 동일하게 근사하기 위한 복제 로직
     const scale = Math.min(resW / BASE_W, resH / BASE_H);
     const cellWidth = 213 * scale * BOARD_SCALE;
     const cellHeight = 204 * scale * BOARD_SCALE;
-
     const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
 
     return {
-        scale,
         cellWidth,
         cellHeight,
         spriteSize,
@@ -39,10 +55,12 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     const resolutionWidth = useSettingsStore((s) => s.resolutionWidth);
     const resolutionHeight = useSettingsStore((s) => s.resolutionHeight);
     const language = useSettingsStore((s) => s.language);
+    const panelRef = useRef<HTMLDivElement | null>(null);
+    const [hoveredSymbol, setHoveredSymbol] = useState<HoveredOwnedSymbol>(null);
 
     const metrics = useMemo(
         () => computeBoardMetrics(resolutionWidth, resolutionHeight),
-        [resolutionWidth, resolutionHeight]
+        [resolutionWidth, resolutionHeight],
     );
 
     useEffect(() => {
@@ -56,11 +74,44 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
 
     useRegisterBoardTooltipBlock('owned-symbols-modal', open);
 
-    if (!open) return null;
+    const updateHoveredSymbol = useCallback((symbolId: number, symbolType: number, e: React.MouseEvent<HTMLDivElement>) => {
+        const panel = panelRef.current;
+        if (!panel) return;
 
-    const halfCellW = metrics.cellWidth / 2;
-    const halfCellH = metrics.cellHeight / 2;
-    const halfSpriteSize = metrics.spriteSize / 2;
+        const rect = panel.getBoundingClientRect();
+        const scaleX = panel.clientWidth / rect.width;
+        const scaleY = panel.clientHeight / rect.height;
+
+        setHoveredSymbol({
+            symbolId,
+            symbolType,
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY,
+        });
+    }, []);
+
+    const getTooltipStyle = (hoveredItem: HoveredOwnedSymbol): React.CSSProperties => {
+        if (!hoveredItem || !panelRef.current) return { display: 'none' };
+
+        let left = hoveredItem.x + TOOLTIP_MARGIN;
+        let top = hoveredItem.y;
+        const panelWidth = panelRef.current.clientWidth;
+        const panelHeight = panelRef.current.clientHeight;
+
+        if (left + TOOLTIP_W > panelWidth) left = hoveredItem.x - TOOLTIP_W - TOOLTIP_MARGIN;
+        if (top + TOOLTIP_H > panelHeight) top = panelHeight - TOOLTIP_H - TOOLTIP_MARGIN;
+        if (top < 0) top = 0;
+
+        return {
+            position: 'absolute',
+            left: `${left}px`,
+            top: `${top}px`,
+            zIndex: 2,
+            pointerEvents: 'none',
+        };
+    };
+
+    if (!open) return null;
 
     return (
         <div
@@ -69,76 +120,96 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                 inset: 0,
                 zIndex: 10001,
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'rgba(0,0,0,0.7)',
-                padding: 12,
+                flexDirection: 'column',
+                background: 'rgba(0,0,0,0.94)',
+                padding: '24px 28px 28px',
+                overflow: 'hidden',
             }}
             onClick={onClose}
         >
             <div
+                ref={panelRef}
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: 'min(860px, 94vw)',
-                    maxHeight: '88vh',
-                    background: '#0b0f14',
-                    border: '1px solid #222',
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(11, 15, 20, 0.92)',
+                    border: '1px solid rgba(255,255,255,0.08)',
                     display: 'flex',
                     flexDirection: 'column',
+                    overflow: 'hidden',
+                    position: 'relative',
                 }}
             >
                 <div
                     style={{
-                        padding: '10px 12px',
-                        borderBottom: '1px solid #222',
+                        padding: '22px 28px',
+                        borderBottom: '1px solid rgba(255,255,255,0.08)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         flexShrink: 0,
-                        gap: 10,
+                        gap: 16,
                     }}
                 >
-                    <div style={{ color: '#e5e7eb', fontWeight: 700, letterSpacing: '0.5px' }}>
-                        Owned Symbols ({playerSymbols.length})
+                    <div
+                        style={{
+                            color: '#e5e7eb',
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            fontSize: '34px',
+                            fontFamily: 'Mulmaru, sans-serif',
+                        }}
+                    >
+                        {t('ownedSymbols.title', language)} ({playerSymbols.length})
                     </div>
                     <button
                         onClick={onClose}
                         style={{
-                            background: 'none',
-                            border: '1px solid #333',
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.14)',
                             color: '#cbd5e1',
                             cursor: 'pointer',
-                            padding: '2px 10px',
-                            fontSize: 14,
-                            borderRadius: 2,
+                            padding: '10px 18px',
+                            fontSize: 22,
+                            fontFamily: 'Mulmaru, sans-serif',
                         }}
                     >
-                        ✕
+                        {t('ownedSymbols.close', language)}
                     </button>
                 </div>
 
                 <div
                     style={{
-                        padding: 12,
-                        overflowY: 'auto'
+                        padding: '28px',
+                        overflowY: 'auto',
+                        flex: 1,
                     }}
                 >
                     {playerSymbols.length === 0 ? (
-                        <div style={{ color: '#6b7280', textAlign: 'center', padding: 28 }}>
-                            (none)
+                        <div
+                            style={{
+                                color: '#9ca3af',
+                                textAlign: 'center',
+                                padding: '72px 28px',
+                                fontSize: 30,
+                                fontFamily: 'Mulmaru, sans-serif',
+                            }}
+                        >
+                            {t('ownedSymbols.empty', language)}
                         </div>
                     ) : (
                         <div
                             style={{
                                 display: 'flex',
                                 flexWrap: 'wrap',
-                                gap: 10,
-                                justifyContent: 'flex-start',
+                                gap: 14,
+                                alignItems: 'flex-start',
+                                alignContent: 'flex-start',
                             }}
                         >
                             {playerSymbols.map((sym, idx) => {
                                 const def = sym.definition;
-                                const symName = t(`symbol.${def.id}.name`, language);
 
                                 const showCounter =
                                     sym.effect_counter > 0 && def.type !== SymbolType.ENEMY && def.base_hp === undefined;
@@ -151,25 +222,26 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                 return (
                                     <div
                                         key={`${sym.instanceId}-${idx}`}
-                                        title={symName}
+                                        onMouseEnter={(e) => updateHoveredSymbol(def.id, def.type, e)}
+                                        onMouseMove={(e) => updateHoveredSymbol(def.id, def.type, e)}
+                                        onMouseLeave={() => setHoveredSymbol(null)}
                                         style={{
-                                            width: halfCellW,
-                                            height: halfCellH,
-                                            border: '1px solid rgba(255,255,255,0.12)',
-                                            background: 'transparent',
+                                            width: metrics.cellWidth,
+                                            height: metrics.cellHeight,
                                             position: 'relative',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
+                                            cursor: 'help',
                                         }}
                                     >
                                         {def.sprite && def.sprite !== '-' && def.sprite !== '-.png' ? (
                                             <img
                                                 src={`${ASSET_BASE_URL}assets/symbols/${def.sprite}`}
-                                                alt={symName}
+                                                alt={t(`symbol.${def.id}.name`, language)}
                                                 style={{
-                                                    width: halfSpriteSize,
-                                                    height: halfSpriteSize,
+                                                    width: metrics.spriteSize,
+                                                    height: metrics.spriteSize,
                                                     objectFit: 'contain',
                                                     imageRendering: 'pixelated',
                                                 }}
@@ -180,7 +252,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             </div>
                                         )}
 
-                                        {/* Counter (effect_counter) */}
                                         {showCounter && (
                                             <div
                                                 style={{
@@ -198,7 +269,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             </div>
                                         )}
 
-                                        {/* Merchant(22) stored_gold counter */}
                                         {showMerchantStoredGold && (
                                             <div
                                                 style={{
@@ -216,7 +286,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             </div>
                                         )}
 
-                                        {/* Attack (⚔ + base_attack) */}
                                         {showAtk && (
                                             <>
                                                 <div
@@ -250,7 +319,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             </>
                                         )}
 
-                                        {/* HP (♥ + enemy_hp) */}
                                         {showHp && (
                                             <>
                                                 <div
@@ -284,7 +352,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             </>
                                         )}
 
-                                        {/* Barbarian Camp: spawn interval - effect_counter */}
                                         {showCampCounter && (
                                             <div
                                                 style={{
@@ -307,6 +374,31 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                         </div>
                     )}
                 </div>
+
+                {hoveredSymbol && (
+                    <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
+                        <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.symbolId}.name`, language)}</div>
+                        <div
+                            className="symbol-tooltip-rarity"
+                            style={{
+                                color: getSymbolColorHex(hoveredSymbol.symbolType),
+                                fontWeight: 'bold',
+                                fontSize: '18px',
+                                letterSpacing: '2px',
+                                textShadow: `0 0 10px ${getSymbolColorHex(hoveredSymbol.symbolType)}80`,
+                            }}
+                        >
+                            {t(ERA_NAME_KEYS[hoveredSymbol.symbolType] ?? 'era.ancient', language)}
+                        </div>
+                        <div className="symbol-tooltip-desc">
+                            {t(`symbol.${hoveredSymbol.symbolId}.desc`, language).split('\n').map((line, i) => (
+                                <div key={i} className="symbol-tooltip-desc-line">
+                                    <EffectText text={line} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
