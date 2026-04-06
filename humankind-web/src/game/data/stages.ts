@@ -36,23 +36,27 @@ export const STAGES: Record<number, StageDefinition> = {
 
 export const STAGE_LIST = Object.values(STAGES);
 
-/** 10·20·30…턴 식량 납부: 첫 납부 금액(이후 +50씩) */
-export function getStageFoodPaymentBase(stageId: number): number {
-  if (stageId === 1 || stageId === 2) return 50;
-  if (stageId === 3 || stageId === 4) return 100;
+/** 10·20·30…턴 식량 납부: 첫 납부 금액 (선택 난이도 공통 100) */
+export function getStageFoodPaymentBase(_stageId: number): number {
   return 100;
+}
+
+/** 10·20·30…턴 식량 납부: 두 번째 납부부터 매번 더해지는 증가분 (역경만 60, 나머지 선택 난이도 50) */
+export function getStageFoodPaymentIncrement(stageId: number): number {
+  if (stageId === 4) return 60;
+  return 50;
 }
 
 /** 런 시작 시 고대 유물 잔해·고대 부족 합류 유물 개수 */
 export function getStageStartingRelicCounts(stageId: number): { debris: number; tribe: number } {
   switch (stageId) {
     case 1:
-      return { debris: 4, tribe: 2 };
+      return { debris: 4, tribe: 1 };
     case 2:
+      return { debris: 3, tribe: 1 };
     case 3:
-      return { debris: 3, tribe: 2 };
     case 4:
-      return { debris: 2, tribe: 1 };
+      return { debris: 3, tribe: 0 };
     default:
       return { debris: 6, tribe: 0 };
   }
@@ -62,12 +66,13 @@ export function getStageStartingRelicCounts(stageId: number): { debris: number; 
 export function getStagePassiveBonus(stageId: number): { food: number; gold: number; knowledge: number } {
   switch (stageId) {
     case 1:
-      return { knowledge: 2, food: 5, gold: 2 };
-    case 2:
-    case 3:
       return { knowledge: 2, food: 2, gold: 2 };
-    case 4:
+    case 2:
+      return { knowledge: 2, food: 1, gold: 1 };
+    case 3:
       return { knowledge: 2, food: 0, gold: 0 };
+    case 4:
+      return { knowledge: 0, food: 0, gold: 0 };
     default:
       return { knowledge: 0, food: 0, gold: 0 };
   }

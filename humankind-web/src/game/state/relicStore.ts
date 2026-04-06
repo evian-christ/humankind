@@ -18,6 +18,8 @@ interface RelicState {
     /** 남은 턴 등: 1 감소, 0 이하면 유물 제거 (우르·나일) */
     decrementRelicCounterOrRemove: (instanceId: string) => void;
     incrementRelicBonus: (instanceId: string, amount?: number) => void;
+    /** 메인 메뉴 등: 유물 초기화 */
+    resetRelics: () => void;
 }
 
 let nextId = 1;
@@ -68,4 +70,9 @@ export const useRelicStore = create<RelicState>((set) => ({
                     : r
             ),
         })),
+
+    resetRelics: () => {
+        nextId = 1;
+        set({ relics: [] });
+    },
 }));

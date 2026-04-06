@@ -10,6 +10,8 @@ interface PreGameState {
   selectedLeaderId: LeaderId | null;
 
   proceedToStageSelect: () => void;
+  /** 메인 메뉴(데모 시작 튜토리얼)로 복귀 */
+  returnToIntro: () => void;
   selectStage: (stageId: number) => void;
   selectLeader: (leaderId: LeaderId) => void;
   exitPreGame: () => void;
@@ -24,6 +26,14 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
 
   proceedToStageSelect: () => {
     set({ screen: 'stage' });
+  },
+
+  returnToIntro: () => {
+    set({
+      screen: 'intro',
+      selectedStageId: null,
+      selectedLeaderId: null,
+    });
   },
 
   selectStage: (stageId) => {

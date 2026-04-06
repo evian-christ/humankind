@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { getStageFoodPaymentBase, getStagePassiveBonus, getStageStartingRelicCounts } from '../data/stages';
+import {
+    getStageFoodPaymentBase,
+    getStageFoodPaymentIncrement,
+    getStagePassiveBonus,
+    getStageStartingRelicCounts,
+} from '../data/stages';
 import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, TAX_SYMBOL_ID, EDICT_SYMBOL_ID } from '../data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
@@ -108,12 +113,13 @@ const phaseAfterTurnFlowComplete = (level: number): GamePhase =>
     level >= DEMO_VICTORY_LEVEL ? 'victory' : 'idle';
 
 type GamePhase = 'idle' | 'spinning' | 'showing_new_threats' | 'processing' | 'upgrade_selection' | 'selection' | 'destroy_selection' | 'game_over' | 'victory';
-/** 10·20·30…턴마다 식량 납부 비용 — 난이도(stageId)에 따라 첫 납부액만 다름 */
+/** 10·20·30…턴마다 식량 납부 비용 — 난이도(stageId)에 따라 첫 납부액·증가분 다름 */
 export const calculateFoodCost = (turn: number, stageId: number = 1): number => {
     const base = getStageFoodPaymentBase(stageId);
+    const step = getStageFoodPaymentIncrement(stageId);
     const nth = Math.floor(turn / 10);
     if (nth < 1) return base;
-    return base + (nth - 1) * 50;
+    return base + (nth - 1) * step;
 };
 
 export type GameEventLogKind =
@@ -214,6 +220,8 @@ export interface GameState {
     levelBeforeUpgrade: number;
     /** 유물 상점 오버레이 열림 여부 */
     isRelicShopOpen: boolean;
+    /** 자동 재입고 이후 아직 확인하지 않은 신규 입고 배지 */
+    hasNewRelicShopStock: boolean;
     /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
     rerollsThisTurn: number;
 
@@ -258,6 +266,7 @@ export interface GameState {
     rerollSymbols: () => void;
 
     toggleRelicShop: () => void;
+    clearRelicShopStockBadge: () => void;
     refreshRelicShop: (force?: boolean) => void;
     buyRelic: (relicId: number) => void;
     selectUpgrade: (upgradeId: number) => void;
@@ -414,6 +423,124 @@ const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => {
     };
 
     return inst;
+};
+
+/** 투기장·심볼 효과와 동일한 고대 풀 랜덤 (Tribal Village 등) */
+const randomEra1SymbolIdForDestroy = (): number => {
+    const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 29, 30, 35];
+    return ids[Math.floor(Math.random() * ids.length)];
+};
+
+/** 보유 심볼만 제거할 때 보드 `finishProcessing` 파괴 보상과 맞춘 누적 효과 */
+interface CollectionDestroyAgg {
+    food: number;
+    gold: number;
+    knowledge: number;
+    addSymbolDefIds: number[];
+    openRelicShop: boolean;
+    refreshRelicShop: boolean;
+    bonusXpPerTurnDelta: number;
+    forceTerrainInNextChoices: boolean;
+    edictRemovalPending: boolean;
+    freeSelectionRerolls: number;
+}
+
+const aggregateCollectionDestroyEffects = (
+    removed: PlayerSymbolInstance[],
+    skipEdictFromSymbol69: boolean,
+): CollectionDestroyAgg => {
+    const out: CollectionDestroyAgg = {
+        food: 0,
+        gold: 0,
+        knowledge: 0,
+        addSymbolDefIds: [],
+        openRelicShop: false,
+        refreshRelicShop: false,
+        bonusXpPerTurnDelta: 0,
+        forceTerrainInNextChoices: false,
+        edictRemovalPending: false,
+        freeSelectionRerolls: 0,
+    };
+    for (const sym of removed) {
+        const id = sym.definition.id;
+        switch (id) {
+            case 20:
+                out.food += sym.effect_counter || 0;
+                break;
+            case 21:
+                out.addSymbolDefIds.push(randomEra1SymbolIdForDestroy(), randomEra1SymbolIdForDestroy());
+                break;
+            case 37:
+                out.refreshRelicShop = true;
+                break;
+            case 40:
+                out.addSymbolDefIds.push(41);
+                break;
+            case 41:
+                out.food += Math.floor(Math.random() * 10) + 1;
+                out.gold += Math.floor(Math.random() * 10) + 1;
+                out.knowledge += Math.floor(Math.random() * 30) + 1;
+                if (Math.random() < 0.01) out.addSymbolDefIds.push(42);
+                break;
+            case 42:
+                out.openRelicShop = true;
+                break;
+            case 48:
+                out.food += 5;
+                break;
+            case 51:
+                out.food += sym.effect_counter || 0;
+                break;
+            case 68:
+                out.forceTerrainInNextChoices = true;
+                break;
+            case 69:
+                if (!skipEdictFromSymbol69) out.edictRemovalPending = true;
+                break;
+            case 70:
+                out.freeSelectionRerolls += 1;
+                break;
+            default:
+                break;
+        }
+    }
+    return out;
+};
+
+const scarabAndHinduismBonusForOwnedRemoves = (
+    board: (PlayerSymbolInstance | null)[][],
+    removeCount: number,
+): { gold: number; food: number; knowledge: number } => {
+    let gold = 0;
+    let food = 0;
+    let knowledge = 0;
+    if (removeCount <= 0) return { gold, food, knowledge };
+    const relics = useRelicStore.getState().relics;
+    if (relics.some((r) => r.definition.id === RELIC_ID.SCARAB)) {
+        gold += removeCount * 3;
+    }
+    let hinduTiles = 0;
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+            const s = board[x][y];
+            if (s && s.definition.id === 34 && !s.is_marked_for_destruction) hinduTiles++;
+        }
+    }
+    if (hinduTiles > 0) {
+        const d = hinduTiles * 5 * removeCount;
+        food += d;
+        knowledge += d;
+    }
+    return { gold, food, knowledge };
+};
+
+const appendSymbolDefIdsToPlayer = (base: PlayerSymbolInstance[], defIds: number[]): PlayerSymbolInstance[] => {
+    const next = [...base];
+    for (const id of defIds) {
+        const def = SYMBOLS[id];
+        if (def) next.push(createInstance(def));
+    }
+    return next;
 };
 
 /** 시작 심볼: Wheat x2, Stone x1 */
@@ -768,6 +895,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     knowledgeUpgradePickQueue: [],
     levelBeforeUpgrade: 1,
     isRelicShopOpen: false,
+    hasNewRelicShopStock: false,
     rerollsThisTurn: 0,
     knowledgeUpgradeGlobalRerollUsed: false,
     returnPhaseAfterDevKnowledgeUpgrade: null,
@@ -2244,7 +2372,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     toggleRelicShop: () => {
-        set((state) => ({ isRelicShopOpen: !state.isRelicShopOpen }));
+        set((state) => ({
+            isRelicShopOpen: !state.isRelicShopOpen,
+            hasNewRelicShopStock: state.isRelicShopOpen ? state.hasNewRelicShopStock : false,
+        }));
+    },
+
+    clearRelicShopStockBadge: () => {
+        set({ hasNewRelicShopStock: false });
     },
 
     refreshRelicShop: (force = false) => {
@@ -2258,7 +2393,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         const newChoices = generateRelicChoices();
         const nextHalfRelicId = pickRelicHalfPriceIdForGoldenTrade(newChoices, hasGoldenTrade);
 
-        set({ relicChoices: newChoices, relicHalfPriceRelicId: nextHalfRelicId });
+        set({
+            relicChoices: newChoices,
+            relicHalfPriceRelicId: nextHalfRelicId,
+            hasNewRelicShopStock: true,
+        });
     },
 
     buyRelic: (relicId: number) => {
@@ -2632,23 +2771,48 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (state.phase !== 'destroy_selection') return;
         const src = state.pendingDestroySource;
 
+        const removed = state.playerSymbols.filter((s) => instanceIds.includes(s.instanceId));
+        const skipEd69 = src === EDICT_SYMBOL_ID;
+        const symAgg = aggregateCollectionDestroyEffects(removed, skipEd69);
+        const shBonus = scarabAndHinduismBonusForOwnedRemoves(state.board, removed.length);
+        const dFood = symAgg.food + shBonus.food;
+        const dGold = symAgg.gold + shBonus.gold;
+        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
+
+        const rewardPatch = (s: GameState) => ({
+            food: s.food + dFood,
+            gold: s.gold + dGold,
+            knowledge: s.knowledge + dKnowledge,
+            bonusXpPerTurn: s.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
+            forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+            edictRemovalPending: s.edictRemovalPending || symAgg.edictRemovalPending,
+            freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
+            isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
+        });
+
+        const baseFiltered = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
+        const newSymbols = appendSymbolDefIdsToPlayer(baseFiltered, symAgg.addSymbolDefIds);
+        const goldAdd = instanceIds.length * 10;
+
+        const afterSetRelicRefresh = () => {
+            if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
+        };
+
         if (src === OBLIVION_FURNACE_PENDING) {
             const relicInstId = state.pendingOblivionFurnaceRelicId;
             if (!relicInstId || instanceIds.length !== 1) return;
-            const newSymbols = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
             useRelicStore.getState().removeRelic(relicInstId);
             set({
+                ...rewardPatch(state),
                 playerSymbols: newSymbols,
                 phase: phaseAfterTurnFlowComplete(state.level),
                 pendingDestroySource: null,
                 pendingOblivionFurnaceRelicId: null,
                 destroySelectionMaxSymbols: 3,
             });
+            afterSetRelicRefresh();
             return;
         }
-
-        const newSymbols = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
-        const goldAdd = instanceIds.length * 10;
 
         if (src === EDICT_SYMBOL_ID) {
             const terr = state.territorialAfterEdictPending;
@@ -2656,6 +2820,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (q.length > 0) {
                 const pickLevel = q[0];
                 set({
+                    ...rewardPatch(state),
                     playerSymbols: newSymbols,
                     phase: 'upgrade_selection',
                     pendingDestroySource: null,
@@ -2670,9 +2835,11 @@ export const useGameStore = create<GameState>((set, get) => ({
                     knowledgeUpgradeGlobalRerollUsed: false,
                     knowledgeUpgradePickQueue: q,
                 });
+                afterSetRelicRefresh();
                 return;
             }
             set({
+                ...rewardPatch(state),
                 playerSymbols: newSymbols,
                 phase: 'selection',
                 pendingDestroySource: null,
@@ -2684,6 +2851,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     : generateChoices(state.era, state.religionUnlocked),
                 ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
             });
+            afterSetRelicRefresh();
             return;
         }
 
@@ -2691,8 +2859,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             const edictChain = get().edictRemovalPending;
             if (edictChain) {
                 set({
+                    ...rewardPatch(state),
                     playerSymbols: newSymbols,
-                    gold: state.gold + goldAdd,
+                    gold: state.gold + dGold + goldAdd,
                     edictRemovalPending: false,
                     phase: 'destroy_selection',
                     pendingDestroySource: EDICT_SYMBOL_ID,
@@ -2700,14 +2869,16 @@ export const useGameStore = create<GameState>((set, get) => ({
                     territorialAfterEdictPending: true,
                     bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
                 });
+                afterSetRelicRefresh();
                 return;
             }
             const qUp = state.knowledgeUpgradePickQueue || [];
             if (qUp.length > 0) {
                 const pickLevel = qUp[0];
                 set({
+                    ...rewardPatch(state),
                     playerSymbols: newSymbols,
-                    gold: state.gold + goldAdd,
+                    gold: state.gold + dGold + goldAdd,
                     phase: 'upgrade_selection',
                     pendingDestroySource: null,
                     destroySelectionMaxSymbols: 3,
@@ -2721,11 +2892,13 @@ export const useGameStore = create<GameState>((set, get) => ({
                     knowledgeUpgradePickQueue: qUp,
                     bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
                 });
+                afterSetRelicRefresh();
                 return;
             }
             set({
+                ...rewardPatch(state),
                 playerSymbols: newSymbols,
-                gold: state.gold + goldAdd,
+                gold: state.gold + dGold + goldAdd,
                 phase: 'selection',
                 pendingDestroySource: null,
                 destroySelectionMaxSymbols: 3,
@@ -2733,6 +2906,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 symbolChoices: generateTerrainOnlyChoices(state.era, state.religionUnlocked),
                 bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
             });
+            afterSetRelicRefresh();
             return;
         }
 
@@ -2740,8 +2914,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (qSac.length > 0 && src === SACRIFICIAL_RITE_UPGRADE_ID) {
             const pickLevel = qSac[0];
             set({
+                ...rewardPatch(state),
                 playerSymbols: newSymbols,
-                gold: state.gold + goldAdd,
+                gold: state.gold + dGold + goldAdd,
                 phase: 'upgrade_selection',
                 upgradeChoices: generateUpgradeChoices(
                     state.unlockedKnowledgeUpgrades || [],
@@ -2755,18 +2930,21 @@ export const useGameStore = create<GameState>((set, get) => ({
                 edictRemovalPending: false,
                 knowledgeUpgradePickQueue: qSac,
             });
+            afterSetRelicRefresh();
             return;
         }
 
         const edictChain = get().edictRemovalPending;
         set({
+            ...rewardPatch(state),
             playerSymbols: newSymbols,
-            gold: state.gold + goldAdd,
+            gold: state.gold + dGold + goldAdd,
             phase: edictChain ? 'destroy_selection' : phaseAfterTurnFlowComplete(state.level),
             pendingDestroySource: edictChain ? EDICT_SYMBOL_ID : null,
             destroySelectionMaxSymbols: edictChain ? 1 : 3,
             edictRemovalPending: false,
         });
+        afterSetRelicRefresh();
     },
 
     finishDestroySelection: () => {
@@ -2943,6 +3121,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             upgradeChoices: [],
             knowledgeUpgradePickQueue: [],
             isRelicShopOpen: false,
+            hasNewRelicShopStock: false,
             rerollsThisTurn: 0,
             knowledgeUpgradeGlobalRerollUsed: false,
 
@@ -3036,6 +3215,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             upgradeChoices: [],
             knowledgeUpgradePickQueue: [],
             isRelicShopOpen: false,
+            hasNewRelicShopStock: false,
             rerollsThisTurn: 0,
             knowledgeUpgradeGlobalRerollUsed: false,
             barbarianSymbolThreat: 0,
