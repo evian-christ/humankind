@@ -1732,9 +1732,13 @@ body {
   flex-direction: column;
   gap: 28px;
   padding: clamp(28px, 3vw, 44px);
-  background: rgba(12, 12, 12, 0.82);
-  border: 1px solid rgba(140, 140, 140, 0.25);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
+  background-color: rgba(12, 12, 12, 0.82);
+  background-image: url('/assets/ui/demo_main/outer.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: none;
+  box-shadow: none;
 }
 
 .demo-start-header {
@@ -1755,15 +1759,19 @@ body {
   flex-direction: column;
   gap: 16px;
   padding: clamp(20px, 2vw, 28px);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(150, 150, 150, 0.18);
+  background-color: transparent;
+  background-image: url('/assets/ui/demo_main/inner.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: none;
 }
 
 .demo-start-section-title {
   font-family: 'Mulmaru', sans-serif;
   font-size: clamp(24px, 2vw, 34px);
   letter-spacing: 0.08em;
-  color: #f3f4f6;
+  color: #1c1917;
 }
 
 .demo-start-list {
@@ -1776,7 +1784,7 @@ body {
 .demo-start-list-item {
   font-size: clamp(19px, 1.35vw, 24px);
   line-height: 1.65;
-  color: rgba(232, 232, 232, 0.92);
+  color: #374151;
   padding-left: 24px;
   position: relative;
 }
@@ -1786,7 +1794,7 @@ body {
   position: absolute;
   left: 0;
   top: 0;
-  color: #d6c38d;
+  color: #92400e;
 }
 
 .demo-inline-code {
@@ -1794,9 +1802,9 @@ body {
   align-items: center;
   padding: 0 8px;
   margin: 0 2px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(180, 180, 180, 0.2);
-  color: #f3f4f6;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #111827;
   letter-spacing: 0.06em;
 }
 
@@ -1818,30 +1826,20 @@ body {
 }
 
 .demo-resource--food {
-  color: #86efac;
+  color: #166534;
 }
 
 .demo-resource--gold {
-  color: #fbbf24;
+  color: #a16207;
 }
 
 .demo-resource--knowledge {
-  color: #7dd3fc;
+  color: #0369a1;
 }
 
 .demo-start-actions {
   display: flex;
   justify-content: center;
-}
-
-.demo-start-play-button {
-  min-width: 320px;
-  min-height: 84px;
-  padding: 22px 36px;
-}
-
-.demo-start-play-button .pregame-card-name {
-  font-size: clamp(22px, 1.7vw, 30px);
 }
 
 .stage-select-root {
@@ -1859,7 +1857,7 @@ body {
 }
 
 .stage-select-header {
-  width: min(100%, 540px);
+  width: min(100%, 270px);
 }
 
 .stage-select-title {
@@ -1869,25 +1867,86 @@ body {
 }
 
 .stage-select-list {
-  width: min(100%, 540px);
+  width: min(100%, 270px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 14px;
+  gap: 7px;
 }
 
-.stage-select-card {
+/* 난이도: 공통 스프라이트(180×48) + 위에 라벨 — demo_difficulty/button*.png */
+.stage-select-card.pregame-card {
+  --stage-diff-btn: url('/assets/ui/demo_difficulty/button.png?v=1');
+  --stage-diff-hovered: url('/assets/ui/demo_difficulty/button_hovered.png?v=1');
+  --stage-diff-pressed: url('/assets/ui/demo_difficulty/button_pressed.png?v=1');
   width: 100%;
   min-width: 0;
-  min-height: 74px;
-  padding: 18px 24px;
+  min-height: 0;
+  padding: 0 7px;
   align-items: center;
   justify-content: center;
+  background-color: transparent;
+  background-image: var(--stage-diff-btn);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: none;
+  transform: none;
+  aspect-ratio: 180 / 48;
 }
 
-.stage-select-card .pregame-card-name {
-  font-size: clamp(20px, 1.5vw, 26px);
-  line-height: 1.1;
+.stage-select-card-label {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: clamp(14px, 1.05vw, 16px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f3f4f6;
+  pointer-events: none;
+  text-align: center;
+  transform: scaleX(1.2);
+  transform-origin: center center;
+}
+
+.stage-select-card.pregame-card:hover:not(:disabled):not(:active) {
+  background-color: transparent;
+  background-image: var(--stage-diff-hovered);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: none;
+  transform: none;
+}
+
+.stage-select-card.pregame-card:active:not(:disabled) {
+  background-color: transparent;
+  background-image: var(--stage-diff-pressed);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: none;
+  transform: none;
+}
+
+.stage-select-card.pregame-card:disabled,
+.stage-select-card.pregame-card:disabled:hover {
+  background-color: transparent;
+  background-image: var(--stage-diff-btn);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.5;
+  filter: grayscale(0.35);
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.stage-select-card.pregame-card:disabled .stage-select-card-label {
+  color: #9ca3af;
+  text-shadow: none;
 }
 
 .leader-select-header {
@@ -1912,33 +1971,40 @@ body {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   -webkit-overflow-scrolling: touch;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  /* 10개 버튼이 '틈 없이' 붙도록 */
-  row-gap: 0;
-  column-gap: 0;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
   align-content: start;
-  justify-items: center;
   padding: 0;
+  /* 서브픽셀 갭 방지: 그리드 자체를 GPU 레이어로 올림 */
+  transform: translateZ(0);
 }
 
 .leader-portrait-btn {
   box-sizing: border-box;
+  display: block;
   width: 100%;
-  /* leaders/*.png (64x100) 기준: 세로형 초상화 프레임 */
-  max-width: none;
-  aspect-ratio: 64 / 100;
+  min-width: 0;
+  /* 원본 프레임 68×104 기준 테두리 2px → UI 스케일에 맞춰 비율 유지 (%패딩은 포함 블록 너비 기준) */
+  aspect-ratio: 68 / 104;
   height: auto;
-  padding: 0;
+  padding: calc(100% * 2 / 68);
   margin: 0;
   border: none;
   cursor: pointer;
-  background: rgba(25, 25, 25, 0.95);
+  background-color: transparent;
+  background-image: url('/assets/ui/demo_leader/leader_background.png?v=2');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
   box-shadow: none;
   transition: filter 0.1s ease;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  /* 각 버튼도 GPU 레이어로 올려 서브픽셀 반올림 통일 */
+  transform: translateZ(0);
 }
 
 .leader-portrait-btn--locked {
@@ -1964,8 +2030,49 @@ body {
 }
 
 .leader-portrait-btn--selected {
-  outline: 2px solid var(--accent-bright);
-  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+  outline: none;
+  background-image: url('/assets/ui/demo_leader/leader_background_selected.png?v=1');
+  /* 오라는 ::after 로 초상화(패딩 안) 위에만 — 밖으로 빛 안 뻗음 */
+  filter: none;
+}
+
+.leader-portrait-btn--selected:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.leader-portrait-btn--selected:active:not(:disabled) {
+  filter: brightness(1.02);
+}
+
+.leader-portrait-btn--selected::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  /* 패딩과 동일: 프레임 안 초상화 영역만 덮음 (가로 기준 2/68, 세로는 같은 px 두께이므로 2/104 of 높이) */
+  left: calc(100% * 2 / 68);
+  right: calc(100% * 2 / 68);
+  top: calc(100% * 2 / 104);
+  bottom: calc(100% * 2 / 104);
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 75% 80% at 50% 42%,
+    rgba(255, 230, 140, 0.42) 0%,
+    rgba(255, 200, 90, 0.18) 42%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  animation: leader-selected-aura-overlay 2s ease-in-out infinite alternate;
+}
+
+@keyframes leader-selected-aura-overlay {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .leader-portrait-btn img {
@@ -2022,9 +2129,10 @@ body {
 }
 
 .leader-select-detail-col {
-  flex: 0 0 44%;
+  flex: 0 0 600px;
+  width: 600px;
+  min-width: 600px;
   max-width: 600px;
-  min-width: min(360px, 100%);
   display: flex;
   flex-direction: column;
   justify-content: stretch;
@@ -2040,9 +2148,15 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.38);
-  border: 1px solid rgba(140, 140, 140, 0.35);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  background-color: transparent;
+  background-image: url('/assets/ui/demo_leader/leader_description_bg.png?v=1');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: none;
+  box-shadow: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .leader-select-preview-scroll {
@@ -2058,65 +2172,68 @@ body {
 .leader-select-preview-footer {
   flex-shrink: 0;
   display: flex;
-  justify-content: stretch;
-  align-items: stretch;
+  justify-content: center;
+  align-items: center;
   /* 가로 30px만 유지, 상단은 스크롤 padding-bottom으로 맞춤 → 박스 전체 크기는 flex:1 그대로 */
   padding: 0 30px max(30px, env(safe-area-inset-bottom, 0px));
 }
 
-.leader-select-play {
-  width: 100%;
+/* 지도자 선택 플레이 버튼 — demo_leader 스프라이트; background 단축으로 한 번에 지정(호버 시 image만 바꾸면 다른 규칙/초기값에 밀릴 수 있음) */
+button.leader-select-play {
+  /* 버튼은 작게(절반 스케일); 가독 텍스트는 .leader-select-play-label에서 키움 */
+  width: 270px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 134 / 48;
   box-sizing: border-box;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: 'Mulmaru', sans-serif;
-  font-size: 26px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.14em;
-  /* 가로 패딩(20px)에 세로 맞춤 */
-  padding: 20px;
   cursor: pointer;
   text-align: center;
-  color: #1a1206;
-  /* 원래 3D 느낌 유지, 채도만 살짝 낮춘 앰버(비활성처럼 보이지 않게) */
-  background: linear-gradient(180deg, #f2e6b8 0%, #d9a84a 45%, #b8822a 100%);
+  color: #e8e8e8;
   border: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    0 8px 0 0 #6b4518,
-    0 10px 22px rgba(0, 0, 0, 0.42);
-  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+  box-shadow: none;
+  transform: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
   flex-shrink: 0;
+  background: transparent url('/assets/ui/demo_leader/button.png?v=2') center / 100% 100% no-repeat;
 }
 
 .leader-select-play-label {
   display: inline-block;
-  font-size: 1.12em;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
   line-height: 1;
-  transform: scaleX(1.2);
-  transform-origin: center;
 }
 
-.leader-select-play:hover:not(:disabled) {
-  transform: translateY(2px);
-  filter: brightness(1.05);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    0 6px 0 0 #6b4518,
-    0 8px 18px rgba(0, 0, 0, 0.4);
+button.leader-select-play:hover:not(:disabled):not(:active) {
+  background: transparent url('/assets/ui/demo_leader/button_hovered.png?v=2') center / 100% 100% no-repeat;
+  box-shadow: none;
+  transform: none;
 }
 
-.leader-select-play:active:not(:disabled) {
-  transform: translateY(6px);
-  filter: brightness(0.98);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.22),
-    0 2px 0 0 #5a3814,
-    0 4px 12px rgba(0, 0, 0, 0.38);
+button.leader-select-play:active:not(:disabled) {
+  background: transparent url('/assets/ui/demo_leader/button_pressed.png?v=2') center / 100% 100% no-repeat;
+  box-shadow: none;
+  transform: none;
 }
 
-.leader-select-play:disabled {
-  opacity: 0.45;
+button.leader-select-play:disabled,
+button.leader-select-play:disabled:hover {
   cursor: not-allowed;
-  filter: grayscale(0.4);
+  background: transparent url('/assets/ui/demo_leader/button.png?v=2') center / 100% 100% no-repeat;
+  opacity: 0.55;
+  filter: grayscale(0.25);
+  transform: none;
+  box-shadow: none;
 }
 
 .leader-preview-name {
@@ -2129,10 +2246,17 @@ body {
 
 .leader-select-preview .leader-preview-name {
   margin-top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.45em;
+  line-height: 1.18;
+}
+
+.leader-select-preview .leader-preview-name__main {
   font-size: clamp(48px, 4.8%, 64px);
   font-weight: 500;
   letter-spacing: 1px;
-  line-height: 1.18;
   color: #fff;
   /* 최저점과 동일 — 바닥 글로우가 항상 눈에 들어오게 */
   text-shadow:
@@ -2142,6 +2266,20 @@ body {
     0 2px 4px rgba(0, 0, 0, 0.45);
   filter: drop-shadow(0 0 12px rgba(190, 205, 255, 0.35)) brightness(1);
   animation: leader-preview-name-breathe 3.5s ease-in-out infinite alternate;
+}
+
+.leader-select-preview .leader-preview-name__subtitle {
+  font-size: clamp(22px, 2.15vw, 30px);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(235, 228, 210, 0.88);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+}
+
+.leader-select-preview .leader-preview-name__subtitle::before {
+  content: '·';
+  margin-right: 0.4em;
+  opacity: 0.55;
 }
 
 @keyframes leader-preview-name-breathe {
@@ -2275,7 +2413,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .leader-select-header .pregame-title.leader-select-title,
-  .leader-select-preview .leader-preview-name {
+  .leader-select-preview .leader-preview-name__main {
     animation: none;
   }
 }
@@ -2344,6 +2482,60 @@ body {
     inset 0 0 0 6px #555,
     0 2px 0 0 #444,
     0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* 데모 시작: 플레이 버튼 — button / button_hovered / button_pressed, 위치 고정 (?v= 캐시 무효화) */
+.pregame-card.demo-start-play-button {
+  --demo-play-button: url('/assets/ui/demo_main/button.png?v=4');
+  --demo-play-button-hovered: url('/assets/ui/demo_main/button_hovered.png?v=1');
+  --demo-play-button-pressed: url('/assets/ui/demo_main/button_pressed.png?v=3');
+  width: min(100%, 240px);
+  aspect-ratio: 120 / 46;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  background-color: transparent;
+  background-image: var(--demo-play-button);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: none;
+  color: #e8e8e8;
+  transform: none;
+  justify-content: center;
+}
+
+.pregame-card.demo-start-play-button:hover:not(:disabled):not(:active) {
+  background-color: transparent;
+  background-image: var(--demo-play-button-hovered);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: none;
+  transform: none;
+}
+
+.pregame-card.demo-start-play-button:active:not(:disabled) {
+  background-color: transparent;
+  background-image: var(--demo-play-button-pressed);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  box-shadow: none;
+  transform: none;
+}
+
+.pregame-card.demo-start-play-button:disabled,
+.pregame-card.demo-start-play-button:disabled:hover {
+  background-color: transparent;
+  background-image: var(--demo-play-button);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.55;
+  filter: grayscale(0.25);
+  transform: none;
+  box-shadow: none;
 }
 
 .pregame-card-name {
@@ -2649,6 +2841,7 @@ body {
   width: var(--side-action-w);
   height: 100px;
   flex-shrink: 0;
+  position: relative;
   box-sizing: border-box;
   background: rgba(30, 30, 30, 0.9);
   border: none;
@@ -2684,6 +2877,23 @@ body {
     inset 0 0 0 6px #555,
     0 2px 0 0 #444,
     0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.relic-shop-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff8dc;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  box-shadow: 0 0 0 2px rgba(30, 30, 30, 0.9);
+  pointer-events: none;
 }
 
 /* ===== 오른쪽 보조 버튼 (정사각형, 스핀 오른쪽) ===== */
@@ -2982,7 +3192,7 @@ body {
   color: #fff;
 }
 
-/* ===== DATA BROWSER (F3) ===== */
+/* ===== DATA BROWSER (F2) ===== */
 .databrowser {
   position: fixed;
   top: 0;
