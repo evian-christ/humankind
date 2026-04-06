@@ -65,7 +65,7 @@ export const SYMBOLS: Record<number, SymbolDefinition> = {
 
     35: { id: 35, name: "Warrior", type: SymbolType.UNIT, description: "Ancient era melee unit.", base_attack: 5, base_hp: 10, sprite: "035.png" },
     37: { id: 37, name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "037.png" },
-    38: { id: 38, name: "Stargazer", type: SymbolType.NORMAL, description: "+2 Knowledge per empty slot.", sprite: "038.png" },
+    38: { id: 38, name: "Stargazer", type: SymbolType.NORMAL, description: "+1 Knowledge per 2 empty slots.", sprite: "038.png" },
 
     39: { id: 39, name: "Stone Tablet", type: SymbolType.NORMAL, description: "+5 Knowledge per relic owned.", sprite: "039.png" },
     36: { id: 36, name: "Archer", type: SymbolType.UNIT, description: "Ancient ranged unit.", base_attack: 3, base_hp: 5, sprite: "036.png" },

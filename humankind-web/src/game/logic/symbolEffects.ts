@@ -850,12 +850,14 @@ export const processSingleSymbolEffects = (
             triggerRelicRefresh = true;
             break;
 
-        case 38: { // Stargazer: +2 Knowledge per empty slot on the board
+        case 38: { // Stargazer: +1 Knowledge per 2 empty slots on the board
+            let emptySlots = 0;
             for (let bx = 0; bx < BOARD_WIDTH; bx++) {
                 for (let by = 0; by < BOARD_HEIGHT; by++) {
-                    if (!boardGrid[bx][by]) knowledge += 2;
+                    if (!boardGrid[bx][by]) emptySlots++;
                 }
             }
+            knowledge += Math.floor(emptySlots / 2);
             break;
         }
 
