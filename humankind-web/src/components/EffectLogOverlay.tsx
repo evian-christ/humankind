@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
@@ -38,31 +38,7 @@ const EffectLogOverlay = () => {
     const [query, setQuery] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const eventLog = useGameStore(s => s.eventLog);
-    const clearEventLog = useGameStore(s => s.clearEventLog);
     const language = useSettingsStore(s => s.language);
-
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'F11') {
-                e.preventDefault();
-                setOpen(prev => !prev);
-            } else if (e.key === 'Escape') {
-                setOpen(false);
-            } else if ((e.ctrlKey || e.metaKey) && (e.key === 'l' || e.key === 'L')) {
-                // terminal-ish: clear screen
-                e.preventDefault();
-                clearEventLog();
-                setExpandedId(null);
-            } else if (e.key === '/') {
-                // terminal-ish: search
-                e.preventDefault();
-                const el = document.getElementById('effect-log-filter') as HTMLInputElement | null;
-                el?.focus();
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [clearEventLog]);
 
     useRegisterBoardTooltipBlock('effect-log-overlay', open);
 

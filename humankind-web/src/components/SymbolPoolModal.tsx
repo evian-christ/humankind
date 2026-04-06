@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useGameStore, getSymbolPoolProbabilities } from '../game/state/gameStore';
 import { SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
@@ -19,17 +19,6 @@ const SymbolPoolModal = () => {
     const [open, setOpen] = useState(false);
     const { era, religionUnlocked } = useGameStore();
     const language = useSettingsStore(s => s.language);
-
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'F4') {
-                e.preventDefault();
-                setOpen(prev => !prev);
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
 
     useRegisterBoardTooltipBlock('symbol-pool-modal', open);
 

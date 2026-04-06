@@ -23,7 +23,7 @@ export default function StageSelectScreen() {
                 if (stage.id >= 1 && stage.id <= 4) selectStage(stage.id);
               }}
             >
-              <span className="pregame-card-name">{t(stage.nameKey, language)}</span>
+              <span className="stage-select-card-label">{t(stage.nameKey, language)}</span>
             </button>
           ))}
       </div>

@@ -22,6 +22,8 @@ export interface LeaderDefinition {
   /** false면 선택·게임 시작 불가(자리 표시자) */
   enabled: boolean;
   nameKey: string;
+  /** 있으면 지도자 선택 미리보기에서 이름 옆 부제목으로 표시 */
+  nameSubtitleKey?: string;
   descriptionKey: string;
   mainEffectNameKey: string;
   mainEffectDescKey: string;
@@ -37,6 +39,7 @@ export const LEADERS: Record<LeaderId, LeaderDefinition> = {
     id: 'ramesses',
     enabled: true,
     nameKey: 'leader.ramesses.name',
+    nameSubtitleKey: 'leader.ramesses.nameSubtitle',
     descriptionKey: 'leader.ramesses.desc',
     mainEffectNameKey: 'leader.ramesses.main.name',
     mainEffectDescKey: 'leader.ramesses.main.desc',
@@ -50,6 +53,7 @@ export const LEADERS: Record<LeaderId, LeaderDefinition> = {
     id: 'shihuang',
     enabled: true,
     nameKey: 'leader.shihuang.name',
+    nameSubtitleKey: 'leader.shihuang.nameSubtitle',
     descriptionKey: 'leader.shihuang.desc',
     mainEffectNameKey: 'leader.shihuang.main.name',
     mainEffectDescKey: 'leader.shihuang.main.desc',

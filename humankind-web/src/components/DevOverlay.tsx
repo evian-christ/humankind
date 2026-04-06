@@ -82,14 +82,15 @@ const DevOverlay = () => {
     const language = useSettingsStore(s => s.language);
 
     useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'F2') {
-                e.preventDefault();
-                setOpen(prev => !prev);
-            }
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.code !== 'F1') return;
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+            e.preventDefault();
+            setOpen((o) => !o);
         };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
 
     if (!open) return null;
@@ -118,7 +119,7 @@ const DevOverlay = () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
             }}>
-                <span style={{ fontWeight: 'bold', fontSize: '16px' }}>DEV TOOLS (F2)</span>
+                <span style={{ fontWeight: 'bold', fontSize: '16px' }}>DEV TOOLS (F1)</span>
                 <button
                     onClick={() => setOpen(false)}
                     style={{

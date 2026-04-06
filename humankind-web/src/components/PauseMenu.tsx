@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSettingsStore, getResolutionOptions, type Language, type EffectSpeed, type SpinSpeed } from '../game/state/settingsStore';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
+import { usePreGameStore } from '../game/state/preGameStore';
+import { useGameStore } from '../game/state/gameStore';
+import { useRelicStore } from '../game/state/relicStore';
 
 const LANGUAGE_OPTIONS: { value: Language; labelKey: string }[] = [
     { value: 'en', labelKey: 'settings.lang.en' },
@@ -34,6 +37,9 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('gameplay');
     const [isFullscreen, setIsFullscreen] = useState(false);
     const { resolutionWidth, resolutionHeight, language, effectSpeed, spinSpeed, setResolution, setLanguage, setEffectSpeed, setSpinSpeed } = useSettingsStore();
+    const returnToIntro = usePreGameStore((s) => s.returnToIntro);
+    const initializeGame = useGameStore((s) => s.initializeGame);
+    const resetRelics = useRelicStore((s) => s.resetRelics);
 
     useEffect(() => {
         import('@tauri-apps/api/core').then(({ isTauri }) => {
@@ -118,6 +124,15 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
         setScreen('main');
     };
 
+    const handleMainMenu = () => {
+        // 게임 상태 초기화 후, 프리게임 튜토리얼(데모 시작) 화면으로 복귀
+        initializeGame();
+        resetRelics();
+        returnToIntro();
+        setScreen('main');
+        onClose();
+    };
+
     const tabs: { key: SettingsTab; labelKey: string }[] = [
         { key: 'gameplay', labelKey: 'settings.tab.gameplay' },
         { key: 'graphics', labelKey: 'settings.tab.graphics' },
@@ -136,7 +151,7 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
                         <button className="pause-menu-btn" onClick={handleSettings}>
                             {t('pause.settings', language)}
                         </button>
-                        <button className="pause-menu-btn pause-menu-btn-disabled">
+                        <button className="pause-menu-btn" onClick={handleMainMenu}>
                             {t('pause.mainMenu', language)}
                         </button>
                     </div>

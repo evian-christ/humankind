@@ -80,9 +80,8 @@ export default function DemoStartScreen() {
             type="button"
             className="pregame-card demo-start-play-button"
             onClick={proceedToStageSelect}
-          >
-            <span className="pregame-card-name">{t('pregame.demoPlay', language)}</span>
-          </button>
+            aria-label={t('pregame.demoPlay', language)}
+          />
         </div>
       </div>
     </div>

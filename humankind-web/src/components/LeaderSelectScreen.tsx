@@ -131,7 +131,18 @@ export default function LeaderSelectScreen() {
           <div className="leader-select-preview">
             <div className="leader-select-preview-scroll">
               <div className="leader-preview-name">
-                {previewLeader ? t(previewLeader.nameKey, language) : '-'}
+                {previewLeader ? (
+                  <>
+                    <span className="leader-preview-name__main">{t(previewLeader.nameKey, language)}</span>
+                    {previewLeader.nameSubtitleKey ? (
+                      <span className="leader-preview-name__subtitle">
+                        {t(previewLeader.nameSubtitleKey, language)}
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  '-'
+                )}
               </div>
 
               {previewLeader && (

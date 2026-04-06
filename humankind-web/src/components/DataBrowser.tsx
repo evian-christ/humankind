@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { SYMBOLS, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition, isBasePool, EXCLUDED_FROM_BASE_POOL } from '../game/data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
 import { RELICS } from '../game/data/relicDefinitions';
@@ -91,19 +91,17 @@ const DataBrowser = () => {
             });
         }, []);
 
-    // F3 키 바인딩
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'F3') {
-                e.preventDefault();
-                setOpen(prev => !prev);
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
-
     useRegisterBoardTooltipBlock('data-browser', open);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.code !== 'F2') return;
+            e.preventDefault();
+            setOpen((o) => !o);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
 
     // 심볼 슬롯 뷰 모드: 필터/검색/정렬이 없을 때 현재 정의된 최대 ID까지 전체 슬롯 표시
     const SYMBOL_SLOT_MIN = 1;
@@ -400,7 +398,7 @@ const DataBrowser = () => {
             <div className="databrowser-header">
                 <div className="databrowser-header-left">
                     <span className="databrowser-title">📦 {t('dataBrowser.title', language)}</span>
-                    <span className="databrowser-hint">F3</span>
+                    <span className="databrowser-hint">F2</span>
                 </div>
                 <button className="databrowser-close" onClick={() => setOpen(false)}>✕</button>
             </div>

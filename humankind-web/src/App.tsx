@@ -23,7 +23,15 @@ import EffectLogOverlay from './components/EffectLogOverlay';
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
   const returnToStageSelect = usePreGameStore((s) => s.returnToStageSelect);
-  const { phase, turn, spinBoard, toggleRelicShop, isRelicShopOpen } = useGameStore();
+  const {
+    phase,
+    turn,
+    spinBoard,
+    toggleRelicShop,
+    isRelicShopOpen,
+    hasNewRelicShopStock,
+    clearRelicShopStockBadge,
+  } = useGameStore();
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
@@ -45,6 +53,12 @@ function App() {
   useEffect(() => {
     setResolution(resolutionWidth, resolutionHeight);
   }, []);
+
+  useEffect(() => {
+    if (isRelicShopOpen && hasNewRelicShopStock) {
+      clearRelicShopStockBadge();
+    }
+  }, [isRelicShopOpen, hasNewRelicShopStock, clearRelicShopStockBadge]);
 
   // 스페이스바로 스핀 (idle일 때만, 입력 필드 포커스 시 무시)
   useEffect(() => {
@@ -116,6 +130,7 @@ function App() {
             title="유물 상점 (Relic Shop)"
           >
             🏺
+            {hasNewRelicShopStock && <span className="relic-shop-badge">New</span>}
           </button>
         </div>
         <div className="spin-area">
@@ -176,10 +191,10 @@ function App() {
         </div>
       )}
 
-      {/* ===== DEV OVERLAY ===== */}
+      {/* ===== DEV OVERLAY (F1) ===== */}
       <DevOverlay />
 
-      {/* ===== DATA BROWSER (F3) ===== */}
+      {/* ===== DATA BROWSER (F2) ===== */}
       <DataBrowser />
 
       {/* ===== SYMBOL POOL PROBABILITY (F4) ===== */}
