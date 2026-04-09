@@ -3,10 +3,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
-
-const FOOD_SYM = '⬟';
-const GOLD_SYM = '●';
-const KNOW_SYM = '✦';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const C_FOOD = '#4ade80';
 const C_GOLD = '#fbbf24';
@@ -27,9 +24,9 @@ const slotLabel = (slot?: { x: number; y: number }) => {
 const formatDeltaText = (delta?: { food: number; gold: number; knowledge: number }) => {
     if (!delta) return '';
     const parts: string[] = [];
-    if (delta.food) parts.push(`${FOOD_SYM}${delta.food > 0 ? '+' : ''}${delta.food}`);
-    if (delta.gold) parts.push(`${GOLD_SYM}${delta.gold > 0 ? '+' : ''}${delta.gold}`);
-    if (delta.knowledge) parts.push(`${KNOW_SYM}${delta.knowledge > 0 ? '+' : ''}${delta.knowledge}`);
+    if (delta.food) parts.push(`food ${delta.food > 0 ? '+' : ''}${delta.food}`);
+    if (delta.gold) parts.push(`gold ${delta.gold > 0 ? '+' : ''}${delta.gold}`);
+    if (delta.knowledge) parts.push(`knowledge ${delta.knowledge > 0 ? '+' : ''}${delta.knowledge}`);
     return parts.join(' ');
 };
 
@@ -140,18 +137,42 @@ const EffectLogOverlay = () => {
                                     const deltaSpans = e.delta ? (
                                         <span>
                                             {e.delta.food !== 0 && (
-                                                <span style={{ color: e.delta.food > 0 ? C_FOOD : '#ef4444' }}>
-                                                    {' '}{FOOD_SYM}{e.delta.food > 0 ? '+' : ''}{e.delta.food}
+                                                <span style={{ color: e.delta.food > 0 ? C_FOOD : '#ef4444', display: 'inline-flex', alignItems: 'center', gap: 4, verticalAlign: 'middle' }}>
+                                                    {' '}
+                                                    <img
+                                                        src={FOOD_RESOURCE_ICON_URL}
+                                                        alt=""
+                                                        width={16}
+                                                        height={16}
+                                                        style={{ imageRendering: 'pixelated', flexShrink: 0 }}
+                                                    />
+                                                    {e.delta.food > 0 ? '+' : ''}{e.delta.food}
                                                 </span>
                                             )}
                                             {e.delta.gold !== 0 && (
-                                                <span style={{ color: e.delta.gold > 0 ? C_GOLD : '#ef4444' }}>
-                                                    {' '}{GOLD_SYM}{e.delta.gold > 0 ? '+' : ''}{e.delta.gold}
+                                                <span style={{ color: e.delta.gold > 0 ? C_GOLD : '#ef4444', display: 'inline-flex', alignItems: 'center', gap: 4, verticalAlign: 'middle' }}>
+                                                    {' '}
+                                                    <img
+                                                        src={GOLD_RESOURCE_ICON_URL}
+                                                        alt=""
+                                                        width={16}
+                                                        height={16}
+                                                        style={{ imageRendering: 'pixelated', flexShrink: 0 }}
+                                                    />
+                                                    {e.delta.gold > 0 ? '+' : ''}{e.delta.gold}
                                                 </span>
                                             )}
                                             {e.delta.knowledge !== 0 && (
-                                                <span style={{ color: e.delta.knowledge > 0 ? C_KNOW : '#ef4444' }}>
-                                                    {' '}{KNOW_SYM}{e.delta.knowledge > 0 ? '+' : ''}{e.delta.knowledge}
+                                                <span style={{ color: e.delta.knowledge > 0 ? C_KNOW : '#ef4444', display: 'inline-flex', alignItems: 'center', gap: 4, verticalAlign: 'middle' }}>
+                                                    {' '}
+                                                    <img
+                                                        src={KNOWLEDGE_RESOURCE_ICON_URL}
+                                                        alt=""
+                                                        width={16}
+                                                        height={16}
+                                                        style={{ imageRendering: 'pixelated', flexShrink: 0 }}
+                                                    />
+                                                    {e.delta.knowledge > 0 ? '+' : ''}{e.delta.knowledge}
                                                 </span>
                                             )}
                                         </span>
@@ -164,7 +185,6 @@ const EffectLogOverlay = () => {
                                             style={{
                                                 color: '#bbf7d0',
                                                 padding: '2px 0',
-                                                cursor: 'pointer',
                                             }}
                                         >
                                             <span style={{ color: '#86efac' }}>[{time}]</span>

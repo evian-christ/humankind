@@ -10,6 +10,7 @@ import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat } from
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
 import { useRelicStore } from '../game/state/relicStore';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -303,12 +304,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
 
     const hudPassiveTotals = hoveredHudStat ? getHudTurnStartPassiveTotals(useGameStore.getState()) : null;
     const hudStatTooltip = showBoardTooltips && hoveredHudStat && hudPassiveTotals && (() => {
-        const hudStatGlyph: Record<HoveredHudStat['kind'], { ch: string; color: string }> = {
-            knowledge: { ch: '✦', color: '#60a5fa' },
-            food: { ch: '⬟', color: '#4ade80' },
-            gold: { ch: '●', color: '#fbbf24' },
-        };
-        const g = hudStatGlyph[hoveredHudStat.kind];
         const n =
             hoveredHudStat.kind === 'knowledge'
                 ? hudPassiveTotals.knowledge
@@ -319,7 +314,31 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         return (
             <div className="hud-stat-tooltip" style={getHudStatTooltipStyle(hoveredHudStat)}>
                 <div className="hud-stat-tooltip-inner">
-                    <span style={{ color: g.color, fontWeight: 900, fontSize: '40px', lineHeight: 1 }}>{g.ch}</span>
+                    {hoveredHudStat.kind === 'food' ? (
+                        <img
+                            src={FOOD_RESOURCE_ICON_URL}
+                            alt=""
+                            width={40}
+                            height={40}
+                            style={{ imageRendering: 'pixelated', flexShrink: 0 }}
+                        />
+                    ) : hoveredHudStat.kind === 'gold' ? (
+                        <img
+                            src={GOLD_RESOURCE_ICON_URL}
+                            alt=""
+                            width={40}
+                            height={40}
+                            style={{ imageRendering: 'pixelated', flexShrink: 0 }}
+                        />
+                    ) : (
+                        <img
+                            src={KNOWLEDGE_RESOURCE_ICON_URL}
+                            alt=""
+                            width={40}
+                            height={40}
+                            style={{ imageRendering: 'pixelated', flexShrink: 0 }}
+                        />
+                    )}
                     <span style={{ color: '#e5e5e5' }}>{line}</span>
                 </div>
             </div>

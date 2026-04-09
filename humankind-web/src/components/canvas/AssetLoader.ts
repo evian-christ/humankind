@@ -2,6 +2,12 @@ import * as PIXI from 'pixi.js';
 import { SYMBOLS } from '../../game/data/symbolDefinitions';
 import { RELICS } from '../../game/data/relicDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
+import {
+    FOOD_RESOURCE_ICON_URL,
+    GOLD_RESOURCE_ICON_URL,
+    KNOWLEDGE_RESOURCE_ICON_URL,
+    RELIC_PANEL_TITLE_ICON_URL,
+} from '../../uiAssetUrls';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -31,6 +37,10 @@ export const loadGameAssets = async () => {
 
     const allPaths = [
         `${ASSET_BASE_URL}assets/ui/slot_bg.png`,
+        FOOD_RESOURCE_ICON_URL,
+        GOLD_RESOURCE_ICON_URL,
+        KNOWLEDGE_RESOURCE_ICON_URL,
+        RELIC_PANEL_TITLE_ICON_URL,
         `${ASSET_BASE_URL}assets/ui/buttons/menu0.png`,
         `${ASSET_BASE_URL}assets/ui/buttons/menu1.png`,
         ...symbolPaths,

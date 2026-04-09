@@ -115,7 +115,6 @@ const SymbolPoolModal = () => {
                                 background: 'none',
                                 border: '1px solid #4b5563',
                                 color: '#9ca3af',
-                                cursor: 'pointer',
                                 padding: '2px 8px',
                                 fontSize: '14px',
                                 borderRadius: '4px',

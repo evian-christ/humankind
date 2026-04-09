@@ -18,6 +18,18 @@ export { type PlayerSymbolInstance } from '../types';
 
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
+
+/**
+ * 1920×1080 기준 보드·셀 실제 픽셀 크기.
+ * 렌더 시 `Math.min(viewW/1920, viewH/1080)` 만 곱하면 끝.
+ */
+export const BOARD_LAYOUT_WIDTH_PX  = 912;    // 1920 기준 보드 가로
+export const BOARD_LAYOUT_HEIGHT_PX = 664;    // 1920 기준 보드 세로
+export const BOARD_CELL_WIDTH_PX    = 170.4;  // 1920 기준 셀 가로
+export const BOARD_CELL_HEIGHT_PX   = 163.2;  // 1920 기준 셀 세로
+export const BOARD_COL_GAP_PX       = 12;     // 1920 기준 열 간격
+/** slot_bg 스프라이트가 보드 바깥으로 더 나오는 여백(1920 기준) */
+export const BOARD_BG_SPRITE_PADDING_PX = 8;
 /** 레벨에 따라 증가하는 리롤 비용: 2G(Lv1) → 5G(Lv10+) */
 export const getRerollCost = (level: number): number => Math.min(2 + Math.floor((level - 1) / 3), 5);
 

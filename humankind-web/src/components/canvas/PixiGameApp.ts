@@ -1,18 +1,40 @@
 import * as PIXI from 'pixi.js';
-import { calculateFoodCost, BOARD_WIDTH, BOARD_HEIGHT, useGameStore } from '../../game/state/gameStore';
+import {
+    calculateFoodCost,
+    BOARD_WIDTH,
+    BOARD_HEIGHT,
+    BOARD_LAYOUT_WIDTH_PX,
+    BOARD_LAYOUT_HEIGHT_PX,
+    BOARD_CELL_WIDTH_PX,
+    BOARD_CELL_HEIGHT_PX,
+    BOARD_COL_GAP_PX,
+    BOARD_BG_SPRITE_PADDING_PX,
+    useGameStore,
+} from '../../game/state/gameStore';
 import type { GameState } from '../../game/state/gameStore';
 import { SPIN_SPEED_CONFIG, COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../game/state/settingsStore';
-import type { SettingsState } from '../../game/state/settingsStore';
+import type { Language, SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
 import { getSymbolColor, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import { useRelicStore } from '../../game/state/relicStore';
+import type { RelicInstance } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
 import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../../game/data/knowledgeUpgradeCandidates';
 import { loadGameAssets } from './AssetLoader';
+import {
+    FOOD_RESOURCE_ICON_URL,
+    GOLD_RESOURCE_ICON_URL,
+    KNOWLEDGE_RESOURCE_ICON_URL,
+    RELIC_PANEL_TITLE_ICON_URL,
+} from '../../uiAssetUrls';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
+/** index.css 커스텀 커서와 동일 (캔버스 위 호버) */
+const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, pointer`;
+const GAME_CURSOR_HELP = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, help`;
 
 const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
 const FLOAT_DISTANCE = 30; // px — 위로 이동 거리
@@ -25,6 +47,10 @@ const THREAT_FLOAT_UP = 85;
 
 /** 클릭으로 발동하는 유물 (gameStore.activateClickableRelic) */
 const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19]);
+
+/** 호버 시 3D 카드 틸트처럼 보이는 원근 투영 */
+const RELIC_STICKER_FOCAL   = 360; // 가상 카메라 초점거리 (클수록 왜곡 약함)
+const RELIC_STICKER_MAX_DEG = 18;  // 최대 기울기 (도)
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -90,6 +116,67 @@ export class PixiGameApp {
     private getPulse01() {
         // 0..1 부드러운 펄스
         return 0.5 + 0.5 * Math.sin(Date.now() / 140);
+    }
+
+    /**
+     * 유물 평면 전체를 하나의 빳빳한 카드처럼 취급해 3D 회전 후 PerspectiveMesh에 corners를 넘긴다.
+     * 텍스처 원근 보정은 Pixi의 PerspectiveMesh가 담당하므로, 2삼각형 메쉬처럼 중간이 접히는 왜곡이 줄어든다.
+     */
+    private updateRelicPerspectiveTilt(
+        e: PIXI.FederatedPointerEvent,
+        panel: PIXI.Container,
+        mesh: PIXI.PerspectiveMesh,
+        displaySize: number,
+        localWidth: number,
+        localHeight: number,
+        panelCX: number,
+        panelCY: number
+    ): { nx: number; ny: number } {
+        const lp = panel.toLocal(e.global);
+        const half = displaySize / 2;
+        let nx = (lp.x - panelCX) / half;
+        let ny = (lp.y - panelCY) / half;
+        nx = Math.max(-1, Math.min(1, nx));
+        ny = Math.max(-1, Math.min(1, ny));
+
+        const maxRad = RELIC_STICKER_MAX_DEG * (Math.PI / 180);
+        const ay = nx * maxRad; // 마우스가 오른쪽이면 오른쪽 면이 뒤로
+        const ax = ny * maxRad; // 마우스가 아래면 아래쪽 면이 뒤로
+        const sinX = Math.sin(ax);
+        const cosX = Math.cos(ax);
+        const sinY = Math.sin(ay);
+        const cosY = Math.cos(ay);
+        const f = RELIC_STICKER_FOCAL * (localWidth / displaySize);
+        const halfW = localWidth / 2;
+        const halfH = localHeight / 2;
+
+        // 4 꼭짓점: TL TR BL BR (중심 원점 기준)
+        const corners: [number, number][] = [
+            [-halfW, -halfH], [halfW, -halfH],
+            [halfW, halfH], [-halfW, halfH],
+        ];
+        const out: number[] = [];
+        for (const [vx, vy] of corners) {
+            // X축 회전
+            const y1 = vy * cosX;
+            const z1 = vy * sinX;
+            // Y축 회전
+            const x2 = vx * cosY - z1 * sinY;
+            const z2 = vx * sinY + z1 * cosY;
+            const s = f / (f + z2);
+            out.push(x2 * s + halfW, y1 * s + halfH);
+        }
+        mesh.setCorners(
+            out[0], out[1],
+            out[2], out[3],
+            out[4], out[5],
+            out[6], out[7]
+        );
+        return { nx, ny };
+    }
+
+    private resetRelicPerspectiveMesh(mesh: PIXI.PerspectiveMesh, localWidth: number, localHeight: number) {
+        mesh.setCorners(0, 0, localWidth, 0, localWidth, localHeight, 0, localHeight);
     }
 
     private drawBackGlow(
@@ -474,13 +561,11 @@ export class PixiGameApp {
         // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
 
 
-        const BOARD_SCALE = 0.8;
-        const boardW = 1140 * scale * BOARD_SCALE;
-        const boardH = 830 * scale * BOARD_SCALE;
-
-        const cellWidth = 213 * scale * BOARD_SCALE;
-        const cellHeight = 204 * scale * BOARD_SCALE;
-        const colGap = 15 * scale * BOARD_SCALE;
+        const boardW    = BOARD_LAYOUT_WIDTH_PX  * scale;
+        const boardH    = BOARD_LAYOUT_HEIGHT_PX * scale;
+        const cellWidth = BOARD_CELL_WIDTH_PX    * scale;
+        const cellHeight= BOARD_CELL_HEIGHT_PX   * scale;
+        const colGap    = BOARD_COL_GAP_PX       * scale;
         const rowGap = 0;
 
         const totalSlotsWidth = (cellWidth * BOARD_WIDTH) + (colGap * (BOARD_WIDTH - 1));
@@ -497,13 +582,14 @@ export class PixiGameApp {
 
         // Board bg sprite
         const boardBg = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/ui/slot_bg.png`);
-        const spritePaddingX = 8 * scale;
-        const spritePaddingY = 8 * scale;
+        const spritePaddingX = BOARD_BG_SPRITE_PADDING_PX * scale;
+        const spritePaddingY = BOARD_BG_SPRITE_PADDING_PX * scale;
         boardBg.x = startX - spritePaddingX;
         boardBg.y = startY - spritePaddingY;
         boardBg.width = boardW + (spritePaddingX * 2);
         boardBg.height = boardH + (spritePaddingY * 2);
         this.boardContainer.addChild(boardBg);
+
 
         // Spin initialization logic
         if (state.phase === 'spinning' && !this.spinActive) {
@@ -610,7 +696,7 @@ export class PixiGameApp {
                 hitArea.rect(cellX, cellY, cellWidth, cellHeight);
                 hitArea.fill({ color: 0x000000, alpha: 0 });
                 hitArea.eventMode = 'static';
-                hitArea.cursor = 'pointer';
+                hitArea.cursor = GAME_CURSOR_POINTER;
                 const symDef = symbol.definition;
 
                 hitArea.on('pointerover', () => {
@@ -887,7 +973,7 @@ export class PixiGameApp {
 
         // UI bars (Knowledge, Food, Gold) — 하단 스핀 버튼 위쪽 중앙
         this.renderUI(state, settings, scale, fs, w, h, startX, startY, boardW, boardH);
-        this.renderRelics(scale);
+        this.renderRelics(scale, lang);
         this.renderKnowledgeUpgrades(state, scale);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
@@ -958,7 +1044,7 @@ export class PixiGameApp {
         }
     }
 
-    private renderRelics(scale: number) {
+    private renderRelics(scale: number, lang: Language) {
         if (!this.cellLayout) return;
         const relics = useRelicStore.getState().relics;
         if (relics.length === 0) return;
@@ -971,57 +1057,166 @@ export class PixiGameApp {
         const gapY = 36 * scale;
         const RELICS_PER_ROW = 3;
         const minMargin = 24 * scale;
-        const maxRowWidth = startX - minMargin * 2;
+        const maxRowWidth = Math.max(0, startX - minMargin * 2);
 
-        // 한 줄 3개 고정, 기본은 이전(96)보다 큰 128 기준 — 좁으면 가용 폭에 맞게 축소
         let iconSize = 128 * scale;
         const rowWidthAtTarget = RELICS_PER_ROW * iconSize + (RELICS_PER_ROW - 1) * gapX;
         if (rowWidthAtTarget > maxRowWidth && maxRowWidth > 0) {
             iconSize = (maxRowWidth - (RELICS_PER_ROW - 1) * gapX) / RELICS_PER_ROW;
         }
         const iconsPerRow = RELICS_PER_ROW;
-
         const actualRowWidth = iconsPerRow * iconSize + (iconsPerRow - 1) * gapX;
-
-        // 왼쪽 가장자리와 보드 사이 공간의 정중앙에 배치
         const startRelicX = (startX - actualRowWidth) / 2;
+
+        const relicTitleTop = 4 * scale;
+        const relicTitleIconH = 20 * scale;
+        const relicTitleGapBelow = 12 * scale;
+        const titleRowBottom = relicTitleTop + relicTitleIconH;
+        /* 배경 없을 때 첫 유물 행: startY + 12*scale — 제목 높이만큼 패널을 위로 올려 맞춤 */
+        const startRelicY = titleRowBottom + relicTitleGapBelow;
+        const relicPanelY = startY + 12 * scale - startRelicY;
+
+        const relicPanel = new PIXI.Container();
+        relicPanel.x = 0;
+        relicPanel.y = relicPanelY;
+        this.bgContainer.addChildAt(relicPanel, 1);
+
+        const titleLeft = startRelicX;
+        const titleIcon = PIXI.Sprite.from(RELIC_PANEL_TITLE_ICON_URL);
+        const titW = titleIcon.texture.width || 16;
+        const titH = titleIcon.texture.height || 16;
+        titleIcon.width = (titW / titH) * relicTitleIconH;
+        titleIcon.height = relicTitleIconH;
+        titleIcon.x = titleLeft;
+        titleIcon.y = relicTitleTop;
+        relicPanel.addChild(titleIcon);
+
+        const relicTitleText = new PIXI.Text({
+            text: t('game.relicPanelTitle', lang),
+            style: new PIXI.TextStyle({
+                fill: '#e2e8f0',
+                fontSize: 22 * scale,
+                fontWeight: 'bold',
+                fontFamily: 'Mulmaru',
+                stroke: { color: '#000000', width: 2 },
+            }),
+        });
+        relicTitleText.anchor.set(0, 0.5);
+        relicTitleText.x = titleLeft + titleIcon.width + 8 * scale;
+        relicTitleText.y = relicTitleTop + relicTitleIconH / 2;
+        relicPanel.addChild(relicTitleText);
+
         const availableWidth = actualRowWidth;
 
-        const startRelicY = startY + 12 * scale;
+        const layout: { relic: RelicInstance; iconX: number; iconY: number }[] = [];
         let curX = startRelicX;
         let curY = startRelicY;
-        const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
-
         for (const relic of relics) {
-            // 이번 유물을 현재 줄에 그릴 공간이 없다면 줄바꿈 (단, 첫 열이 아닐 때만)
             if (curX > startRelicX && curX + iconSize > startRelicX + availableWidth) {
                 curX = startRelicX;
                 curY += iconSize + gapY;
             }
+            layout.push({ relic, iconX: curX, iconY: curY });
+            curX += iconSize + gapX;
+        }
 
-            // 이벤트 핸들러에서 사용할 좌표는 고정(루프 변수 캡처 버그 방지)
-            const iconX = curX;
-            const iconY = curY;
+        const panelWX = relicPanel.x;
+        const panelWY = relicPanel.y;
+
+        const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
+
+        for (const { relic, iconX, iconY } of layout) {
             const isShakingThisRelic = shakeRelicDefId === relic.definition.id;
             const shakeX = isShakingThisRelic ? Math.sin(Date.now() / 20) * (5 * scale) : 0;
             const shakeY = isShakingThisRelic ? Math.cos(Date.now() / 17) * (4 * scale) : 0;
+            const worldIconX = panelWX + iconX + shakeX;
+            const worldIconY = panelWY + iconY + shakeY;
             relicCenterByInstanceId.set(relic.instanceId, {
-                x: iconX + iconSize / 2 + shakeX,
-                y: iconY + iconSize / 2 + shakeY,
+                x: worldIconX + iconSize / 2,
+                y: worldIconY + iconSize / 2,
             });
+
+            const cx = iconX + iconSize / 2 + shakeX;
+            const cy = iconY + iconSize / 2 + shakeY;
+
+            let relicMesh: PIXI.PerspectiveMesh | null = null;
+
+            if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
+                const texture =
+                    (PIXI.Assets.get(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`) as PIXI.Texture | undefined)
+                    ?? PIXI.Texture.from(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`);
+                const localWidth = texture.width || 1;
+                const localHeight = texture.height || 1;
+                const mesh = new PIXI.PerspectiveMesh({
+                    texture,
+                    verticesX: 12,
+                    verticesY: 12,
+                    x0: 0,
+                    y0: 0,
+                    x1: localWidth,
+                    y1: 0,
+                    x2: localWidth,
+                    y2: localHeight,
+                    x3: 0,
+                    y3: localHeight,
+                });
+                mesh.x = iconX + shakeX;
+                mesh.y = iconY + shakeY;
+                mesh.scale.set(iconSize / localWidth, iconSize / localHeight);
+                relicPanel.addChild(mesh);
+                relicMesh = mesh;
+            } else {
+                const spPlaceholder = new PIXI.Text({
+                    text: '🏺',
+                    style: new PIXI.TextStyle({ fontSize: iconSize * 0.6 }),
+                });
+                spPlaceholder.anchor.set(0.5);
+                spPlaceholder.x = cx;
+                spPlaceholder.y = cy;
+                relicPanel.addChild(spPlaceholder);
+            }
 
             const hitArea = new PIXI.Graphics();
-            hitArea.rect(iconX, iconY, iconSize, iconSize);
-            hitArea.fill({ color: 0x000000, alpha: 0 }); // 투명 히트박스
+            hitArea.rect(worldIconX, worldIconY, iconSize, iconSize);
+            hitArea.fill({ color: 0x000000, alpha: 0 });
             hitArea.eventMode = 'static';
             const relicClickable = CLICKABLE_RELIC_IDS.has(relic.definition.id);
-            hitArea.cursor = relicClickable ? 'pointer' : 'help';
+            hitArea.cursor = relicClickable ? GAME_CURSOR_POINTER : GAME_CURSOR_HELP;
 
-            hitArea.on('pointerover', () => {
-                this.relicHoverSnapshot = { instanceId: relic.instanceId, screenX: iconX + iconSize, screenY: iconY };
-                this.onHoverRelic({ relicInfo: relic, screenX: iconX + iconSize, screenY: iconY });
+            const onStickerMove = (e: PIXI.FederatedPointerEvent) => {
+                if (relicMesh) {
+                    const texture = relicMesh.texture;
+                    this.updateRelicPerspectiveTilt(
+                        e,
+                        relicPanel,
+                        relicMesh,
+                        iconSize,
+                        texture.width || 1,
+                        texture.height || 1,
+                        cx,
+                        cy
+                    );
+                }
+            };
+            const onStickerOut = () => {
+                if (relicMesh) {
+                    const texture = relicMesh.texture;
+                    this.resetRelicPerspectiveMesh(relicMesh, texture.width || 1, texture.height || 1);
+                }
+            };
+
+            hitArea.on('pointerover', (e: PIXI.FederatedPointerEvent) => {
+                onStickerMove(e);
+                this.relicHoverSnapshot = {
+                    instanceId: relic.instanceId,
+                    screenX: worldIconX + iconSize,
+                    screenY: worldIconY,
+                };
+                this.onHoverRelic({ relicInfo: relic, screenX: worldIconX + iconSize, screenY: worldIconY });
             });
+            hitArea.on('pointermove', onStickerMove);
             hitArea.on('pointerout', () => {
+                onStickerOut();
                 this.relicHoverSnapshot = null;
                 this.onHoverRelic(null);
             });
@@ -1032,25 +1227,6 @@ export class PixiGameApp {
             }
             this.hitContainer.addChild(hitArea);
 
-            if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
-                const sp = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`);
-                sp.width = iconSize;
-                sp.height = iconSize;
-                sp.x = iconX + shakeX;
-                sp.y = iconY + shakeY;
-                this.boardContainer.addChild(sp);
-            } else {
-                const spPlaceholder = new PIXI.Text({
-                    text: '🏺',
-                    style: new PIXI.TextStyle({ fontSize: iconSize * 0.6 })
-                });
-                spPlaceholder.anchor.set(0.5);
-                spPlaceholder.x = iconX + iconSize / 2 + shakeX;
-                spPlaceholder.y = iconY + iconSize / 2 + shakeY;
-                this.boardContainer.addChild(spPlaceholder);
-            }
-
-            // 유물 카운터: 보드 심볼과 같이 우하단, 연회색 글씨 + 검은 테두리 (숫자만)
             {
                 const rid = relic.definition.id;
                 let counterStr: string | null = null;
@@ -1062,20 +1238,18 @@ export class PixiGameApp {
                         text: counterStr,
                         style: new PIXI.TextStyle({
                             fill: '#d1d5db',
-                            fontSize: 28 * scale,
+                            fontSize: 26 * scale,
                             fontWeight: 'bold',
                             fontFamily: 'Mulmaru',
                             stroke: { color: '#000000', width: 3 },
                         }),
                     });
                     counterText.anchor.set(0.5, 0.5);
-                    counterText.x = iconX + iconSize - 16 * scale;
-                    counterText.y = iconY + iconSize - 18 * scale;
-                    this.boardContainer.addChild(counterText);
+                    counterText.x = iconX + iconSize - 14 * scale;
+                    counterText.y = iconY + iconSize - 16 * scale;
+                    relicPanel.addChild(counterText);
                 }
             }
-
-            curX += iconSize + gapX;
         }
 
         // ── Relic floats (e.g., Jomon cashout +Food) ──
@@ -1151,7 +1325,7 @@ export class PixiGameApp {
             hitArea.rect(iconX, iconY, iconSize, iconSize);
             hitArea.fill({ color: 0x000000, alpha: 0 });
             hitArea.eventMode = 'static';
-            hitArea.cursor = 'help';
+            hitArea.cursor = GAME_CURSOR_HELP;
             hitArea.on('pointerover', () => {
                 this.upgradeHoverSnapshot = { id: upgrade.id, screenX: iconX, screenY: iconY };
                 this.onHoverUpgrade({ upgrade: { id: upgrade.id }, screenX: iconX, screenY: iconY });
@@ -1315,36 +1489,44 @@ export class PixiGameApp {
 
         const statsFontSize = demandFontSize;
 
-        const foodSym = new PIXI.Text({
-            text: '⬟',
-            style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: statsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: eraStroke } }),
-        });
+        const foodSym = PIXI.Sprite.from(FOOD_RESOURCE_ICON_URL);
+        const foodIconH = statsFontSize * 1.05;
+        const tw = foodSym.texture.width || 16;
+        const th = foodSym.texture.height || 16;
+        foodSym.width = (tw / th) * foodIconH;
+        foodSym.height = foodIconH;
         foodSym.anchor.set(0, 0.5);
 
         const foodNum = new PIXI.Text({
-            text: ` ${state.food}`,
+            text: String(state.food),
             style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: statsFontSize, fontFamily, stroke: { color: '#000000', width: eraStroke } }),
         });
         foodNum.anchor.set(0, 0.5);
 
-        const goldSym = new PIXI.Text({
-            text: '●',
-            style: new PIXI.TextStyle({ fill: '#fbbf24', fontSize: statsFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: eraStroke } }),
-        });
+        const foodIconGap = 4 * scale * HUD_ROW_SCALE;
+
+        const goldSym = PIXI.Sprite.from(GOLD_RESOURCE_ICON_URL);
+        const goldIconH = statsFontSize * 1.05;
+        const gtw = goldSym.texture.width || 16;
+        const gth = goldSym.texture.height || 16;
+        goldSym.width = (gtw / gth) * goldIconH;
+        goldSym.height = goldIconH;
         goldSym.anchor.set(0, 0.5);
 
         const goldNum = new PIXI.Text({
-            text: ` ${state.gold}`,
+            text: String(state.gold),
             style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: statsFontSize, fontFamily, stroke: { color: '#000000', width: eraStroke } }),
         });
         goldNum.anchor.set(0, 0.5);
+
+        const goldIconGap = 4 * scale * HUD_ROW_SCALE;
 
         // 보드 너비 안에 3구역: (1) 레벨·시대·경험치바 (2) 식량 (3) 골드 — 구역 사이 간격 동일, 골드 우측 미세 패딩
         const hudStatPadRight = 22 * scale * HUD_ROW_SCALE;
         const flexTrackW = boardW - hudStatPadRight;
         const wKnowledge = eraText.width + gap + barW;
-        const wFood = foodSym.width + foodNum.width;
-        const wGold = goldSym.width + goldNum.width;
+        const wFood = foodSym.width + foodIconGap + foodNum.width;
+        const wGold = goldSym.width + goldIconGap + goldNum.width;
         let flexGap = (flexTrackW - wKnowledge - wFood - wGold) / 2;
         if (!Number.isFinite(flexGap) || flexGap < 0) flexGap = 0;
 
@@ -1373,20 +1555,34 @@ export class PixiGameApp {
         }
 
         const fracStroke = Math.max(2, Math.round(3 * HUD_ROW_SCALE));
-        const fracLabel = new PIXI.Text({
-            text: `✦ ${knowledgeCurrent}/${knowledgeRequired}`,
-            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 22 * fs * HUD_ROW_SCALE, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: fracStroke } }),
+        const knowFracFontSize = 22 * fs * HUD_ROW_SCALE;
+        const knowBarSym = PIXI.Sprite.from(KNOWLEDGE_RESOURCE_ICON_URL);
+        const kBarIconH = knowFracFontSize * 1.05;
+        const kbtw = knowBarSym.texture.width || 16;
+        const kbth = knowBarSym.texture.height || 16;
+        knowBarSym.width = (kbtw / kbth) * kBarIconH;
+        knowBarSym.height = kBarIconH;
+        knowBarSym.anchor.set(0, 0.5);
+        const knowFracText = new PIXI.Text({
+            text: `${knowledgeCurrent}/${knowledgeRequired}`,
+            style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: knowFracFontSize, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: fracStroke } }),
         });
-        fracLabel.anchor.set(0.5, 0.5);
-        fracLabel.x = barX + barW / 2;
-        fracLabel.y = rowCY;
-        this.bgContainer.addChild(fracLabel);
+        knowFracText.anchor.set(0, 0.5);
+        const kBarIconGap = 3 * scale * HUD_ROW_SCALE;
+        const kBarGroupW = knowBarSym.width + kBarIconGap + knowFracText.width;
+        const kBarGroupLeft = barX + barW / 2 - kBarGroupW / 2;
+        knowBarSym.x = kBarGroupLeft;
+        knowBarSym.y = rowCY;
+        knowFracText.x = knowBarSym.x + knowBarSym.width + kBarIconGap;
+        knowFracText.y = rowCY;
+        this.bgContainer.addChild(knowBarSym);
+        this.bgContainer.addChild(knowFracText);
 
         foodSym.x = xFood;
         foodSym.y = rowCY - 2 * scale * HUD_ROW_SCALE;
         this.bgContainer.addChild(foodSym);
 
-        foodNum.x = foodSym.x + foodSym.width;
+        foodNum.x = foodSym.x + foodSym.width + foodIconGap;
         foodNum.y = rowCY;
         this.bgContainer.addChild(foodNum);
 
@@ -1394,7 +1590,7 @@ export class PixiGameApp {
         goldSym.y = rowCY;
         this.bgContainer.addChild(goldSym);
 
-        goldNum.x = goldSym.x + goldSym.width;
+        goldNum.x = goldSym.x + goldSym.width + goldIconGap;
         goldNum.y = rowCY;
         this.bgContainer.addChild(goldNum);
 
@@ -1448,7 +1644,7 @@ export class PixiGameApp {
             g.rect(hx, hy, hw, hh);
             g.fill({ color: 0x000000, alpha: 0.001 });
             g.eventMode = 'static';
-            g.cursor = 'help';
+            g.cursor = GAME_CURSOR_HELP;
             const emit = (e: PIXI.FederatedPointerEvent) => {
                 const clientX = e.clientX;
                 const clientY = e.clientY;

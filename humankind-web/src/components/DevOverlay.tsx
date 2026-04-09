@@ -13,7 +13,6 @@ const btnStyle = (color: string): React.CSSProperties => ({
     color: '#fff',
     border: 'none',
     padding: '2px 7px',
-    cursor: 'pointer',
     fontSize: '12px',
     borderRadius: '2px',
 });
@@ -126,7 +125,6 @@ const DevOverlay = () => {
                         background: 'none',
                         border: '1px solid #666',
                         color: '#aaa',
-                        cursor: 'pointer',
                         padding: '2px 8px',
                         fontSize: '14px',
                     }}
@@ -149,7 +147,6 @@ const DevOverlay = () => {
                             color: '#fff',
                             border: 'none',
                             padding: '7px 4px',
-                            cursor: 'pointer',
                             fontSize: '12px',
                             borderRadius: '4px',
                             display: 'flex',
@@ -170,7 +167,6 @@ const DevOverlay = () => {
                             color: '#fff',
                             border: 'none',
                             padding: '7px 4px',
-                            cursor: 'pointer',
                             fontSize: '12px',
                             borderRadius: '4px',
                             display: 'flex',
@@ -268,7 +264,6 @@ const DevOverlay = () => {
                         color: '#fff',
                         border: 'none',
                         padding: '4px 12px',
-                        cursor: 'pointer',
                         fontSize: '13px',
                     }}
                 >+</button>
@@ -311,7 +306,6 @@ const DevOverlay = () => {
                             color: '#fff',
                             border: 'none',
                             padding: '4px 12px',
-                            cursor: 'pointer',
                             fontSize: '13px',
                         }}
                     >+</button>
@@ -337,7 +331,6 @@ const DevOverlay = () => {
                                 color: '#fca5a5',
                                 border: 'none',
                                 padding: '2px 8px',
-                                cursor: 'pointer',
                                 fontSize: '12px',
                             }}
                         >-</button>
@@ -381,7 +374,6 @@ const DevOverlay = () => {
                                 color: '#fca5a5',
                                 border: 'none',
                                 padding: '2px 8px',
-                                cursor: 'pointer',
                                 fontSize: '12px',
                             }}
                         >-</button>

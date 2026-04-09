@@ -1,6 +1,7 @@
 import { useSettingsStore } from '../game/state/settingsStore';
 import { usePreGameStore } from '../game/state/preGameStore';
 import { t } from '../i18n';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 type ResourceType = 'food' | 'gold' | 'knowledge';
 
@@ -11,15 +12,17 @@ function ResourceWord({
   type: ResourceType;
   label: string;
 }) {
-  const iconMap: Record<ResourceType, string> = {
-    food: '⬟',
-    gold: '●',
-    knowledge: '✦',
-  };
-
   return (
     <span className={`demo-resource demo-resource--${type}`}>
-      <span className="demo-resource-icon" aria-hidden="true">{iconMap[type]}</span>
+      <span className="demo-resource-icon" aria-hidden="true">
+        {type === 'food' ? (
+          <img src={FOOD_RESOURCE_ICON_URL} alt="" className="demo-resource-icon-img" />
+        ) : type === 'gold' ? (
+          <img src={GOLD_RESOURCE_ICON_URL} alt="" className="demo-resource-icon-img" />
+        ) : (
+          <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" className="demo-resource-icon-img" />
+        )}
+      </span>
       <span>{label}</span>
     </span>
   );

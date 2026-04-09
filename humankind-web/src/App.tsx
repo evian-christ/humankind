@@ -135,10 +135,12 @@ function App() {
         </div>
         <div className="spin-area">
           <button
+            type="button"
             className="spin-btn"
             onClick={spinBoard}
             disabled={phase !== 'idle'}
-            title="SPIN"
+            aria-label={t('game.spin', language)}
+            title={t('game.spin', language)}
           >
             SPIN
           </button>

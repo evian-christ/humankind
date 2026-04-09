@@ -153,7 +153,6 @@ const DestroySelection = () => {
                                     border: selectedInstanceIds.includes(sym.instanceId) ? '3px solid #ef4444' : '2px solid #555',
                                     borderRadius: '8px',
                                     background: selectedInstanceIds.includes(sym.instanceId) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(30, 30, 30, 0.8)',
-                                    cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',

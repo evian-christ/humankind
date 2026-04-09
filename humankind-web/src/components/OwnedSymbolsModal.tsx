@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useGameStore } from '../game/state/gameStore';
+import {
+    useGameStore,
+    BOARD_CELL_WIDTH_PX,
+    BOARD_CELL_HEIGHT_PX,
+} from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { BARBARIAN_CAMP_SPAWN_INTERVAL, getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
@@ -9,7 +13,6 @@ import { EffectText } from './EffectText';
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 const BASE_W = 1920;
 const BASE_H = 1080;
-const BOARD_SCALE = 0.8;
 const SPRITE_PX = 32;
 const TOOLTIP_W = 280;
 const TOOLTIP_H = 180;
@@ -38,8 +41,8 @@ type HoveredOwnedSymbol = {
 
 function computeBoardMetrics(resW: number, resH: number) {
     const scale = Math.min(resW / BASE_W, resH / BASE_H);
-    const cellWidth = 213 * scale * BOARD_SCALE;
-    const cellHeight = 204 * scale * BOARD_SCALE;
+    const cellWidth  = BOARD_CELL_WIDTH_PX  * scale;
+    const cellHeight = BOARD_CELL_HEIGHT_PX * scale;
     const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
 
@@ -169,7 +172,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                             background: 'rgba(255,255,255,0.04)',
                             border: '1px solid rgba(255,255,255,0.14)',
                             color: '#cbd5e1',
-                            cursor: 'pointer',
                             padding: '10px 18px',
                             fontSize: 22,
                             fontFamily: 'Mulmaru, sans-serif',

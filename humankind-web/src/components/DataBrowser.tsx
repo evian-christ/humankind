@@ -42,7 +42,7 @@ const SortTh = ({ column, label, sort, onSort, className }: {
     const active = sort?.column === column;
     const arrow = active ? (sort!.dir === 'asc' ? ' ▲' : ' ▼') : '';
     return (
-        <th className={className} onClick={() => onSort(column)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+        <th className={className} onClick={() => onSort(column)} style={{ userSelect: 'none' }}>
             {label}{arrow}
         </th>
     );
@@ -553,7 +553,7 @@ const DataBrowser = () => {
                                             <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
                                             <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                             <td style={{ textAlign: 'center' }}>
-                                                <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                                <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
                                             </td>
                                         </tr>
                                     );
@@ -582,7 +582,7 @@ const DataBrowser = () => {
                                         <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
                                         <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                         <td style={{ textAlign: 'center' }}>
-                                            <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                            <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
                                         </td>
                                     </tr>
                                 ))
@@ -630,7 +630,7 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
                                     <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                     <td style={{ textAlign: 'center' }}>
-                                        <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                        <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
                                     </td>
                                 </tr>
                             ))}
@@ -783,7 +783,7 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
                                     <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                     <td style={{ textAlign: 'center' }}>
-                                        <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', cursor: 'pointer', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                        <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
                                     </td>
                                 </tr>
                             ))}

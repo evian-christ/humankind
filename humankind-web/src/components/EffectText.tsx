@@ -1,4 +1,5 @@
 import React from 'react';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 interface EffectTextProps {
     text: string;
@@ -18,9 +19,9 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
     // 1: Condition (matches text ending with colon, like "파괴 시:", "바다에 인접 시:" etc)
     // 2: English Stat + Num (+20 Food)
     // 3: Korean Stat + Num (식량 +20)
-    // 4: Standalone Stat (Food/Gold/Knowledge/식량/골드/지식)
+    // 4: Standalone resource word only (단어 단위 — "Foods", "knowledge" 내부 등 오매칭 방지)
     // 5: Standalone number (positive/negative integer or float, or x2, x3)
-    const regex = /([^:.;]+:)|([+-]?\d+)\s*(Food|Gold|Knowledge)|(식량|골드|지식)'?\s*([+-]?\d+)|(Food|Gold|Knowledge|식량|골드|지식)|(?:[xX])(\d+)|([+-]?\d+)/gi;
+    const regex = /([^:.;]+:)|([+-]?\d+)\s*(Food|Gold|Knowledge)|(식량|골드|지식)'?\s*([+-]?\d+)|(\bFood\b|\bGold\b|\bKnowledge\b|(?<![가-힣])(?:식량|골드|지식)(?![가-힣]))|(?:[xX])(\d+)|([+-]?\d+)/giu;
 
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -55,10 +56,37 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
             const isKnowledge = /Knowledge|지식/i.test(statWord);
 
             let color = '#ffffff';
-            let icon = '';
-            if (isFood) { color = '#22c55e'; icon = '⬟'; }
-            if (isGold) { color = '#f59e0b'; icon = '●'; }
-            if (isKnowledge) { color = '#60a5fa'; icon = '✦'; }
+            let icon: React.ReactNode = '';
+            if (isFood) {
+                color = '#22c55e';
+                icon = (
+                    <img
+                        src={FOOD_RESOURCE_ICON_URL}
+                        alt=""
+                        className="effect-text-food-icon"
+                    />
+                );
+            }
+            if (isGold) {
+                color = '#f59e0b';
+                icon = (
+                    <img
+                        src={GOLD_RESOURCE_ICON_URL}
+                        alt=""
+                        className="effect-text-gold-icon"
+                    />
+                );
+            }
+            if (isKnowledge) {
+                color = '#60a5fa';
+                icon = (
+                    <img
+                        src={KNOWLEDGE_RESOURCE_ICON_URL}
+                        alt=""
+                        className="effect-text-knowledge-icon"
+                    />
+                );
+            }
 
             if (enStat) {
                 const raw = Number(enNum);
@@ -106,5 +134,6 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
         parts.push(text.slice(lastIndex));
     }
 
-    return <>{parts}</>;
+    // Fragment 대신 단일 인라인 래퍼: 상위 flex/pre-wrap과 섞일 때 줄 단위로 깨지지 않게 함
+    return <span className="effect-text-root">{parts}</span>;
 };

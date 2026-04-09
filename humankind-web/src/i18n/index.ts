@@ -40,6 +40,7 @@ const translations: Record<Language, Record<string, string>> = {
         'game.chooseSymbol': 'Choose a Symbol',
         'game.chooseRelic': 'Choose a Relic',
         'game.relicShopTitle': 'Relic Shop — New stock in {turns} turns',
+        'game.relicPanelTitle': 'Relics',
         'game.relicShopBuyDiscountAria': 'Buy for {sale} gold (original price {original})',
         'game.chooseUpgrade': 'Choose a Knowledge Upgrade',
         'game.noUpgradesAvailable': 'No upgrades available',
@@ -66,7 +67,7 @@ const translations: Record<Language, Record<string, string>> = {
         'ownedSymbols.title': 'Owned Symbols',
         'ownedSymbols.close': 'Close',
         'ownedSymbols.empty': 'No owned symbols',
-        /** HUD 기본 생산 툴팁: 앞에 ✦/⬟/● 는 코드에서 붙임 */
+        /** HUD 기본 생산 툴팁: 식량·골드·지식은 `food16x16.png` / `gold16x16.png` / `knowledge16x16.png` */
         'game.hudBaseProductionShort': 'Base production +{n}',
 
         // Pre-game: Demo / Stage / Leader
@@ -514,6 +515,7 @@ const translations: Record<Language, Record<string, string>> = {
         'game.chooseSymbol': '심볼을 선택하세요',
         'game.chooseRelic': '유물 선택',
         'game.relicShopTitle': '유물 상점 - 새로운 유물 입고까지 {turns}턴',
+        'game.relicPanelTitle': '유물',
         'game.relicShopBuyDiscountAria': '구매, 할인가 {sale} 골드 (정가 {original})',
         'game.chooseUpgrade': '지식 업그레이드 선택',
         'game.noUpgradesAvailable': '선택 가능한 업그레이드가 없습니다',
