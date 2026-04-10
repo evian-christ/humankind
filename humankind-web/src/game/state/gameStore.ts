@@ -3252,7 +3252,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const playerSymbols = symbolIds
             .map((id) => SYMBOLS[id])
             .filter((def): def is SymbolDefinition => def != null)
-            .map(createInstance);
+            .map((def) => createInstance(def));
 
         const board = createEmptyBoard();
 
