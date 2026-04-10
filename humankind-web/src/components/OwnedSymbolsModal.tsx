@@ -5,10 +5,11 @@ import {
     BOARD_CELL_HEIGHT_PX,
 } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { BARBARIAN_CAMP_SPAWN_INTERVAL, getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
+import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { EffectText } from './EffectText';
+import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 const BASE_W = 1920;
@@ -213,14 +214,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                             {playerSymbols.map((sym, idx) => {
                                 const def = sym.definition;
 
-                                const showCounter =
-                                    sym.effect_counter > 0 && def.type !== SymbolType.ENEMY && def.base_hp === undefined;
-                                const showAtk = def.base_attack !== undefined && def.base_attack > 0;
-                                const showHp = def.base_hp !== undefined && def.base_hp > 0;
-                                const hpValue = sym.enemy_hp ?? def.base_hp;
-                                const showCampCounter = def.id === 40;
-                                const showMerchantStoredGold = def.id === 22 && (sym.stored_gold ?? 0) > 0;
-
                                 return (
                                     <div
                                         key={`${sym.instanceId}-${idx}`}
@@ -254,122 +247,11 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             </div>
                                         )}
 
-                                        {showCounter && (
-                                            <div
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: 2,
-                                                    bottom: 4,
-                                                    fontSize: 14,
-                                                    fontFamily: 'Mulmaru, sans-serif',
-                                                    lineHeight: 1,
-                                                    color: '#8b7355',
-                                                    fontWeight: 700,
-                                                }}
-                                            >
-                                                {sym.effect_counter}
-                                            </div>
-                                        )}
-
-                                        {showMerchantStoredGold && (
-                                            <div
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: 2,
-                                                    bottom: 4,
-                                                    fontSize: 14,
-                                                    fontFamily: 'Mulmaru, sans-serif',
-                                                    lineHeight: 1,
-                                                    color: '#fbbf24',
-                                                    fontWeight: 800,
-                                                }}
-                                            >
-                                                {sym.stored_gold}
-                                            </div>
-                                        )}
-
-                                        {showAtk && (
-                                            <>
-                                                <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: 8,
-                                                        bottom: 6,
-                                                        fontSize: 18,
-                                                        fontFamily: 'Mulmaru, sans-serif',
-                                                        color: '#ff8c42',
-                                                        opacity: 0.55,
-                                                        lineHeight: 1,
-                                                    }}
-                                                >
-                                                    ⚔
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: 28,
-                                                        bottom: 6,
-                                                        fontSize: 14,
-                                                        fontFamily: 'Mulmaru, sans-serif',
-                                                        lineHeight: 1,
-                                                        color: '#ffffff',
-                                                        fontWeight: 800,
-                                                    }}
-                                                >
-                                                    {def.base_attack}
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {showHp && (
-                                            <>
-                                                <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        right: 6,
-                                                        bottom: 6,
-                                                        fontSize: 18,
-                                                        fontFamily: 'Mulmaru, sans-serif',
-                                                        color: '#4ade80',
-                                                        opacity: 0.55,
-                                                        lineHeight: 1,
-                                                    }}
-                                                >
-                                                    ♥
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        right: 24,
-                                                        bottom: 6,
-                                                        fontSize: 14,
-                                                        fontFamily: 'Mulmaru, sans-serif',
-                                                        lineHeight: 1,
-                                                        color: '#ffffff',
-                                                        fontWeight: 800,
-                                                    }}
-                                                >
-                                                    {hpValue}
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {showCampCounter && (
-                                            <div
-                                                style={{
-                                                    position: 'absolute',
-                                                    left: 28,
-                                                    bottom: 6,
-                                                    fontSize: 14,
-                                                    fontFamily: 'Mulmaru, sans-serif',
-                                                    lineHeight: 1,
-                                                    color: '#8b7355',
-                                                    fontWeight: 800,
-                                                }}
-                                            >
-                                                {BARBARIAN_CAMP_SPAWN_INTERVAL - sym.effect_counter}
-                                            </div>
-                                        )}
+                                        <SymbolCellBoardOverlays
+                                            sym={sym}
+                                            cellWidth={metrics.cellWidth}
+                                            cellHeight={metrics.cellHeight}
+                                        />
                                     </div>
                                 );
                             })}

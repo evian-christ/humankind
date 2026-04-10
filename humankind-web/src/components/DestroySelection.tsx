@@ -7,6 +7,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
+import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -174,6 +175,7 @@ const DestroySelection = () => {
                                 ) : (
                                     <span style={{ fontSize: '24px', opacity: 0.5 }}>?</span>
                                 )}
+                                <SymbolCellBoardOverlays sym={sym} cellWidth={CELL_PX} cellHeight={CELL_PX} />
                             </div>
                         ))}
                     </div>
