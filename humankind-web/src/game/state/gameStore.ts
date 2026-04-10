@@ -370,11 +370,14 @@ const applyWarriorEliteTransforms = (
                     const horseInst = b[horsePos.x][horsePos.y]!;
                     b[horsePos.x][horsePos.y] = null;
                     removeFromList(horseInst.instanceId);
+                    const knDef = SYMBOLS[62];
+                    const knBase = knDef.base_hp ?? 0;
+                    const knHp = knBase + (upgrades.includes(2) ? getBronzeWorkingHpBonus(knDef) : 0);
                     const knight: PlayerSymbolInstance = {
                         ...cell,
-                        definition: SYMBOLS[62],
-                        enemy_hp: SYMBOLS[62].base_hp,
-                        remaining_attacks: SYMBOLS[62].base_attack ? 3 : 0,
+                        definition: knDef,
+                        enemy_hp: knHp,
+                        remaining_attacks: knDef.base_attack ? 3 : 0,
                     };
                     b[x][y] = knight;
                     const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
@@ -386,11 +389,14 @@ const applyWarriorEliteTransforms = (
             if (upgrades.includes(21)) {
                 const seaAdj = getAdjacentCoords(x, y).some((p) => b[p.x][p.y]?.definition.id === 6);
                 if (seaAdj) {
+                    const cvDef = SYMBOLS[63];
+                    const cvBase = cvDef.base_hp ?? 0;
+                    const cvHp = cvBase + (upgrades.includes(2) ? getBronzeWorkingHpBonus(cvDef) : 0);
                     const caravel: PlayerSymbolInstance = {
                         ...cell,
-                        definition: SYMBOLS[63],
-                        enemy_hp: SYMBOLS[63].base_hp,
-                        remaining_attacks: SYMBOLS[63].base_attack ? 3 : 0,
+                        definition: cvDef,
+                        enemy_hp: cvHp,
+                        remaining_attacks: cvDef.base_attack ? 3 : 0,
                     };
                     b[x][y] = caravel;
                     const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
@@ -420,10 +426,25 @@ const shuffle = <T>(arr: T[]): T[] => {
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
 
+/** 지식 업그레이드 2 (청동 기술): 전사·기사·캐러벨 +10, 궁수 +3 — 전투 `getEffectiveMaxHP`와 동일 규칙 */
+export const getBronzeWorkingHpBonus = (def: SymbolDefinition): number => {
+    if (def.type !== SymbolType.UNIT) return 0;
+    if (def.id === 35 || def.id === 62 || def.id === 63) return 10;
+    if (def.id === 36) return 3;
+    return 0;
+};
 
-const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => {
+const createInstance = (def: SymbolDefinition, unlockedUpgrades: number[] = []): PlayerSymbolInstance => {
     let finalDef = def;
     // Relic ID 8 (십계명 석판): Unlocks 'Stone Tablet' (ID 39) in the symbol selection pool.
+
+    const baseHp = finalDef.base_hp;
+    let enemy_hp: number | undefined;
+    if (baseHp === undefined) enemy_hp = undefined;
+    else {
+        const bonus = unlockedUpgrades.includes(2) ? getBronzeWorkingHpBonus(finalDef) : 0;
+        enemy_hp = baseHp + bonus;
+    }
 
     const inst: PlayerSymbolInstance = {
         definition: finalDef,
@@ -431,7 +452,7 @@ const createInstance = (def: SymbolDefinition): PlayerSymbolInstance => {
         effect_counter: 0,
         is_marked_for_destruction: false,
         remaining_attacks: finalDef.base_attack ? 3 : 0,
-        enemy_hp: finalDef.base_hp,
+        enemy_hp,
     };
 
     return inst;
@@ -546,11 +567,15 @@ const scarabAndHinduismBonusForOwnedRemoves = (
     return { gold, food, knowledge };
 };
 
-const appendSymbolDefIdsToPlayer = (base: PlayerSymbolInstance[], defIds: number[]): PlayerSymbolInstance[] => {
+const appendSymbolDefIdsToPlayer = (
+    base: PlayerSymbolInstance[],
+    defIds: number[],
+    unlockedUpgrades: number[],
+): PlayerSymbolInstance[] => {
     const next = [...base];
     for (const id of defIds) {
         const def = SYMBOLS[id];
-        if (def) next.push(createInstance(def));
+        if (def) next.push(createInstance(def, unlockedUpgrades));
     }
     return next;
 };
@@ -561,7 +586,7 @@ const getStartingSymbols = (): PlayerSymbolInstance[] => {
         SYMBOLS[1],  // Wheat
         SYMBOLS[1],  // Wheat
         SYMBOLS[7],  // Stone
-    ].map(createInstance);
+    ].map((d) => createInstance(d, []));
 };
 
 /**
@@ -944,6 +969,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         let { barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = state;
 
         const newPlayerSymbols = [...state.playerSymbols];
+        const spinUpgrades = state.unlockedKnowledgeUpgrades || [];
         /** 이번 턴 새로 추가된 위협 심볼 (플로팅 라벨용) */
         const newThreats: { instanceId: string; label: string }[] = [];
 
@@ -961,7 +987,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 barbarianSymbolThreat = 0;
                 const enemyDef = SYMBOLS[43];
                 if (enemyDef) {
-                    const inst = createInstance(enemyDef);
+                    const inst = createInstance(enemyDef, spinUpgrades);
                     newPlayerSymbols.push(inst);
                     newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.barbarian_invasion') });
                 }
@@ -973,7 +999,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 barbarianCampThreat = 0;
                 const campDef = SYMBOLS[40];
                 if (campDef) {
-                    const inst = createInstance(campDef);
+                    const inst = createInstance(campDef, spinUpgrades);
                     newPlayerSymbols.push(inst);
                     newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.barbarian_camp') });
                 }
@@ -992,7 +1018,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 const addDisaster = (symId: number, counterMin: number, counterMax: number, labelKey: string) => {
                     const def = SYMBOLS[symId];
                     if (!def) return;
-                    const inst = createInstance(def);
+                    const inst = createInstance(def, spinUpgrades);
                     inst.effect_counter = randInt(counterMin, counterMax);
                     newPlayerSymbols.push(inst);
                     newThreats.push({ instanceId: inst.instanceId, label: threatLabel(labelKey) });
@@ -1004,7 +1030,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 } else if (pick === EARTHQUAKE_ID) {
                     const def = SYMBOLS[EARTHQUAKE_ID];
                     if (def) {
-                        const inst = createInstance(def);
+                        const inst = createInstance(def, spinUpgrades);
                         newPlayerSymbols.push(inst);
                         newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.earthquake') });
                     }
@@ -1899,6 +1925,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const upgradesForQinEra = get().unlockedKnowledgeUpgrades || [];
 
             set((prev) => {
+                const finishUpgrades = prev.unlockedKnowledgeUpgrades || [];
                 let newLevel = prev.level;
                 let newKnowledge = prev.knowledge + tKnowledge + bonusKnowledge;
                 const knowledgeUpgradePickQueue: number[] = [];
@@ -1930,7 +1957,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         for (let bx = 0; bx < BOARD_WIDTH && !placed; bx++) {
                             for (let by = 0; by < BOARD_HEIGHT && !placed; by++) {
                                 if (!cleanBoard[bx][by]) {
-                                    const inst = createInstance(def);
+                                    const inst = createInstance(def, finishUpgrades);
                                     cleanBoard[bx][by] = inst;
                                     newPlayerSymbols.push(inst);
                                     placed = true;
@@ -1938,7 +1965,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                             }
                         }
                         if (!placed) {
-                            newPlayerSymbols.push(createInstance(def));
+                            newPlayerSymbols.push(createInstance(def, finishUpgrades));
                         }
                     }
                 }
@@ -1946,7 +1973,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (const symId of toAdd) {
                     const def = SYMBOLS[symId];
                     if (def) {
-                        newPlayerSymbols.push(createInstance(def));
+                        newPlayerSymbols.push(createInstance(def, finishUpgrades));
                     }
                 }
 
@@ -2113,30 +2140,65 @@ export const useGameStore = create<GameState>((set, get) => ({
                 return { combatFloats: next.length > 80 ? next.slice(next.length - 80) : next };
             });
         };
-        const combatEvents: { ax: number; ay: number; tx: number; ty: number }[] = [];
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-            for (let y = 0; y < BOARD_HEIGHT; y++) {
-                const sym = combatBoard[x][y];
-                // 아군 전투 유닛만 공격자: UNIT 타입이고 base_attack 보유
-                if (!sym || sym.definition.type !== SymbolType.UNIT || sym.definition.base_attack === undefined) continue;
+        /** 슬롯 인덱스 0..19 — 효과 페이즈 `slotOrder`와 동일 (행 y, 열 x) */
+        const slotIndex = (px: number, py: number) => py * BOARD_WIDTH + px;
 
-                if (sym.definition.id === 36) { // 궁수: 보드 전체 사거리
+        /**
+         * 공격자 위치 기준으로 공격 대상 1칸을 결정한다.
+         * - UNIT 공격자: 인접 ENEMY 중 슬롯 인덱스 최소 (궁수 36은 보드 전체 ENEMY 중 최소)
+         * - ENEMY 공격자: 인접 UNIT 중 슬롯 인덱스 최소 (원거리 ENEMY가 생기면 여기에 추가)
+         */
+        const resolveCombatTarget = (
+            board: (PlayerSymbolInstance | null)[][],
+            ax: number,
+            ay: number,
+        ): { tx: number; ty: number } | null => {
+            const sym = board[ax][ay];
+            if (!sym || sym.definition.base_attack === undefined) return null;
+            if (sym.is_marked_for_destruction) return null;
+
+            const isUnit = sym.definition.type === SymbolType.UNIT;
+            const isEnemy = sym.definition.type === SymbolType.ENEMY;
+            if (!isUnit && !isEnemy) return null;
+
+            const targetType = isUnit ? SymbolType.ENEMY : SymbolType.UNIT;
+
+            // 궁수(36): 보드 전체 대상 중 슬롯 최소
+            if (sym.definition.id === 36) {
+                let picked: { tx: number; ty: number; si: number } | null = null;
+                for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
                     for (let tx = 0; tx < BOARD_WIDTH; tx++) {
-                        for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
-                            const target = combatBoard[tx][ty];
-                            if (target?.definition.type === SymbolType.ENEMY) {
-                                combatEvents.push({ ax: x, ay: y, tx, ty });
-                            }
-                        }
-                    }
-                } else { // 근접: 인접 칸만
-                    for (const adj of getAdjacentCoords(x, y)) {
-                        const target = combatBoard[adj.x][adj.y];
-                        if (target?.definition.type === SymbolType.ENEMY) {
-                            combatEvents.push({ ax: x, ay: y, tx: adj.x, ty: adj.y });
+                        const target = board[tx][ty];
+                        if (target?.definition.type === targetType && !target.is_marked_for_destruction) {
+                            const si = slotIndex(tx, ty);
+                            if (!picked || si < picked.si) picked = { tx, ty, si };
                         }
                     }
                 }
+                return picked ? { tx: picked.tx, ty: picked.ty } : null;
+            }
+
+            // 근접: 인접 대상 중 슬롯 최소
+            let picked: { tx: number; ty: number; si: number } | null = null;
+            for (const adj of getAdjacentCoords(ax, ay)) {
+                const target = board[adj.x][adj.y];
+                if (target?.definition.type === targetType && !target.is_marked_for_destruction) {
+                    const si = slotIndex(adj.x, adj.y);
+                    if (!picked || si < picked.si) picked = { tx: adj.x, ty: adj.y, si };
+                }
+            }
+            return picked ? { tx: picked.tx, ty: picked.ty } : null;
+        };
+
+        // UNIT + ENEMY 모두 슬롯 순(1→20)으로 각자 1회 공격. 반격 없음.
+        const combatEvents: { ax: number; ay: number }[] = [];
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                const sym = combatBoard[x][y];
+                if (!sym || sym.definition.base_attack === undefined) continue;
+                if (sym.definition.type !== SymbolType.UNIT && sym.definition.type !== SymbolType.ENEMY) continue;
+                if (sym.is_marked_for_destruction) continue;
+                combatEvents.push({ ax: x, ay: y });
             }
         }
 
@@ -2201,49 +2263,41 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
         };
 
-        // 전투 이벤트 순차 처리 (공격 bounce → 반격 bounce → 다음)
+        // 전투 이벤트 순차 처리 — 각 심볼은 자기 조건에 맞는 대상 1곳에만 공격 1회. 반격 없음.
         const processCombatEvent = (eventIdx: number) => {
             if (eventIdx >= combatEvents.length) {
                 startEffectPhase();
                 return;
             }
 
-            const { ax, ay, tx, ty } = combatEvents[eventIdx];
+            const { ax, ay } = combatEvents[eventIdx];
             const board = get().board;
             const attacker = board[ax][ay];
-            const target = board[tx][ty];
+            const picked = resolveCombatTarget(board, ax, ay);
+            const tx = picked?.tx ?? -1;
+            const ty = picked?.ty ?? -1;
+            const target = picked ? board[tx][ty] : null;
 
-            // 둘 다 살아있을 때만 전투
             let atkDmg = 0;
-            let counterDmg = 0;
-            if (attacker && !attacker.is_marked_for_destruction &&
-                target && !target.is_marked_for_destruction) {
-
+            if (
+                picked &&
+                attacker &&
+                !attacker.is_marked_for_destruction &&
+                target &&
+                !target.is_marked_for_destruction
+            ) {
                 atkDmg = attacker.definition.base_attack ?? 0;
-                const isAdjacent = Math.abs(ax - tx) <= 1 && Math.abs(ay - ty) <= 1;
-                counterDmg = isAdjacent ? (target.definition.base_attack ?? 0) : 0;
-
-                const upgrades = get().unlockedKnowledgeUpgrades || [];
-
-                const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => {
-                    let hp = sym.definition.base_hp ?? 0;
-                    // 아군 유닛(UNIT 타입)에게만 업그레이드 체력 보너스 적용
-                    if (sym.definition.type === SymbolType.UNIT && upgrades.includes(2)) {
-                        if (sym.definition.id === 35 || sym.definition.id === 62 || sym.definition.id === 63) hp += 10;
-                        if (sym.definition.id === 36) hp += 3;
-                    }
-                    return hp;
-                };
 
                 if (atkDmg > 0) {
+                    const upgrades = get().unlockedKnowledgeUpgrades || [];
+                    const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => {
+                        let hp = sym.definition.base_hp ?? 0;
+                        if (upgrades.includes(2)) hp += getBronzeWorkingHpBonus(sym.definition);
+                        return hp;
+                    };
                     const maxHP = getEffectiveMaxHP(target);
                     target.enemy_hp = (target.enemy_hp ?? maxHP) - atkDmg;
                     if (target.enemy_hp <= 0) target.is_marked_for_destruction = true;
-                }
-                if (counterDmg > 0) {
-                    const maxHP = getEffectiveMaxHP(attacker);
-                    attacker.enemy_hp = (attacker.enemy_hp ?? maxHP) - counterDmg;
-                    if (attacker.enemy_hp <= 0) attacker.is_marked_for_destruction = true;
                 }
             }
 
@@ -2258,20 +2312,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             const stepDelay = bounceDur + 40;
 
-            if (atkDmg > 0 && counterDmg > 0) {
-                // 양방향: 공격 bounce → 반격 bounce → 다음
+            if (atkDmg > 0 && picked) {
                 set({ combatAnimation: { ax, ay, tx, ty, atkDmg, counterDmg: 0 } });
-                setTimeout(() => {
-                    set({ combatAnimation: { ax: tx, ay: ty, tx: ax, ty: ay, atkDmg: counterDmg, counterDmg: 0 } });
-                    setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
-                }, stepDelay);
-            } else if (atkDmg > 0) {
-                // 공격만
-                set({ combatAnimation: { ax, ay, tx, ty, atkDmg, counterDmg: 0 } });
-                setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
-            } else if (counterDmg > 0) {
-                // 반격만
-                set({ combatAnimation: { ax: tx, ay: ty, tx: ax, ty: ay, atkDmg: counterDmg, counterDmg: 0 } });
                 setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
             } else {
                 processCombatEvent(eventIdx + 1);
@@ -2319,7 +2361,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = SYMBOLS[symbolId];
         if (!def) return;
 
-        const newSymbols = [...state.playerSymbols, createInstance(def)];
+        const newSymbols = [...state.playerSymbols, createInstance(def, state.unlockedKnowledgeUpgrades || [])];
         const q = [...(state.bonusSelectionQueue || [])];
         if (q.length > 0) {
             q.shift();
@@ -2526,6 +2568,21 @@ export const useGameStore = create<GameState>((set, get) => ({
             newPlayerSymbols = newPlayerSymbols.map((s) =>
                 s.definition.id === 25 ? { ...s, definition: SYMBOLS[54] } : s
             );
+        }
+
+        // 2 Bronze Working: 이미 보유 중인 전사·궁수·기사·캐러벨에 체력 보너스 반영
+        if (upgradeId === 2) {
+            const migrateBronzeHp = (s: PlayerSymbolInstance): PlayerSymbolInstance => {
+                if (s.definition.type !== SymbolType.UNIT) return s;
+                const bonus = getBronzeWorkingHpBonus(s.definition);
+                if (bonus === 0) return s;
+                const base = s.definition.base_hp ?? 0;
+                const newMax = base + bonus;
+                const cur = s.enemy_hp ?? base;
+                const migrated = Math.min(newMax, cur + bonus);
+                return { ...s, enemy_hp: migrated };
+            };
+            newPlayerSymbols = newPlayerSymbols.map(migrateBronzeHp);
         }
 
         // newPlayerSymbols에 맞춰 newBoard 갱신
@@ -2803,7 +2860,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
 
         const baseFiltered = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
-        const newSymbols = appendSymbolDefIdsToPlayer(baseFiltered, symAgg.addSymbolDefIds);
+        const newSymbols = appendSymbolDefIdsToPlayer(
+            baseFiltered,
+            symAgg.addSymbolDefIds,
+            state.unlockedKnowledgeUpgrades || [],
+        );
         const goldAdd = instanceIds.length * 10;
 
         const afterSetRelicRefresh = () => {
@@ -3253,7 +3314,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = SYMBOLS[symbolId] || SYMBOL_CANDIDATES[symbolId];
         if (!def) return;
         set((prev) => ({
-            playerSymbols: [...prev.playerSymbols, createInstance(def)],
+            playerSymbols: [
+                ...prev.playerSymbols,
+                createInstance(def, prev.unlockedKnowledgeUpgrades || []),
+            ],
         }));
     },
 
