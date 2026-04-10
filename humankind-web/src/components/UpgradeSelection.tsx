@@ -6,6 +6,7 @@ import { getSymbolColorHex, SYMBOLS, SymbolType } from '../game/data/symbolDefin
 import type { KnowledgeUpgradeDescSymbol, KnowledgeUpgradeSymbolRelation } from '../game/data/knowledgeUpgrades';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
+import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 const RELATION_BADGE: Record<KnowledgeUpgradeSymbolRelation, string> = {
     pool_add: '+',
@@ -307,6 +308,11 @@ const UpgradeSelection = () => {
     } = useGameStore();
     const knowledgeUpgradePickQueue = useGameStore((s) => s.knowledgeUpgradePickQueue ?? []);
     const language = useSettingsStore((s) => s.language);
+    const [isPeeked, setIsPeeked] = useState(false);
+
+    /** 업그레이드 패널이 보드를 가릴 때만 툴팁 억제; ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
+    const blockBoardTooltipsForUpgradeUi = phase === 'upgrade_selection' && !isPeeked;
+    useRegisterBoardTooltipBlock('upgrade-selection-overlay', blockBoardTooltipsForUpgradeUi);
 
     const pickLevel = knowledgeUpgradePickQueue[0] ?? level;
     const eraForPick = getEraFromLevel(pickLevel);
@@ -346,16 +352,25 @@ const UpgradeSelection = () => {
     if (phase !== 'upgrade_selection') return null;
 
     return (
-        <div className="selection-overlay selection-overlay--upgrade">
+        <div
+            className={`selection-overlay selection-overlay--upgrade${isPeeked ? ' selection-overlay--peeked' : ''}`}
+        >
+            <button
+                type="button"
+                className="selection-peek-handle"
+                onClick={() => setIsPeeked((v) => !v)}
+                title={isPeeked ? 'Show upgrade panel' : 'Peek at board'}
+            >
+                {isPeeked ? '▲ 돌아오기' : '▼ 보드 보기'}
+            </button>
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
-                    <div className="selection-title">지식 업그레이드</div>
-                    {/* 레벨업 정보 — 박스 없이 텍스트만 */}
+                    {/* 레벨업 정보 */}
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '14px',
-                        marginTop: '-12px',
+                        marginTop: '56px',
                     }}>
                         <span style={{
                             fontFamily: 'Mulmaru, monospace',

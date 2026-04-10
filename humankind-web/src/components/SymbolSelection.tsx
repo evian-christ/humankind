@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useGameStore, getRerollCost } from '../game/state/gameStore';
+import { useGameStore, getRerollCost, getBronzeWorkingHpBonus } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
@@ -22,12 +22,24 @@ const ASSET_BASE_URL = import.meta.env.BASE_URL;
 const RELIC_ANCIENT_DEBRIS = 13;
 const RELIC_ANCIENT_TRIBE_JOIN = 19;
 
-const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: () => void }) => {
+const SymbolCard = ({
+    symbol,
+    hasBronzeWorking,
+    onClick,
+}: {
+    symbol: SymbolDefinition;
+    hasBronzeWorking: boolean;
+    onClick: () => void;
+}) => {
     const language = useSettingsStore((s) => s.language);
     const eraColor = getSymbolColorHex(symbol.type);
     const eraName = t(ERA_NAME_KEYS[symbol.type] ?? 'era.ancient', language);
     const symName = t(`symbol.${symbol.id}.name`, language);
     const symDesc = t(`symbol.${symbol.id}.desc`, language);
+    const displayHp =
+        symbol.base_hp !== undefined
+            ? symbol.base_hp + (hasBronzeWorking ? getBronzeWorkingHpBonus(symbol) : 0)
+            : undefined;
 
     return (
         <button
@@ -66,10 +78,10 @@ const SymbolCard = ({ symbol, onClick }: { symbol: SymbolDefinition; onClick: ()
 
             {/* 이름 */}
             <div className="selection-card-name">{symName}</div>
-            {(symbol.base_attack !== undefined || symbol.base_hp !== undefined) && (
+            {(symbol.base_attack !== undefined || displayHp !== undefined) && (
                 <div className="selection-card-stats" style={{ display: 'flex', gap: '16px', fontSize: '24px', margin: '8px 0', fontWeight: 'bold', color: '#1a1a1a' }}>
                     {symbol.base_attack !== undefined && <span>⚔ {symbol.base_attack}</span>}
-                    {symbol.base_hp !== undefined && <span>♥ {symbol.base_hp}</span>}
+                    {displayHp !== undefined && <span>♥ {displayHp}</span>}
                 </div>
             )}
             <div className="selection-card-desc">
@@ -95,6 +107,7 @@ const SymbolSelection = () => {
     } = useGameStore();
     const language = useSettingsStore((s) => s.language);
     const relics = useRelicStore((s) => s.relics);
+    const hasBronzeWorking = useGameStore((s) => (s.unlockedKnowledgeUpgrades || []).includes(2));
     const [isPeeked, setIsPeeked] = useState(false);
 
     /** 선택 패널이 보드를 가릴 때만 툴팁 억제; 본게임 ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
@@ -149,6 +162,7 @@ const SymbolSelection = () => {
                             <SymbolCard
                                 key={`${sym.id}-${i}`}
                                 symbol={sym}
+                                hasBronzeWorking={hasBronzeWorking}
                                 onClick={() => handleCardClick(sym.id)}
                             />
                         ))}
