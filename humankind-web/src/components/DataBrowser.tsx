@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, Fragment } from 'react';
 import { SYMBOLS, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition, isBasePool, EXCLUDED_FROM_BASE_POOL } from '../game/data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
 import { RELICS } from '../game/data/relicDefinitions';
@@ -6,13 +6,14 @@ import { RELIC_CANDIDATES } from '../game/data/relicCandidates';
 import { ENEMIES } from '../game/data/enemyDefinitions';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../game/data/knowledgeUpgradeCandidates';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
+import { LEADERS } from '../game/data/leaders';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
-type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'relicCandidates' | 'knowledgeUpgrades' | 'knowledgeUpgradeCandidates' | 'enemies';
+type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'relicCandidates' | 'knowledgeUpgrades' | 'knowledgeUpgradeCandidates' | 'enemies' | 'leaders';
 type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
@@ -75,6 +76,7 @@ const DataBrowser = () => {
     const [knowledgeUpgradeSort, setKnowledgeUpgradeSort] = useState<SortState | null>(null);
     const [knowledgeUpgradeCandidateSort, setKnowledgeUpgradeCandidateSort] = useState<SortState | null>(null);
     const [enemySort, setEnemySort] = useState<SortState | null>(null);
+    const [leaderSort, setLeaderSort] = useState<SortState | null>(null);
 
     const tl = useCallback((key: string, fallback: string) => {
         const translated = t(key, language);
@@ -368,7 +370,39 @@ const DataBrowser = () => {
         return list;
     }, [eraFilter, search, language, knowledgeUpgradeSort]);
 
+    // 지도자 목록
+    const filteredLeaders = useMemo(() => {
+        let list = Object.values(LEADERS);
 
+        if (search.trim()) {
+            const q = search.toLowerCase();
+            list = list.filter(l => {
+                const name = t(l.nameKey, language).toLowerCase();
+                const desc = t(l.descriptionKey, language).toLowerCase();
+                return name.includes(q) || desc.includes(q) || l.id.includes(q);
+            });
+        }
+
+        if (leaderSort) {
+            const { column, dir } = leaderSort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                const aSprite = a.id === 'ramesses' ? '001.png' : a.id === 'shihuang' ? '002.png' : '-';
+                const bSprite = b.id === 'ramesses' ? '001.png' : b.id === 'shihuang' ? '002.png' : '-';
+
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'name': va = t(a.nameKey, language); vb = t(b.nameKey, language); break;
+                    case 'desc': va = t(a.descriptionKey, language); vb = t(b.descriptionKey, language); break;
+                    case 'sprite': va = aSprite; vb = bSprite; break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        }
+
+        return list;
+    }, [search, leaderSort, language]);
 
     // 시대별 카운트
     const eraCounts = useMemo(() => {
@@ -391,6 +425,7 @@ const DataBrowser = () => {
     const kuSortHandler = toggleSort(setKnowledgeUpgradeSort);
     const kucSortHandler = toggleSort(setKnowledgeUpgradeCandidateSort);
     const enSortHandler = toggleSort(setEnemySort);
+    const leaderSortHandler = toggleSort(setLeaderSort);
 
     return (
         <div className="databrowser">
@@ -446,6 +481,12 @@ const DataBrowser = () => {
                     onClick={() => setTab('enemies')}
                 >
                     {t('dataBrowser.enemies', language)} ({Object.keys(ENEMIES).length})
+                </button>
+                <button
+                    className={`databrowser-tab ${tab === 'leaders' ? 'databrowser-tab--active' : ''}`}
+                    onClick={() => setTab('leaders')}
+                >
+                    지도자 ({Object.keys(LEADERS).length})
                 </button>
             </div>
 
@@ -791,7 +832,67 @@ const DataBrowser = () => {
                     </table>
                 )}
 
-
+                {tab === 'leaders' && (
+                    <table className="databrowser-table">
+                        <thead>
+                            <tr>
+                                <SortTh column="id" label="ID" sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--id" />
+                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--name" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--desc" />
+                                <th className="databrowser-th--stat" style={{ textAlign: 'center' }}>시작 식량</th>
+                                <th className="databrowser-th--stat" style={{ textAlign: 'center' }}>시작 골드</th>
+                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--sprite" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredLeaders.map(l => {
+                                const sprite = l.id === 'ramesses' ? '001.png' : l.id === 'shihuang' ? '002.png' : '-';
+                                return (
+                                <Fragment key={l.id}>
+                                    <tr className="databrowser-row" style={l.enabled ? {} : { opacity: 0.4 }}>
+                                        <td className="databrowser-cell--id">{l.id}</td>
+                                        <td className="databrowser-cell--name">{t(l.nameKey, language)} {!l.enabled && <span style={{fontSize: '11px', color: '#999', marginLeft: '4px'}}>(Locked)</span>}</td>
+                                        <td className="databrowser-cell--desc">
+                                            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                                                <EffectText text={t(l.descriptionKey, language)} />
+                                            </span>
+                                        </td>
+                                        <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{l.startingFood}</td>
+                                        <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{l.startingGold}</td>
+                                        <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            {sprite !== '-' ? (
+                                                <>
+                                                    <img src={`${ASSET_BASE_URL}assets/leaders/${sprite}`} alt={t(l.nameKey, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'cover', borderRadius: '50%' }} />
+                                                    <span style={{ fontSize: '11px', color: '#888' }}>{sprite}</span>
+                                                </>
+                                            ) : '-'}
+                                        </td>
+                                    </tr>
+                                    <tr className="databrowser-row" style={l.enabled ? {} : { opacity: 0.4 }}>
+                                        <td colSpan={2} style={{ borderTop: 'none', background: 'rgba(0,0,0,0.1)' }}></td>
+                                        <td colSpan={4} className="databrowser-cell--desc" style={{ borderTop: 'none', background: 'rgba(0,0,0,0.1)', paddingBottom: '12px' }}>
+                                            {l.enabled ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div>
+                                                        <strong style={{ color: '#6ee7b7' }}>[{t(l.mainEffectNameKey, language)}]</strong>{' '}
+                                                        <EffectText text={t(l.mainEffectDescKey, language)} />
+                                                    </div>
+                                                    <div>
+                                                        <strong style={{ color: '#93c5fd' }}>[{t(l.subEffectNameKey, language)}]</strong>{' '}
+                                                        <EffectText text={t(l.subEffectDescKey, language)} />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div style={{ color: '#555', fontStyle: 'italic' }}>효과 없음</div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                </Fragment>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                )}
 
                 {tab === 'knowledgeUpgrades' && (
                     <table className="databrowser-table">
