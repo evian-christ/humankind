@@ -19,6 +19,7 @@ import DataBrowser from './components/DataBrowser';
 import SymbolPoolModal from './components/SymbolPoolModal';
 import OwnedSymbolsModal from './components/OwnedSymbolsModal';
 import EffectLogOverlay from './components/EffectLogOverlay';
+import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import { calculateFoodCost, getHudTurnStartPassiveTotals } from './game/state/gameStore';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 
@@ -46,6 +47,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
+  const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
@@ -100,13 +102,7 @@ function App() {
   const stageId = useGameStore((s) => s.stageId);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
-  const unlockedUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades);
-
-  const leaderId = React.useMemo(() => {
-    if (unlockedUpgrades.includes(11)) return 'ramesses';
-    if (unlockedUpgrades.includes(13)) return 'shihuang';
-    return null;
-  }, [unlockedUpgrades]);
+  const leaderId = useGameStore((s) => s.leaderId);
 
   // 스테이지 선택 화면
   if (preGameScreen === 'intro') {
@@ -264,7 +260,8 @@ function App() {
           </button>
           <button
             className="relic-shop-btn"
-            title="지식 스킬 (준비중)"
+            title="지식 업그레이드"
+            onClick={() => setIsKnowledgeOpen(true)}
           >
             <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="지식" style={{ width: 54, height: 54, imageRendering: 'pixelated' }} />
           </button>
@@ -350,6 +347,9 @@ function App() {
 
       {/* ===== EFFECT / EVENT LOG (F11/Button) ===== */}
       <EffectLogOverlay isOpen={isLogOpen} onClose={() => setIsLogOpen(false)} />
+
+      {/* ===== KNOWLEDGE UPGRADES OVERLAY ===== */}
+      <KnowledgeUpgradesOverlay isOpen={isKnowledgeOpen} onClose={() => setIsKnowledgeOpen(false)} />
     </div>
   );
 }
