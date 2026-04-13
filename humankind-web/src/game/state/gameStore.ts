@@ -1859,7 +1859,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             // ── 베틀(206): 초원/평원이 있으면 골드 +10/턴 — 기본 생산이 아닌 조건부 보너스 ──
-            if (upgradesLeader.includes(206) && hasTextileSourceOnBoard(state.board)) {
+            if ((state.unlockedKnowledgeUpgrades || []).includes(206) && hasTextileSourceOnBoard(state.board)) {
                 bonusGold += 10;
                 knowledgeOwnEffectFloats.push({ upgradeId: 206, text: '+10', color: '#fbbf24' });
             }
@@ -2006,7 +2006,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             {
                 const eraAfter = get().era;
                 if (
-                    upgradesForQinEra.includes(LEADER_KNOWLEDGE_UPGRADES.shihuang.sub) &&
+                    get().leaderId === 'shihuang' &&
                     eraAfter > eraBeforeKnowledgeFinish
                 ) {
                     const debrisDef = RELICS[RELIC_ID.ANCIENT_RELIC_DEBRIS];
