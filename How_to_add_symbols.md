@@ -20,6 +20,20 @@
 
 ---
 
+### 1-1. 데이터 브라우저에 노출되는 이름/설명은 한국어/영어를 모두 추가한다
+
+실제 심볼이든, `symbolCandidates.ts`에 넣는 후보 심볼이든, **데이터 브라우저에 표시될 이름과 설명은 반드시 한국어/영어 둘 다 준비**해야 한다.
+
+- 실제 심볼: `humankind-web/src/i18n/index.ts`의 `symbol.<id>.name`, `symbol.<id>.desc`
+- 후보 심볼: `humankind-web/src/i18n/index.ts`의 `symbolCandidate.<id>.name`, `symbolCandidate.<id>.desc`
+
+> ❌ 잘못된 예: 정의 파일에 한글만 넣고 번역 키를 생략해서 영어 UI에서 fallback 문자열만 보이게 두는 것
+> ✅ 올바른 예: 정의 파일의 기본값과 별개로 `i18n/index.ts`에 한국어/영어 이름·설명을 모두 추가
+
+**왜인가**: 데이터 브라우저와 언어 설정은 번역 키를 기준으로 동작한다. 한쪽 언어만 있으면 표시 품질이 떨어지고, 후보 테이블에서도 일관성이 깨진다.
+
+---
+
 ### 2. 유저가 요청하지 않은 태그를 임의로 붙이지 않는다
 
 심볼 정의의 `tags` 필드는 **실제로 게임 로직/표시에 사용되는 경우에만** 추가한다. “그럴 듯해서” 붙이는 추측성 태그는 금지한다.
@@ -98,10 +112,10 @@
 
 ## 심볼 추가 체크리스트
 
-1. [ ] `humankind-web/src/game/data/symbolDefinitions.ts`에 ID, 이름, 타입, 설명, 스프라이트, 태그 추가
+1. [ ] 실제 심볼이면 `humankind-web/src/game/data/symbolDefinitions.ts`, 후보 심볼이면 `humankind-web/src/game/data/symbolCandidates.ts`에 ID, 이름, 타입, 설명, 스프라이트 추가
 2. [ ] `sprite` 필드: `public/assets/symbols/`에서 파일 존재 확인 → 없으면 `"-"`
 3. [ ] `tags` 필드: 실제 사용처가 있을 때만 추가, 없으면 `[]` (새 태그면 `i18n/index.ts`의 `tag.<tag>`도 추가)
 4. [ ] `description` 필드: 위 3항 효과 텍스트 규칙 준수 (용어, 조건 콜론, 세미콜론 구분)
 5. [ ] `symbolEffects.ts`에 해당 ID의 `case` 블록 추가
-6. [ ] `i18n/index.ts`에 한국어/영어 이름 및 설명 번역 추가 (번역도 동일 용어 규칙 적용)
+6. [ ] `i18n/index.ts`에 한국어/영어 이름 및 설명 번역 추가 (`symbol.<id>.*` 또는 `symbolCandidate.<id>.*`; 번역도 동일 용어 규칙 적용)
 7. [ ] `AssetLoader.ts`는 `SYMBOLS`에서 동적으로 읽으므로 별도 수정 불필요
