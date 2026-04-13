@@ -33,14 +33,7 @@ export const BOARD_BG_SPRITE_PADDING_PX = 8;
 /** 레벨에 따라 증가하는 리롤 비용: 2G(Lv1) → 5G(Lv10+) */
 export const getRerollCost = (level: number): number => Math.min(2 + Math.floor((level - 1) / 3), 5);
 
-/**
- * 지도자 스킬을 "지식 업그레이드"로 치환한 ID들.
- * - 이들은 업그레이드 선택지로 등장하지 않도록 `KNOWLEDGE_UPGRADES.type`으로 숨김 처리함.
- */
-const LEADER_KNOWLEDGE_UPGRADES = {
-    ramesses: { main: 11, sub: 12 },
-    shihuang: { main: 13, sub: 14 },
-} as const;
+
 
 /** 1→2 단계: 본체만 보여줌(들어올림) 후, activate 보여주기 전 대기(ms) */
 const PHASE1_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
@@ -162,6 +155,7 @@ export interface GameEventLogEntry {
 }
 
 export interface GameState {
+    leaderId: import('../data/leaders').LeaderId | null;
     food: number;
     gold: number;
     knowledge: number; // 기존 knowledge
@@ -894,6 +888,7 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
+    leaderId: null,
     food: 0,
     gold: 0,
     knowledge: 0,
@@ -1833,9 +1828,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                 });
             }
 
-            // ── 진시황 천하부강 (지식 업그레이드 13): 보드 심볼 2개당 식량 +1, 빈 칸 2개당 지식 +1 (파괴 예정 칸은 빈 칸으로 계산)
-            const upgradesLeader = get().unlockedKnowledgeUpgrades || [];
-            if (upgradesLeader.includes(LEADER_KNOWLEDGE_UPGRADES.shihuang.main)) {
+            // ── 진시황 천하부강: 보드 심볼 2개당 식량 +1, 빈 칸 2개당 지식 +1 (파괴 예정 칸은 빈 칸으로 계산)
+            if (state.leaderId === 'shihuang') {
                 let placedSymbols = 0;
                 let emptySlots = 0;
                 for (let qx = 0; qx < BOARD_WIDTH; qx++) {
@@ -1849,27 +1843,13 @@ export const useGameStore = create<GameState>((set, get) => ({
                 const qinKnowledge = Math.floor(emptySlots / 2);
                 if (qinFood > 0) bonusFood += qinFood;
                 if (qinKnowledge > 0) bonusKnowledge += qinKnowledge;
-                if (qinFood > 0 || qinKnowledge > 0) {
-                    const inlineParts: { text: string; color: string }[] = [];
-                    if (qinFood > 0) inlineParts.push({ text: `+${qinFood}`, color: '#4ade80' });
-                    if (qinKnowledge > 0) inlineParts.push({ text: `+${qinKnowledge}`, color: '#60a5fa' });
-                    knowledgeOwnEffectFloats.push({
-                        upgradeId: LEADER_KNOWLEDGE_UPGRADES.shihuang.main,
-                        inlineParts,
-                    });
-                }
             }
 
-            // ── 람세스 유물 금고(지식 업그레이드 12): 보유 유물 1개당 지식 +1/턴 ──
-            if (upgradesLeader.includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.sub)) {
+            // ── 람세스 유물 금고: 보유 유물 1개당 지식 +1/턴 ──
+            if (state.leaderId === 'ramesses') {
                 const relicVaultKnowledge = useRelicStore.getState().relics.length;
                 if (relicVaultKnowledge > 0) {
                     bonusKnowledge += relicVaultKnowledge;
-                    knowledgeOwnEffectFloats.push({
-                        upgradeId: LEADER_KNOWLEDGE_UPGRADES.ramesses.sub,
-                        text: `+${relicVaultKnowledge}`,
-                        color: '#60a5fa',
-                    });
                 }
             }
 
@@ -2441,8 +2421,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const state = get();
 
-        const upgrades = state.unlockedKnowledgeUpgrades || [];
-        const hasGoldenTrade = upgrades.includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.main);
+        const hasGoldenTrade = state.leaderId === 'ramesses';
 
         const newChoices = generateRelicChoices();
         const nextHalfRelicId = pickRelicHalfPriceIdForGoldenTrade(newChoices, hasGoldenTrade);
@@ -2462,7 +2441,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const def = state.relicChoices[relicIndex];
         if (!def) return;
 
-        const hasGoldenTrade = (state.unlockedKnowledgeUpgrades || []).includes(LEADER_KNOWLEDGE_UPGRADES.ramesses.main);
+        const hasGoldenTrade = state.leaderId === 'ramesses';
         const isHalfPrice = state.relicHalfPriceRelicId === relicId;
         const effectiveCostUnscaled =
             hasGoldenTrade && isHalfPrice ? Math.floor(def.cost * 0.5) : def.cost;
@@ -3238,11 +3217,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         const startingFood = (leader?.startingFood ?? 0);
         const startingGold = (leader?.startingGold ?? 0);
 
-        const leaderKnowledgeUpgrades =
-            leaderId === 'ramesses'
-                ? [LEADER_KNOWLEDGE_UPGRADES.ramesses.main, LEADER_KNOWLEDGE_UPGRADES.ramesses.sub]
-                : [LEADER_KNOWLEDGE_UPGRADES.shihuang.main, LEADER_KNOWLEDGE_UPGRADES.shihuang.sub];
-
         const initialRelicChoices = generateRelicChoices();
         const initialHalfPriceRelicId = pickRelicHalfPriceIdForGoldenTrade(
             initialRelicChoices,
@@ -3257,6 +3231,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         const board = createEmptyBoard();
 
         set({
+            leaderId,
             food: startingFood,
             gold: startingGold,
             knowledge: 0,
@@ -3283,7 +3258,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             combatAnimation: null,
             combatShaking: false,
             religionUnlocked: false,
-            unlockedKnowledgeUpgrades: leaderKnowledgeUpgrades,
+            unlockedKnowledgeUpgrades: [],
             bonusXpPerTurn: 0,
             upgradeChoices: [],
             knowledgeUpgradePickQueue: [],

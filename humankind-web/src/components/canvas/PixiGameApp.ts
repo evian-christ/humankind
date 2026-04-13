@@ -997,7 +997,6 @@ export class PixiGameApp {
         // UI bars (Knowledge, Food, Gold) — 하단 스핀 버튼 위쪽 중앙
         this.renderUI(state, settings, scale, fs, w, h, startX, startY, boardW, boardH);
         this.renderRelics(scale, lang);
-        this.renderKnowledgeUpgrades(state, scale);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
 
@@ -1048,19 +1047,6 @@ export class PixiGameApp {
             }
         }
 
-        if (this.upgradeHoverSnapshot && this.onHoverUpgrade) {
-            const ids = state.unlockedKnowledgeUpgrades || [];
-            if (ids.includes(this.upgradeHoverSnapshot.id)) {
-                this.onHoverUpgrade({
-                    upgrade: { id: this.upgradeHoverSnapshot.id },
-                    screenX: this.upgradeHoverSnapshot.screenX,
-                    screenY: this.upgradeHoverSnapshot.screenY,
-                });
-            } else {
-                this.upgradeHoverSnapshot = null;
-                this.onHoverUpgrade(null);
-            }
-        }
 
         if (this.hudHoverSnapshot && this.onHoverHudStat) {
             this.onHoverHudStat(this.hudHoverSnapshot);
@@ -1305,142 +1291,6 @@ export class PixiGameApp {
         }
     }
 
-    private renderKnowledgeUpgrades(state: GameState, scale: number) {
-        if (!this.cellLayout) return;
-        const upgradeIds = state.unlockedKnowledgeUpgrades || [];
-        if (upgradeIds.length === 0) return;
-
-        const { startX, startY, boardW } = this.cellLayout;
-        const w = this.app?.screen?.width ?? 1920;
-        // 지식 업그레이드 선택 카드 64x64 스프라이트를 2배 크기로 표시
-        const iconSize = 128 * scale;
-        const gapX = 24 * scale;
-        const gapY = 24 * scale;
-        const minMargin = 24 * scale;
-
-        // 보드 우측 여백 시작 (전체 업글 묶음 우측 이동)
-        const UPGRADE_PANEL_OFFSET_X = 16 * scale;
-        const startUpgradeX = startX + boardW + minMargin + UPGRADE_PANEL_OFFSET_X;
-        const maxRowWidth = w - startUpgradeX - minMargin;
-        const iconsPerRow = Math.max(1, Math.floor((maxRowWidth + gapX) / (iconSize + gapX)));
-        const actualRowWidth = iconsPerRow * iconSize + (iconsPerRow - 1) * gapX;
-        const rowStartX = startUpgradeX;
-
-        let curX = rowStartX;
-        let curY = startY - 6 * scale;
-
-        const upgradeCenterByUpgradeId = new Map<number, { x: number; y: number }>();
-
-        for (const id of upgradeIds) {
-            const upgrade = KNOWLEDGE_UPGRADES[id] ?? KNOWLEDGE_UPGRADE_CANDIDATES[id];
-            if (!upgrade) continue;
-
-            if (curX > rowStartX && curX + iconSize > rowStartX + actualRowWidth) {
-                curX = rowStartX;
-                curY += iconSize + gapY;
-            }
-
-            // 이벤트 핸들러에서 사용할 좌표는 고정(루프 변수 캡처 버그 방지)
-            const iconX = curX;
-            const iconY = curY;
-
-            const hitArea = new PIXI.Graphics();
-            hitArea.rect(iconX, iconY, iconSize, iconSize);
-            hitArea.fill({ color: 0x000000, alpha: 0 });
-            hitArea.eventMode = 'static';
-            hitArea.cursor = GAME_CURSOR_HELP;
-            hitArea.on('pointerover', () => {
-                this.upgradeHoverSnapshot = { id: upgrade.id, screenX: iconX, screenY: iconY };
-                this.onHoverUpgrade({ upgrade: { id: upgrade.id }, screenX: iconX, screenY: iconY });
-            });
-            hitArea.on('pointerout', () => {
-                this.upgradeHoverSnapshot = null;
-                this.onHoverUpgrade(null);
-            });
-            this.hitContainer.addChild(hitArea);
-
-            // 지식 업그레이드 선택 카드와 동일: /assets/upgrades/ 64x64 스프라이트 (AssetLoader에서 선로드)
-            const upgradeSpritePath = (upgrade.sprite && upgrade.sprite !== '-' && upgrade.sprite !== '-.png')
-                ? `${ASSET_BASE_URL}assets/upgrades/${upgrade.sprite}`
-                : `${ASSET_BASE_URL}assets/upgrades/000.png`;
-            const texture = PIXI.Assets.get(upgradeSpritePath);
-            const sp = texture
-                ? new PIXI.Sprite(texture)
-                : PIXI.Sprite.from(upgradeSpritePath); // 캐시 미스 시 비동기 로드
-            sp.width = iconSize;
-            sp.height = iconSize;
-            sp.x = iconX;
-            sp.y = iconY;
-            this.boardContainer.addChild(sp);
-
-            upgradeCenterByUpgradeId.set(id, { x: iconX + iconSize / 2, y: iconY + iconSize / 2 });
-
-            curX += iconSize + gapX;
-        }
-
-        const storeState = useGameStore.getState();
-        if (!storeState.knowledgeUpgradeFloats || storeState.knowledgeUpgradeFloats.length === 0) {
-            this.prevKnowledgeUpgradeFloatCount = 0;
-        } else if (storeState.knowledgeUpgradeFloats.length > this.prevKnowledgeUpgradeFloatCount) {
-            const newFloats = storeState.knowledgeUpgradeFloats.slice(this.prevKnowledgeUpgradeFloatCount);
-            this.prevKnowledgeUpgradeFloatCount = storeState.knowledgeUpgradeFloats.length;
-            const fontSize = Math.max(26, iconSize * 0.32);
-            const stackInBatch = new Map<number, number>();
-            const textStyleBase = {
-                fontSize,
-                fontWeight: 'bold' as const,
-                fontFamily: 'Mulmaru',
-                stroke: { color: '#000000', width: 4 },
-            };
-            for (const f of newFloats) {
-                const c = upgradeCenterByUpgradeId.get(f.upgradeId);
-                if (!c) continue;
-                const stackIdx = stackInBatch.get(f.upgradeId) ?? 0;
-                stackInBatch.set(f.upgradeId, stackIdx + 1);
-                const baseY = c.y - iconSize * 0.15 - 20 * scale * stackIdx;
-
-                if ('inlineParts' in f && f.inlineParts.length > 0) {
-                    const gapBetween = 6 * scale;
-                    const row: PIXI.Text[] = [];
-                    for (const p of f.inlineParts) {
-                        row.push(
-                            new PIXI.Text({
-                                text: p.text,
-                                style: new PIXI.TextStyle({ ...textStyleBase, fill: p.color }),
-                            }),
-                        );
-                    }
-                    const totalW =
-                        row.reduce((sum, t) => sum + t.width, 0) + gapBetween * Math.max(0, row.length - 1);
-                    let curX = c.x - totalW / 2;
-                    for (let i = 0; i < row.length; i++) {
-                        const txt = row[i];
-                        txt.anchor.set(0, 0.5);
-                        txt.x = curX;
-                        txt.y = baseY;
-                        (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                        curX += txt.width + (i < row.length - 1 ? gapBetween : 0);
-                        this.floatContainer.addChild(txt);
-                    }
-                    this.floatingEffects.push({ texts: row, startY: baseY, elapsed: 0 });
-                } else if ('text' in f) {
-                    const txt = new PIXI.Text({
-                        text: f.text,
-                        style: new PIXI.TextStyle({
-                            ...textStyleBase,
-                            fill: f.color ?? '#ffffff',
-                        }),
-                    });
-                    txt.anchor.set(0.5, 0.5);
-                    txt.x = c.x;
-                    txt.y = baseY;
-                    (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                    this.floatContainer.addChild(txt);
-                    this.floatingEffects.push({ texts: [txt], startY: txt.y, elapsed: 0 });
-                }
-            }
-        }
-    }
 
     private renderUI(
         state: GameState,

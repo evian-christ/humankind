@@ -38,7 +38,7 @@ export interface KnowledgeUpgrade {
     descSymbols?: KnowledgeUpgradeDescSymbol[];
 }
 
-export type KnowledgeUpgradeType = SymbolType | 'ramesses' | 'shihuang';
+export type KnowledgeUpgradeType = SymbolType;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -245,38 +245,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         sprite: '-',
     },
 
-    // ── Leader Effects (hidden from upgrade selection) ──
-    11: {
-        id: 11,
-        name: 'Golden Trade',
-        type: 'ramesses',
-        description:
-            'Whenever the Relic Shop restocks, one random relic in stock is 50% off.',
-        sprite: '-',
-    },
-    12: {
-        id: 12,
-        name: 'Relic Vault',
-        type: 'ramesses',
-        description: 'For each relic you own: +1 Knowledge per turn.',
-        sprite: '-',
-    },
-    13: {
-        id: 13,
-        name: 'Heaven and Earth Prosper',
-        type: 'shihuang',
-        description:
-            'Per 2 symbols on the board: +1 Food per turn. Per 2 empty board slots: +1 Knowledge per turn.',
-        sprite: '-',
-    },
-    14: {
-        id: 14,
-        name: 'Foundations of Unification',
-        type: 'shihuang',
-        description:
-            'Each time you enter a new era, gain 1 Ancient Relic Debris and 1 Ancient Tribal Joining.',
-        sprite: '-',
-    },
+
 };
 
 export const FEUDALISM_UPGRADE_ID = 15;
