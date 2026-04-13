@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
@@ -30,14 +30,13 @@ const formatDeltaText = (delta?: { food: number; gold: number; knowledge: number
     return parts.join(' ');
 };
 
-const EffectLogOverlay = () => {
-    const [open, setOpen] = useState(false);
+const EffectLogOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
     const [query, setQuery] = useState('');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const eventLog = useGameStore(s => s.eventLog);
     const language = useSettingsStore(s => s.language);
 
-    useRegisterBoardTooltipBlock('effect-log-overlay', open);
+    useRegisterBoardTooltipBlock('effect-log-overlay', isOpen);
 
     const rows = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -53,7 +52,20 @@ const EffectLogOverlay = () => {
         });
     }, [eventLog, query]);
 
-    if (!open) return null;
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === '/') {
+                e.preventDefault();
+                document.getElementById('effect-log-filter')?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
 
     return (
         <div
@@ -87,8 +99,12 @@ const EffectLogOverlay = () => {
                     whiteSpace: 'pre',
                     userSelect: 'none',
                     fontSize: '16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                 }}>
-                    {`HUMANKIND EVENT LOG  |  ${rows.length.toLocaleString()}/${eventLog.length.toLocaleString()}  |  /:filter  Ctrl+L:clear  Esc:close`}
+                    <span>{`HUMANKIND EVENT LOG  |  ${rows.length.toLocaleString()}/${eventLog.length.toLocaleString()}  |  /:filter  Ctrl+L:clear  Esc:close`}</span>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#86efac', cursor: 'pointer', fontSize: '24px', lineHeight: 1 }}>✕</button>
                 </div>
 
                 {/* Body */}
