@@ -25,7 +25,14 @@ const renderRelicDesc = (desc: string) => {
 };
 
 const RelicSelection = () => {
-    const { isRelicShopOpen, toggleRelicShop, relicChoices, buyRelic, gold, turn, unlockedKnowledgeUpgrades, relicHalfPriceRelicId } = useGameStore();
+    const isRelicShopOpen = useGameStore((s) => s.isRelicShopOpen);
+    const toggleRelicShop = useGameStore((s) => s.toggleRelicShop);
+    const relicChoices = useGameStore((s) => s.relicChoices);
+    const buyRelic = useGameStore((s) => s.buyRelic);
+    const gold = useGameStore((s) => s.gold);
+    const turn = useGameStore((s) => s.turn);
+    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades);
+    const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
     const language = useSettingsStore((s) => s.language);
 
     if (!isRelicShopOpen) return null;
