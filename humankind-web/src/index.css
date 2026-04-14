@@ -22,24 +22,27 @@
   --accent: #888888;
   --accent-bright: #cccccc;
   /* 커스텀 커서 — 크기는 PNG 자체 픽셀 크기로 조절; 핫스팟은 앞 두 숫자 */
-  --app-cursor: url('/assets/ui/cursor.png?v=2') 0 0, auto;
-  --app-cursor-pointer: url('/assets/ui/cursor.png?v=2') 0 0, pointer;
+  --app-cursor-img: url('/assets/ui/cursor.png?v=2');
 }
+
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   user-select: none;
+  cursor: none !important; /* Force hide all browser cursors */
 }
+
 
 body {
   overflow: hidden;
   background: #1a1a1a;
   color: #e0e0e0;
   font-family: 'Mulmaru', sans-serif;
-  cursor: var(--app-cursor);
+  cursor: none; /* Hide default cursor */
 }
+
 
 
 
@@ -54,7 +57,22 @@ body {
   overflow: hidden;
 }
 
-/* ===== GAME HUD TOP BAR (Global Rehaul) ===== */
+.custom-mouse-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80px;
+  height: 80px;
+  pointer-events: none;
+  z-index: 99999;
+  image-rendering: pixelated;
+  background-image: var(--app-cursor-img);
+  background-size: contain;
+  background-repeat: no-repeat;
+  display: none; /* Show only when active via JS */
+  transform-origin: 0 0;
+}
+
 .hud-top {
   position: fixed;
   top: 0;
@@ -107,7 +125,7 @@ body {
   width: 220px;
   height: 32px;
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.15);
   position: relative;
@@ -311,65 +329,47 @@ body {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 32px;
+  bottom: 22px;
   height: 110px;
   z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
   pointer-events: none;
+  gap: 12px;
 }
 
 .bottom-action-bar > * {
   pointer-events: auto;
 }
 
-/* 하단 3버튼(좌/스핀/우) 총합 = 보드 폭(기준) */
-.bottom-action-bar {
-  /* gameStore BOARD_LAYOUT_WIDTH_PX와 동일 */
-  --board-action-total-w: 912px;
-  --bottom-action-gap: 12px;
-  --spin-action-w: 560px;
-  /* 좌 + gap + spin + gap + 우 = board */
-  --side-action-w: calc((var(--board-action-total-w) - var(--spin-action-w) - (var(--bottom-action-gap) * 2)) / 2);
-  --side-anchor-offset: calc((var(--spin-action-w) / 2) + var(--bottom-action-gap));
-}
-
-/* 스핀 버튼: 화면 가로 정중앙 고정
-   스프라이트는 면+기둥(110px)이 한 장에 있고, 양옆은 100px 박스+그림자 기둥이라
-   bottom: -10px 로 내려 면 하단·기둥이 유물/보유 버튼과 맞춤 */
 .spin-area {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: -10px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* 유물: 스핀 왼쪽에 12px 간격으로 붙임 (면 하단 정렬은 스핀과 동일하게 bottom: -10px) */
+
+/* 유물: 스핀 왼쪽에 붙임 */
 .bottom-action-bar-left {
-  position: absolute;
-  right: calc(50% + var(--side-anchor-offset));
-  bottom: -10px;
   display: flex;
   flex-direction: row;
   gap: 12px;
   align-items: flex-end;
 }
 
-/* 보유 심볼: 스핀 오른쪽에 12px 간격으로 붙임 */
+/* 보유 심볼: 스핀 오른쪽에 붙임 */
 .bottom-action-bar-right {
-  position: absolute;
-  left: calc(50% + var(--side-anchor-offset));
-  bottom: -10px;
   display: flex;
   flex-direction: row;
   gap: 12px;
   align-items: flex-end;
 }
+
 
 /* 스핀 버튼 (Native CSS Style) */
 button.spin-btn {
-  width: 280px;
+  width: 504px;
   height: 80px;
   box-sizing: border-box;
   padding: 0;
@@ -378,12 +378,11 @@ button.spin-btn {
   font-size: 32px;
   font-weight: 900;
   letter-spacing: 4px;
-  cursor: var(--app-cursor-pointer);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(30, 30, 30, 0.85);
-  color: rgba(220, 220, 220, 0.85);
+  background: rgba(45, 45, 45, 0.85);
+  color: rgba(230, 230, 230, 0.9);
   transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.1s ease;
   box-shadow:
     inset 0 0 0 4px #555,
@@ -392,8 +391,8 @@ button.spin-btn {
 }
 
 button.spin-btn:hover:not(:disabled):not(:active) {
-  background: rgba(50, 50, 50, 0.95);
-  color: rgba(255, 255, 255, 0.95);
+  background: rgba(65, 65, 65, 0.95);
+  color: #ffffff;
   transform: translateY(1px);
   box-shadow:
     inset 0 0 0 4px #666,
@@ -430,7 +429,6 @@ button.spin-btn:disabled:active {
   color: rgba(255, 255, 255, 0.3);
   background: none;
   border: none;
-  cursor: var(--app-cursor-pointer);
   padding: 4px 8px;
 }
 
@@ -510,7 +508,6 @@ button.spin-btn:disabled:active {
   font-family: 'Mulmaru', sans-serif;
   font-size: 20px;
   letter-spacing: 2px;
-  cursor: var(--app-cursor-pointer);
   z-index: 510;
   transition: background 0.15s ease, color 0.15s ease, opacity 0.45s ease;
   white-space: nowrap;
@@ -656,7 +653,6 @@ button.spin-btn:disabled:active {
   font-size: 23px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  cursor: var(--app-cursor-pointer);
   transition: color 0.15s ease, background 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -734,7 +730,6 @@ button.spin-btn:disabled:active {
   align-items: center;
   padding: 120px 24px 24px;
   gap: 10px;
-  cursor: var(--app-cursor-pointer);
   transition: all 0.15s ease, filter 0.05s ease;
   font-family: 'Mulmaru', sans-serif;
   color: #1a1a1a;
@@ -809,7 +804,6 @@ button.spin-btn:disabled:active {
   font-size: 24px;
   padding: 10px 28px;
   border-radius: 6px;
-  cursor: var(--app-cursor-pointer);
   transition: all 0.15s ease;
   letter-spacing: 1px;
 }
@@ -2388,7 +2382,7 @@ button.leader-select-play:disabled:hover {
 
 .pregame-card {
   font-family: 'Mulmaru', sans-serif;
-  background: rgba(30, 30, 30, 0.9);
+  background: rgba(45, 45, 45, 0.9);
   border: none;
   border-radius: 0px;
   padding: 24px 32px;
@@ -2407,7 +2401,7 @@ button.leader-select-play:disabled:hover {
 }
 
 .pregame-card:hover:not(:disabled) {
-  background: rgba(50, 50, 50, 0.95);
+  background: rgba(65, 65, 65, 0.95);
   transform: translateY(2px);
   box-shadow:
     inset 0 0 0 6px #666,
@@ -2736,7 +2730,7 @@ button.leader-select-play:disabled:hover {
   height: 56px;
   padding: 0;
   box-sizing: border-box;
-  background: rgba(30, 30, 30, 0.85);
+  background: rgba(45, 45, 45, 0.85);
   border: none;
   border-radius: 0;
   color: rgba(220, 220, 220, 0.85);
@@ -2755,7 +2749,7 @@ button.leader-select-play:disabled:hover {
 }
 
 .pause-btn-top:hover {
-  background: rgba(50, 50, 50, 0.95);
+  background: rgba(65, 65, 65, 0.95);
   color: rgba(255, 255, 255, 0.95);
   transform: translateY(1px);
   box-shadow:
@@ -2778,7 +2772,7 @@ button.leader-select-play:disabled:hover {
   height: 100px;
   flex-shrink: 0;
   box-sizing: border-box;
-  background: rgba(30, 30, 30, 0.9);
+  background: rgba(45, 45, 45, 0.9);
   border: none;
   border-radius: 0;
   color: #ccc;
@@ -2797,7 +2791,7 @@ button.leader-select-play:disabled:hover {
 }
 
 .menu-btn:hover {
-  background: rgba(50, 50, 50, 0.95);
+  background: rgba(65, 65, 65, 0.95);
   color: #fff;
   transform: translateY(2px);
   box-shadow:
@@ -2829,8 +2823,8 @@ button.bottom-right-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(30, 30, 30, 0.85);
-  color: rgba(220, 220, 220, 0.85);
+  background: rgba(45, 45, 45, 0.85);
+  color: rgba(230, 230, 230, 0.9);
   transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.1s ease;
   box-shadow:
     inset 0 0 0 4px #555,
@@ -2840,8 +2834,8 @@ button.bottom-right-btn {
 
 button.relic-shop-btn:hover:not(:active),
 button.bottom-right-btn:hover:not(:active) {
-  background: rgba(50, 50, 50, 0.95);
-  color: rgba(255, 255, 255, 0.95);
+  background: rgba(65, 65, 65, 0.95);
+  color: #ffffff;
   transform: translateY(1px);
   box-shadow:
     inset 0 0 0 4px #666,

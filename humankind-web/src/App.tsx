@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore } from './game/state/settingsStore';
@@ -22,6 +22,48 @@ import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import { calculateFoodCost, getHudTurnStartPassiveTotals } from './game/state/gameStore';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
+
+const CustomCursor = () => {
+  const cursorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = document.getElementById('root');
+    if (!root) return;
+
+    const onHover = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const isPointer = target.closest('button, [role="button"], .cursor-pointer, a') !== null;
+      
+      if (cursorRef.current) {
+        cursorRef.current.style.display = 'block';
+        if (isPointer) cursorRef.current.classList.add('is-pointer');
+        else cursorRef.current.classList.remove('is-pointer');
+
+        const rect = root.getBoundingClientRect();
+        const scale = rect.width / root.clientWidth;
+        const vx = (e.clientX - rect.left) / scale;
+        const vy = (e.clientY - rect.top) / scale;
+        cursorRef.current.style.transform = `translate(${vx}px, ${vy}px)`;
+      }
+    };
+
+    const onLeave = () => {
+      if (cursorRef.current) cursorRef.current.style.display = 'none';
+    };
+
+    window.addEventListener('mousemove', onHover);
+    window.addEventListener('mouseout', (e) => {
+      if (!e.relatedTarget) onLeave();
+    });
+    
+    return () => {
+      window.removeEventListener('mousemove', onHover);
+    };
+  }, []);
+
+  return <div ref={cursorRef} className="custom-mouse-cursor" />;
+};
+
 
 const ERA_NAME_KEYS: Record<number, string> = {
   1: 'era.ancient',
@@ -78,7 +120,7 @@ function App() {
       if (e.code !== 'Space') return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-      if (phase !== 'idle') return;
+      if (phase !== 'idle' || useGameStore.getState().knowledgeUpgradePickQueue.length > 0) return;
       e.preventDefault();
       spinBoard();
     };
@@ -102,21 +144,38 @@ function App() {
   const stageId = useGameStore((s) => s.stageId);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
+  const knowledgeUpgradePickQueue = useGameStore((s) => s.knowledgeUpgradePickQueue || []);
+  const unspentUpgrades = knowledgeUpgradePickQueue.length;
   const leaderId = useGameStore((s) => s.leaderId);
 
   // 스테이지 선택 화면
   if (preGameScreen === 'intro') {
-    return <DemoStartScreen />;
+    return (
+      <>
+        <CustomCursor />
+        <DemoStartScreen />
+      </>
+    );
   }
 
   // 스테이지 선택 화면
   if (preGameScreen === 'stage') {
-    return <StageSelectScreen />;
+    return (
+      <>
+        <CustomCursor />
+        <StageSelectScreen />
+      </>
+    );
   }
 
   // 리더 선택 화면
   if (preGameScreen === 'leader') {
-    return <LeaderSelectScreen />;
+    return (
+      <>
+        <CustomCursor />
+        <LeaderSelectScreen />
+      </>
+    );
   }
 
   // ===== 본게임 =====
@@ -164,6 +223,7 @@ function App() {
 
   return (
     <div className="game-screen">
+      <CustomCursor />
       <div className="hud-top">
         <div className="hud-top-left">
           <div className="level-info-mini" style={{ cursor: 'help' }} onMouseEnter={() => setHoveredStat('knowledge')} onMouseLeave={() => setHoveredStat(null)}>
@@ -216,26 +276,7 @@ function App() {
         </div>
       </div>
 
-      {leaderId && (
-        <div style={{
-          position: 'fixed',
-          bottom: '0px',
-          right: '0px',
-          zIndex: 50,
-          pointerEvents: 'none',
-          opacity: 0.85,
-          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))',
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'flex-end'
-        }}>
-          <img 
-            src={`${import.meta.env.BASE_URL}assets/leaders/${leaderId === 'ramesses' ? '001' : '002'}.png`} 
-            alt="leader" 
-            style={{ width: '380px', height: 'auto', imageRendering: 'pixelated', display: 'block' }} 
-          />
-        </div>
-      )}
+
 
       {/* 로드 완료 전 검은 오버레이 — onReady 후 페이드 아웃 */}
       <div
@@ -264,6 +305,11 @@ function App() {
             onClick={() => setIsKnowledgeOpen(true)}
           >
             <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="지식" style={{ width: 54, height: 54, imageRendering: 'pixelated' }} />
+            {unspentUpgrades > 0 && (
+              <span className="relic-shop-badge" style={{ background: '#ef4444', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {unspentUpgrades}
+              </span>
+            )}
           </button>
         </div>
         <div className="spin-area">
@@ -271,11 +317,11 @@ function App() {
             type="button"
             className="spin-btn"
             onClick={spinBoard}
-            disabled={phase !== 'idle'}
+            disabled={phase !== 'idle' || unspentUpgrades > 0}
             aria-label={t('game.spin', language)}
-            title={t('game.spin', language)}
+            title={unspentUpgrades > 0 ? '지식 업그레이드를 확인해주세요!' : t('game.spin', language)}
           >
-            SPIN
+            <span style={{ display: 'inline-block', transform: 'scaleX(1.8)', fontSize: '48px', fontWeight: 600, letterSpacing: '8px' }}>SPIN</span>
           </button>
         </div>
         <div className="bottom-action-bar-right">
