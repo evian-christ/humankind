@@ -2043,22 +2043,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                         }));
                         get().refreshRelicShop(true); // Auto refresh shop inventory every 10 turns
                     }
-                    // 레벨업이 있으면 (여러 레벨이면 큐만큼 연속) upgrade_selection 먼저
-                    if (finalState.knowledgeUpgradePickQueue.length > 0) {
-                        const pickLevel = finalState.knowledgeUpgradePickQueue[0];
-                        const upgradeChoices = generateUpgradeChoices(
-                            finalState.unlockedKnowledgeUpgrades || [],
-                            getEraFromLevel(pickLevel),
-                            pickLevel,
-                        );
-                        set({
-                            phase: 'upgrade_selection' as GamePhase,
-                            upgradeChoices,
-                            knowledgeUpgradeGlobalRerollUsed: false,
-                            levelBeforeUpgrade: pickLevel - 1,
-                        });
-                        return;
-                    }
+                    // 더 이상 레벨업 시 강제로 upgrade_selection 화면을 띄우지 않습니다.
+                    // (플레이어가지식 탭 스킬 트리를 켜서 직접 능력을 해금합니다.)
                     // 칙령(69): 보유 심볼 1개 제거 후 심볼 선택
                     if (finalState.edictRemovalPending) {
                         set({
