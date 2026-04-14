@@ -1058,71 +1058,31 @@ export class PixiGameApp {
         const relics = useRelicStore.getState().relics;
         if (relics.length === 0) return;
 
-        const { startX, startY } = this.cellLayout;
         const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
         const state = useGameStore.getState();
 
-        const gapX = 18 * scale;
-        const gapY = 36 * scale;
-        const RELICS_PER_ROW = 3;
-        const minMargin = 24 * scale;
-        const maxRowWidth = Math.max(0, startX - minMargin * 2);
-
-        let iconSize = 128 * scale;
-        const rowWidthAtTarget = RELICS_PER_ROW * iconSize + (RELICS_PER_ROW - 1) * gapX;
-        if (rowWidthAtTarget > maxRowWidth && maxRowWidth > 0) {
-            iconSize = (maxRowWidth - (RELICS_PER_ROW - 1) * gapX) / RELICS_PER_ROW;
-        }
-        const iconsPerRow = RELICS_PER_ROW;
-        const actualRowWidth = iconsPerRow * iconSize + (iconsPerRow - 1) * gapX;
-        const startRelicX = (startX - actualRowWidth) / 2;
-
-        const relicTitleTop = 4 * scale;
-        const relicTitleIconH = 20 * scale;
-        const relicTitleGapBelow = 12 * scale;
-        const titleRowBottom = relicTitleTop + relicTitleIconH;
-        /* 배경 없을 때 첫 유물 행: startY + 12*scale — 제목 높이만큼 패널을 위로 올려 맞춤 */
-        const startRelicY = titleRowBottom + relicTitleGapBelow;
-        const relicPanelY = startY + 12 * scale - startRelicY;
+        // 상단 HUD 바 아래 — 화면 좌측 상단에 작게 가로 배치
+        const HUD_HEIGHT = 80 * scale;       // 상단 UI 바 높이
+        const iconSize = 64 * scale;         // 컴팩트 크기
+        const gapX = 8 * scale;
+        const gapY = 8 * scale;
+        const MARGIN_LEFT = 16 * scale;
+        const MARGIN_TOP = HUD_HEIGHT + 8 * scale;
+        const w = this.app?.screen?.width ?? 1920;
+        const iconsPerRow = Math.max(1, Math.floor((w - MARGIN_LEFT * 2) / (iconSize + gapX)));
 
         const relicPanel = new PIXI.Container();
-        relicPanel.x = 0;
-        relicPanel.y = relicPanelY;
+        relicPanel.x = MARGIN_LEFT;
+        relicPanel.y = MARGIN_TOP;
         this.bgContainer.addChildAt(relicPanel, 1);
 
-        const titleLeft = startRelicX;
-        const titleIcon = PIXI.Sprite.from(RELIC_PANEL_TITLE_ICON_URL);
-        const titW = titleIcon.texture.width || 16;
-        const titH = titleIcon.texture.height || 16;
-        titleIcon.width = (titW / titH) * relicTitleIconH;
-        titleIcon.height = relicTitleIconH;
-        titleIcon.x = titleLeft;
-        titleIcon.y = relicTitleTop;
-        relicPanel.addChild(titleIcon);
-
-        const relicTitleText = new PIXI.Text({
-            text: t('game.relicPanelTitle', lang),
-            style: new PIXI.TextStyle({
-                fill: '#e2e8f0',
-                fontSize: 22 * scale,
-                fontWeight: 'bold',
-                fontFamily: 'Mulmaru',
-                stroke: { color: '#000000', width: 2 },
-            }),
-        });
-        relicTitleText.anchor.set(0, 0.5);
-        relicTitleText.x = titleLeft + titleIcon.width + 8 * scale;
-        relicTitleText.y = relicTitleTop + relicTitleIconH / 2;
-        relicPanel.addChild(relicTitleText);
-
-        const availableWidth = actualRowWidth;
 
         const layout: { relic: RelicInstance; iconX: number; iconY: number }[] = [];
-        let curX = startRelicX;
-        let curY = startRelicY;
+        let curX = 0;
+        let curY = 0;
         for (const relic of relics) {
-            if (curX > startRelicX && curX + iconSize > startRelicX + availableWidth) {
-                curX = startRelicX;
+            if (curX > 0 && curX + iconSize > iconsPerRow * (iconSize + gapX)) {
+                curX = 0;
                 curY += iconSize + gapY;
             }
             layout.push({ relic, iconX: curX, iconY: curY });
