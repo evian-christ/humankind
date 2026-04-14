@@ -4,6 +4,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { t } from '../i18n';
+import { UpgradeCardDescSymbols, resolveUpgradeSprite } from './UpgradeSelection';
 
 interface Props {
     isOpen: boolean;
@@ -81,20 +82,31 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             }}
         >
             {/* 상단 헤더 */}
-            <div style={{ padding: '16px 24px', flexShrink: 0 }}>
+            <div style={{ padding: '24px 32px', flexShrink: 0 }}>
                 <button
+                    type="button"
                     onClick={onClose}
-                    className="bottom-right-btn"
                     style={{
-                        fontSize: '20px',
-                        fontFamily: 'Mulmaru, sans-serif',
-                        width: '200px',
-                        height: '52px',
-                        padding: '0 28px',
-                        letterSpacing: '0.04em',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        fontSize: '40px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '48px',
+                        height: '48px',
+                        padding: 0,
+                        transition: 'color 0.2s, transform 0.2s',
+                        borderRadius: '50%',
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#f8fafc'; e.currentTarget.style.transform = 'translateX(-4px)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.transform = 'translateX(0)'; }}
+                    title="돌아가기"
+                    aria-label="돌아가기"
                 >
-                    ← 돌아가기
+                    ←
                 </button>
             </div>
 
@@ -109,7 +121,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                 flex: 1,
                                 textAlign: 'center',
                                 fontFamily: 'Mulmaru, sans-serif',
-                                fontSize: '18px',
+                                fontSize: '28px',
                                 letterSpacing: '0.12em',
                                 color: tierUnlockable ? '#fbbf24cc' : '#444',
                                 fontWeight: 'bold',
@@ -154,21 +166,23 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                             className="bottom-right-btn"
                                             onClick={() => setSelectedId(isSelected ? null : id)}
                                             style={{
-                                                width: '90%',
-                                                maxWidth: 300,
-                                                flex: 1,
-                                                maxHeight: 120,
-                                                fontSize: '26px',
+                                                width: '120px',
+                                                height: '120px',
+                                                flex: 'none',
+                                                fontSize: '18px',
                                                 fontFamily: 'Mulmaru, sans-serif',
-                                                padding: '0 24px',
+                                                padding: '8px',
                                                 letterSpacing: '0.03em',
+                                                wordBreak: 'keep-all',
+                                                lineHeight: 1.3,
                                                 display: 'flex',
+                                                flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                borderRadius: '999px 0 0 999px',
+                                                borderRadius: '16px',
                                                 opacity: tierUnlockable ? 1 : 0.35,
-                                                outline: isSelected ? '2px solid #60a5fa' : 'none',
-                                                outlineOffset: '3px',
+                                                outline: isSelected ? '3px solid #60a5fa' : 'none',
+                                                outlineOffset: '4px',
                                                 boxShadow: unlocked
                                                     ? 'inset 0 0 0 2px #fbbf2466, 0 5px 0 0 #92400e, 0 5px 14px rgba(251,191,36,0.2)'
                                                     : 'inset 0 0 0 4px #555, 0 6px 0 0 #444, 0 6px 10px rgba(0,0,0,0.4)',
@@ -177,13 +191,18 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                                     : 'rgba(30,30,30,0.85)',
                                                 color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
                                                 cursor: 'pointer',
-                                                transition: 'outline 0.1s',
+                                                transition: 'outline 0.1s, transform 0.1s',
                                             }}
                                         >
                                             {unlocked && (
-                                                <span style={{ color: '#fbbf24', marginRight: 8, fontSize: 14 }}>✓</span>
+                                                <div style={{ position: 'absolute', top: 6, right: 8, color: '#fbbf24', fontSize: '16px', fontWeight: 'bold', textShadow: '0 0 5px rgba(0,0,0,0.8)' }}>✓</div>
                                             )}
-                                            {name}
+                                            <img
+                                                src={resolveUpgradeSprite(upgrade.sprite)}
+                                                alt={name}
+                                                title={name}
+                                                style={{ width: '80%', height: '80%', objectFit: 'contain', imageRendering: 'pixelated' }}
+                                            />
                                         </button>
                                     );
                                 })}
@@ -197,11 +216,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                     <div
                         style={{
                             position: 'fixed',
-                            top: 0,
-                            right: 0,
-                            width: '30%',
-                            height: '100%',
-                            borderLeft: '2px solid #1a1a2a',
+                            top: '32px',
+                            right: '32px',
+                            bottom: '32px',
+                            width: '32%',
+                            minWidth: '400px',
+                            border: '2px solid #1a1a2a',
+                            borderRadius: '24px',
                             background: '#0b0d14',
                             display: 'flex',
                             flexDirection: 'column',
@@ -209,13 +230,15 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             boxSizing: 'border-box',
                             gap: '20px',
                             zIndex: 210,
+                            overflow: 'hidden',
+                            boxShadow: '-10px 10px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05)',
                         }}
                     >
                         {/* 업그레이드 이름 */}
                         <div>
                             <div
                                 style={{
-                                    fontSize: '26px',
+                                    fontSize: '32px',
                                     fontFamily: 'Mulmaru, sans-serif',
                                     color: selectedUnlocked ? '#fbbf24' : '#e5e5e5',
                                     fontWeight: 'bold',
@@ -228,7 +251,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             </div>
                             <div
                                 style={{
-                                    fontSize: '13px',
+                                    fontSize: '18px',
                                     color: '#555',
                                     fontFamily: 'Mulmaru, sans-serif',
                                     letterSpacing: '0.08em',
@@ -245,14 +268,25 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                         <div
                             style={{
                                 flex: 1,
-                                fontSize: '17px',
+                                fontSize: '22px',
                                 fontFamily: 'Mulmaru, sans-serif',
                                 color: '#bbb',
                                 lineHeight: 1.7,
                                 letterSpacing: '0.02em',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '20px',
+                                overflowY: 'auto',
                             }}
                         >
-                            {t(`knowledgeUpgrade.${selectedId}.desc`, language) || selectedUpgrade.description}
+                            <div>
+                                {t(`knowledgeUpgrade.${selectedId}.desc`, language) || selectedUpgrade.description}
+                            </div>
+                            {selectedUpgrade.descSymbols && selectedUpgrade.descSymbols.length > 0 && (
+                                <div>
+                                    <UpgradeCardDescSymbols upgradeId={selectedId} entries={selectedUpgrade.descSymbols} />
+                                </div>
+                            )}
                         </div>
 
                         {/* 구분선 */}
@@ -265,8 +299,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             disabled={selectedUnlocked || !selectedUnlockable}
                             style={{
                                 width: '100%',
-                                height: 68,
-                                fontSize: '20px',
+                                height: 80,
+                                fontSize: '24px',
                                 fontFamily: 'Mulmaru, sans-serif',
                                 letterSpacing: '0.05em',
                                 borderRadius: 0,

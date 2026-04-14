@@ -29,7 +29,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 /** upgrades/ 폴더의 스프라이트를 불러옵니다. sprite가 없으면 000.png 사용 */
-const resolveUpgradeSprite = (sprite: string | undefined): string => {
+export const resolveUpgradeSprite = (sprite: string | undefined): string => {
     if (sprite && sprite !== '-' && sprite !== '-.png') return `${ASSET_BASE_URL}assets/upgrades/${sprite}`;
     return `${ASSET_BASE_URL}assets/upgrades/000.png`;
 };
@@ -61,7 +61,7 @@ function resolveSymbolDescAfterUpgrade(
     return val === key ? null : val;
 }
 
-const UpgradeCardDescSymbols = ({
+export const UpgradeCardDescSymbols = ({
     upgradeId,
     entries,
 }: {
@@ -174,42 +174,60 @@ const UpgradeCardDescSymbols = ({
                 className="upgrade-card-desc-symbols"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
+                style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
             >
-                <div className="upgrade-card-desc-symbol-chips">
-                    {entries.map(({ id, relation }) => {
-                        const def = SYMBOLS[id];
-                        if (!def) return null;
-                        const src =
-                            def.sprite && def.sprite !== '-' && def.sprite !== '-.png'
-                                ? `${ASSET_BASE_URL}assets/symbols/${def.sprite}`
-                                : undefined;
-                        const symName = t(`symbol.${id}.name`, language);
-                        return (
-                            <button
-                                key={`${id}-${relation}`}
-                                type="button"
-                                className={`upgrade-card-desc-symbol-chip upgrade-card-desc-symbol-chip--${relation}`}
-                                aria-label={symName}
-                                onMouseEnter={(e) => showTooltip(id, relation, e.currentTarget)}
-                                onMouseLeave={() => setHover(null)}
-                                onFocus={(e) => showTooltip(id, relation, e.currentTarget)}
-                                onBlur={() => setHover(null)}
-                            >
-                                <span
-                                    className={`upgrade-card-desc-symbol-badge upgrade-card-desc-symbol-badge--${relation}`}
-                                    aria-hidden
-                                >
-                                    {RELATION_BADGE[relation]}
-                                </span>
-                                {src ? (
-                                    <img src={src} alt="" className="upgrade-card-desc-symbol-img" />
-                                ) : (
-                                    <span className="upgrade-card-desc-symbol-fallback">{symName}</span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
+                {(['pool_add', 'effect_modify', 'pool_remove'] as KnowledgeUpgradeSymbolRelation[]).map((rel) => {
+                    const group = entries.filter(e => e.relation === rel);
+                    if (group.length === 0) return null;
+                    const relInfo = rel === 'pool_add'
+                        ? { prefix: '+', color: '#4ade80', text: '추가되는 심볼' }
+                        : rel === 'effect_modify'
+                        ? { prefix: '~', color: '#facc15', text: '변경되는 심볼' }
+                        : { prefix: '-', color: '#f87171', text: '제거되는 심볼' };
+                    return (
+                        <div key={rel} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ fontSize: '16px', color: '#94a3b8', fontFamily: 'Mulmaru, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ color: relInfo.color, fontWeight: '900', fontSize: '18px' }}>{relInfo.prefix}</span>
+                                {relInfo.text}
+                            </div>
+                            <div className="upgrade-card-desc-symbol-chips">
+                                {group.map(({ id, relation }) => {
+                                    const def = SYMBOLS[id];
+                                    if (!def) return null;
+                                    const src =
+                                        def.sprite && def.sprite !== '-' && def.sprite !== '-.png'
+                                            ? `${ASSET_BASE_URL}assets/symbols/${def.sprite}`
+                                            : undefined;
+                                    const symName = t(`symbol.${id}.name`, language);
+                                    return (
+                                        <button
+                                            key={`${id}-${relation}`}
+                                            type="button"
+                                            className={`upgrade-card-desc-symbol-chip upgrade-card-desc-symbol-chip--${relation}`}
+                                            aria-label={symName}
+                                            onMouseEnter={(e) => showTooltip(id, relation, e.currentTarget)}
+                                            onMouseLeave={() => setHover(null)}
+                                            onFocus={(e) => showTooltip(id, relation, e.currentTarget)}
+                                            onBlur={() => setHover(null)}
+                                        >
+                                            <span
+                                                className={`upgrade-card-desc-symbol-badge upgrade-card-desc-symbol-badge--${relation}`}
+                                                aria-hidden
+                                            >
+                                                {RELATION_BADGE[relation]}
+                                            </span>
+                                            {src ? (
+                                                <img src={src} alt="" className="upgrade-card-desc-symbol-img" />
+                                            ) : (
+                                                <span className="upgrade-card-desc-symbol-fallback">{symName}</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
             {tooltipContent && typeof document !== 'undefined'
                 ? createPortal(tooltipContent, document.body)

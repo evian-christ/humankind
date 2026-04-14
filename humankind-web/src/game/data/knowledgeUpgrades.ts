@@ -11,7 +11,7 @@ export interface KnowledgeUpgradeDescSymbol {
 /** 중세시대(15) 카드 칩 — 풀 제외/추가는 게임과 동기, 효과 변경은 산만(지형 등장 확률만 바뀌는 타일은 칩 제외) */
 export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
     const poolRemoveIds = Object.values(SYMBOLS)
-        .filter((s) => s.type === SymbolType.ANCIENT || s.id === 35 || s.id === 36)
+        .filter((s) => s.type === SymbolType.ANCIENT)
         .map((s) => s.id)
         .sort((a, b) => a - b);
 
