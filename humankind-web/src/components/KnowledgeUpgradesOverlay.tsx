@@ -110,46 +110,67 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 </button>
             </div>
 
-            {/* 레벨 레이블 행 */}
-            <div style={{ display: 'flex', flexShrink: 0, paddingBottom: '8px' }}>
+            {/* 트리 본문 — 세로 타임라인 */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
                 {TIERS.map((tier) => {
                     const tierUnlockable = currentLevel >= tier.level;
+                    const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
+                    const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
+
                     return (
                         <div
                             key={tier.level}
                             style={{
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
                                 flex: 1,
-                                textAlign: 'center',
-                                fontFamily: 'Mulmaru, sans-serif',
-                                fontSize: '28px',
-                                letterSpacing: '0.12em',
-                                color: tierUnlockable ? '#fbbf24cc' : '#444',
-                                fontWeight: 'bold',
+                                minHeight: '130px',
+                                padding: '0 48px',
                             }}
                         >
-                            Lv.{tier.level}
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* 트리 본문 */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', borderTop: '1px solid #1a1a22' }}>
-                    {TIERS.map((tier, colIdx) => {
-                        const tierUnlockable = currentLevel >= tier.level;
-                        return (
+                            {/* 티어를 관통하는 점선 */}
                             <div
-                                key={tier.level}
                                 style={{
-                                    flex: 1,
+                                    position: 'absolute',
+                                    left: 0,
+                                    right: 0,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    borderTop: `2px dashed ${dashColor}`,
+                                    pointerEvents: 'none',
+                                    zIndex: 0,
+                                }}
+                            />
+
+                            {/* Lv 레이블 — 점선 위에 배경색으로 덮어 끊기는 효과 */}
+                            <div
+                                style={{
+                                    position: 'relative',
+                                    zIndex: 1,
+                                    flexShrink: 0,
+                                    width: '72px',
+                                    fontFamily: 'Mulmaru, sans-serif',
+                                    fontSize: '20px',
+                                    letterSpacing: '0.12em',
+                                    color: labelColor,
+                                    fontWeight: 'bold',
+                                    background: '#070a0f',
+                                    paddingRight: '14px',
+                                }}
+                            >
+                                Lv.{tier.level}
+                            </div>
+
+                            {/* 업그레이드 버튼들 */}
+                            <div
+                                style={{
+                                    position: 'relative',
+                                    zIndex: 1,
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-evenly',
-                                    padding: '24px 16px',
-                                    borderLeft: colIdx > 0 ? '1px solid #ffffff0d' : 'none',
-                                    boxSizing: 'border-box',
+                                    flexDirection: 'row',
                                     gap: '16px',
+                                    alignItems: 'center',
                                 }}
                             >
                                 {tier.ids.map((id) => {
@@ -158,7 +179,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                     const unlocked = unlockedUpgrades.includes(id);
                                     const isSelected = selectedId === id;
                                     const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
-                                    const isSpecial = id === 15;
 
                                     return (
                                         <button
@@ -166,10 +186,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                             className="bottom-right-btn"
                                             onClick={() => setSelectedId(isSelected ? null : id)}
                                             style={{
-                                                width: '120px',
-                                                height: '120px',
+                                                width: '110px',
+                                                height: '110px',
                                                 flex: 'none',
-                                                fontSize: '18px',
+                                                fontSize: '16px',
                                                 fontFamily: 'Mulmaru, sans-serif',
                                                 padding: '8px',
                                                 letterSpacing: '0.03em',
@@ -179,23 +199,26 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                borderRadius: '16px',
+                                                borderRadius: '14px',
                                                 opacity: tierUnlockable ? 1 : 0.35,
-                                                outline: isSelected ? '3px solid #60a5fa' : 'none',
-                                                outlineOffset: '4px',
-                                                boxShadow: unlocked
-                                                    ? 'inset 0 0 0 2px #fbbf2466, 0 5px 0 0 #92400e, 0 5px 14px rgba(251,191,36,0.2)'
-                                                    : 'inset 0 0 0 4px #555, 0 6px 0 0 #444, 0 6px 10px rgba(0,0,0,0.4)',
-                                                background: unlocked
-                                                    ? 'rgba(120,80,20,0.75)'
-                                                    : 'rgba(30,30,30,0.85)',
+                                                transform: isSelected ? 'scale(1.1) translateY(-4px)' : 'scale(1) translateY(0)',
+                                                boxShadow: isSelected
+                                                    ? (unlocked
+                                                        ? 'inset 0 0 0 2px #fbbf2499, 0 0 0 2px #60a5fa88, 0 0 20px 6px #3b82f655, 0 8px 24px rgba(0,0,0,0.5)'
+                                                        : 'inset 0 0 0 2px #60a5fa66, 0 0 0 2px #60a5fa88, 0 0 20px 6px #3b82f655, 0 8px 24px rgba(0,0,0,0.5)')
+                                                    : (unlocked
+                                                        ? 'inset 0 0 0 2px #fbbf2466, 0 5px 0 0 #92400e, 0 5px 14px rgba(251,191,36,0.2)'
+                                                        : 'inset 0 0 0 4px #555, 0 6px 0 0 #444, 0 6px 10px rgba(0,0,0,0.4)'),
+                                                background: isSelected
+                                                    ? (unlocked ? 'rgba(140,100,30,0.9)' : 'rgba(20,40,70,0.95)')
+                                                    : (unlocked ? 'rgba(120,80,20,0.75)' : 'rgba(30,30,30,0.85)'),
                                                 color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
                                                 cursor: 'pointer',
-                                                transition: 'outline 0.1s, transform 0.1s',
+                                                transition: 'transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
                                             }}
                                         >
                                             {unlocked && (
-                                                <div style={{ position: 'absolute', top: 6, right: 8, color: '#fbbf24', fontSize: '16px', fontWeight: 'bold', textShadow: '0 0 5px rgba(0,0,0,0.8)' }}>✓</div>
+                                                <div style={{ position: 'absolute', top: 6, right: 8, color: '#fbbf24', fontSize: '14px', fontWeight: 'bold', textShadow: '0 0 5px rgba(0,0,0,0.8)' }}>✓</div>
                                             )}
                                             <img
                                                 src={resolveUpgradeSprite(upgrade.sprite)}
@@ -207,76 +230,87 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                     );
                                 })}
                             </div>
-                        );
-                    })}
-                </div>
+                        </div>
+                    );
+                })}
+            </div>
 
-            {/* 우측 사이드 패널 — fixed 오버레이 */}
+            {/* 하단 패널 — floating 윈도우 */}
             {selectedUpgrade && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: '50%',
+                        bottom: '32px',
+                        transform: 'translateX(-50%)',
+                        width: '60%',
+                        minWidth: '560px',
+                        maxWidth: '860px',
+                        border: '1px solid #1e2030',
+                        borderRadius: '20px',
+                        background: '#0b0d14',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'stretch',
+                        padding: '20px 24px',
+                        boxSizing: 'border-box',
+                        gap: '20px',
+                        boxShadow: '0 8px 48px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(255,255,255,0.05)',
+                        minHeight: '150px',
+                        maxHeight: '200px',
+                        zIndex: 210,
+                    }}
+                >
+                    {/* 좌측: 이름 + 설명 */}
                     <div
                         style={{
-                            position: 'fixed',
-                            top: '32px',
-                            right: '32px',
-                            bottom: '32px',
-                            width: '32%',
-                            minWidth: '400px',
-                            border: '2px solid #1a1a2a',
-                            borderRadius: '24px',
-                            background: '#0b0d14',
+                            flex: 1,
                             display: 'flex',
                             flexDirection: 'column',
-                            padding: '32px 28px 24px',
-                            boxSizing: 'border-box',
-                            gap: '20px',
-                            zIndex: 210,
+                            gap: '8px',
                             overflow: 'hidden',
-                            boxShadow: '-10px 10px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05)',
                         }}
                     >
                         {/* 업그레이드 이름 */}
-                        <div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
                             <div
                                 style={{
-                                    fontSize: '32px',
+                                    fontSize: '26px',
                                     fontFamily: 'Mulmaru, sans-serif',
                                     color: selectedUnlocked ? '#fbbf24' : '#e5e5e5',
                                     fontWeight: 'bold',
                                     letterSpacing: '0.04em',
-                                    marginBottom: 8,
                                 }}
                             >
-                                {selectedUnlocked && <span style={{ marginRight: 8 }}>✓</span>}
+                                {selectedUnlocked && <span style={{ marginRight: 6 }}>✓</span>}
                                 {t(`knowledgeUpgrade.${selectedId}.name`, language) || selectedUpgrade.name}
                             </div>
                             <div
                                 style={{
-                                    fontSize: '18px',
+                                    fontSize: '16px',
                                     color: '#555',
                                     fontFamily: 'Mulmaru, sans-serif',
                                     letterSpacing: '0.08em',
+                                    whiteSpace: 'nowrap',
                                 }}
                             >
                                 Lv.{selectedTierLevel} 해금 · {selectedUpgrade.type === 0 ? '고대' : '중세'}
                             </div>
                         </div>
 
-                        {/* 구분선 */}
-                        <div style={{ height: 1, background: '#1c1c28' }} />
-
                         {/* 설명 */}
                         <div
                             style={{
                                 flex: 1,
-                                fontSize: '22px',
+                                fontSize: '18px',
                                 fontFamily: 'Mulmaru, sans-serif',
                                 color: '#bbb',
-                                lineHeight: 1.7,
+                                lineHeight: 1.6,
                                 letterSpacing: '0.02em',
+                                overflowY: 'auto',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '20px',
-                                overflowY: 'auto',
+                                gap: '12px',
                             }}
                         >
                             <div>
@@ -288,22 +322,22 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                 </div>
                             )}
                         </div>
+                    </div>
 
-                        {/* 구분선 */}
-                        <div style={{ height: 1, background: '#1c1c28' }} />
-
-                        {/* 하단 해금 버튼 */}
+                    {/* 우측: 연구 버튼 */}
+                    <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                         <button
                             className="bottom-right-btn"
                             onClick={handleUnlock}
                             disabled={selectedUnlocked || !selectedUnlockable}
                             style={{
-                                width: '100%',
-                                height: 80,
-                                fontSize: '24px',
+                                width: '160px',
+                                height: '100%',
+                                minHeight: '100px',
+                                fontSize: '22px',
                                 fontFamily: 'Mulmaru, sans-serif',
                                 letterSpacing: '0.05em',
-                                borderRadius: 0,
+                                borderRadius: '12px',
                                 opacity: selectedUnlocked ? 0.4 : !selectedUnlockable ? 0.3 : 1,
                                 background: selectedUnlocked
                                     ? 'rgba(100,70,10,0.5)'
@@ -313,13 +347,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                     : 'inset 0 0 0 2px #fbbf2455, 0 6px 0 0 #7c3100, 0 6px 16px rgba(251,191,36,0.25)',
                                 color: selectedUnlocked ? '#888' : '#fbbf24',
                                 cursor: selectedUnlocked || !selectedUnlockable ? 'not-allowed' : 'pointer',
-                                flexShrink: 0,
                             }}
                         >
                             {selectedUnlocked ? '이미 연구됨' : !selectedUnlockable ? `Lv.${selectedTierLevel} 필요` : '연구하기'}
                         </button>
                     </div>
-                )}
+                </div>
+            )}
         </div>
     );
 };
