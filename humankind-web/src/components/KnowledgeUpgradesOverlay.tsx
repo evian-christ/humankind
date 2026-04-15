@@ -11,9 +11,9 @@ interface Props {
     onClose: () => void;
 }
 
-const TIERS: { level: number; ids: number[] }[] = [
-    { level: 1,  ids: [5, 9, 3, 8] },
-    { level: 4,  ids: [1, 7, 2] },
+const TIERS: { level: number; ids: (number | null)[] }[] = [
+    { level: 1,  ids: [9, 3, 8, 5] },
+    { level: 4,  ids: [1, 7, null, 2] },
     { level: 7,  ids: [6, 4, 10] },
     { level: 10, ids: [15] },
 ];
@@ -173,10 +173,15 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                     alignItems: 'center',
                                 }}
                             >
-                                {tier.ids.map((id) => {
+                                {tier.ids.map((id, slotIdx) => {
+                                    if (id === null) return <div key={`empty-${slotIdx}`} style={{ width: '110px' }} />;
                                     const upgrade = KNOWLEDGE_UPGRADES[id];
                                     if (!upgrade) return null;
                                     const unlocked = unlockedUpgrades.includes(id);
+
+                                    // 의존성 체크 (UI 전용)
+                                    const isLockedByDependency = id === 2 && !unlockedUpgrades.includes(5);
+
                                     const isSelected = selectedId === id;
                                     const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
 
@@ -200,7 +205,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 borderRadius: '14px',
-                                                opacity: tierUnlockable ? 1 : 0.35,
+                                                opacity: tierUnlockable && !isLockedByDependency ? 1 : 0.35,
                                                 transform: isSelected ? 'scale(1.1) translateY(-4px)' : 'scale(1) translateY(0)',
                                                 boxShadow: isSelected
                                                     ? (unlocked
@@ -219,6 +224,36 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                         >
                                             {unlocked && (
                                                 <div style={{ position: 'absolute', top: 6, right: 8, color: '#fbbf24', fontSize: '14px', fontWeight: 'bold', textShadow: '0 0 5px rgba(0,0,0,0.8)' }}>✓</div>
+                                            )}
+                                            {isLockedByDependency && (
+                                                <div style={{ position: 'absolute', top: 6, right: 8, color: '#ef4444', fontSize: '14px', fontWeight: 'bold', textShadow: '0 0 5px rgba(0,0,0,0.8)' }}>🔒</div>
+                                            )}
+                                            {/* 궁술 -> 청동기술 연결선 (ID 5 위치에서 아래로) */}
+                                            {id === 5 && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '110px',
+                                                        left: '50%',
+                                                        width: '2px',
+                                                        height: '40px',
+                                                        background: 'linear-gradient(to bottom, #60a5fa, #60a5fa00)',
+                                                        transform: 'translateX(-50%)',
+                                                        zIndex: -1,
+                                                        pointerEvents: 'none',
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        bottom: 0,
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%) rotate(45deg)',
+                                                        width: '6px',
+                                                        height: '6px',
+                                                        borderRight: '2px solid #60a5fa55',
+                                                        borderBottom: '2px solid #60a5fa55',
+                                                    }} />
+                                                </div>
                                             )}
                                             <img
                                                 src={resolveUpgradeSprite(upgrade.sprite)}
