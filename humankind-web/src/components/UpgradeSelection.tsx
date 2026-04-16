@@ -64,9 +64,12 @@ function resolveSymbolDescAfterUpgrade(
 export const UpgradeCardDescSymbols = ({
     upgradeId,
     entries,
+    layoutSize = 'default',
 }: {
     upgradeId: number;
     entries: KnowledgeUpgradeDescSymbol[];
+    /** `panel`: knowledge tree right-hand detail column (larger type) */
+    layoutSize?: 'default' | 'panel';
 }) => {
     const language = useSettingsStore((s) => s.language);
     const [hover, setHover] = useState<{
@@ -77,6 +80,12 @@ export const UpgradeCardDescSymbols = ({
     } | null>(null);
 
     if (entries.length === 0) return null;
+
+    const isPanel = layoutSize === 'panel';
+    const symbolsColGap = isPanel ? '18px' : '16px';
+    const groupRowGap = isPanel ? '10px' : '8px';
+    const relLabelFontPx = isPanel ? '18px' : '16px';
+    const relPrefixFontPx = isPanel ? '20px' : '18px';
 
     const showTooltip = (id: number, relation: KnowledgeUpgradeSymbolRelation, el: HTMLElement) => {
         const r = el.getBoundingClientRect();
@@ -174,7 +183,7 @@ export const UpgradeCardDescSymbols = ({
                 className="upgrade-card-desc-symbols"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
-                style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+                style={{ display: 'flex', flexDirection: 'column', gap: symbolsColGap }}
             >
                 {(['pool_add', 'effect_modify', 'pool_remove'] as KnowledgeUpgradeSymbolRelation[]).map((rel) => {
                     const group = entries.filter(e => e.relation === rel);
@@ -185,9 +194,9 @@ export const UpgradeCardDescSymbols = ({
                         ? { prefix: '~', color: '#facc15', text: '변경되는 심볼' }
                         : { prefix: '-', color: '#f87171', text: '제거되는 심볼' };
                     return (
-                        <div key={rel} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ fontSize: '16px', color: '#94a3b8', fontFamily: 'Mulmaru, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ color: relInfo.color, fontWeight: '900', fontSize: '18px' }}>{relInfo.prefix}</span>
+                        <div key={rel} style={{ display: 'flex', flexDirection: 'column', gap: groupRowGap }}>
+                            <div style={{ fontSize: relLabelFontPx, color: '#94a3b8', fontFamily: 'Mulmaru, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ color: relInfo.color, fontWeight: '900', fontSize: relPrefixFontPx }}>{relInfo.prefix}</span>
                                 {relInfo.text}
                             </div>
                             <div className="upgrade-card-desc-symbol-chips">
