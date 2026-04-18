@@ -3,14 +3,10 @@ import {
     calculateFoodCost,
     BOARD_WIDTH,
     BOARD_HEIGHT,
-    BOARD_LAYOUT_WIDTH_PX,
-    BOARD_LAYOUT_HEIGHT_PX,
-    BOARD_CELL_WIDTH_PX,
-    BOARD_CELL_HEIGHT_PX,
-    BOARD_COL_GAP_PX,
     BOARD_BG_SPRITE_PADDING_PX,
     useGameStore,
 } from '../../game/state/gameStore';
+import { computeBoardPixelLayout } from '../../game/layout/boardPixelLayout';
 import type { GameState } from '../../game/state/gameStore';
 import { SPIN_SPEED_CONFIG, COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../game/state/settingsStore';
 import type { Language, SettingsState } from '../../game/state/settingsStore';
@@ -551,30 +547,25 @@ export class PixiGameApp {
         bg.fill({ color: 0x252525 });
         this.bgContainer.addChild(bg);
 
-        const BASE_W = 1920;
-        const BASE_H = 1080;
-        const scale = Math.min(w / BASE_W, h / BASE_H);
+        const viewLayout = computeBoardPixelLayout(w, h);
+        const {
+            startX,
+            startY,
+            boardW,
+            boardH,
+            cellWidth,
+            cellHeight,
+            gridOffsetX,
+            gridOffsetY,
+            colGap,
+            scale,
+        } = viewLayout;
         const lang = settings.language;
         const fontFamily = 'Mulmaru';
         const fs = 1;
-
-        // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
-
-
-        const boardW    = BOARD_LAYOUT_WIDTH_PX  * scale;
-        const boardH    = BOARD_LAYOUT_HEIGHT_PX * scale;
-        const cellWidth = BOARD_CELL_WIDTH_PX    * scale;
-        const cellHeight= BOARD_CELL_HEIGHT_PX   * scale;
-        const colGap    = BOARD_COL_GAP_PX       * scale;
         const rowGap = 0;
 
-        const totalSlotsWidth = (cellWidth * BOARD_WIDTH) + (colGap * (BOARD_WIDTH - 1));
-        const totalSlotsHeight = cellHeight * BOARD_HEIGHT;
-        const gridOffsetX = (boardW - totalSlotsWidth) / 2;
-        const gridOffsetY = (boardH - totalSlotsHeight) / 2;
-
-        const startX = (w - boardW) / 2;
-        const startY = (h - boardH) / 2;
+        // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
 
         this.cellLayout = { startX, startY, boardW, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
 
@@ -1053,7 +1044,7 @@ export class PixiGameApp {
         }
     }
 
-    private renderRelics(scale: number, lang: Language) {
+    private renderRelics(scale: number, _lang: Language) {
         if (!this.cellLayout) return;
         const relics = useRelicStore.getState().relics;
         if (relics.length === 0) return;
@@ -1253,16 +1244,16 @@ export class PixiGameApp {
 
 
     private renderUI(
-        state: GameState,
-        settings: SettingsState,
+        _state: GameState,
+        _settings: SettingsState,
         scale: number,
-        fs: number,
+        _fs: number,
         w: number,
-        h: number,
-        boardStartX: number,
-        boardStartY: number,
-        boardW: number,
-        boardH: number
+        _h: number,
+        _boardStartX: number,
+        _boardStartY: number,
+        _boardW: number,
+        _boardH: number
     ) {
         // UI rendering is now handled by React (App.tsx / .hud-top)
         this.hudTopContainer.removeChildren();
