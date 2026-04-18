@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
-import { useGameStore } from '../game/state/gameStore';
+import { isUpgradeLegalForKnowledgePick, useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
-import { UpgradeCardDescSymbols, resolveUpgradeSprite } from './UpgradeSelection';
+import { UpgradeCardDescSymbols, resolveUpgradeSprite } from './KnowledgeUpgradeCardWidgets';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -24,6 +25,8 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
 }
+
+type ResearchPointsMouseHint = { id: number; x: number; y: number };
 
 const TIERS: { level: number; ids: (number | null)[] }[] = [
     { level: 1,  ids: [9, 3, 8, 5] },
@@ -80,17 +83,32 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
 
     const unlockedUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades);
     const currentLevel = useGameStore((s) => s.level);
+    const levelUpResearchPoints = useGameStore((s) => s.levelUpResearchPoints ?? 0);
     const phase = useGameStore((s) => s.phase);
     const language = useSettingsStore((s) => s.language);
 
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [researchPointsMouseHints, setResearchPointsMouseHints] = useState<ResearchPointsMouseHint[]>([]);
+    const researchHintIdRef = useRef(0);
 
     const selectedUpgrade = selectedId != null ? KNOWLEDGE_UPGRADES[selectedId] : null;
     const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
     const selectedTierLevel = selectedId != null
         ? (TIERS.find(tier => tier.ids.includes(selectedId!))?.level ?? 1)
         : 1;
-    const selectedUnlockable = currentLevel >= selectedTierLevel;
+    const archeryBlocksBronze = selectedId === 2 && !unlockedUpgrades.includes(5);
+    const hasResearchPoints = levelUpResearchPoints > 0;
+    const canResearchWithCurrentPick =
+        currentLevel >= selectedTierLevel &&
+        selectedId != null &&
+        isUpgradeLegalForKnowledgePick(selectedId, unlockedUpgrades, currentLevel);
+    const canResearchSelected =
+        hasResearchPoints &&
+        !selectedUnlocked &&
+        !archeryBlocksBronze &&
+        canResearchWithCurrentPick;
+    const researchButtonDisabled =
+        selectedUnlocked || archeryBlocksBronze || (hasResearchPoints && !canResearchWithCurrentPick);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -106,7 +124,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
 
     // 패널 닫기 (오버레이 닫힐 때 선택 초기화)
     useEffect(() => {
-        if (!isOpen) setSelectedId(null);
+        if (!isOpen) {
+            setSelectedId(null);
+            setResearchPointsMouseHints([]);
+        }
     }, [isOpen]);
 
     if (!isOpen) return null;
@@ -114,20 +135,26 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const detailEraColor =
         selectedUpgrade != null ? getSymbolColorHex(selectedUpgrade.type) : '#888888';
 
-    const handleUnlock = () => {
-        if (!selectedId || selectedUnlocked) return;
-        // phase를 upgrade_selection으로 임시 전환 후 selectUpgrade 호출
-        useGameStore.setState((s) => ({
-            phase: 'upgrade_selection',
-            upgradeChoices: [selectedId],
-            knowledgeUpgradePickQueue: [s.level],
-            levelBeforeUpgrade: s.level - 1,
-            knowledgeUpgradeGlobalRerollUsed: false,
+    const handleUnlock = (e: ReactMouseEvent<HTMLButtonElement>) => {
+        if (!selectedId || selectedUnlocked || archeryBlocksBronze) return;
+        if (!hasResearchPoints) {
+            researchHintIdRef.current += 1;
+            const id = researchHintIdRef.current;
+            setResearchPointsMouseHints((prev) => [...prev, { id, x: e.clientX, y: e.clientY }]);
+            return;
+        }
+        if (!canResearchSelected) return;
+        const st = useGameStore.getState();
+        if ((st.levelUpResearchPoints ?? 0) <= 0) return;
+        const choice = KNOWLEDGE_UPGRADES[selectedId];
+        if (!choice) return;
+        useGameStore.setState({
             returnPhaseAfterDevKnowledgeUpgrade: phase,
-        }));
+        });
         useGameStore.getState().selectUpgrade(selectedId);
         // Stay on tree overlay; close only if upgrade opens destroy-selection flow.
-        if (useGameStore.getState().phase === 'destroy_selection') {
+        const ph = useGameStore.getState().phase;
+        if (ph === 'destroy_selection' || ph === 'oblivion_furnace_board') {
             onClose();
         }
     };
@@ -182,6 +209,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 <h1
                     style={{
                         margin: 0,
+                        flex: 1,
+                        minWidth: 0,
                         fontFamily: 'Mulmaru, sans-serif',
                         fontSize: 'clamp(22px, 2.4vw, 30px)',
                         fontWeight: 'bold',
@@ -192,6 +221,33 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 >
                     {t('game.knowledgeUpgradeTreeTitle', language)}
                 </h1>
+                <div
+                    role="status"
+                    aria-label={`${t('game.levelUpResearchPointsLabel', language)}: ${levelUpResearchPoints}`}
+                    style={{
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: 6,
+                        fontFamily: 'Mulmaru, sans-serif',
+                        fontSize: 'clamp(22px, 2.4vw, 30px)',
+                        fontWeight: 'bold',
+                        color: '#f1f5f9',
+                        letterSpacing: '0.08em',
+                        lineHeight: 1.2,
+                    }}
+                >
+                    <span>{t('game.levelUpResearchPointsLabel', language)}</span>
+                    <span aria-hidden>:</span>
+                    <span
+                        style={{
+                            color: '#60a5fa',
+                            fontVariantNumeric: 'tabular-nums',
+                        }}
+                    >
+                        {levelUpResearchPoints}
+                    </span>
+                </div>
             </div>
 
             {/* 트리 본문 — 세로 타임라인 */}
@@ -439,7 +495,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             <button
                                 className="bottom-right-btn"
                                 onClick={handleUnlock}
-                                disabled={selectedUnlocked || !selectedUnlockable}
+                                disabled={researchButtonDisabled}
                                 style={{
                                     width: '100%',
                                     maxWidth: '280px',
@@ -449,18 +505,32 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                     letterSpacing: '0.04em',
                                     lineHeight: 1.25,
                                     borderRadius: 0,
-                                    opacity: selectedUnlocked ? 0.4 : !selectedUnlockable ? 0.3 : 1,
+                                    opacity: selectedUnlocked ? 0.4 : researchButtonDisabled ? 0.3 : 1,
                                     background: selectedUnlocked
                                         ? 'rgba(40,85,48,0.45)'
                                         : 'rgba(80,40,0,0.9)',
-                                    boxShadow: selectedUnlocked || !selectedUnlockable
+                                    boxShadow: selectedUnlocked || researchButtonDisabled
                                         ? 'inset 0 0 0 4px #333, 0 6px 0 0 #222, 0 6px 10px rgba(0,0,0,0.35)'
                                         : 'inset 0 0 0 4px #fbbf2455, 0 6px 0 0 #7c3100, 0 6px 16px rgba(251,191,36,0.25)',
                                     color: selectedUnlocked ? '#86a878' : '#fbbf24',
-                                    cursor: selectedUnlocked || !selectedUnlockable ? 'not-allowed' : 'pointer',
+                                    cursor: selectedUnlocked || researchButtonDisabled ? 'not-allowed' : 'pointer',
                                 }}
                             >
-                                {selectedUnlocked ? '이미 연구됨' : !selectedUnlockable ? `Lv.${selectedTierLevel} 필요` : '연구하기'}
+                                {selectedUnlocked
+                                    ? '이미 연구됨'
+                                    : archeryBlocksBronze
+                                        ? t('knowledgeUpgrade.requiresArcheryShort', language)
+                                        : hasResearchPoints && currentLevel < selectedTierLevel
+                                            ? `Lv.${selectedTierLevel} 필요`
+                                            : hasResearchPoints &&
+                                                selectedId != null &&
+                                                !isUpgradeLegalForKnowledgePick(
+                                                    selectedId,
+                                                    unlockedUpgrades,
+                                                    currentLevel,
+                                                )
+                                              ? '이번 연구로 선택 불가'
+                                              : '연구하기'}
                             </button>
                         </div>
                     </>
@@ -479,6 +549,23 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             </div>
             </div>
 
+            {typeof document !== 'undefined' &&
+                researchPointsMouseHints.length > 0 &&
+                createPortal(
+                    researchPointsMouseHints.map((h) => (
+                        <div
+                            key={h.id}
+                            className="knowledge-research-mouse-hint"
+                            style={{ left: h.x, top: h.y }}
+                            onAnimationEnd={() =>
+                                setResearchPointsMouseHints((prev) => prev.filter((p) => p.id !== h.id))
+                            }
+                        >
+                            {t('game.levelUpResearchPointsRequired', language)}
+                        </div>
+                    )),
+                    document.body,
+                )}
         </div>
     );
 };

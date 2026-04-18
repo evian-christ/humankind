@@ -76,7 +76,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, level, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = useGameStore();
+    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
 
@@ -176,7 +176,7 @@ const DevOverlay = () => {
                         }}
                     >
                         <span style={{ fontSize: '18px' }}>📚</span>
-                        <span>지식 업그레이드</span>
+                        <span>연구 포인트 +1</span>
                     </button>
                 </div>
             </div>
@@ -211,6 +211,14 @@ const DevOverlay = () => {
                     onAdjust={d => devSetStat('level', level + d)}
                     onSet={v => devSetStat('level', v)}
                     deltas={[-5, -1, 1, 5]}
+                />
+
+                <StatRow
+                    label={t('game.turn', language)}
+                    value={turn}
+                    onAdjust={d => devSetStat('turn', turn + d)}
+                    onSet={v => devSetStat('turn', v)}
+                    deltas={[-10, -1, 1, 10]}
                 />
 
                 {/* 하단에 현재 위협 게이지 확률 표시 */}

@@ -7,8 +7,8 @@ import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
-import UpgradeSelection from './components/UpgradeSelection';
 import DestroySelection from './components/DestroySelection';
+import OblivionFurnaceBoardOverlay from './components/OblivionFurnaceBoardOverlay';
 import DemoStartScreen from './components/DemoStartScreen';
 import StageSelectScreen from './components/StageSelectScreen';
 import LeaderSelectScreen from './components/LeaderSelectScreen';
@@ -82,6 +82,7 @@ function App() {
     isRelicShopOpen,
     hasNewRelicShopStock,
     clearRelicShopStockBadge,
+    levelUpResearchPoints,
   } = useGameStore();
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
   const language = useSettingsStore((s) => s.language);
@@ -93,6 +94,7 @@ function App() {
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
+  const gameAreaRef = useRef<HTMLDivElement>(null);
 
   const handleCanvasReady = useCallback(() => {
     setGameCanvasReady(true);
@@ -120,17 +122,20 @@ function App() {
       if (e.code !== 'Space') return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-      if (phase !== 'idle' || useGameStore.getState().knowledgeUpgradePickQueue.length > 0) return;
+      const st = useGameStore.getState();
+      const rp = st.levelUpResearchPoints ?? 0;
+      const canSpin = st.phase === 'idle' || (st.phase === 'selection' && rp > 0);
+      if (!canSpin) return;
       e.preventDefault();
       spinBoard();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [phase, spinBoard]);
+  }, [phase, spinBoard, levelUpResearchPoints]);
 
   const boardIsForegroundForTooltips =
-    phase !== 'upgrade_selection' &&
     phase !== 'destroy_selection' &&
+    phase !== 'oblivion_furnace_board' &&
     phase !== 'game_over' &&
     phase !== 'victory' &&
     !isRelicShopOpen;
@@ -144,9 +149,9 @@ function App() {
   const stageId = useGameStore((s) => s.stageId);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
-  const knowledgeUpgradePickQueue = useGameStore((s) => s.knowledgeUpgradePickQueue || []);
-  const unspentUpgrades = knowledgeUpgradePickQueue.length;
   const leaderId = useGameStore((s) => s.leaderId);
+  const canPressSpin =
+    phase === 'idle' || (phase === 'selection' && (levelUpResearchPoints ?? 0) > 0);
 
   // 스테이지 선택 화면
   if (preGameScreen === 'intro') {
@@ -284,8 +289,9 @@ function App() {
         aria-hidden="true"
       />
       {/* ===== GAME BOARD (with integrated UI bars) ===== */}
-      <div className="game-area">
+      <div className="game-area" ref={gameAreaRef}>
         <GameCanvas onReady={handleCanvasReady} suppressBoardTooltips={suppressBoardTooltips} />
+        {phase === 'oblivion_furnace_board' && <OblivionFurnaceBoardOverlay anchorRef={gameAreaRef} />}
       </div>
 
       {/* ===== 보드 하단: 왼쪽(유물) · 중앙 고정(스핀) · 오른쪽(⋯, 메뉴) ===== */}
@@ -294,22 +300,51 @@ function App() {
           <button
             className="relic-shop-btn"
             onClick={toggleRelicShop}
-            title="유물 상점 (Relic Shop)"
+            title={
+              hasNewRelicShopStock
+                ? t('game.relicShopNewStockHint', language)
+                : t('game.relicShopTitleShort', language)
+            }
+            aria-label={
+              hasNewRelicShopStock
+                ? t('game.relicShopNewStockAria', language)
+                : t('game.relicShopTitleShort', language)
+            }
           >
-            <img src={RELIC_PANEL_TITLE_ICON_URL} alt="유물 상점" style={{ width: 44, height: 44, imageRendering: 'pixelated' }} />
-            {hasNewRelicShopStock && <span className="relic-shop-badge">New</span>}
-          </button>
-          <button
-            className="relic-shop-btn"
-            title="지식 업그레이드"
-            onClick={() => setIsKnowledgeOpen(true)}
-          >
-            <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="지식" style={{ width: 54, height: 54, imageRendering: 'pixelated' }} />
-            {unspentUpgrades > 0 && (
-              <span className="relic-shop-badge" style={{ background: '#ef4444', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {unspentUpgrades}
+            <img src={RELIC_PANEL_TITLE_ICON_URL} alt="" style={{ width: 44, height: 44, imageRendering: 'pixelated' }} />
+            {hasNewRelicShopStock && (
+              <span className="hud-new-stock-tab" aria-hidden="true">
+                {t('game.knowledgeHudPendingTab', language)}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            className="relic-shop-btn relic-shop-btn--knowledge"
+            aria-label={
+              levelUpResearchPoints > 0
+                ? t('game.knowledgeHudButtonHintPending', language).replace(
+                    '{title}',
+                    t('game.knowledgeUpgradeTreeTitle', language),
+                  )
+                : t('game.knowledgeUpgradeTreeTitle', language)
+            }
+            title={
+              levelUpResearchPoints > 0
+                ? t('game.knowledgeHudButtonHintPending', language).replace(
+                    '{title}',
+                    t('game.knowledgeUpgradeTreeTitle', language),
+                  )
+                : t('game.knowledgeUpgradeTreeTitle', language)
+            }
+            onClick={() => setIsKnowledgeOpen(true)}
+          >
+            {levelUpResearchPoints > 0 && (
+              <span className="hud-new-stock-tab" aria-hidden="true">
+                {t('game.knowledgeHudPendingTab', language)}
+              </span>
+            )}
+            <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" draggable={false} style={{ width: 54, height: 54, imageRendering: 'pixelated' }} />
           </button>
         </div>
         <div className="spin-area">
@@ -317,9 +352,9 @@ function App() {
             type="button"
             className="spin-btn"
             onClick={spinBoard}
-            disabled={phase !== 'idle' || unspentUpgrades > 0}
+            disabled={!canPressSpin}
             aria-label={t('game.spin', language)}
-            title={unspentUpgrades > 0 ? '지식 업그레이드를 확인해주세요!' : t('game.spin', language)}
+            title={t('game.spin', language)}
           >
             <span style={{ display: 'inline-block', transform: 'scaleX(1.8)', fontSize: '48px', fontWeight: 600, letterSpacing: '8px' }}>SPIN</span>
           </button>
@@ -344,9 +379,6 @@ function App() {
 
       {/* ===== PAUSE MENU OVERLAY ===== */}
       <PauseMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
-
-      {/* ===== UPGRADE SELECTION OVERLAY ===== */}
-      <UpgradeSelection />
 
       {/* ===== SYMBOL SELECTION OVERLAY ===== */}
       <SymbolSelection />

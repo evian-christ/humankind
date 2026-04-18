@@ -131,7 +131,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     15: {
         id: 15,
         name: "망각의 화로",
-        description: "클릭하여 발동. 보유 심볼 중 하나를 선택해 파괴합니다.",
+        description: "소모하여 보드 위에 있는 심볼 1개 파괴.",
         cost: 20,
         type: SymbolType.NORMAL,
         sprite: "015.png",

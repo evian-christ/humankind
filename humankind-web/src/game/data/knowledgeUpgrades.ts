@@ -116,7 +116,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 8,
         name: 'Sacrificial Rite',
         type: SymbolType.ANCIENT,
-        description: 'Immediately lets you select and destroy up to 3 owned symbols. +10 Gold per destroyed symbol.',
+        description:
+            'Gain 3 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
         sprite: '-',
     },
     9: {

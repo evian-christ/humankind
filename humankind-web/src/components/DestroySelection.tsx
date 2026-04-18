@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useGameStore, OBLIVION_FURNACE_PENDING } from '../game/state/gameStore';
+import { useGameStore } from '../game/state/gameStore';
 import { TERRITORIAL_REORG_UPGRADE_ID } from '../game/data/knowledgeUpgrades';
 import { EDICT_SYMBOL_ID, getSymbolColorHex, SymbolType, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
@@ -84,22 +84,18 @@ const DestroySelection = () => {
 
     const isTerritory = pendingDestroySource === TERRITORIAL_REORG_UPGRADE_ID;
     const isEdict = pendingDestroySource === EDICT_SYMBOL_ID;
-    const isOblivion = pendingDestroySource === OBLIVION_FURNACE_PENDING;
-    const titleKey = isOblivion
-        ? 'destroySelection.oblivionTitle'
-        : isEdict
-          ? 'destroySelection.edictTitle'
-          : isTerritory
-            ? 'destroySelection.territoryTitle'
-            : 'destroySelection.riteTitle';
+    const titleKey = isEdict
+        ? 'destroySelection.edictTitle'
+        : isTerritory
+          ? 'destroySelection.territoryTitle'
+          : 'destroySelection.riteTitle';
     const n = selectedInstanceIds.length;
-    const confirmLabel = isOblivion
-        ? t('destroySelection.oblivionConfirm', language)
-        : isEdict && n === 1
-          ? t('destroySelection.edictConfirm', language)
-          : t('destroySelection.confirmSacrifice', language)
-                .replace('{n}', String(n))
-                .replace('{gold}', String(n * 10));
+    const confirmLabel =
+        isEdict && n === 1
+            ? t('destroySelection.edictConfirm', language)
+            : t('destroySelection.confirmSacrifice', language)
+                  .replace('{n}', String(n))
+                  .replace('{gold}', String(n * 10));
 
     return (
         <div className="selection-overlay">
