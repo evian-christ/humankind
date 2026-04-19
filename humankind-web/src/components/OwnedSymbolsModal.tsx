@@ -5,7 +5,7 @@ import {
     BOARD_CELL_HEIGHT_PX,
 } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
+import { getSymbolColorHex, SymbolType, SYMBOLS } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { EffectText } from './EffectText';
@@ -233,7 +233,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                         {def.sprite && def.sprite !== '-' && def.sprite !== '-.png' ? (
                                             <img
                                                 src={`${ASSET_BASE_URL}assets/symbols/${def.sprite}`}
-                                                alt={t(`symbol.${def.id}.name`, language)}
+                                                alt={t(`symbol.${def.key}.name`, language)}
                                                 style={{
                                                     width: metrics.spriteSize,
                                                     height: metrics.spriteSize,
@@ -261,7 +261,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
 
                 {hoveredSymbol && (
                     <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
-                        <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.symbolId}.name`, language)}</div>
+                        <div className="symbol-tooltip-name">{t(`symbol.${SYMBOLS[hoveredSymbol.symbolId]?.key ?? hoveredSymbol.symbolId}.name`, language)}</div>
                         <div
                             className="symbol-tooltip-rarity"
                             style={{
@@ -275,7 +275,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                             {t(ERA_NAME_KEYS[hoveredSymbol.symbolType] ?? 'era.ancient', language)}
                         </div>
                         <div className="symbol-tooltip-desc">
-                            {t(`symbol.${hoveredSymbol.symbolId}.desc`, language).split('\n').map((line, i) => (
+                            {t(`symbol.${SYMBOLS[hoveredSymbol.symbolId]?.key ?? hoveredSymbol.symbolId}.desc`, language).split('\n').map((line, i) => (
                                 <div key={i} className="symbol-tooltip-desc-line">
                                     <EffectText text={line} />
                                 </div>

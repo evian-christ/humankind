@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
+import { SYMBOLS } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
@@ -146,7 +147,9 @@ const EffectLogOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                             <div style={{ whiteSpace: 'pre-wrap' }}>
                                 {rows.map((e) => {
                                     const isExpanded = expandedId === e.id;
-                                    const symName = e.symbolId != null ? t(`symbol.${e.symbolId}.name`, language) : '';
+                                    const symName = e.symbolId != null
+                                        ? t(`symbol.${SYMBOLS[e.symbolId]?.key ?? e.symbolId}.name`, language)
+                                        : '';
                                     const slot = e.slot ? slotLabel(e.slot) : '';
                                     const time = new Date(e.ts).toLocaleTimeString();
 
@@ -217,7 +220,9 @@ const EffectLogOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                                             {e.contributors && e.contributors.length > 0 && (
                                                 <div>
                                                     contributors: {e.contributors.map(c => {
-                                                        const n = c.symbolId != null ? t(`symbol.${c.symbolId}.name`, language) : '?';
+                                                        const n = c.symbolId != null
+                                                            ? t(`symbol.${SYMBOLS[c.symbolId]?.key ?? c.symbolId}.name`, language)
+                                                            : '?';
                                                         const s = slotLabel({ x: c.x, y: c.y });
                                                         return `${s} ${n}`;
                                                     }).join(', ')}

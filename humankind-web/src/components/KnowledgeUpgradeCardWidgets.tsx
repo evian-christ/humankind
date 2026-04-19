@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSettingsStore, type Language } from '../game/state/settingsStore';
-import { getSymbolColorHex, SYMBOLS, SymbolType } from '../game/data/symbolDefinitions';
-import type { KnowledgeUpgradeDescSymbol, KnowledgeUpgradeSymbolRelation } from '../game/data/knowledgeUpgrades';
+import { getSymbolColorHex, SYMBOLS_BY_KEY, SymbolType, type SymbolDefinition, type SymbolKey } from '../game/data/symbolDefinitions';
+import type {
+    KnowledgeUpgradeDescSymbol,
+    KnowledgeUpgradeDescSymbolKey,
+    KnowledgeUpgradeSymbolRelation,
+} from '../game/data/knowledgeUpgrades';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 
@@ -39,18 +43,36 @@ function normalizeDescForCompare(s: string): string {
     return s.replace(/\s+/g, ' ').trim();
 }
 
+/** 풀에서 제거된 심볼 — 업그레이드 칩·툴팁만 (i18n symbol.* 유지) */
+const DESC_ONLY_SYMBOL_VISUAL: Partial<
+    Record<KnowledgeUpgradeDescSymbolKey, Pick<SymbolDefinition, 'key' | 'sprite' | 'type'>>
+> = {
+    aqueduct: { key: 'aqueduct', sprite: '056.png', type: SymbolType.NORMAL },
+    rye: { key: 'rye', sprite: '057.png', type: SymbolType.NORMAL },
+    hay: { key: 'hay', sprite: '051.png', type: SymbolType.NORMAL },
+};
+
+function resolveUpgradeDescSymbolVisual(
+    symbolKey: KnowledgeUpgradeDescSymbolKey,
+): Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> | null {
+    const live = SYMBOLS_BY_KEY[symbolKey as SymbolKey];
+    if (live) return { key: live.key, sprite: live.sprite, type: live.type };
+    return DESC_ONLY_SYMBOL_VISUAL[symbolKey] ?? null;
+}
+
 /** 적용 전: 항상 공식 symbol.*.desc 와 동일 */
-function getCanonicalSymbolDesc(symbolId: number, language: Language): string {
-    return t(`symbol.${symbolId}.desc`, language);
+function getCanonicalSymbolDesc(symbolKey: KnowledgeUpgradeDescSymbolKey, language: Language): string {
+    return t(`symbol.${symbolKey}.desc`, language);
 }
 
 /** 적용 후 효과 문구 — symbol 카드와 같은 문체·형식으로 작성된 i18n */
 function resolveSymbolDescAfterUpgrade(
     upgradeId: number,
-    symbolId: number,
+    symbolKey: KnowledgeUpgradeDescSymbolKey,
     language: Language,
 ): string | null {
-    const key = `knowledgeUpgrade.symbolDescAfter.${upgradeId}.${symbolId}`;
+    if (!SYMBOLS_BY_KEY[symbolKey as SymbolKey]) return null;
+    const key = `knowledgeUpgrade.symbolDescAfter.${upgradeId}.${symbolKey}`;
     const val = t(key, language);
     return val === key ? null : val;
 }
@@ -67,7 +89,7 @@ export const UpgradeCardDescSymbols = ({
 }) => {
     const language = useSettingsStore((s) => s.language);
     const [hover, setHover] = useState<{
-        id: number;
+        symbolKey: KnowledgeUpgradeDescSymbolKey;
         relation: KnowledgeUpgradeSymbolRelation;
         anchorRight: number;
         anchorTop: number;
@@ -81,19 +103,19 @@ export const UpgradeCardDescSymbols = ({
     const relLabelFontPx = isPanel ? '18px' : '16px';
     const relPrefixFontPx = isPanel ? '20px' : '18px';
 
-    const showTooltip = (id: number, relation: KnowledgeUpgradeSymbolRelation, el: HTMLElement) => {
+    const showTooltip = (symbolKey: KnowledgeUpgradeDescSymbolKey, relation: KnowledgeUpgradeSymbolRelation, el: HTMLElement) => {
         const r = el.getBoundingClientRect();
-        setHover({ id, relation, anchorRight: r.right, anchorTop: r.top });
+        setHover({ symbolKey, relation, anchorRight: r.right, anchorTop: r.top });
     };
 
     const tooltipContent = hover && (() => {
-        const def = SYMBOLS[hover.id];
+        const def = resolveUpgradeDescSymbolVisual(hover.symbolKey);
         if (!def) return null;
         const eraColor = getSymbolColorHex(def.type);
         const eraName = t(ERA_NAME_KEYS[def.type] ?? 'era.ancient', language);
         const isModify = hover.relation === 'effect_modify';
-        const beforeCanonical = isModify ? getCanonicalSymbolDesc(hover.id, language) : '';
-        const afterResolved = isModify ? resolveSymbolDescAfterUpgrade(upgradeId, hover.id, language) : null;
+        const beforeCanonical = isModify ? getCanonicalSymbolDesc(hover.symbolKey, language) : '';
+        const afterResolved = isModify ? resolveSymbolDescAfterUpgrade(upgradeId, hover.symbolKey, language) : null;
         const hasCompare =
             isModify &&
             afterResolved !== null &&
@@ -117,7 +139,7 @@ export const UpgradeCardDescSymbols = ({
                 }}
                 role="tooltip"
             >
-                <div className="symbol-tooltip-name">{t(`symbol.${def.id}.name`, language)}</div>
+                <div className="symbol-tooltip-name">{t(`symbol.${def.key}.name`, language)}</div>
                 <div
                     className="symbol-tooltip-rarity"
                     style={{
@@ -160,7 +182,7 @@ export const UpgradeCardDescSymbols = ({
                     </div>
                 ) : (
                     <div className="symbol-tooltip-desc" style={{ marginTop: '8px' }}>
-                        {t(`symbol.${def.id}.desc`, language).split('\n').map((line, i) => (
+                        {t(`symbol.${def.key}.desc`, language).split('\n').map((line, i) => (
                             <div key={i} className="symbol-tooltip-desc-line">
                                 <EffectText text={line} />
                             </div>
@@ -194,23 +216,23 @@ export const UpgradeCardDescSymbols = ({
                                 {relInfo.text}
                             </div>
                             <div className="upgrade-card-desc-symbol-chips">
-                                {group.map(({ id, relation }) => {
-                                    const def = SYMBOLS[id];
+                                {group.map(({ symbolKey, relation }) => {
+                                    const def = resolveUpgradeDescSymbolVisual(symbolKey);
                                     if (!def) return null;
                                     const src =
                                         def.sprite && def.sprite !== '-' && def.sprite !== '-.png'
                                             ? `${ASSET_BASE_URL}assets/symbols/${def.sprite}`
                                             : undefined;
-                                    const symName = t(`symbol.${id}.name`, language);
+                                    const symName = t(`symbol.${symbolKey}.name`, language);
                                     return (
                                         <button
-                                            key={`${id}-${relation}`}
+                                            key={`${symbolKey}-${relation}`}
                                             type="button"
                                             className={`upgrade-card-desc-symbol-chip upgrade-card-desc-symbol-chip--${relation}`}
                                             aria-label={symName}
-                                            onMouseEnter={(e) => showTooltip(id, relation, e.currentTarget)}
+                                            onMouseEnter={(e) => showTooltip(symbolKey, relation, e.currentTarget)}
                                             onMouseLeave={() => setHover(null)}
-                                            onFocus={(e) => showTooltip(id, relation, e.currentTarget)}
+                                            onFocus={(e) => showTooltip(symbolKey, relation, e.currentTarget)}
                                             onBlur={() => setHover(null)}
                                         >
                                             <span

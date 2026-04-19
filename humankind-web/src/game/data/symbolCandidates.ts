@@ -6,6 +6,7 @@ import { SymbolType, type SymbolDefinition } from './symbolDefinitions';
 export const SYMBOL_CANDIDATES: Record<number, SymbolDefinition> = {
     1001: {
         id: 1001,
+        key: 'candidate1001',
         name: '상인 (고대 개편안)',
         type: SymbolType.ANCIENT,
         description:
@@ -14,6 +15,7 @@ export const SYMBOL_CANDIDATES: Record<number, SymbolDefinition> = {
     },
     1002: {
         id: 1002,
+        key: 'candidate1002',
         name: '향신료 (고대 개편안)',
         type: SymbolType.ANCIENT,
         description:
@@ -22,6 +24,7 @@ export const SYMBOL_CANDIDATES: Record<number, SymbolDefinition> = {
     },
     1003: {
         id: 1003,
+        key: 'candidate1003',
         name: '도서관 (고대 개편안)',
         type: SymbolType.ANCIENT,
         description:

@@ -1630,7 +1630,7 @@ button.spin-btn:disabled:active {
   max-width: 90%;
 }
 
-/* 리더 선택 — 전체 화면 (패널 박스 없음) */
+/* 리더 선택 — 전체 화면 (초상화 PNG 제외 스프라이트 없음) */
 .leader-select-root {
   /* 화면 오른쪽 가장자리 여백 = 기준값, 하단·좌측·지도자 그리드↔우측 박스 간격도 동일 */
   --leader-select-gutter: clamp(16px, 3%, 40px);
@@ -1643,7 +1643,9 @@ button.spin-btn:disabled:active {
   min-height: 100%;
   max-height: 100%;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.88);
+  background:
+    radial-gradient(circle at top, rgba(120, 120, 120, 0.12), transparent 45%),
+    rgba(0, 0, 0, 0.9);
   /* 좌우 gutter, 상·하는 중간 정도 */
   padding: clamp(12px, 1.9%, 26px) var(--leader-select-gutter);
 }
@@ -1669,13 +1671,14 @@ button.spin-btn:disabled:active {
   flex-direction: column;
   gap: 28px;
   padding: clamp(28px, 3vw, 44px);
-  background-color: rgba(12, 12, 12, 0.82);
-  background-image: url('/assets/ui/demo_main/outer.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  border: none;
-  box-shadow: none;
+  box-sizing: border-box;
+  font-family: 'Mulmaru', sans-serif;
+  /* 심볼 툴팁(.symbol-tooltip)과 동일 계열: 스프라이트 없이 CSS만 */
+  background: rgba(15, 15, 15, 0.95);
+  border: 2px solid #555;
+  box-shadow:
+    0 14px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .demo-start-header {
@@ -1696,19 +1699,18 @@ button.spin-btn:disabled:active {
   flex-direction: column;
   gap: 16px;
   padding: clamp(20px, 2vw, 28px);
-  background-color: transparent;
-  background-image: url('/assets/ui/demo_main/inner.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  border: none;
+  box-sizing: border-box;
+  /* 안쪽 박스: 툴팁 내부 구분선(.knowledge-upgrade-detail-panel) 느낌 */
+  background: rgba(10, 10, 10, 0.72);
+  border: 1px solid #444;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .demo-start-section-title {
   font-family: 'Mulmaru', sans-serif;
   font-size: clamp(24px, 2vw, 34px);
   letter-spacing: 0.08em;
-  color: #1c1917;
+  color: #ffffff;
 }
 
 .demo-start-list {
@@ -1719,9 +1721,9 @@ button.spin-btn:disabled:active {
 }
 
 .demo-start-list-item {
-  font-size: clamp(19px, 1.35vw, 24px);
-  line-height: 1.65;
-  color: #374151;
+  font-size: clamp(18px, 1.3vw, 22px);
+  line-height: 1.5;
+  color: #cccccc;
   padding-left: 24px;
   position: relative;
 }
@@ -1731,18 +1733,19 @@ button.spin-btn:disabled:active {
   position: absolute;
   left: 0;
   top: 0;
-  color: #92400e;
+  color: #a8a29e;
 }
 
 .demo-inline-code {
   display: inline-flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 2px 10px;
   margin: 0 2px;
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  color: #111827;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #555;
+  color: #f3f4f6;
   letter-spacing: 0.06em;
+  font-size: 0.92em;
 }
 
 .demo-resource {
@@ -1772,15 +1775,15 @@ button.spin-btn:disabled:active {
 }
 
 .demo-resource--food {
-  color: #166534;
+  color: #4ade80;
 }
 
 .demo-resource--gold {
-  color: #a16207;
+  color: #facc15;
 }
 
 .demo-resource--knowledge {
-  color: #0369a1;
+  color: #7dd3fc;
 }
 
 .demo-start-actions {
@@ -1797,13 +1800,31 @@ button.spin-btn:disabled:active {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 28px;
-  background: rgba(0, 0, 0, 0.88);
+  background:
+    radial-gradient(circle at top, rgba(120, 120, 120, 0.12), transparent 45%),
+    rgba(0, 0, 0, 0.9);
   padding: clamp(28px, 4vw, 72px);
 }
 
+/* 데모 시작 패널과 동일 계열 — 스프라이트 없이 CSS만 */
+.stage-select-panel {
+  width: min(100%, 400px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: clamp(28px, 3vw, 44px);
+  box-sizing: border-box;
+  font-family: 'Mulmaru', sans-serif;
+  background: rgba(15, 15, 15, 0.95);
+  border: 2px solid #555;
+  box-shadow:
+    0 14px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 .stage-select-header {
-  width: min(100%, 270px);
+  width: 100%;
 }
 
 .stage-select-title {
@@ -1813,32 +1834,23 @@ button.spin-btn:disabled:active {
 }
 
 .stage-select-list {
-  width: min(100%, 270px);
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 7px;
+  gap: 12px;
 }
 
-/* 난이도: 공통 스프라이트(180×48) + 위에 라벨 — demo_difficulty/button*.png */
+/* 난이도 버튼 — 위 `.pregame-card` 인게임 3D 버튼(스프라이트 없음) */
 .stage-select-card.pregame-card {
-  --stage-diff-btn: url('/assets/ui/demo_difficulty/button.png?v=1');
-  --stage-diff-hovered: url('/assets/ui/demo_difficulty/button_hovered.png?v=1');
-  --stage-diff-pressed: url('/assets/ui/demo_difficulty/button_pressed.png?v=1');
   width: 100%;
   min-width: 0;
-  min-height: 0;
-  padding: 0 7px;
-  align-items: center;
+  min-height: 56px;
+  padding: 14px 22px;
+  flex-direction: row;
   justify-content: center;
-  background-color: transparent;
-  background-image: var(--stage-diff-btn);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  box-shadow: none;
-  transform: none;
-  aspect-ratio: 180 / 48;
+  align-items: center;
+  gap: 0;
 }
 
 .stage-select-card-label {
@@ -1846,53 +1858,11 @@ button.spin-btn:disabled:active {
   z-index: 1;
   display: inline-block;
   font-family: 'Mulmaru', sans-serif;
-  font-size: clamp(14px, 1.05vw, 16px);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #f3f4f6;
+  font-size: clamp(16px, 1.25vw, 20px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
   pointer-events: none;
   text-align: center;
-  transform: scaleX(1.2);
-  transform-origin: center center;
-}
-
-.stage-select-card.pregame-card:hover:not(:disabled):not(:active) {
-  background-color: transparent;
-  background-image: var(--stage-diff-hovered);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  box-shadow: none;
-  transform: none;
-}
-
-.stage-select-card.pregame-card:active:not(:disabled) {
-  background-color: transparent;
-  background-image: var(--stage-diff-pressed);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  box-shadow: none;
-  transform: none;
-}
-
-.stage-select-card.pregame-card:disabled,
-.stage-select-card.pregame-card:disabled:hover {
-  background-color: transparent;
-  background-image: var(--stage-diff-btn);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.5;
-  filter: grayscale(0.35);
-  transform: none;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-.stage-select-card.pregame-card:disabled .stage-select-card-label {
-  color: #9ca3af;
-  text-shadow: none;
 }
 
 .leader-select-header {
@@ -1921,13 +1891,14 @@ button.spin-btn:disabled:active {
   -webkit-overflow-scrolling: touch;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 0;
+  gap: clamp(6px, 1.2vw, 12px);
   align-content: start;
   padding: 0;
   /* 서브픽셀 갭 방지: 그리드 자체를 GPU 레이어로 올림 */
   transform: translateZ(0);
 }
 
+/* 초상화 주변 프레임만 CSS(심볼 툴팁·pregame 패널 계열). 초상화 img 자체는 유지 */
 .leader-portrait-btn {
   box-sizing: border-box;
   display: block;
@@ -1938,17 +1909,13 @@ button.spin-btn:disabled:active {
   height: auto;
   padding: calc(100% * 2 / 68);
   margin: 0;
-  border: none;
+  border: 2px solid #555;
   cursor: var(--app-cursor-pointer);
-  background-color: transparent;
-  background-image: url('/assets/ui/demo_leader/leader_background.png?v=2');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  box-shadow: none;
-  transition: filter 0.1s ease;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  background-color: rgba(14, 14, 14, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.45);
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
   /* 각 버튼도 GPU 레이어로 올려 서브픽셀 반올림 통일 */
   transform: translateZ(0);
 }
@@ -1958,12 +1925,21 @@ button.spin-btn:disabled:active {
   filter: grayscale(0.85);
 }
 
-.leader-portrait-btn:hover:not(:disabled) {
-  filter: brightness(1.08);
+/* 비선택: 회색 프레임 — 호버 시 연한 회색(밝은 테두리), brightness 필터 없음 */
+.leader-portrait-btn:hover:not(:disabled):not(.leader-portrait-btn--selected) {
+  border-color: #9ca3af;
+  background-color: rgba(26, 26, 28, 0.98);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 5px 20px rgba(0, 0, 0, 0.42);
 }
 
-.leader-portrait-btn:active:not(:disabled) {
-  filter: brightness(1.02);
+.leader-portrait-btn:active:not(:disabled):not(.leader-portrait-btn--selected) {
+  border-color: #6b7280;
+  background-color: rgba(14, 14, 16, 0.98);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 3px 12px rgba(0, 0, 0, 0.5);
 }
 
 .leader-portrait-btn:focus-visible {
@@ -1979,18 +1955,33 @@ button.spin-btn:disabled:active {
   position: relative;
   z-index: 1;
   outline: none;
-  /* 선택도 비선택과 동일 프레임(pressed/selected 전용 배경 미사용) — 구분은 ::after 오라만 */
-  background-image: url('/assets/ui/demo_leader/leader_background.png?v=2');
+  border-color: #ca8a04;
+  box-shadow:
+    inset 0 0 0 1px rgba(253, 224, 71, 0.12),
+    0 0 0 1px rgba(251, 191, 36, 0.35),
+    0 6px 22px rgba(0, 0, 0, 0.5);
   /* 오라는 ::after 로 초상화(패딩 안) 위에만 — 밖으로 빛 안 뻗음 */
   filter: none;
 }
 
+/* 선택됨: 주황/앰버 프레임 — 호버 시 연한 주황(필터로 회색화되지 않게 테두리·광만 조정) */
 .leader-portrait-btn--selected:hover:not(:disabled) {
-  filter: brightness(1.06);
+  border-color: #fcd34d;
+  background-color: rgba(40, 28, 8, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(254, 243, 199, 0.22),
+    0 0 0 2px rgba(251, 191, 36, 0.55),
+    0 0 28px rgba(251, 191, 36, 0.32),
+    0 8px 26px rgba(0, 0, 0, 0.48);
 }
 
 .leader-portrait-btn--selected:active:not(:disabled) {
-  filter: brightness(1.02);
+  border-color: #ea580c;
+  background-color: rgba(24, 16, 6, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(254, 215, 170, 0.14),
+    0 0 0 1px rgba(234, 88, 12, 0.45),
+    0 4px 18px rgba(0, 0, 0, 0.52);
 }
 
 .leader-portrait-btn--selected::after {
@@ -2092,21 +2083,18 @@ button.spin-btn:disabled:active {
 }
 
 .leader-select-preview {
-  /* 본문 높이를 채우고, 플레이 버튼은 박스 하단 고정 */
+  /* 본문 높이를 채우고, 플레이 버튼은 박스 하단 고정 — 툴팁/데모 패널과 동일 계열 */
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: transparent;
-  background-image: url('/assets/ui/demo_leader/leader_description_bg.png?v=1');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  border: none;
-  box-shadow: none;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  box-sizing: border-box;
+  background: rgba(15, 15, 15, 0.95);
+  border: 2px solid #555;
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .leader-select-preview-scroll {
@@ -2128,62 +2116,24 @@ button.spin-btn:disabled:active {
   padding: 0 30px max(30px, env(safe-area-inset-bottom, 0px));
 }
 
-/* 지도자 선택 플레이 버튼 — demo_leader 스프라이트; background 단축으로 한 번에 지정(호버 시 image만 바꾸면 다른 규칙/초기값에 밀릴 수 있음) */
-button.leader-select-play {
-  /* 버튼은 작게(절반 스케일); 가독 텍스트는 .leader-select-play-label에서 키움 */
-  width: 270px;
-  max-width: 100%;
-  height: auto;
-  aspect-ratio: 134 / 48;
-  box-sizing: border-box;
-  padding: 0;
-  display: flex;
-  align-items: center;
+/* 플레이 — .pregame-card 인게임 3D 버튼(스프라이트 없음) */
+button.pregame-card.leader-select-play {
+  width: min(100%, 300px);
+  min-height: 58px;
+  padding: 14px 26px;
+  flex-direction: row;
   justify-content: center;
-  font-family: 'Mulmaru', sans-serif;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  cursor: var(--app-cursor-pointer);
-  text-align: center;
-  color: #e8e8e8;
-  border: none;
-  box-shadow: none;
-  transform: none;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  align-items: center;
+  gap: 0;
   flex-shrink: 0;
-  background: transparent url('/assets/ui/demo_leader/button.png?v=2') center / 100% 100% no-repeat;
 }
 
 .leader-select-play-label {
   display: inline-block;
-  font-size: 24px;
+  font-size: clamp(20px, 1.8vw, 26px);
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   line-height: 1;
-}
-
-button.leader-select-play:hover:not(:disabled):not(:active) {
-  background: transparent url('/assets/ui/demo_leader/button_hovered.png?v=2') center / 100% 100% no-repeat;
-  box-shadow: none;
-  transform: none;
-}
-
-button.leader-select-play:active:not(:disabled) {
-  background: transparent url('/assets/ui/demo_leader/button_pressed.png?v=2') center / 100% 100% no-repeat;
-  box-shadow: none;
-  transform: none;
-}
-
-button.leader-select-play:disabled,
-button.leader-select-play:disabled:hover {
-  cursor: not-allowed;
-  background: transparent url('/assets/ui/demo_leader/button.png?v=2') center / 100% 100% no-repeat;
-  opacity: 0.55;
-  filter: grayscale(0.25);
-  transform: none;
-  box-shadow: none;
 }
 
 .leader-preview-name {
@@ -2434,58 +2384,18 @@ button.leader-select-play:disabled:hover {
     0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* 데모 시작: 플레이 버튼 — button / button_hovered / button_pressed, 위치 고정 (?v= 캐시 무효화) */
+/* 데모 시작: 플레이 — 위 `.pregame-card`와 동일한 인게임 3D 버튼(스프라이트 없음) */
 .pregame-card.demo-start-play-button {
-  --demo-play-button: url('/assets/ui/demo_main/button.png?v=4');
-  --demo-play-button-hovered: url('/assets/ui/demo_main/button_hovered.png?v=1');
-  --demo-play-button-pressed: url('/assets/ui/demo_main/button_pressed.png?v=3');
-  width: min(100%, 240px);
-  aspect-ratio: 120 / 46;
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  background-color: transparent;
-  background-image: var(--demo-play-button);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  box-shadow: none;
-  color: #e8e8e8;
-  transform: none;
+  width: min(100%, 300px);
+  min-height: 64px;
+  padding: 16px 32px;
+  flex-direction: row;
   justify-content: center;
-}
-
-.pregame-card.demo-start-play-button:hover:not(:disabled):not(:active) {
-  background-color: transparent;
-  background-image: var(--demo-play-button-hovered);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  box-shadow: none;
-  transform: none;
-}
-
-.pregame-card.demo-start-play-button:active:not(:disabled) {
-  background-color: transparent;
-  background-image: var(--demo-play-button-pressed);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  box-shadow: none;
-  transform: none;
-}
-
-.pregame-card.demo-start-play-button:disabled,
-.pregame-card.demo-start-play-button:disabled:hover {
-  background-color: transparent;
-  background-image: var(--demo-play-button);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.55;
-  filter: grayscale(0.25);
-  transform: none;
-  box-shadow: none;
+  align-items: center;
+  gap: 0;
+  font-weight: 800;
+  font-size: clamp(22px, 2vw, 30px);
+  letter-spacing: 0.12em;
 }
 
 .pregame-card-name {

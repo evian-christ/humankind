@@ -121,8 +121,8 @@ const DataBrowser = () => {
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(s => {
-                const name = t(`symbol.${s.id}.name`, language).toLowerCase();
-                const desc = t(`symbol.${s.id}.desc`, language).toLowerCase();
+                const name = t(`symbol.${s.key}.name`, language).toLowerCase();
+                const desc = t(`symbol.${s.key}.desc`, language).toLowerCase();
                 return name.includes(q) || desc.includes(q) || String(s.id).includes(q);
             });
         }
@@ -133,10 +133,10 @@ const DataBrowser = () => {
                 let va: unknown, vb: unknown;
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = t(`symbol.${a.id}.name`, language); vb = t(`symbol.${b.id}.name`, language); break;
+                    case 'name': va = t(`symbol.${a.key}.name`, language); vb = t(`symbol.${b.key}.name`, language); break;
                     case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'type': va = a.type; vb = b.type; break;
-                    case 'desc': va = t(`symbol.${a.id}.desc`, language); vb = t(`symbol.${b.id}.desc`, language); break;
+                    case 'desc': va = t(`symbol.${a.key}.desc`, language); vb = t(`symbol.${b.key}.desc`, language); break;
                     case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
                     case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
@@ -573,7 +573,7 @@ const DataBrowser = () => {
                                     return (
                                         <tr key={s.id} className="databrowser-row">
                                             <td className="databrowser-cell--id">{s.id}</td>
-                                            <td className="databrowser-cell--name">{t(`symbol.${s.id}.name`, language)}</td>
+                                            <td className="databrowser-cell--name">{t(`symbol.${s.key}.name`, language)}</td>
                                             <td>
                                                 <span
                                                     style={{
@@ -588,7 +588,7 @@ const DataBrowser = () => {
                                                 </span>
                                             </td>
 
-                                            <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
+                                            <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.key}.desc`, language)} /></td>
                                             <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
                                             <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
                                             <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
@@ -602,7 +602,7 @@ const DataBrowser = () => {
                                 : filteredSymbols.map(s => (
                                     <tr key={s.id} className="databrowser-row">
                                         <td className="databrowser-cell--id">{s.id}</td>
-                                        <td className="databrowser-cell--name">{t(`symbol.${s.id}.name`, language)}</td>
+                                        <td className="databrowser-cell--name">{t(`symbol.${s.key}.name`, language)}</td>
                                         <td>
                                             <span
                                                 style={{
@@ -617,7 +617,7 @@ const DataBrowser = () => {
                                             </span>
                                         </td>
 
-                                        <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.id}.desc`, language)} /></td>
+                                        <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.key}.desc`, language)} /></td>
                                         <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
                                         <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
                                         <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>

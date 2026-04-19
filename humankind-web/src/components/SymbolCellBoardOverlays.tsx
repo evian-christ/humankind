@@ -2,6 +2,7 @@ import type { PlayerSymbolInstance } from '../game/types';
 import {
     BARBARIAN_CAMP_SPAWN_INTERVAL,
     SymbolType,
+    S,
 } from '../game/data/symbolDefinitions';
 import { BOARD_CELL_HEIGHT_PX, BOARD_CELL_WIDTH_PX } from '../game/state/gameStore';
 
@@ -29,8 +30,8 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const showAtk = def.base_attack !== undefined && def.base_attack > 0;
     const showHp = def.base_hp !== undefined && def.base_hp > 0;
     const hpValue = sym.enemy_hp ?? def.base_hp;
-    const showCampCounter = def.id === 40;
-    const showMerchantStoredGold = def.id === 22 && (sym.stored_gold ?? 0) > 0;
+    const showCampCounter = def.id === S.barbarian_camp;
+    const showMerchantStoredGold = def.id === S.merchant && (sym.stored_gold ?? 0) > 0;
 
     const font = { fontFamily: 'Mulmaru, sans-serif' as const, lineHeight: 1 as const };
     const statShadow =

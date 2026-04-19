@@ -110,7 +110,7 @@ const DestroySelection = () => {
                         pointerEvents: 'none',
                     }}
                 >
-                    <div className="symbol-tooltip-name">{t(`symbol.${hoverTip.def.id}.name`, language)}</div>
+                    <div className="symbol-tooltip-name">{t(`symbol.${hoverTip.def.key}.name`, language)}</div>
                     <div
                         className="symbol-tooltip-rarity"
                         style={{
@@ -124,7 +124,7 @@ const DestroySelection = () => {
                         {t(SYMBOL_TYPE_ERA_KEY[hoverTip.def.type] ?? 'era.ancient', language)}
                     </div>
                     <div className="symbol-tooltip-desc">
-                        {t(`symbol.${hoverTip.def.id}.desc`, language).split('\n').map((line, j) => (
+                        {t(`symbol.${hoverTip.def.key}.desc`, language).split('\n').map((line, j) => (
                             <div key={j} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
                         ))}
                     </div>
@@ -164,7 +164,7 @@ const DestroySelection = () => {
                                 {sym.definition.sprite && sym.definition.sprite !== '-' && sym.definition.sprite !== '-.png' ? (
                                     <img
                                         src={`${ASSET_BASE_URL}assets/symbols/${sym.definition.sprite}`}
-                                        alt={t(`symbol.${sym.definition.id}.name`, language)}
+                                        alt={t(`symbol.${sym.definition.key}.name`, language)}
                                         style={{ width: `${IMG_PX}px`, height: `${IMG_PX}px`, objectFit: 'contain', imageRendering: 'pixelated' }}
                                         draggable={false}
                                     />

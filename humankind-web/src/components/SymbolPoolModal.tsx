@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useGameStore, getSymbolPoolProbabilities } from '../game/state/gameStore';
-import { SymbolType } from '../game/data/symbolDefinitions';
+import { SymbolType, SYMBOLS } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
@@ -180,7 +180,7 @@ const SymbolPoolModal = () => {
                                                     {row.id}
                                                 </td>
                                                 <td style={{ padding: '6px 12px' }}>
-                                                    <div style={{ color: '#f3f4f6' }}>{t(`symbol.${row.id}.name`, language)}</div>
+                                                    <div style={{ color: '#f3f4f6' }}>{t(`symbol.${SYMBOLS[row.id]?.key ?? row.id}.name`, language)}</div>
                                                     <div style={{ fontSize: '11px', color: '#6b7280' }}>{row.name}</div>
                                                 </td>
                                                 <td style={{ padding: '6px 12px' }}>

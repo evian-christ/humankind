@@ -261,7 +261,7 @@ const DevOverlay = () => {
                 >
                     {allSymbolsList.map(sym => (
                         <option key={sym.id} value={sym.id}>
-                            [E{sym.type}] {t(`symbol.${sym.id}.name`, language)} (#{sym.id})
+                            [E{sym.type}] {t(`symbol.${sym.key}.name`, language)} (#{sym.id})
                         </option>
                     ))}
                 </select>
@@ -370,7 +370,7 @@ const DevOverlay = () => {
                     >
                         <span>
                             <span style={{ color: '#888', marginRight: '6px' }}>[E{sym.definition.type}]</span>
-                            {t(`symbol.${sym.definition.id}.name`, language)}
+                            {t(`symbol.${sym.definition.key}.name`, language)}
                             {sym.effect_counter > 0 && (
                                 <span style={{ color: '#fbbf24', marginLeft: '6px' }}>({sym.effect_counter})</span>
                             )}

@@ -350,7 +350,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         <div ref={canvasRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
             {showBoardTooltips && hoveredSymbol && (
                 <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
-                    <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.definition.id}.name`, language)}</div>
+                    <div className="symbol-tooltip-name">{t(`symbol.${hoveredSymbol.definition.key}.name`, language)}</div>
                     <div className="symbol-tooltip-rarity" style={{
                         color: getSymbolColorHex(hoveredSymbol.definition.type),
                         fontWeight: 'bold',
@@ -361,7 +361,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                         {t(ERA_NAME_KEYS[hoveredSymbol.definition.type] ?? 'era.ancient', language)}
                     </div>
                     <div className="symbol-tooltip-desc">
-                        {t(`symbol.${hoveredSymbol.definition.id}.desc`, language).split('\n').map((line, i) => (
+                        {t(`symbol.${hoveredSymbol.definition.key}.desc`, language).split('\n').map((line, i) => (
                             <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
                         ))}
                     </div>

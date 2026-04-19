@@ -171,7 +171,7 @@ export default function LeaderSelectScreen() {
             <div className="leader-select-preview-footer">
               <button
                 type="button"
-                className="leader-select-play"
+                className="pregame-card leader-select-play"
                 onClick={handlePlay}
                 disabled={chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)}
               >

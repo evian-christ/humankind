@@ -17,6 +17,8 @@ interface PreGameState {
   exitPreGame: () => void;
   /** 게임오버/승리 후 재진입: 난이도(스테이지) 선택 화면으로 */
   returnToStageSelect: () => void;
+  /** 데모 시작 화면에서 S: 개척(1) + 진시황으로 바로 게임 진입 */
+  skipIntroToDefaults: () => void;
 }
 
 export const usePreGameStore = create<PreGameState>((set, get) => ({
@@ -58,6 +60,15 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
   returnToStageSelect: () => {
     set({
       screen: 'stage',
+      selectedStageId: null,
+      selectedLeaderId: null,
+    });
+  },
+
+  skipIntroToDefaults: () => {
+    useGameStore.getState().startGameWithDraft([], 'shihuang', 1);
+    set({
+      screen: null,
       selectedStageId: null,
       selectedLeaderId: null,
     });

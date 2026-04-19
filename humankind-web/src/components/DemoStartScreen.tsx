@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { usePreGameStore } from '../game/state/preGameStore';
 import { t } from '../i18n';
@@ -31,7 +32,21 @@ function ResourceWord({
 export default function DemoStartScreen() {
   const language = useSettingsStore((s) => s.language);
   const proceedToStageSelect = usePreGameStore((s) => s.proceedToStageSelect);
+  const skipIntroToDefaults = usePreGameStore((s) => s.skipIntroToDefaults);
   const isKorean = language === 'ko';
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyS') return;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return;
+      e.preventDefault();
+      skipIntroToDefaults();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [skipIntroToDefaults]);
   const resource = (type: ResourceType) => (
     <ResourceWord
       type={type}
@@ -84,7 +99,9 @@ export default function DemoStartScreen() {
             className="pregame-card demo-start-play-button"
             onClick={proceedToStageSelect}
             aria-label={t('pregame.demoPlay', language)}
-          />
+          >
+            {t('pregame.demoPlay', language)}
+          </button>
         </div>
       </div>
     </div>

@@ -11,11 +11,12 @@ import type { GameState } from '../../game/state/gameStore';
 import { SPIN_SPEED_CONFIG, COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../game/state/settingsStore';
 import type { Language, SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
-import { getSymbolColor, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL } from '../../game/data/symbolDefinitions';
+import { getSymbolColor, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import { useRelicStore } from '../../game/state/relicStore';
 import type { RelicInstance } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
+import type { PlayerSymbolInstance } from '../../game/types';
 import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../../game/data/knowledgeUpgradeCandidates';
 import { loadGameAssets } from './AssetLoader';
@@ -27,6 +28,19 @@ import {
 } from '../../uiAssetUrls';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
+
+function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+            if (board[nx][ny]?.definition.id === S.plains) return true;
+        }
+    }
+    return false;
+}
 
 /** index.css 커스텀 커서와 동일 (캔버스 위 호버) */
 const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, pointer`;
@@ -706,22 +720,102 @@ export class PixiGameApp {
                 const preShakeX = isPreCombatShakeTarget ? Math.sin(Date.now() / 22) * 5 : 0;
                 const preShakeY = isPreCombatShakeTarget ? Math.cos(Date.now() / 18) * 4 : 0;
 
-                const hitArea = new PIXI.Graphics();
-                hitArea.rect(cellX, cellY, cellWidth, cellHeight);
-                hitArea.fill({ color: 0x000000, alpha: 0 });
-                hitArea.eventMode = 'static';
-                hitArea.cursor = GAME_CURSOR_POINTER;
                 const symDef = symbol.definition;
+                const canButcherPasture =
+                    state.phase === 'idle' &&
+                    (symDef.id === S.cattle || symDef.id === S.sheep) &&
+                    !symbol.is_marked_for_destruction &&
+                    boardHasAdjacentPlains(state.board, x, y);
 
-                hitArea.on('pointerover', () => {
+                const showSymbolHover = () => {
                     this.symbolHoverCell = { x, y };
                     this.onHoverSymbol({ definition: symDef, screenX: cellX + cellWidth, screenY: cellY });
-                });
-                hitArea.on('pointerout', () => {
+                };
+                const clearSymbolHover = () => {
                     this.symbolHoverCell = null;
                     this.onHoverSymbol(null);
-                });
-                this.hitContainer.addChild(hitArea);
+                };
+
+                if (canButcherPasture) {
+                    const cellRoot = new PIXI.Container();
+                    cellRoot.x = cellX;
+                    cellRoot.y = cellY;
+                    cellRoot.eventMode = 'static';
+                    cellRoot.cursor = GAME_CURSOR_POINTER;
+                    // 명시적 hitArea — 자식 bounds 계산에 의존하지 않음
+                    cellRoot.hitArea = new PIXI.Rectangle(0, 0, cellWidth, cellHeight);
+
+                    // OblivionFurnaceBoardOverlay «제거» 버튼과 동일 스타일
+                    const btnFs = Math.max(15, 18 * scale);
+                    const btnPadY = Math.max(8, 10 * scale);
+                    const btnPadX = Math.max(18, 22 * scale);
+                    const btnLabel = t('cattleButcher.button', lang);
+                    const lbl = new PIXI.Text({
+                        text: btnLabel,
+                        style: new PIXI.TextStyle({
+                            fill: '#ffffff',
+                            fontSize: btnFs,
+                            fontWeight: '800',
+                            fontFamily,
+                        }),
+                    });
+                    lbl.anchor.set(0.5);
+                    const bw = lbl.width + btnPadX * 2;
+                    const bh = lbl.height + btnPadY * 2;
+                    const btnBg = new PIXI.Graphics();
+                    btnBg.rect(-bw / 2, -bh / 2, bw, bh);
+                    btnBg.fill({ color: 0xb91c1c, alpha: 1 });
+                    btnBg.stroke({ width: 3, color: 0xfca5a5, alpha: 1 });
+
+                    const butcherBtn = new PIXI.Container();
+                    butcherBtn.addChild(btnBg);
+                    butcherBtn.addChild(lbl);
+                    butcherBtn.x = cellWidth / 2;
+                    butcherBtn.y = cellHeight / 2;
+                    butcherBtn.visible = false;
+                    butcherBtn.eventMode = 'none';
+                    cellRoot.addChild(butcherBtn);
+
+                    // 버튼 로컬 히트 영역 (cellRoot 좌표계)
+                    const btnX1 = cellWidth / 2 - bw / 2;
+                    const btnX2 = cellWidth / 2 + bw / 2;
+                    const btnY1 = cellHeight / 2 - bh / 2;
+                    const btnY2 = cellHeight / 2 + bh / 2;
+
+                    cellRoot.on('pointerover', () => {
+                        showSymbolHover();
+                        butcherBtn.visible = true;
+                    });
+                    cellRoot.on('pointerleave', () => {
+                        clearSymbolHover();
+                        butcherBtn.visible = false;
+                    });
+                    cellRoot.on('pointertap', (e: PIXI.FederatedPointerEvent) => {
+                        if (!butcherBtn.visible) return;
+                        const local = e.getLocalPosition(cellRoot);
+                        if (local.x >= btnX1 && local.x <= btnX2 && local.y >= btnY1 && local.y <= btnY2) {
+                            useGameStore.getState().butcherPastureAnimalAt(x, y);
+                            butcherBtn.visible = false;
+                            clearSymbolHover();
+                        }
+                    });
+
+                    this.hitContainer.addChild(cellRoot);
+                } else {
+                    const hitArea = new PIXI.Graphics();
+                    hitArea.rect(cellX, cellY, cellWidth, cellHeight);
+                    hitArea.fill({ color: 0x000000, alpha: 0 });
+                    hitArea.eventMode = 'static';
+                    hitArea.cursor = GAME_CURSOR_POINTER;
+
+                    hitArea.on('pointerover', () => {
+                        showSymbolHover();
+                    });
+                    hitArea.on('pointerout', () => {
+                        clearSymbolHover();
+                    });
+                    this.hitContainer.addChild(hitArea);
+                }
 
                 const innerW = cellWidth - 6;
                 const rarityColor = getSymbolColor(symDef.type);
@@ -764,7 +858,7 @@ export class PixiGameApp {
                     if (isContrib) sprite.tint = contribGreenTint;
                     drawTarget.addChild(sprite);
                 } else {
-                    const symName = t(`symbol.${symDef.id}.name`, lang);
+                    const symName = t(`symbol.${symDef.key}.name`, lang);
                     const fillColor = isContrib ? '#90ee90' : rarityColor;
                     const nameText = new PIXI.Text({
                         text: symName,
@@ -788,7 +882,7 @@ export class PixiGameApp {
                 }
 
                 // Merchant(22): 저장된 골드를 카운터로 표시
-                if (symDef.id === 22 && (symbol.stored_gold ?? 0) > 0) {
+                if (symDef.id === S.merchant && (symbol.stored_gold ?? 0) > 0) {
                     const storedGoldText = new PIXI.Text({
                         text: String(symbol.stored_gold),
                         style: new PIXI.TextStyle({
@@ -847,7 +941,7 @@ export class PixiGameApp {
                     drawTarget.addChild(hpText);
                 }
 
-                if (symDef.id === 40) { // Barbarian Camp
+                if (symDef.id === S.barbarian_camp) { // Barbarian Camp
                     const campCounterText = new PIXI.Text({
                         text: String(BARBARIAN_CAMP_SPAWN_INTERVAL - symbol.effect_counter),
                         style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
@@ -1300,7 +1394,7 @@ export class PixiGameApp {
             bounceSprite = sp;
         } else {
             const lang = useSettingsStore.getState().language;
-            const symName = t(`symbol.${attackerDef?.id ?? 0}.name`, lang);
+            const symName = t(`symbol.${attackerDef?.key ?? 'warrior'}.name`, lang);
             const rarityColor = attackerDef ? getSymbolColor(attackerDef.type) : 0xffffff;
             const container = new PIXI.Container();
             const txt = new PIXI.Text({

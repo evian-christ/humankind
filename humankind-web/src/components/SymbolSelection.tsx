@@ -34,8 +34,8 @@ const SymbolCard = ({
     const language = useSettingsStore((s) => s.language);
     const eraColor = getSymbolColorHex(symbol.type);
     const eraName = t(ERA_NAME_KEYS[symbol.type] ?? 'era.ancient', language);
-    const symName = t(`symbol.${symbol.id}.name`, language);
-    const symDesc = t(`symbol.${symbol.id}.desc`, language);
+    const symName = t(`symbol.${symbol.key}.name`, language);
+    const symDesc = t(`symbol.${symbol.key}.desc`, language);
     const displayHp =
         symbol.base_hp !== undefined
             ? symbol.base_hp + (hasBronzeWorking ? getBronzeWorkingHpBonus(symbol) : 0)
