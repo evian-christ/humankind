@@ -1,30 +1,42 @@
-import { SymbolType, SYMBOLS } from './symbolDefinitions';
+import { SymbolType, SYMBOLS, SYMBOL_NUMERIC_ID, type SymbolKey } from './symbolDefinitions';
 
 /** 지식 업그레이드 설명에 나오는 심볼과, 선택 풀·효과에 미치는 관계 */
 export type KnowledgeUpgradeSymbolRelation = 'pool_add' | 'pool_remove' | 'effect_modify';
 
+/** 업그레이드 카드 칩·툴팁 — 게임 풀에서 제거된 심볼 키도 문구·스프라이트 표시용으로 허용 */
+export type KnowledgeUpgradeDescSymbolKey = SymbolKey | 'aqueduct' | 'rye' | 'hay';
+
 export interface KnowledgeUpgradeDescSymbol {
-    id: number;
+    /** 활성 심볼 키 또는 표시 전용(제거된 심볼) 키 */
+    symbolKey: KnowledgeUpgradeDescSymbolKey;
     relation: KnowledgeUpgradeSymbolRelation;
 }
 
 /** 중세시대(15) 카드 칩 — 풀 제외/추가는 게임과 동기, 효과 변경은 산만(지형 등장 확률만 바뀌는 타일은 칩 제외) */
-export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
-    const poolRemoveIds = Object.values(SYMBOLS)
+/** 고대 시대(지식) — 고대 타입 심볼 풀 해금 카드 칩용 */
+export function buildAncientSymbolsUnlockDescSymbols(): KnowledgeUpgradeDescSymbol[] {
+    return Object.values(SYMBOLS)
         .filter((s) => s.type === SymbolType.ANCIENT)
-        .map((s) => s.id)
-        .sort((a, b) => a - b);
+        .sort((a, b) => a.id - b.id)
+        .map((s) => ({ symbolKey: s.key as SymbolKey, relation: 'pool_add' as const }));
+}
+
+export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
+    const poolRemoveKeys = Object.values(SYMBOLS)
+        .filter((s) => s.type === SymbolType.ANCIENT)
+        .map((s) => s.key as SymbolKey)
+        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
 
     /** `buildFlatPool`에서 중세시대 해금 시 포함되는 SymbolType.MEDIEVAL 심볼 */
-    const poolAddIds = [53, 64, 65, 66, 67, 68, 69, 70];
+    const poolAddKeys: SymbolKey[] = ['tax', 'scholar', 'holy_relic', 'telescope', 'scales', 'pioneer', 'edict', 'embassy'];
 
-    /** `symbolEffects` case 15: 식량·인접 적 피해 규칙이 바뀌는 지형만 */
-    const effectModifyTerrainIds = [15];
+    /** `symbolEffects` case mountain: 식량·인접 적 피해 규칙이 바뀌는 지형만 */
+    const effectModifyTerrainKeys: SymbolKey[] = ['mountain'];
 
     return [
-        ...poolRemoveIds.map((id) => ({ id, relation: 'pool_remove' as const })),
-        ...poolAddIds.map((id) => ({ id, relation: 'pool_add' as const })),
-        ...effectModifyTerrainIds.map((id) => ({ id, relation: 'effect_modify' as const })),
+        ...poolRemoveKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_remove' as const })),
+        ...poolAddKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_add' as const })),
+        ...effectModifyTerrainKeys.map((symbolKey) => ({ symbolKey, relation: 'effect_modify' as const })),
     ];
 }
 
@@ -40,15 +52,36 @@ export interface KnowledgeUpgrade {
 
 export type KnowledgeUpgradeType = SymbolType;
 
+/** 고대 타입 심볼을 상점/선택 풀에 넣기 위한 선행 연구 */
+export const ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID = 25;
+/** 목축업 — 양 풀 해금 (등자와 분리) */
+export const PASTORALISM_UPGRADE_ID = 26;
+
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
+    [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID]: {
+        id: ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+        name: 'Ancient Era',
+        type: SymbolType.ANCIENT,
+        description: 'Unlocks Ancient-type symbols for the symbol selection pool.',
+        sprite: '-',
+        descSymbols: buildAncientSymbolsUnlockDescSymbols(),
+    },
+    [PASTORALISM_UPGRADE_ID]: {
+        id: PASTORALISM_UPGRADE_ID,
+        name: 'Pastoralism',
+        type: SymbolType.ANCIENT,
+        description: 'Unlocks Sheep symbol for selection.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'sheep', relation: 'pool_add' }],
+    },
     1: {
         id: 1,
         name: 'Writing System',
         type: SymbolType.ANCIENT,
         description: 'Permanently increases base Knowledge generation by +2. Unlocks Library symbol.',
         sprite: '001.png',
-        descSymbols: [{ id: 25, relation: 'pool_add' }],
+        descSymbols: [{ symbolKey: 'library', relation: 'pool_add' }],
     },
     2: {
         id: 2,
@@ -57,8 +90,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Warrior HP +10, Archer HP +3.',
         sprite: '002.png',
         descSymbols: [
-            { id: 35, relation: 'effect_modify' },
-            { id: 36, relation: 'effect_modify' },
+            { symbolKey: 'warrior', relation: 'effect_modify' },
+            { symbolKey: 'archer', relation: 'effect_modify' },
         ],
     },
     3: {
@@ -68,8 +101,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'All Grasslands produce triple Food instead of double.',
         sprite: '003.png',
         descSymbols: [
-            { id: 1, relation: 'effect_modify' },
-            { id: 2, relation: 'effect_modify' },
+            { symbolKey: 'wheat', relation: 'effect_modify' },
+            { symbolKey: 'rice', relation: 'effect_modify' },
         ],
     },
     4: {
@@ -79,10 +112,10 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Unlocks Religion symbols for selection.',
         sprite: '004.png',
         descSymbols: [
-            { id: 31, relation: 'pool_add' },
-            { id: 32, relation: 'pool_add' },
-            { id: 33, relation: 'pool_add' },
-            { id: 34, relation: 'pool_add' },
+            { symbolKey: 'christianity', relation: 'pool_add' },
+            { symbolKey: 'islam', relation: 'pool_add' },
+            { symbolKey: 'buddhism', relation: 'pool_add' },
+            { symbolKey: 'hinduism', relation: 'pool_add' },
         ],
     },
     5: {
@@ -91,7 +124,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.ANCIENT,
         description: 'Unlocks Archer symbol for selection.',
         sprite: '005.png',
-        descSymbols: [{ id: 36, relation: 'pool_add' }],
+        descSymbols: [{ symbolKey: 'archer', relation: 'pool_add' }],
     },
     6: {
         id: 6,
@@ -99,7 +132,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.ANCIENT,
         description: 'Permanently increases base Gold generation by +2. Unlocks Merchant symbol.',
         sprite: '006.png',
-        descSymbols: [{ id: 22, relation: 'pool_add' }],
+        descSymbols: [{ symbolKey: 'merchant', relation: 'pool_add' }],
     },
     7: {
         id: 7,
@@ -108,8 +141,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Unlocks Horse symbol. Plains base Food production +1.',
         sprite: '007.png',
         descSymbols: [
-            { id: 23, relation: 'pool_add' },
-            { id: 14, relation: 'effect_modify' },
+            { symbolKey: 'horse', relation: 'pool_add' },
+            { symbolKey: 'plains', relation: 'effect_modify' },
         ],
     },
     8: {
@@ -127,8 +160,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Unlocks Crab and Pearl symbols for selection.',
         sprite: '-',
         descSymbols: [
-            { id: 24, relation: 'pool_add' },
-            { id: 26, relation: 'pool_add' },
+            { symbolKey: 'crab', relation: 'pool_add' },
+            { symbolKey: 'pearl', relation: 'pool_add' },
         ],
     },
     10: {
@@ -157,8 +190,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Libraries are replaced with Universities. Base Knowledge production +2.',
         sprite: '-',
         descSymbols: [
-            { id: 25, relation: 'pool_remove' },
-            { id: 54, relation: 'pool_add' },
+            { symbolKey: 'library', relation: 'pool_remove' },
+            { symbolKey: 'university', relation: 'pool_add' },
         ],
     },
     17: {
@@ -167,7 +200,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.MEDIEVAL,
         description: 'Unlocks Harbor symbol.',
         sprite: '-',
-        descSymbols: [{ id: 55, relation: 'pool_add' }],
+        descSymbols: [{ symbolKey: 'harbor', relation: 'pool_add' }],
     },
     18: {
         id: 18,
@@ -176,8 +209,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Unlocks Aqueduct and Rye symbols.',
         sprite: '-',
         descSymbols: [
-            { id: 56, relation: 'pool_add' },
-            { id: 57, relation: 'pool_add' },
+            { symbolKey: 'aqueduct', relation: 'pool_add' },
+            { symbolKey: 'rye', relation: 'pool_add' },
         ],
     },
     19: {
@@ -185,14 +218,14 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Stirrup',
         type: SymbolType.MEDIEVAL,
         description:
-            'Warrior adjacent to Horse becomes Knight (+3 Attack, +3 HP); Horse is removed. Unlocks Sheep. Cattle: +3 Food; +2 Food when adjacent to Plains or Grassland.',
+            'Warrior adjacent to Horse becomes Knight (+3 Attack, +3 HP); Horse is removed. Sheep (Pastoralism): +1 Food; 10% chance to produce Sheep; 10% chance to produce Wool; butcher when adjacent to Plains: +5 Food, +5 Gold. Cattle: +3 Food per turn; 10% chance to produce Cattle; butcher when adjacent to Plains: +10 Food.',
         sprite: '-',
         descSymbols: [
-            { id: 35, relation: 'effect_modify' },
-            { id: 23, relation: 'effect_modify' },
-            { id: 62, relation: 'pool_add' },
-            { id: 58, relation: 'pool_add' },
-            { id: 3, relation: 'effect_modify' },
+            { symbolKey: 'warrior', relation: 'effect_modify' },
+            { symbolKey: 'horse', relation: 'effect_modify' },
+            { symbolKey: 'knight', relation: 'pool_add' },
+            { symbolKey: 'wool', relation: 'effect_modify' },
+            { symbolKey: 'cattle', relation: 'effect_modify' },
         ],
     },
     20: {
@@ -202,8 +235,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Unlocks Sawmill and Wild Boar symbols.',
         sprite: '-',
         descSymbols: [
-            { id: 60, relation: 'pool_add' },
-            { id: 59, relation: 'pool_add' },
+            { symbolKey: 'sawmill', relation: 'pool_add' },
+            { symbolKey: 'wild_boar', relation: 'pool_add' },
         ],
     },
     21: {
@@ -214,12 +247,12 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             'Warrior adjacent to Sea becomes Caravel (+7 HP). Unlocks Gold Vein. Spices: +1 Food per terrain type; when adjacent to Rainforest: +2 Food and +3 Gold.',
         sprite: '-',
         descSymbols: [
-            { id: 35, relation: 'effect_modify' },
-            { id: 6, relation: 'effect_modify' },
-            { id: 63, relation: 'pool_add' },
-            { id: 61, relation: 'pool_add' },
-            { id: 52, relation: 'effect_modify' },
-            { id: 13, relation: 'effect_modify' },
+            { symbolKey: 'warrior', relation: 'effect_modify' },
+            { symbolKey: 'sea', relation: 'effect_modify' },
+            { symbolKey: 'caravel', relation: 'pool_add' },
+            { symbolKey: 'gold_vein', relation: 'pool_add' },
+            { symbolKey: 'spices', relation: 'effect_modify' },
+            { symbolKey: 'rainforest', relation: 'effect_modify' },
         ],
     },
     22: {
@@ -236,7 +269,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.MEDIEVAL,
         description: 'Barbarian invasion and Barbarian Camp threat growth per turn is halved.',
         sprite: '-',
-        descSymbols: [{ id: 40, relation: 'effect_modify' }],
+        descSymbols: [{ symbolKey: 'barbarian_camp', relation: 'effect_modify' }],
     },
     24: {
         id: 24,

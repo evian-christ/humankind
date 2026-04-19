@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { isUpgradeLegalForKnowledgePick, useGameStore } from '../game/state/gameStore';
@@ -28,30 +35,24 @@ interface Props {
 
 type ResearchPointsMouseHint = { id: number; x: number; y: number };
 
+/** 칩 열 수 — 5열 고정 */
+const KNOWLEDGE_TREE_GRID_COLS = 5;
+
 const TIERS: { level: number; ids: (number | null)[] }[] = [
-    { level: 1,  ids: [9, 3, 8, 5] },
-    { level: 4,  ids: [1, 7, null, 2] },
-    { level: 7,  ids: [6, 4, 10] },
-    { level: 10, ids: [15] },
+    //           col1  col2  col3  col4  col5
+    { level: 1,  ids: [null, null, 25,   null, null] },
+    { level: 2,  ids: [26,   9,    3,    8,    5   ] },
+    { level: 4,  ids: [1,    7,    null, null, 2   ] },
+    { level: 7,  ids: [6,    4,    10,   null, null] },
+    { level: 10, ids: [null, null, 15,   null, null] },
 ];
 
-/* Archery (id 5) -> Bronze (id 2); column index 3 in 4-col grid */
 const KNOWLEDGE_TREE_CHIP = 110;
 const KNOWLEDGE_TREE_GAP = 16;
-const KNOWLEDGE_TREE_COLS = 4;
-const KNOWLEDGE_TREE_TABLE_W =
-    KNOWLEDGE_TREE_COLS * KNOWLEDGE_TREE_CHIP + (KNOWLEDGE_TREE_COLS - 1) * KNOWLEDGE_TREE_GAP;
 const TIER_ROW_PAD_X = 48;
 const TIER_LABEL_W = 72;
-/** Lv label band width; chips center in the area to its right (until panel / viewport edge). */
+/** Lv 라벨이 들어가는 첫 열 너비(단일 그리드의 1열). */
 const KNOWLEDGE_TREE_LABEL_BAND_PX = TIER_ROW_PAD_X + TIER_LABEL_W + 14;
-/** Offset from 4-col grid center to column 4 center. */
-const KNOWLEDGE_TREE_COL4_CENTER_OFFSET_PX =
-    3 * (KNOWLEDGE_TREE_CHIP + KNOWLEDGE_TREE_GAP) +
-    KNOWLEDGE_TREE_CHIP / 2 -
-    KNOWLEDGE_TREE_TABLE_W / 2;
-/** Chip-area center + offset; % is tree column width (panel is always beside the tree). */
-const ARCHERY_TO_BRONZE_COL_CENTER = `calc((100% + ${KNOWLEDGE_TREE_LABEL_BAND_PX}px) / 2 + ${KNOWLEDGE_TREE_COL4_CENTER_OFFSET_PX}px)`;
 const TIER_ROW_MIN_H = 130;
 const TIER_STACK_GAP = 28;
 const ARCHERY_BRONZE_LINE_GRAY = '#383c43';
@@ -63,6 +64,9 @@ const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#555';
 const KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT = '#444';
 const KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED = '#469068';
 const KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED = '#26503a';
+const KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET = 8;
+const KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET = 1;
+const KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y = 5;
 
 function knowledgeTreeChipFrameShadow(pressed: boolean, researched: boolean): string {
     const inset = researched ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
@@ -78,6 +82,27 @@ const KNOWLEDGE_TREE_CHIP_IDLE_BG = '#1b1b1c';
 /** Selected chip: dark gray + pressed look (not hue shift) */
 const KNOWLEDGE_TREE_CHIP_SELECTED_BG = '#3a3a3a';
 
+/** 칩 9열 + 열 사이 간격(칩끼리 8칸) */
+function knowledgeTreeGridWidthPx(): number {
+    return (
+        KNOWLEDGE_TREE_GRID_COLS * KNOWLEDGE_TREE_CHIP +
+        (KNOWLEDGE_TREE_GRID_COLS - 1) * KNOWLEDGE_TREE_GAP
+    );
+}
+
+/** Lv 라벨 열 + 간격 + 칩 그리드 — 트리 전체 한 격자 너비 */
+function knowledgeTreeFullGridWidthPx(): number {
+    return KNOWLEDGE_TREE_LABEL_BAND_PX + KNOWLEDGE_TREE_GAP + knowledgeTreeGridWidthPx();
+}
+
+function findTierGridSlot(upgradeId: number): { rowIdx: number; colIdx: number } | null {
+    for (let rowIdx = 0; rowIdx < TIERS.length; rowIdx += 1) {
+        const colIdx = TIERS[rowIdx]!.ids.indexOf(upgradeId);
+        if (colIdx >= 0) return { rowIdx, colIdx };
+    }
+    return null;
+}
+
 const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     useRegisterBoardTooltipBlock('knowledge-upgrades-overlay', isOpen);
 
@@ -90,6 +115,12 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [researchPointsMouseHints, setResearchPointsMouseHints] = useState<ResearchPointsMouseHint[]>([]);
     const researchHintIdRef = useRef(0);
+    const treeScrollRef = useRef<HTMLDivElement>(null);
+    const treeContentRef = useRef<HTMLDivElement>(null);
+    const [connectorLine, setConnectorLine] = useState<{
+        x1: number; y1: number;
+        x2: number; y2: number;
+    } | null>(null);
 
     const selectedUpgrade = selectedId != null ? KNOWLEDGE_UPGRADES[selectedId] : null;
     const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
@@ -107,8 +138,61 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         !selectedUnlocked &&
         !archeryBlocksBronze &&
         canResearchWithCurrentPick;
+    const needsHigherLevel = selectedId != null && currentLevel < selectedTierLevel;
     const researchButtonDisabled =
-        selectedUnlocked || archeryBlocksBronze || (hasResearchPoints && !canResearchWithCurrentPick);
+        selectedUnlocked ||
+        archeryBlocksBronze ||
+        needsHigherLevel ||
+        (hasResearchPoints && !canResearchWithCurrentPick);
+
+    const updateArcheryBronzeConnector = useCallback(() => {
+        const contentEl = treeContentRef.current;
+        const archPos = findTierGridSlot(5);
+        const bronzePos = findTierGridSlot(2);
+        if (!contentEl || !archPos || !bronzePos || unlockedUpgrades.includes(2)) {
+            setConnectorLine(null);
+            return;
+        }
+        const gridWidth = knowledgeTreeGridWidthPx();
+        const centeredGridStartX =
+            KNOWLEDGE_TREE_LABEL_BAND_PX +
+            Math.max(0, (contentEl.clientWidth - KNOWLEDGE_TREE_LABEL_BAND_PX - gridWidth) / 2);
+        const xForCol = (colIdx: number) =>
+            centeredGridStartX + colIdx * (KNOWLEDGE_TREE_CHIP + KNOWLEDGE_TREE_GAP) + KNOWLEDGE_TREE_CHIP / 2;
+        const rowTop = (rowIdx: number) => rowIdx * (TIER_ROW_MIN_H + TIER_STACK_GAP);
+        const bottomAnchorY = (rowIdx: number, pressed: boolean) =>
+            rowTop(rowIdx) +
+            (TIER_ROW_MIN_H + KNOWLEDGE_TREE_CHIP) / 2 +
+            (pressed ? KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET + KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y : KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET);
+        const topAnchorY = (rowIdx: number, pressed: boolean) =>
+            rowTop(rowIdx) +
+            (TIER_ROW_MIN_H - KNOWLEDGE_TREE_CHIP) / 2 +
+            (pressed ? KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y : 0);
+        setConnectorLine({
+            x1: xForCol(archPos.colIdx),
+            y1: bottomAnchorY(archPos.rowIdx, selectedId === 5),
+            x2: xForCol(bronzePos.colIdx),
+            y2: topAnchorY(bronzePos.rowIdx, selectedId === 2),
+        });
+    }, [selectedId, unlockedUpgrades]);
+
+    useLayoutEffect(() => {
+        if (!isOpen) return;
+        const raf = requestAnimationFrame(() => updateArcheryBronzeConnector());
+        const contentEl = treeContentRef.current;
+        const scrollEl = treeScrollRef.current;
+        if (!contentEl) return () => cancelAnimationFrame(raf);
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateArcheryBronzeConnector()) : null;
+        ro?.observe(contentEl);
+        scrollEl?.addEventListener('scroll', updateArcheryBronzeConnector, { passive: true });
+        window.addEventListener('resize', updateArcheryBronzeConnector);
+        return () => {
+            cancelAnimationFrame(raf);
+            ro?.disconnect();
+            scrollEl?.removeEventListener('scroll', updateArcheryBronzeConnector);
+            window.removeEventListener('resize', updateArcheryBronzeConnector);
+        };
+    }, [isOpen, updateArcheryBronzeConnector, language, selectedId]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -263,179 +347,191 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 }}
             >
             <div
+                ref={treeScrollRef}
                 style={{
                     flex: 1,
                     minWidth: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: TIER_STACK_GAP,
                     overflowY: 'auto',
                     paddingBottom: 8,
-                    position: 'relative',
                 }}
             >
-                {TIERS.map((tier) => {
-                    const tierUnlockable = currentLevel >= tier.level;
-                    const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
-                    const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
+                <div
+                    ref={treeContentRef}
+                    style={{
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: TIER_STACK_GAP,
+                    }}
+                >
+                    {TIERS.map((tier) => {
+                        const tierUnlockable = currentLevel >= tier.level;
+                        const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
+                        const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
 
-                    return (
-                        <div
-                            key={tier.level}
-                            style={{
-                                position: 'relative',
-                                flex: '0 0 auto',
-                                minHeight: `${TIER_ROW_MIN_H}px`,
-                            }}
-                        >
-                            {/* 티어를 관통하는 점선 */}
+                        return (
                             <div
-                                style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    right: 0,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    borderTop: `2px dashed ${dashColor}`,
-                                    pointerEvents: 'none',
-                                    zIndex: 0,
-                                }}
-                            />
-
-
-                            {/* 업그레이드 버튼들 */}
-                            <div
+                                key={tier.level}
                                 style={{
                                     position: 'relative',
-                                    zIndex: 1,
-                                    width: '100%',
-                                    boxSizing: 'border-box',
-                                    paddingLeft: KNOWLEDGE_TREE_LABEL_BAND_PX,
-                                    display: 'flex',
-                                    flexDirection: 'row',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
+                                    flex: '0 0 auto',
                                     minHeight: `${TIER_ROW_MIN_H}px`,
                                 }}
                             >
+                                {/* 점선 — 화면 전체 너비 */}
                                 <div
                                     style={{
-                                        display: 'flex',
-                                        flexDirection: 'row',
-                                        gap: `${KNOWLEDGE_TREE_GAP}px`,
-                                        alignItems: 'center',
-                                        width: `${KNOWLEDGE_TREE_TABLE_W}px`,
-                                        flexShrink: 0,
+                                        position: 'absolute',
+                                        left: 0,
+                                        right: 0,
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        borderTop: `2px dashed ${dashColor}`,
+                                        pointerEvents: 'none',
+                                        zIndex: 0,
+                                    }}
+                                />
+
+                                {/* Lv 라벨 — 맨 왼쪽 고정 */}
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        left: `${TIER_ROW_PAD_X}px`,
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        zIndex: 2,
+                                        width: `${TIER_LABEL_W}px`,
+                                        fontFamily: 'Mulmaru, sans-serif',
+                                        fontSize: '20px',
+                                        letterSpacing: '0.12em',
+                                        color: labelColor,
+                                        fontWeight: 'bold',
+                                        background: '#070a0f',
+                                        paddingRight: '14px',
                                     }}
                                 >
-                                {[...tier.ids, ...Array(Math.max(0, KNOWLEDGE_TREE_COLS - tier.ids.length)).fill(null)]
-                                    .slice(0, KNOWLEDGE_TREE_COLS)
-                                    .map((id, slotIdx) => {
-                                    if (id === null) {
-                                        return (
-                                            <div key={`empty-${tier.level}-${slotIdx}`} style={{ width: `${KNOWLEDGE_TREE_CHIP}px`, flexShrink: 0 }} />
-                                        );
-                                    }
-                                    const upgrade = KNOWLEDGE_UPGRADES[id];
-                                    if (!upgrade) return null;
-                                    const unlocked = unlockedUpgrades.includes(id);
+                                    Lv.{tier.level}
+                                </div>
 
-                                    // 의존성 체크 (UI 전용)
-                                    const isLockedByDependency = id === 2 && !unlockedUpgrades.includes(5);
-
-                                    const isSelected = selectedId === id;
-                                    const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
-                                    const rowBright = tierUnlockable && !isLockedByDependency;
-                                    return (
-                                        <button
-                                            key={id}
-                                            type="button"
-                                            className="knowledge-upgrade-chip"
-                                            title={name}
-                                            onClick={() => setSelectedId(isSelected ? null : id)}
-                                            style={{
-                                                width: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                height: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                flex: 'none',
-                                                padding: 0,
-                                                display: 'block',
-                                                position: 'relative',
-                                                overflow: 'hidden',
-                                                borderRadius: 0,
-                                                filter: rowBright ? 'none' : 'brightness(0.5)',
-                                                boxShadow: knowledgeTreeChipFrameShadow(isSelected, unlocked),
-                                                background: isSelected
-                                                    ? KNOWLEDGE_TREE_CHIP_SELECTED_BG
-                                                    : KNOWLEDGE_TREE_CHIP_IDLE_BG,
-                                                color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
-                                                cursor: 'pointer',
-                                                transform: isSelected ? 'translateY(5px)' : 'none',
-                                                transition:
-                                                    'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
-                                            }}
-                                        >
-                                            <img
-                                                src={resolveUpgradeSprite(upgrade.sprite)}
-                                                alt={name}
-                                                title={name}
-                                                draggable={false}
-                                                style={{
-                                                    position: 'absolute',
-                                                    left: '50%',
-                                                    top: '50%',
-                                                    width: '82%',
-                                                    height: '82%',
-                                                    transform: 'translate(-50%, -50%)',
-                                                    objectFit: 'contain',
-                                                    imageRendering: 'pixelated',
-                                                    pointerEvents: 'none',
-                                                }}
-                                            />
-                                        </button>
-                                    );
-                                })}
+                                {/* 칩 그리드 — 라벨 영역 이후 중앙 정렬 */}
+                                <div
+                                    style={{
+                                        position: 'relative',
+                                        zIndex: 1,
+                                        width: '100%',
+                                        boxSizing: 'border-box',
+                                        paddingLeft: KNOWLEDGE_TREE_LABEL_BAND_PX,
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        minHeight: `${TIER_ROW_MIN_H}px`,
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
+                                            gap: `${KNOWLEDGE_TREE_GAP}px`,
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {tier.ids.map((id, slotIdx) => {
+                                            if (id === null) {
+                                                return (
+                                                    <div
+                                                        key={`empty-${tier.level}-${slotIdx}`}
+                                                        style={{
+                                                            width: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                            height: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                        }}
+                                                    />
+                                                );
+                                            }
+                                            const upgrade = KNOWLEDGE_UPGRADES[id];
+                                            if (!upgrade) return null;
+                                            const unlocked = unlockedUpgrades.includes(id);
+                                            const isLockedByDependency = id === 2 && !unlockedUpgrades.includes(5);
+                                            const isSelected = selectedId === id;
+                                            const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
+                                            const rowBright = tierUnlockable && !isLockedByDependency;
+                                            return (
+                                                <button
+                                                    key={id}
+                                                    type="button"
+                                                    className="knowledge-upgrade-chip"
+                                                    title={name}
+                                                    onClick={() => setSelectedId(isSelected ? null : id)}
+                                                    style={{
+                                                        width: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                        height: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                        padding: 0,
+                                                        display: 'block',
+                                                        position: 'relative',
+                                                        overflow: 'hidden',
+                                                        borderRadius: 0,
+                                                        filter: rowBright ? 'none' : 'brightness(0.5)',
+                                                        boxShadow: knowledgeTreeChipFrameShadow(isSelected, unlocked),
+                                                        background: isSelected
+                                                            ? KNOWLEDGE_TREE_CHIP_SELECTED_BG
+                                                            : KNOWLEDGE_TREE_CHIP_IDLE_BG,
+                                                        color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
+                                                        cursor: 'pointer',
+                                                        transform: isSelected ? 'translateY(5px)' : 'none',
+                                                        transition:
+                                                            'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={resolveUpgradeSprite(upgrade.sprite)}
+                                                        alt={name}
+                                                        title={name}
+                                                        draggable={false}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            left: '50%',
+                                                            top: '50%',
+                                                            width: '82%',
+                                                            height: '82%',
+                                                            transform: 'translate(-50%, -50%)',
+                                                            objectFit: 'contain',
+                                                            imageRendering: 'pixelated',
+                                                            pointerEvents: 'none',
+                                                        }}
+                                                    />
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Lv label over grid (same x as before) */}
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    left: `${TIER_ROW_PAD_X}px`,
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    zIndex: 2,
-                                    width: `${TIER_LABEL_W}px`,
-                                    fontFamily: 'Mulmaru, sans-serif',
-                                    fontSize: '20px',
-                                    letterSpacing: '0.12em',
-                                    color: labelColor,
-                                    fontWeight: 'bold',
-                                    background: '#070a0f',
-                                    paddingRight: '14px',
-                                }}
-                            >
-                                Lv.{tier.level}
-                            </div>
-                        </div>
-                    );
-                })}
-                {!unlockedUpgrades.includes(2) && (
-                    <div
-                        aria-hidden
-                        style={{
-                            position: 'absolute',
-                            left: ARCHERY_TO_BRONZE_COL_CENTER,
-                            top: `calc(${TIER_ROW_MIN_H}px / 2 + ${KNOWLEDGE_TREE_CHIP / 2}px)`,
-                            height: `calc(${TIER_ROW_MIN_H}px / 2 + ${TIER_STACK_GAP}px + ${TIER_ROW_MIN_H}px / 2 - ${KNOWLEDGE_TREE_CHIP}px)`,
-                            width: ARCHERY_BRONZE_LINE_WIDTH,
-                            transform: 'translateX(-50%)',
-                            background: ARCHERY_BRONZE_LINE_GRAY,
-                            pointerEvents: 'none',
-                            zIndex: 0,
-                        }}
-                    />
-                )}
+                        );
+                    })}
+                    {!unlockedUpgrades.includes(2) && connectorLine && (
+                        <svg
+                            aria-hidden
+                            style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                width: '100%',
+                                height: '100%',
+                                overflow: 'visible',
+                                pointerEvents: 'none',
+                                zIndex: 3,
+                            }}
+                        >
+                            <line
+                                x1={connectorLine.x1}
+                                y1={connectorLine.y1}
+                                x2={connectorLine.x2}
+                                y2={connectorLine.y2}
+                                stroke={ARCHERY_BRONZE_LINE_GRAY}
+                                strokeWidth={ARCHERY_BRONZE_LINE_WIDTH}
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                    )}
+                </div>
             </div>
 
             <div className="knowledge-upgrade-detail-panel">
@@ -520,7 +616,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                     ? '이미 연구됨'
                                     : archeryBlocksBronze
                                         ? t('knowledgeUpgrade.requiresArcheryShort', language)
-                                        : hasResearchPoints && currentLevel < selectedTierLevel
+                                        : needsHigherLevel
                                             ? `Lv.${selectedTierLevel} 필요`
                                             : hasResearchPoints &&
                                                 selectedId != null &&

@@ -5,7 +5,7 @@ import {
     getStagePassiveBonus,
     getStageStartingRelicCounts,
 } from '../data/stages';
-import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, TAX_SYMBOL_ID, EDICT_SYMBOL_ID } from '../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, TAX_SYMBOL_ID, EDICT_SYMBOL_ID, S, Sym } from '../data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
@@ -74,7 +74,7 @@ const RELIC_ID = {
 } as const;
 
 /** 작물 심볼 ID 목록 (카르멜 산 화덕 재 효과용) */
-const CROP_SYMBOL_IDS = [1, 2, 4, 5]; // Wheat, Rice, Banana, Fish
+const CROP_SYMBOL_IDS = [S.wheat, S.rice, S.banana, S.fish]; // Wheat, Rice, Banana, Fish
 
 // 시대별 심볼 등장 확률 테이블 (종교 미해금)
 const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
@@ -237,7 +237,7 @@ export interface GameState {
     naturalDisasterThreat: number;
     /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
     pendingNewThreatFloats: { x: number; y: number; label: string }[];
-    /** 전투로 보드에서 제거된 야만인 주둔지(40)마다 전리품(41) 심볼 ID — 효과 페이즈 종료 시 toAdd에 합침 */
+    /** 전투로 보드에서 제거된 야만인 주둔지마다 전리품 심볼 — 효과 페이즈 종료 시 toAdd에 합침 */
     pendingCombatLootAdds: number[];
 
     /** destroy_selection 진입 시 출처 (22 영토 정비 / 69 칙령) */
@@ -288,6 +288,8 @@ export interface GameState {
     cancelOblivionFurnacePick: () => void;
     /** 조몬 토기 조각·고대 유물 잔해 등 클릭 발동 유물 */
     activateClickableRelic: (instanceId: string) => void;
+    /** 소·양: 평원 인접·idle 시 도축(보드 제거; 소 +10 Food, 양 +5 Food/+5 Gold; 파괴 보상은 집계 반영) */
+    butcherPastureAnimalAt: (x: number, y: number) => void;
 
     /** F12 로그 오버레이용 */
     appendEventLog: (entry: Omit<GameEventLogEntry, 'id' | 'ts'> & { ts?: number; id?: string }) => void;
@@ -298,7 +300,7 @@ const hasTextileSourceOnBoard = (board: (PlayerSymbolInstance | null)[][]): bool
     for (let bx = 0; bx < BOARD_WIDTH; bx++) {
         for (let by = 0; by < BOARD_HEIGHT; by++) {
             const sym = board[bx][by];
-            if (sym?.definition.id === 14 || sym?.definition.id === 9) return true;
+            if (sym?.definition.id === S.plains || sym?.definition.id === S.grassland) return true;
         }
     }
     return false;
@@ -352,15 +354,15 @@ const applyWarriorEliteTransforms = (
     for (let x = 0; x < BOARD_WIDTH; x++) {
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             const cell = b[x][y];
-            if (!cell || cell.definition.id !== 35) continue;
+            if (!cell || cell.definition.id !== S.warrior) continue;
 
             if (upgrades.includes(19)) {
-                const horsePos = getAdjacentCoords(x, y).find((p) => b[p.x][p.y]?.definition.id === 23);
+                const horsePos = getAdjacentCoords(x, y).find((p) => b[p.x][p.y]?.definition.id === S.horse);
                 if (horsePos) {
                     const horseInst = b[horsePos.x][horsePos.y]!;
                     b[horsePos.x][horsePos.y] = null;
                     removeFromList(horseInst.instanceId);
-                    const knDef = SYMBOLS[62];
+                    const knDef = Sym.knight;
                     const knBase = knDef.base_hp ?? 0;
                     const knHp = knBase + (upgrades.includes(2) ? getBronzeWorkingHpBonus(knDef) : 0);
                     const knight: PlayerSymbolInstance = {
@@ -377,9 +379,9 @@ const applyWarriorEliteTransforms = (
             }
 
             if (upgrades.includes(21)) {
-                const seaAdj = getAdjacentCoords(x, y).some((p) => b[p.x][p.y]?.definition.id === 6);
+                const seaAdj = getAdjacentCoords(x, y).some((p) => b[p.x][p.y]?.definition.id === S.sea);
                 if (seaAdj) {
-                    const cvDef = SYMBOLS[63];
+                    const cvDef = Sym.caravel;
                     const cvBase = cvDef.base_hp ?? 0;
                     const cvHp = cvBase + (upgrades.includes(2) ? getBronzeWorkingHpBonus(cvDef) : 0);
                     const caravel: PlayerSymbolInstance = {
@@ -419,14 +421,14 @@ const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter
 /** 지식 업그레이드 2 (청동 기술): 전사·기사·캐러벨 +10, 궁수 +3 — 전투 `getEffectiveMaxHP`와 동일 규칙 */
 export const getBronzeWorkingHpBonus = (def: SymbolDefinition): number => {
     if (def.type !== SymbolType.UNIT) return 0;
-    if (def.id === 35 || def.id === 62 || def.id === 63) return 10;
-    if (def.id === 36) return 3;
+    if (def.id === S.warrior || def.id === S.knight || def.id === S.caravel) return 10;
+    if (def.id === S.archer) return 3;
     return 0;
 };
 
 const createInstance = (def: SymbolDefinition, unlockedUpgrades: number[] = []): PlayerSymbolInstance => {
     let finalDef = def;
-    // Relic ID 8 (십계명 석판): Unlocks 'Stone Tablet' (ID 39) in the symbol selection pool.
+    // Relic ID 8 (십계명 석판): Unlocks Stone Tablet in the symbol selection pool.
 
     const baseHp = finalDef.base_hp;
     let enemy_hp: number | undefined;
@@ -448,10 +450,19 @@ const createInstance = (def: SymbolDefinition, unlockedUpgrades: number[] = []):
     return inst;
 };
 
-/** 투기장·심볼 효과와 동일한 고대 풀 랜덤 (Tribal Village 등) */
+/** 투기장·심볼 효과와 동일한 고대 풀 랜덤 (Tribal Village 등) — 고대 시대(25) 미연구 시 고대 타입 심볼 제외 */
 const randomEra1SymbolIdForDestroy = (): number => {
-    const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 29, 30, 35];
-    return ids[Math.floor(Math.random() * ids.length)];
+    const ids = [
+        S.wheat, S.rice, S.cattle, S.banana, S.fish, S.sea, S.stone, S.copper, S.grassland, S.monument, S.oasis,
+        S.oral_tradition, S.rainforest, S.plains, S.mountain, S.totem, S.offering, S.omen, S.campfire, S.pottery,
+        S.tribal_village, S.deer, S.date, S.warrior,
+    ];
+    const ancientOk = (useGameStore.getState().unlockedKnowledgeUpgrades || []).includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
+    const pool = ancientOk
+        ? ids
+        : ids.filter((id) => SYMBOLS[id] && SYMBOLS[id].type !== SymbolType.ANCIENT);
+    const pick = pool.length > 0 ? pool : [S.wheat];
+    return pick[Math.floor(Math.random() * pick.length)];
 };
 
 /** 보유 심볼만 제거할 때 보드 `finishProcessing` 파괴 보상과 맞춘 누적 효과 */
@@ -487,40 +498,40 @@ const aggregateCollectionDestroyEffects = (
     for (const sym of removed) {
         const id = sym.definition.id;
         switch (id) {
-            case 20:
+            case S.pottery:
                 out.food += sym.effect_counter || 0;
                 break;
-            case 21:
+            case S.tribal_village:
                 out.addSymbolDefIds.push(randomEra1SymbolIdForDestroy(), randomEra1SymbolIdForDestroy());
                 break;
-            case 37:
+            case S.relic_caravan:
                 out.refreshRelicShop = true;
                 break;
-            case 40:
-                out.addSymbolDefIds.push(41);
+            case S.barbarian_camp:
+                out.addSymbolDefIds.push(S.loot);
                 break;
-            case 41:
+            case S.loot:
                 out.food += Math.floor(Math.random() * 10) + 1;
                 out.gold += Math.floor(Math.random() * 10) + 1;
                 out.knowledge += Math.floor(Math.random() * 30) + 1;
-                if (Math.random() < 0.01) out.addSymbolDefIds.push(42);
+                if (Math.random() < 0.01) out.addSymbolDefIds.push(S.glowing_amber);
                 break;
-            case 42:
+            case S.glowing_amber:
                 out.openRelicShop = true;
                 break;
-            case 48:
+            case S.honey:
                 out.food += 5;
                 break;
-            case 51:
-                out.food += sym.effect_counter || 0;
+            case S.wool:
+                out.gold += 5;
                 break;
-            case 68:
+            case S.pioneer:
                 out.forceTerrainInNextChoices = true;
                 break;
-            case 69:
+            case S.edict:
                 if (!skipEdictFromSymbol69) out.edictRemovalPending = true;
                 break;
-            case 70:
+            case S.embassy:
                 out.freeSelectionRerolls += 1;
                 break;
             default:
@@ -546,7 +557,7 @@ const scarabAndHinduismBonusForOwnedRemoves = (
     for (let x = 0; x < BOARD_WIDTH; x++) {
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             const s = board[x][y];
-            if (s && s.definition.id === 34 && !s.is_marked_for_destruction) hinduTiles++;
+            if (s && s.definition.id === S.hinduism && !s.is_marked_for_destruction) hinduTiles++;
         }
     }
     if (hinduTiles > 0) {
@@ -573,9 +584,9 @@ const appendSymbolDefIdsToPlayer = (
 /** 시작 심볼: Wheat x2, Stone x1 */
 const getStartingSymbols = (): PlayerSymbolInstance[] => {
     return [
-        SYMBOLS[1],  // Wheat
-        SYMBOLS[1],  // Wheat
-        SYMBOLS[7],  // Stone
+        Sym.wheat,  // Wheat
+        Sym.wheat,  // Wheat
+        Sym.stone,  // Stone
     ].map((d) => createInstance(d, []));
 };
 
@@ -621,28 +632,30 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
         const feudal = upgrades.includes(FEUDALISM_UPGRADE_ID);
 
-        if (feudal && (sym.type === SymbolType.ANCIENT || sym.id === 35 || sym.id === 36)) continue;
+        if (feudal && (sym.type === SymbolType.ANCIENT || sym.id === S.warrior || sym.id === S.archer)) continue;
 
         // 업그레이드로 해금되는 심볼들 예외 처리
         let isUnlocked = !EXCLUDED_FROM_BASE_POOL.has(sym.id);
-        if (sym.id === 25 && upgrades.includes(1) && !upgrades.includes(16)) isUnlocked = true; // Writing -> Library
-        if (sym.id === 25 && upgrades.includes(16)) isUnlocked = false;
-        if (sym.id === 54 && upgrades.includes(16)) isUnlocked = true; // Education -> University
-        if (sym.id === 36 && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
-        if (sym.id === 22 && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
-        if (sym.id === 23 && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
-        if ((sym.id === 24 || sym.id === 26) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
-        if (sym.id === 39 && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
+        if (sym.type === SymbolType.ANCIENT && !upgrades.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)) {
+            isUnlocked = false;
+        }
+        if (sym.id === S.library && upgrades.includes(1) && !upgrades.includes(16)) isUnlocked = true; // Writing -> Library
+        if (sym.id === S.library && upgrades.includes(16)) isUnlocked = false;
+        if (sym.id === S.university && upgrades.includes(16)) isUnlocked = true; // Education -> University
+        if (sym.id === S.archer && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
+        if (sym.id === S.merchant && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
+        if (sym.id === S.horse && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
+        if ((sym.id === S.crab || sym.id === S.pearl) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
+        if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
-        if (sym.id === 55 && upgrades.includes(17)) isUnlocked = true;
-        if ((sym.id === 56 || sym.id === 57) && upgrades.includes(18)) isUnlocked = true;
-        if (sym.id === 58 && upgrades.includes(19)) isUnlocked = true;
-        if ((sym.id === 59 || sym.id === 60) && upgrades.includes(20)) isUnlocked = true;
-        if (sym.id === 61 && upgrades.includes(21)) isUnlocked = true;
+        if (sym.id === S.harbor && upgrades.includes(17)) isUnlocked = true;
+        if (sym.id === S.sheep && upgrades.includes(PASTORALISM_UPGRADE_ID)) isUnlocked = true;
+        if ((sym.id === S.wild_boar || sym.id === S.sawmill) && upgrades.includes(20)) isUnlocked = true;
+        if (sym.id === S.gold_vein && upgrades.includes(21)) isUnlocked = true;
 
         // 금지(Ban) 목록
-        if (sym.id === 4 && upgrades.includes(201)) isUnlocked = false; // Hunting -> Ban Banana
-        if (sym.id === 35 && upgrades.includes(203)) isUnlocked = false; // Spearcraft -> Ban Warrior
+        if (sym.id === S.banana && upgrades.includes(201)) isUnlocked = false; // Hunting -> Ban Banana
+        if (sym.id === S.warrior && upgrades.includes(203)) isUnlocked = false; // Spearcraft -> Ban Warrior
 
         if (!isUnlocked && !isReplacementTarget) continue;
 
@@ -708,7 +721,7 @@ const generateTerrainOnlyChoices = (era: number, religionUnlocked: boolean): Sym
         if (pool.length > 0) {
             choices.push(pool[Math.floor(Math.random() * pool.length)]);
         } else {
-            choices.push(SYMBOLS[9]);
+            choices.push(Sym.grassland);
         }
     }
     return choices;
@@ -725,7 +738,7 @@ const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefiniti
     const otherSyms = pool.filter((s) => s.type !== SymbolType.TERRAIN);
 
     const pickOne = (): SymbolDefinition => {
-        if (terrainSyms.length === 0 && otherSyms.length === 0) return SYMBOLS[1];
+        if (terrainSyms.length === 0 && otherSyms.length === 0) return Sym.wheat;
         if (terrainSyms.length === 0) return otherSyms[Math.floor(Math.random() * otherSyms.length)];
         if (otherSyms.length === 0) return terrainSyms[Math.floor(Math.random() * terrainSyms.length)];
         const tw = feudalTerrainWeight ? 0.2 * terrainSyms.length : terrainSyms.length;
@@ -742,7 +755,7 @@ const generateChoices = (era: number, religionUnlocked: boolean): SymbolDefiniti
         const tPick =
             terrainSyms.length > 0
                 ? terrainSyms[Math.floor(Math.random() * terrainSyms.length)]
-                : otherSyms[Math.floor(Math.random() * otherSyms.length)] ?? SYMBOLS[9];
+                : otherSyms[Math.floor(Math.random() * otherSyms.length)] ?? Sym.grassland;
         choices.push(tPick);
         while (choices.length < 3) {
             choices.push(pickOne());
@@ -797,6 +810,8 @@ import {
     FEUDALISM_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
 import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
@@ -828,6 +843,14 @@ export function isUpgradeLegalForKnowledgePick(
     }
     if (upgradeId === FEUDALISM_UPGRADE_ID) return level >= 10;
     if (u.type === SymbolType.MEDIEVAL) return medievalUnlocked;
+    // 고대 시대(25) 연구 전에는 다른 고대 지식 카드·목축업(26) 선택 불가
+    if (
+        u.type === SymbolType.ANCIENT &&
+        upgradeId !== ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID &&
+        !unlocked.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)
+    ) {
+        return false;
+    }
     return upgradeEra <= currentEra;
 }
 
@@ -948,7 +971,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             barbarianSymbolThreat += castleSlow ? 0.5 : 1;
             if (Math.random() * 100 < barbarianSymbolThreat) {
                 barbarianSymbolThreat = 0;
-                const enemyDef = SYMBOLS[43];
+                const enemyDef = Sym.enemy_warrior;
                 if (enemyDef) {
                     const inst = createInstance(enemyDef, spinUpgrades);
                     newPlayerSymbols.push(inst);
@@ -960,7 +983,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             barbarianCampThreat += castleSlow ? 0.1 : 0.2;
             if (Math.random() * 100 < barbarianCampThreat) {
                 barbarianCampThreat = 0;
-                const campDef = SYMBOLS[40];
+                const campDef = Sym.barbarian_camp;
                 if (campDef) {
                     const inst = createInstance(campDef, spinUpgrades);
                     newPlayerSymbols.push(inst);
@@ -973,9 +996,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             if (Math.random() * 100 < naturalDisasterThreat) {
                 naturalDisasterThreat = 0;
                 const randInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
-                const FLOOD_ID = 44;
-                const EARTHQUAKE_ID = 45;
-                const DROUGHT_ID = 46;
+                const FLOOD_ID = S.flood;
+                const EARTHQUAKE_ID = S.earthquake;
+                const DROUGHT_ID = S.drought;
                 const pick = [FLOOD_ID, EARTHQUAKE_ID, DROUGHT_ID][Math.floor(Math.random() * 3)];
 
                 const addDisaster = (symId: number, counterMin: number, counterMax: number, labelKey: string) => {
@@ -1092,7 +1115,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
 
         // ── 홍수(44): 인접 지형 생산 비활성화(순서 무관) ──
-        const FLOOD_ID = 44;
+        const FLOOD_ID = S.flood;
         const disabledTerrainCoords = new Set<string>();
         for (let bx = 0; bx < BOARD_WIDTH; bx++) {
             for (let by = 0; by < BOARD_HEIGHT; by++) {
@@ -1138,7 +1161,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 종교 심볼(31=Christianity, 32=Islam)은 인접 심볼의 "이번 스핀 산출량"을 기준으로 계산해야 해서,
         // 기존 symbolEffects.ts의 정적 테이블 계산과 충돌하지 않도록 effectPhase에서 임시 보류 후 여기서 최종 계산한다.
-        const RELIGION_RECALC_IDS = new Set<number>([31, 32]);
+        const RELIGION_RECALC_IDS = new Set<number>([S.christianity, S.islam]);
         const religionEffectCache = new Map<string, { food: number; knowledge: number; gold: number }>();
         const religionSlotsToRecalculate: { x: number; y: number; id: number }[] = [];
         const relicEffects = buildActiveRelicEffects();
@@ -1188,12 +1211,12 @@ export const useGameStore = create<GameState>((set, get) => ({
                         // 이번 스핀에 실제로 계산된 값은 religionEffectCache에 들어있다.
                         // 종교 심볼(31/32)은 여기서 계산하므로 현재 반복값을 사용한다.
                         const adjFoodFromCache =
-                            adjSym.definition.id === 31 || adjSym.definition.id === 32
+                            adjSym.definition.id === S.christianity || adjSym.definition.id === S.islam
                                 ? (doctrineFood.get(adjKey) ?? 0)
                                 : (religionEffectCache.get(adjKey)?.food ?? 0);
 
                         const adjKnowledgeFromCache =
-                            adjSym.definition.id === 31 || adjSym.definition.id === 32
+                            adjSym.definition.id === S.christianity || adjSym.definition.id === S.islam
                                 ? 0
                                 : (religionEffectCache.get(adjKey)?.knowledge ?? 0);
 
@@ -1205,9 +1228,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
                     let food = 0;
                     let gold = 0;
-                    if (sym.definition.id === 31) {
+                    if (sym.definition.id === S.christianity) {
                         food = maxAdjFood;
-                    } else if (sym.definition.id === 32) {
+                    } else if (sym.definition.id === S.islam) {
                         // 지식을 생산하는 인접 심볼 1개당 골드 +2
                         gold = knowledgeProducerCount * 2;
                     }
@@ -1279,7 +1302,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     for (let mx = 0; mx < BOARD_WIDTH; mx++) {
                         for (let my = 0; my < BOARD_HEIGHT; my++) {
                             const sym = currentBoardRef[mx][my];
-                            if (!sym || sym.definition.id !== 22) continue;
+                            if (!sym || sym.definition.id !== S.merchant) continue;
                             if (!sym.merchant_store_pending) continue;
                             if (computeIsCorner(mx, my)) continue; // 안전장치: corner merchant는 즉시 현금화 처리됨
 
@@ -1516,13 +1539,13 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
-            // ── Barbarian Camp (40) 파괴 시 전리품(41) 추가 (효과 페이즈 등으로 보드에 남아 파괴 표시된 경우)
+            // ── Barbarian Camp 파괴 시 전리품 추가 (효과 페이즈 등으로 보드에 남아 파괴 표시된 경우)
             // 전투로 이미 보드에서 제거된 주둔지는 pendingCombatLootAdds → 위에서 toAdd에 합쳐짐
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
-                    if (s && s.definition.id === 40 && s.is_marked_for_destruction) {
-                        toAdd.push(41);
+                    if (s && s.definition.id === S.barbarian_camp && s.is_marked_for_destruction) {
+                        toAdd.push(S.loot);
                     }
                 }
             }
@@ -1531,7 +1554,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
-                    if (s && s.definition.id === 20 && s.is_marked_for_destruction) {
+                    if (s && s.definition.id === S.pottery && s.is_marked_for_destruction) {
                         bonusFood += s.effect_counter || 0;
                     }
                 }
@@ -1541,16 +1564,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             const jomonRelicInst = getRelicInst(RELIC_ID.JOMON_POTTERY);
             if (jomonRelicInst) {
                 useRelicStore.getState().incrementRelicBonus(jomonRelicInst.instanceId, 1);
-            }
-
-            // ── Hay (51): 파괴 시 저장된 카운터만큼 식량 획득 ──
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                for (let y = 0; y < BOARD_HEIGHT; y++) {
-                    const s = currentBoard[x][y];
-                    if (s && s.definition.id === 51 && s.is_marked_for_destruction) {
-                        bonusFood += s.effect_counter || 0;
-                    }
-                }
             }
 
             // ── Campfire (19): 파괴 시 인접 심볼 중 "이번 턴 식량 생산"이 가장 높은 심볼의 효과 복사 ──
@@ -1571,7 +1584,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (let cx = 0; cx < BOARD_WIDTH; cx++) {
                     for (let cy = 0; cy < BOARD_HEIGHT; cy++) {
                         const camp = currentBoard[cx][cy];
-                        if (!camp || camp.definition.id !== 19 || !camp.is_marked_for_destruction) continue;
+                        if (!camp || camp.definition.id !== S.campfire || !camp.is_marked_for_destruction) continue;
 
                         let bestPos: { x: number; y: number } | null = null;
                         let bestFood = -Infinity;
@@ -1603,7 +1616,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 for (let y = 0; y < BOARD_HEIGHT; y++) {
                     const s = currentBoard[x][y];
-                    if (!s || s.definition.id !== 45 || !s.is_marked_for_destruction) continue;
+                    if (!s || s.definition.id !== S.earthquake || !s.is_marked_for_destruction) continue;
 
                     const candidates: { x: number; y: number }[] = [];
                     for (let dx = -1; dx <= 1; dx++) {
@@ -1638,11 +1651,11 @@ export const useGameStore = create<GameState>((set, get) => ({
                         if (!s || s.is_marked_for_destruction) continue;
                         const baseFood = (() => {
                             switch (s.definition.id) {
-                                case 1: return 2; case 2: return 2; case 3: return 1;
-                                case 4: return 2; case 5: return 0; case 6: return 0;
-                                case 7: return 0; case 9: return 2; case 13: return 1;
-                                case 14: return 1; case 19: return 1; case 22: return 2;
-                                case 23: return 1; case 71: return 1;
+                                case S.wheat: return 1; case S.rice: return 1; case S.cattle: return 1;
+                                case S.banana: return 2; case S.fish: return 0; case S.sea: return 0;
+                                case S.stone: return 0; case S.grassland: return 2; case S.rainforest: return 1;
+                                case S.plains: return 1; case S.campfire: return 1; case S.merchant: return 2;
+                                case S.horse: return 1; case S.wild_seeds: return 1;
                                 default: return 0;
                             }
                         })();
@@ -1690,7 +1703,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 for (let hx = 0; hx < BOARD_WIDTH; hx++) {
                     for (let hy = 0; hy < BOARD_HEIGHT; hy++) {
                         const hs = currentBoard[hx][hy];
-                        if (!hs || hs.definition.id !== 34 || hs.is_marked_for_destruction) continue;
+                        if (!hs || hs.definition.id !== S.hinduism || hs.is_marked_for_destruction) continue;
                         const delta = finalDestroyedCount * 5;
                         bonusFood += delta;
                         bonusKnowledge += delta;
@@ -2093,7 +2106,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const targetType = isUnit ? SymbolType.ENEMY : SymbolType.UNIT;
 
             // 궁수(36): 보드 전체 대상 중 슬롯 최소
-            if (sym.definition.id === 36) {
+            if (sym.definition.id === S.archer) {
                 let picked: { tx: number; ty: number; si: number } | null = null;
                 for (let ty = 0; ty < BOARD_HEIGHT; ty++) {
                     for (let tx = 0; tx < BOARD_WIDTH; tx++) {
@@ -2147,7 +2160,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             const doRemoveAndStart = () => {
                 if (combatDestroyedIds.size > 0) {
-                    const LOOT_SYMBOL_ID = 41;
                     set(prev => {
                         const lootFromCamps: number[] = [];
                         for (let cx = 0; cx < BOARD_WIDTH; cx++) {
@@ -2156,9 +2168,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                                 if (
                                     s?.is_marked_for_destruction &&
                                     combatDestroyedIds.has(s.instanceId) &&
-                                    s.definition.id === 40
+                                    s.definition.id === S.barbarian_camp
                                 ) {
-                                    lootFromCamps.push(LOOT_SYMBOL_ID);
+                                    lootFromCamps.push(S.loot);
                                 }
                             }
                         }
@@ -2471,7 +2483,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 201 Hunting: Destroy 1 Banana(4) for +100 Gold
         if (upgradeId === 201) {
-            const idx = newPlayerSymbols.findIndex(s => s.definition.id === 4);
+            const idx = newPlayerSymbols.findIndex(s => s.definition.id === S.banana);
             if (idx !== -1) {
                 newPlayerSymbols.splice(idx, 1);
                 addedGold += 10;
@@ -2481,23 +2493,23 @@ export const useGameStore = create<GameState>((set, get) => ({
         // 204 Shipbuilding: All Oasis(11) -> Sea(6)
         if (upgradeId === 204) {
             newPlayerSymbols = newPlayerSymbols.map(s =>
-                s.definition.id === 11 ? { ...s, definition: SYMBOLS[6] } : s
+                s.definition.id === S.oasis ? { ...s, definition: Sym.sea } : s
             );
         }
 
         // 205 Shamanism: Destroy 1 Omen(18) for +50 Knowledge
         if (upgradeId === 205) {
-            const idx = newPlayerSymbols.findIndex(s => s.definition.id === 18);
+            const idx = newPlayerSymbols.findIndex(s => s.definition.id === S.omen);
             if (idx !== -1) {
                 newPlayerSymbols.splice(idx, 1);
                 addedKnowledge += 50;
             }
         }
 
-        // 16 Education: Library(25) → University(54)
+        // 16 Education: Library → University
         if (upgradeId === 16) {
             newPlayerSymbols = newPlayerSymbols.map((s) =>
-                s.definition.id === 25 ? { ...s, definition: SYMBOLS[54] } : s
+                s.definition.id === S.library ? { ...s, definition: Sym.university } : s
             );
         }
 
@@ -3023,6 +3035,64 @@ export const useGameStore = create<GameState>((set, get) => ({
             territorialAfterEdictPending: false,
             returnPhaseAfterDevKnowledgeUpgrade: null,
             knowledgeUpgradeFloats: [],
+        });
+    },
+
+    butcherPastureAnimalAt: (x: number, y: number) => {
+        const prev = get();
+        if (prev.phase !== 'idle') return;
+        const sym = prev.board[x]?.[y];
+        const sid = sym?.definition.id;
+        if (!sym || sym.is_marked_for_destruction || (sid !== S.cattle && sid !== S.sheep)) return;
+        const plainsNear = getAdjacentCoords(x, y).some(
+            (p) => prev.board[p.x][p.y]?.definition.id === S.plains,
+        );
+        if (!plainsNear) return;
+
+        const removed = [sym];
+        const symAgg = aggregateCollectionDestroyEffects(removed, false);
+        const shBonus = scarabAndHinduismBonusForOwnedRemoves(prev.board, removed.length);
+        const butcherFood = sid === S.cattle ? 10 : 5;
+        const butcherGoldFlat = sid === S.sheep ? 5 : 0;
+        const dFood = butcherFood + symAgg.food + shBonus.food;
+        const dGold = butcherGoldFlat + symAgg.gold + shBonus.gold;
+        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
+
+        const instanceIds = [sym.instanceId];
+        const newBoard = prev.board.map((col) => [...col]);
+        newBoard[x][y] = null;
+        const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
+        const newSymbols = appendSymbolDefIdsToPlayer(
+            baseFiltered,
+            symAgg.addSymbolDefIds,
+            prev.unlockedKnowledgeUpgrades || [],
+        );
+
+        set({
+            board: newBoard,
+            playerSymbols: newSymbols,
+            food: prev.food + dFood,
+            gold: prev.gold + dGold,
+            knowledge: prev.knowledge + dKnowledge,
+            bonusXpPerTurn: prev.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
+            forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+            edictRemovalPending: prev.edictRemovalPending || symAgg.edictRemovalPending,
+            freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
+            isRelicShopOpen: prev.isRelicShopOpen || symAgg.openRelicShop,
+            lastEffects: [...prev.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
+        });
+        if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
+        get().appendEventLog({
+            turn: prev.turn,
+            kind: 'system',
+            slot: { x, y },
+            symbolId: sid,
+            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
+            meta: {
+                action: sid === S.cattle ? 'cattle_butcher' : 'sheep_butcher',
+                butcherFood,
+                butcherGoldFlat,
+            },
         });
     },
 
