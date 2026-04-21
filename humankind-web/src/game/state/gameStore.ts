@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import {
     getStageFoodPaymentBase,
-    getStageFoodPaymentIncrement,
     getStagePassiveBonus,
     getStageStartingRelicCounts,
+    TOTAL_STAGE_COUNT,
 } from '../data/stages';
 import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, TAX_SYMBOL_ID, EDICT_SYMBOL_ID, S, Sym } from '../data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
@@ -19,6 +19,58 @@ export { type PlayerSymbolInstance } from '../types';
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 
+/** 보드 중앙 칸 (5×4, 0-based): x=2, y=1 */
+const ORAL_TRADITION_ANCHOR = { x: 2, y: 1 } as const;
+
+const ensureOralTraditionOwned = (playerSymbols: PlayerSymbolInstance[]): PlayerSymbolInstance[] => {
+    if (playerSymbols.some((s) => s.definition.id === S.oral_tradition)) return playerSymbols;
+    const def = SYMBOLS[S.oral_tradition];
+    if (!def) return playerSymbols;
+    return [...playerSymbols, createInstance(def, [])];
+};
+
+const placeOralTraditionAtBoardCenter = (
+    board: (PlayerSymbolInstance | null)[][],
+    playerSymbols: PlayerSymbolInstance[],
+): { board: (PlayerSymbolInstance | null)[][]; playerSymbols: PlayerSymbolInstance[] } => {
+    const symList = [...playerSymbols];
+    const oralIdx = symList.findIndex((s) => s.definition.id === S.oral_tradition);
+    if (oralIdx < 0) return { board, playerSymbols: symList };
+
+    const oralInst = symList[oralIdx]!;
+    const b = board.map((col) => [...col]);
+
+    const { x: ax, y: ay } = ORAL_TRADITION_ANCHOR;
+
+    // 보드 어딘가에 이미 oral이 있으면(예: 시작 배치) 그 칸을 비움 — 중앙으로만 남기기
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+        for (let y = 0; y < BOARD_HEIGHT; y++) {
+            const cell = b[x][y];
+            if (cell && cell.instanceId === oralInst.instanceId) b[x][y] = null;
+        }
+    }
+
+    const occupant = b[ax][ay];
+    if (occupant && occupant.instanceId !== oralInst.instanceId) {
+        // oral이 원래 있던 위치로 기존 중앙 점유 심볼을 스왑(인스턴스 유지)
+        let ox = -1;
+        let oy = -1;
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                const cell = b[x][y];
+                if (cell && cell.instanceId === oralInst.instanceId) {
+                    ox = x;
+                    oy = y;
+                }
+            }
+        }
+        if (ox >= 0) b[ox][oy] = occupant;
+    }
+
+    b[ax][ay] = oralInst;
+    return { board: b, playerSymbols: symList };
+};
+
 /**
  * 1920×1080 기준 보드·셀 실제 픽셀 크기.
  * 렌더 시 `Math.min(viewW/1920, viewH/1080)` 만 곱하면 끝.
@@ -30,8 +82,8 @@ export const BOARD_CELL_HEIGHT_PX   = 163.2;  // 1920 기준 셀 세로
 export const BOARD_COL_GAP_PX       = 12;     // 1920 기준 열 간격
 /** slot_bg 스프라이트가 보드 바깥으로 더 나오는 여백(1920 기준) */
 export const BOARD_BG_SPRITE_PADDING_PX = 8;
-/** 레벨에 따라 증가하는 리롤 비용: 2G(Lv1) → 5G(Lv10+) */
-export const getRerollCost = (level: number): number => Math.min(2 + Math.floor((level - 1) / 3), 5);
+/** 레벨에 따라 증가하는 리롤 비용: 2G(Lv0) → 5G(Lv9+) */
+export const getRerollCost = (level: number): number => Math.min(2 + Math.floor(level / 3), 5);
 
 
 
@@ -50,7 +102,7 @@ const PHASE2_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
     'instant': 0,
 };
 
-/** 유물 ID 목록 (relicDefinitions + relicCandidates) */
+/** 유물 ID 목록 (`relicDefinitions` RELICS 1–19) */
 const RELIC_ID = {
     CLOVIS_SPEAR: 1,          // 클로비스 투창촉: 매 턴 전투 직전 무작위 적 체력 -1
     LYDIA_COIN: 2,            // 리디아 호박금 주화: 리롤 50% 할인, 턴당 최대 3회
@@ -91,9 +143,9 @@ const ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
 };
 
 // 레벨업에 필요한 경험치(Knowledge)
-// 1~10렙: 50
-// 11~20렙: 100
-// 21~30렙: 200
+// 0~9렙: 50
+// 10~19렙: 100
+// 20~29렙: 200
 const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
     if (currentLevel < 10) return 50;
     if (currentLevel < 20) return 100;
@@ -123,13 +175,18 @@ type GamePhase =
     | 'oblivion_furnace_board'
     | 'game_over'
     | 'victory';
-/** 10·20·30…턴마다 식량 납부 비용 — 난이도(stageId)에 따라 첫 납부액·증가분 다름 */
+/** 10·20·30…턴마다 식량 납부 비용 — 선택한 스테이지 규칙을 반영 */
 export const calculateFoodCost = (turn: number, stageId: number = 1): number => {
     const base = getStageFoodPaymentBase(stageId);
-    const step = getStageFoodPaymentIncrement(stageId);
     const nth = Math.floor(turn / 10);
     if (nth < 1) return base;
-    return base + (nth - 1) * step;
+    // nth: 1@10턴, 2@20턴… — 증가분이 회차마다 커지는(가속) 누적 합
+    // extra(nth) = 50*1 + 60*2 + 70*3 + ... = Σ (40 + 10*k) * k, k=1..(nth-1)
+    let extra = 0;
+    for (let k = 1; k <= nth - 1; k++) {
+        extra += (40 + 10 * k) * k;
+    }
+    return base + extra;
 };
 
 export type GameEventLogKind =
@@ -164,10 +221,10 @@ export interface GameState {
     food: number;
     gold: number;
     knowledge: number; // 기존 knowledge
-    level: number; // 1 ~ 30
+    level: number; // 0 ~ 30
     era: number; // derived from level
     turn: number;
-    /** 난이도(프리게임 스테이지 1~4) — 식량 납부·시작 유물·기본 생산 보너스 */
+    /** 프리게임 스테이지 ID — 식량 납부·시작 유물·기본 생산 보너스 */
     stageId: number;
     board: (PlayerSymbolInstance | null)[][];
     playerSymbols: PlayerSymbolInstance[];
@@ -274,7 +331,7 @@ export interface GameState {
     selectUpgrade: (upgradeId: number) => void;
 
         initializeGame: () => void;
-    /** 프리게임: 보유 심볼(symbolIds) + 리더 + 난이도별 시작 유물로 본게임 시작 */
+    /** 프리게임: 보유 심볼(symbolIds) + 리더 + 스테이지별 시작 유물로 본게임 시작 */
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId, stageId: number) => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
@@ -306,7 +363,7 @@ const hasTextileSourceOnBoard = (board: (PlayerSymbolInstance | null)[][]): bool
     return false;
 };
 
-/** 난이도 + "기본 생산 +N" 업그레이드만 반영한 순수 기본 생산량. */
+/** 스테이지 보너스 + "기본 생산 +N" 업그레이드만 반영한 순수 기본 생산량. */
 export function getHudTurnStartPassiveTotals(state: GameState): { food: number; gold: number; knowledge: number } {
     const upgrades = state.unlockedKnowledgeUpgrades || [];
     const knowledge =
@@ -356,7 +413,7 @@ const applyWarriorEliteTransforms = (
             const cell = b[x][y];
             if (!cell || cell.definition.id !== S.warrior) continue;
 
-            if (upgrades.includes(19)) {
+            if (upgrades.includes(STIRRUP_UPGRADE_ID)) {
                 const horsePos = getAdjacentCoords(x, y).find((p) => b[p.x][p.y]?.definition.id === S.horse);
                 if (horsePos) {
                     const horseInst = b[horsePos.x][horsePos.y]!;
@@ -454,7 +511,7 @@ const createInstance = (def: SymbolDefinition, unlockedUpgrades: number[] = []):
 const randomEra1SymbolIdForDestroy = (): number => {
     const ids = [
         S.wheat, S.rice, S.cattle, S.banana, S.fish, S.sea, S.stone, S.copper, S.grassland, S.monument, S.oasis,
-        S.oral_tradition, S.rainforest, S.plains, S.mountain, S.totem, S.offering, S.omen, S.campfire, S.pottery,
+        S.oral_tradition, S.rainforest, S.plains, S.mountain, S.totem, S.omen, S.campfire, S.pottery,
         S.tribal_village, S.deer, S.date, S.warrior,
     ];
     const ancientOk = (useGameStore.getState().unlockedKnowledgeUpgrades || []).includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
@@ -581,12 +638,13 @@ const appendSymbolDefIdsToPlayer = (
     return next;
 };
 
-/** 시작 심볼: Wheat x2, Stone x1 */
+/** 시작 심볼: Wheat x2, Stone x1, Oral Tradition x1 */
 const getStartingSymbols = (): PlayerSymbolInstance[] => {
     return [
         Sym.wheat,  // Wheat
         Sym.wheat,  // Wheat
         Sym.stone,  // Stone
+        Sym.oral_tradition, // Oral Tradition
     ].map((d) => createInstance(d, []));
 };
 
@@ -595,6 +653,7 @@ const getStartingSymbols = (): PlayerSymbolInstance[] => {
  * 슬롯 7 (x=1, y=1) → Wheat
  * 슬롯 9 (x=3, y=1) → Wheat
  * 슬롯 13 (x=2, y=2) → Stone
+ * 보드 중앙 (x=2, y=1) → Oral Tradition
  */
 const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], playerSymbols: PlayerSymbolInstance[] } => {
     const symbols = getStartingSymbols();
@@ -602,6 +661,7 @@ const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], play
     board[1][1] = symbols[0]; // Wheat  — 슬롯 7
     board[3][1] = symbols[1]; // Wheat  — 슬롯 9
     board[2][2] = symbols[2]; // Stone  — 슬롯 13
+    board[ORAL_TRADITION_ANCHOR.x][ORAL_TRADITION_ANCHOR.y] = symbols[3]; // Oral Tradition — 중앙
     return { board, playerSymbols: symbols };
 };
 
@@ -644,12 +704,11 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         if (sym.id === S.university && upgrades.includes(16)) isUnlocked = true; // Education -> University
         if (sym.id === S.archer && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
         if (sym.id === S.merchant && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
-        if (sym.id === S.horse && upgrades.includes(7)) isUnlocked = true; // Horsemanship -> Horse
-        if ((sym.id === S.crab || sym.id === S.pearl) && upgrades.includes(9)) isUnlocked = true; // Celestial Navigation -> Crab, Pearl
+        if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
+        if ((sym.id === S.crab || sym.id === S.pearl) && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Crab, Pearl
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
         if (sym.id === S.harbor && upgrades.includes(17)) isUnlocked = true;
-        if (sym.id === S.sheep && upgrades.includes(PASTORALISM_UPGRADE_ID)) isUnlocked = true;
         if ((sym.id === S.wild_boar || sym.id === S.sawmill) && upgrades.includes(20)) isUnlocked = true;
         if (sym.id === S.gold_vein && upgrades.includes(21)) isUnlocked = true;
 
@@ -811,7 +870,15 @@ import {
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS,
     PASTORALISM_UPGRADE_ID,
+    AGRICULTURE_UPGRADE_ID,
+    IRRIGATION_UPGRADE_ID,
+    STIRRUP_UPGRADE_ID,
+    HORSEMANSHIP_UPGRADE_ID,
+    CELESTIAL_NAVIGATION_UPGRADE_ID,
+    FISHERIES_UPGRADE_ID,
+    SEAFARING_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
 import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
@@ -831,26 +898,30 @@ export function isUpgradeLegalForKnowledgePick(
     unlocked: number[],
     level: number,
 ): boolean {
-    const u = KNOWLEDGE_UPGRADES[upgradeId];
+    const uid = Number(upgradeId);
+    const have = new Set((unlocked ?? []).map((x) => Number(x)));
+    const u = KNOWLEDGE_UPGRADES[uid];
     if (!u) return false;
-    if (unlocked.includes(upgradeId)) return false;
+    if (have.has(uid)) return false;
     const upgradeEra = upgradeEraBySymbolType(u.type);
     if (upgradeEra == null) return false;
     const currentEra = getEraFromLevel(level);
-    const medievalUnlocked = unlocked.includes(FEUDALISM_UPGRADE_ID) || currentEra >= 2;
-    if (level >= 11) {
-        return u.type === SymbolType.MEDIEVAL && medievalUnlocked;
-    }
-    if (upgradeId === FEUDALISM_UPGRADE_ID) return level >= 10;
+    const medievalUnlocked = have.has(FEUDALISM_UPGRADE_ID) || currentEra >= 2;
+    if (uid === FEUDALISM_UPGRADE_ID) return level >= 10;
     if (u.type === SymbolType.MEDIEVAL) return medievalUnlocked;
-    // 고대 시대(25) 연구 전에는 다른 고대 지식 카드·목축업(26) 선택 불가
+    // 고대 시대(25) 연구 전: 다른 고대 지식 카드 불가(Lv2 트리 행은 예외)
     if (
         u.type === SymbolType.ANCIENT &&
-        upgradeId !== ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID &&
-        !unlocked.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)
+        uid !== ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID &&
+        !KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS.includes(uid) &&
+        !have.has(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)
     ) {
         return false;
     }
+    if (uid === IRRIGATION_UPGRADE_ID && !have.has(AGRICULTURE_UPGRADE_ID)) return false;
+    if (uid === HORSEMANSHIP_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
+    if (uid === SEAFARING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
+    if (uid === CELESTIAL_NAVIGATION_UPGRADE_ID && !have.has(SEAFARING_UPGRADE_ID)) return false;
     return upgradeEra <= currentEra;
 }
 
@@ -858,20 +929,14 @@ export function isUpgradeLegalForKnowledgePick(
 const buildActiveRelicEffects = (): ActiveRelicEffects => {
     const relics = useRelicStore.getState().relics;
     const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
-    const getRelicInstance = (id: number) => relics.find(r => r.definition.id === id);
 
-    const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
+    const upgrades = (useGameStore.getState().unlockedKnowledgeUpgrades || []).map((x) => Number(x));
 
     return {
         relicCount: relics.length,
         quarryEmptyGold: hasRelic(RELIC_ID.EGYPT_SAW),
         bananaFossilBonus: hasRelic(RELIC_ID.GOANNA_BANANA),
-        burnOfferingEmptyPenalty: false,
-        jerichoMonumentBonus: false,
-        gobekliAnimalJackpot: false,
-        gilgameshReligionNoPenalty: false,
-        fishBoneHookGold: false,
-        horsemansihpPastureBonus: upgrades.includes(7),
+        horsemansihpPastureBonus: upgrades.includes(HORSEMANSHIP_UPGRADE_ID),
         terraFossilDisasterFood: hasRelic(RELIC_ID.TERRA_FOSSIL_GRAPE),
     };
 };
@@ -881,7 +946,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     food: 0,
     gold: 0,
     knowledge: 0,
-    level: 1,
+    level: 0,
     era: 1,
     turn: 0,
     stageId: 1,
@@ -945,11 +1010,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     spinBoard: () => {
         let state = get();
-        // selection + research points: skip symbol pick first, then continue into the new turn.
-        if (state.phase === 'selection' && (state.levelUpResearchPoints ?? 0) > 0) {
-            get().skipSelection();
-            state = get();
-        }
+        if ((state.levelUpResearchPoints ?? 0) > 0) return;
         if (state.phase !== 'idle') return;
 
         let { barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = state;
@@ -1054,11 +1115,19 @@ export const useGameStore = create<GameState>((set, get) => ({
             newPlayerSymbols
         );
 
+        // 첫 스핀(턴 0 → 1)에서만 구전 설화를 보드 중앙에 고정
+        const anchored =
+            state.turn === 0
+                ? placeOralTraditionAtBoardCenter(placedBoard, placedSymbols)
+                : { board: placedBoard, playerSymbols: placedSymbols };
+        const anchoredBoard = anchored.board;
+        const anchoredSymbols = anchored.playerSymbols;
+
         const newThreatLabels = new Map<string, string>(newThreats.map(n => [n.instanceId, n.label]));
         const pendingNewThreatFloats: { x: number; y: number; label: string }[] = [];
         for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let y = 0; y < BOARD_HEIGHT; y++) {
-                const inst = placedBoard[x][y];
+                const inst = anchoredBoard[x][y];
                 if (inst && newThreatLabels.has(inst.instanceId)) {
                     pendingNewThreatFloats.push({ x, y, label: newThreatLabels.get(inst.instanceId)! });
                 }
@@ -1069,13 +1138,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
         set({
-            playerSymbols: placedSymbols,
+            playerSymbols: anchoredSymbols,
             barbarianSymbolThreat,
             barbarianCampThreat,
             naturalDisasterThreat,
             pendingNewThreatFloats,
             prevBoard: state.board,
-            board: placedBoard,
+            board: anchoredBoard,
             turn: newTurn,
             phase: 'spinning',
             lastEffects: [],
@@ -1240,7 +1309,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                         const t = currentBoardRef[pos.x][pos.y];
                         return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
                     });
-                    if (hasAdjacentDoctrine && !relicEffects.gilgameshReligionNoPenalty) {
+                    if (hasAdjacentDoctrine) {
                         food -= 50;
                     }
 
@@ -1644,6 +1713,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             let urWheelInstanceId: string | null = null;
             if (urWheelRelicForPlan && urWheelRelicForPlan.effect_counter > 0) {
                 urWheelInstanceId = urWheelRelicForPlan.instanceId;
+                const urWheelGrasslandFood = (get().unlockedKnowledgeUpgrades ?? []).map(Number).includes(IRRIGATION_UPGRADE_ID)
+                    ? 2
+                    : 1;
                 let minFoodUr = Infinity;
                 for (let ux = 0; ux < BOARD_WIDTH; ux++) {
                     for (let uy = 0; uy < BOARD_HEIGHT; uy++) {
@@ -1652,8 +1724,10 @@ export const useGameStore = create<GameState>((set, get) => ({
                         const baseFood = (() => {
                             switch (s.definition.id) {
                                 case S.wheat: return 1; case S.rice: return 1; case S.cattle: return 1;
-                                case S.banana: return 2; case S.fish: return 0; case S.sea: return 0;
-                                case S.stone: return 0; case S.grassland: return 2; case S.rainforest: return 1;
+                                case S.banana:
+                                    return 1 + (s.banana_permanent_food_bonus ?? 0);
+                                case S.fish: return 0; case S.sea: return 0;
+                                case S.stone: return 0; case S.grassland: return urWheelGrasslandFood; case S.rainforest: return 1;
                                 case S.plains: return 1; case S.campfire: return 1; case S.merchant: return 2;
                                 case S.horse: return 1; case S.wild_seeds: return 1;
                                 default: return 0;
@@ -2434,22 +2508,23 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (pts <= 0) return;
 
         const pickLevel = state.level;
-        const unlocked = state.unlockedKnowledgeUpgrades || [];
+        const uid = Number(upgradeId);
+        const unlockedNorm = (state.unlockedKnowledgeUpgrades || []).map((x) => Number(x));
         if (
-            KNOWLEDGE_UPGRADES[upgradeId] != null &&
-            !isUpgradeLegalForKnowledgePick(upgradeId, unlocked, pickLevel)
+            KNOWLEDGE_UPGRADES[uid] != null &&
+            !isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel)
         ) {
             return;
         }
 
         const nextResearchPts = Math.max(0, pts - 1);
 
-        const upgrade = KNOWLEDGE_UPGRADES[upgradeId] || KNOWLEDGE_UPGRADE_CANDIDATES[upgradeId];
+        const upgrade = KNOWLEDGE_UPGRADES[uid] || KNOWLEDGE_UPGRADE_CANDIDATES[uid];
         if (!upgrade) return;
 
-        if (upgradeId === TERRITORIAL_REORG_UPGRADE_ID) {
+        if (uid === TERRITORIAL_REORG_UPGRADE_ID) {
             set({
-                unlockedKnowledgeUpgrades: [...(state.unlockedKnowledgeUpgrades || []), upgradeId],
+                unlockedKnowledgeUpgrades: [...unlockedNorm, uid],
                 phase: 'destroy_selection',
                 pendingDestroySource: TERRITORIAL_REORG_UPGRADE_ID,
                 destroySelectionMaxSymbols: 3,
@@ -2459,9 +2534,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             return;
         }
 
-        const newUnlocked = [...(state.unlockedKnowledgeUpgrades || []), upgradeId];
+        const newUnlocked = [...unlockedNorm, uid];
 
-        if (upgradeId === SACRIFICIAL_RITE_UPGRADE_ID) {
+        if (uid === SACRIFICIAL_RITE_UPGRADE_ID) {
             const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
             if (oblDef) {
                 const rs = useRelicStore.getState();
@@ -2471,10 +2546,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // Apply upgrade effects
         let religionUnlocked = state.religionUnlocked;
-        if (upgradeId === 4) religionUnlocked = true; // Theology
+        if (uid === 4) religionUnlocked = true; // Theology
 
         let bonusXpDelta = 0;
-        if (upgradeId === 1) bonusXpDelta = 2; // Writing System: +2 base Knowledge
+        if (uid === 1) bonusXpDelta = 2; // Writing System: +2 base Knowledge
 
         let newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];
@@ -2482,7 +2557,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         let addedGold = 0;
 
         // 201 Hunting: Destroy 1 Banana(4) for +100 Gold
-        if (upgradeId === 201) {
+        if (uid === 201) {
             const idx = newPlayerSymbols.findIndex(s => s.definition.id === S.banana);
             if (idx !== -1) {
                 newPlayerSymbols.splice(idx, 1);
@@ -2491,14 +2566,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         // 204 Shipbuilding: All Oasis(11) -> Sea(6)
-        if (upgradeId === 204) {
+        if (uid === 204) {
             newPlayerSymbols = newPlayerSymbols.map(s =>
                 s.definition.id === S.oasis ? { ...s, definition: Sym.sea } : s
             );
         }
 
         // 205 Shamanism: Destroy 1 Omen(18) for +50 Knowledge
-        if (upgradeId === 205) {
+        if (uid === 205) {
             const idx = newPlayerSymbols.findIndex(s => s.definition.id === S.omen);
             if (idx !== -1) {
                 newPlayerSymbols.splice(idx, 1);
@@ -2507,14 +2582,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         // 16 Education: Library → University
-        if (upgradeId === 16) {
+        if (uid === 16) {
             newPlayerSymbols = newPlayerSymbols.map((s) =>
                 s.definition.id === S.library ? { ...s, definition: Sym.university } : s
             );
         }
 
         // 2 Bronze Working: migrate HP for owned units
-        if (upgradeId === 2) {
+        if (uid === 2) {
             const migrateBronzeHp = (s: PlayerSymbolInstance): PlayerSymbolInstance => {
                 if (s.definition.type !== SymbolType.UNIT) return s;
                 const bonus = getBronzeWorkingHpBonus(s.definition);
@@ -2899,7 +2974,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             gold: 0,
             knowledge: 0,
             era: 1,
-            level: 1,
+            level: 0,
             turn: 0,
             stageId: 1,
             board,
@@ -2953,7 +3028,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId, stageId: number) => {
         if (!isLeaderPlayable(leaderId)) return;
-        const resolvedStage = stageId >= 1 && stageId <= 6 ? stageId : 1;
+        const resolvedStage = stageId >= 1 && stageId <= TOTAL_STAGE_COUNT ? stageId : 1;
         const relicStore = useRelicStore.getState();
         const toRemove = relicStore.relics.map((r) => r.instanceId);
         toRemove.forEach((id) => relicStore.removeRelic(id));
@@ -2979,12 +3054,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             leaderId === 'ramesses',
         );
 
-        const playerSymbols = symbolIds
+        let playerSymbols = symbolIds
             .map((id) => SYMBOLS[id])
             .filter((def): def is SymbolDefinition => def != null)
             .map((def) => createInstance(def));
 
+        playerSymbols = ensureOralTraditionOwned(playerSymbols);
+
         const board = createEmptyBoard();
+        const placed = placeOralTraditionAtBoardCenter(board, playerSymbols);
 
         set({
             leaderId,
@@ -2992,11 +3070,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             gold: startingGold,
             knowledge: 0,
             era: 1,
-            level: 1,
+            level: 0,
             turn: 0,
             stageId: resolvedStage,
-            board,
-            playerSymbols,
+            board: placed.board,
+            playerSymbols: placed.playerSymbols,
             phase: 'idle',
             symbolChoices: [],
             symbolSelectionRelicSourceId: null,
@@ -3010,7 +3088,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
             eventLog: [],
-            prevBoard: createEmptyBoard(),
+            prevBoard: placed.board.map((col) => [...col]),
             combatAnimation: null,
             combatShaking: false,
             religionUnlocked: false,
