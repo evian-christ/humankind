@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useRelicStore } from '../game/state/relicStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { SYMBOLS } from '../game/data/symbolDefinitions';
+import { SYMBOLS, S } from '../game/data/symbolDefinitions';
 import { RELIC_LIST } from '../game/data/relicDefinitions';
 import { t } from '../i18n';
 
@@ -371,8 +371,23 @@ const DevOverlay = () => {
                         <span>
                             <span style={{ color: '#888', marginRight: '6px' }}>[E{sym.definition.type}]</span>
                             {t(`symbol.${sym.definition.key}.name`, language)}
-                            {sym.effect_counter > 0 && (
-                                <span style={{ color: '#fbbf24', marginLeft: '6px' }}>({sym.effect_counter})</span>
+                            {sym.definition.id === S.banana ? (
+                                ((sym.banana_permanent_food_bonus ?? 0) > 0 || (sym.effect_counter ?? 0) > 0) && (
+                                    <span style={{ color: '#fbbf24', marginLeft: '6px' }}>
+                                        (
+                                        {[
+                                            (sym.banana_permanent_food_bonus ?? 0) > 0 ? `+${sym.banana_permanent_food_bonus}` : '',
+                                            (sym.effect_counter ?? 0) > 0 ? `${sym.effect_counter}/10` : '',
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ')}
+                                        )
+                                    </span>
+                                )
+                            ) : (
+                                sym.effect_counter > 0 && (
+                                    <span style={{ color: '#fbbf24', marginLeft: '6px' }}>({sym.effect_counter})</span>
+                                )
                             )}
                         </span>
                         <button

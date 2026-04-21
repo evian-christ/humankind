@@ -4,7 +4,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { TERRITORIAL_REORG_UPGRADE_ID } from '../game/data/knowledgeUpgrades';
 import { EDICT_SYMBOL_ID, getSymbolColorHex, SymbolType, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { t } from '../i18n';
+import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
@@ -38,6 +38,7 @@ const DestroySelection = () => {
         pendingDestroySource,
         destroySelectionMaxSymbols,
     } = useGameStore();
+    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
     const language = useSettingsStore((s) => s.language);
     const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
     const [hoverTip, setHoverTip] = useState<{
@@ -124,9 +125,13 @@ const DestroySelection = () => {
                         {t(SYMBOL_TYPE_ERA_KEY[hoverTip.def.type] ?? 'era.ancient', language)}
                     </div>
                     <div className="symbol-tooltip-desc">
-                        {t(`symbol.${hoverTip.def.key}.desc`, language).split('\n').map((line, j) => (
-                            <div key={j} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
-                        ))}
+                        {getBoardSymbolTooltipDesc(hoverTip.def.key, language, unlockedKnowledgeUpgrades)
+                            .split('\n')
+                            .map((line, j) => (
+                                <div key={j} className="symbol-tooltip-desc-line">
+                                    <EffectText text={line} />
+                                </div>
+                            ))}
                     </div>
                 </div>,
                 document.body,

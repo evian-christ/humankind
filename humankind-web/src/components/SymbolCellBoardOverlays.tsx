@@ -25,8 +25,22 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const fs = Math.max(18, Math.round(27 * sx));
     const fsIcon = Math.max(22, Math.round(34 * sx));
 
+    const bananaStatText =
+        def.id === S.banana
+            ? (() => {
+                  const perm = sym.banana_permanent_food_bonus ?? 0;
+                  const pr = sym.effect_counter || 0;
+                  const parts: string[] = [];
+                  if (perm > 0) parts.push(`+${perm}`);
+                  if (pr > 0) parts.push(`${pr}/10`);
+                  return parts.length ? parts.join(' ') : null;
+              })()
+            : null;
     const showCounter =
-        sym.effect_counter > 0 && def.type !== SymbolType.ENEMY && def.base_hp === undefined;
+        def.id !== S.banana &&
+        sym.effect_counter > 0 &&
+        def.type !== SymbolType.ENEMY &&
+        def.base_hp === undefined;
     const showAtk = def.base_attack !== undefined && def.base_attack > 0;
     const showHp = def.base_hp !== undefined && def.base_hp > 0;
     const hpValue = sym.enemy_hp ?? def.base_hp;
@@ -39,6 +53,23 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
 
     return (
         <>
+            {bananaStatText != null && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        right: ux(2),
+                        bottom: uy(4),
+                        fontSize: fs,
+                        ...font,
+                        color: '#8b7355',
+                        fontWeight: 700,
+                        textShadow: statShadow,
+                    }}
+                >
+                    {bananaStatText}
+                </div>
+            )}
+
             {showCounter && (
                 <div
                     style={{

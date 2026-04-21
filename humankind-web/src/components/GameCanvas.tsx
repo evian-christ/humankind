@@ -5,7 +5,7 @@ import { useGameStore, getHudTurnStartPassiveTotals } from '../game/state/gameSt
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
-import { t } from '../i18n';
+import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
@@ -38,6 +38,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
     const [hoveredHudStat, setHoveredHudStat] = useState<HoveredHudStat | null>(null);
     const language = useSettingsStore((s) => s.language);
+    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
 
     suppressBoardTooltipsRef.current = suppressBoardTooltips;
 
@@ -361,9 +362,13 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                         {t(ERA_NAME_KEYS[hoveredSymbol.definition.type] ?? 'era.ancient', language)}
                     </div>
                     <div className="symbol-tooltip-desc">
-                        {t(`symbol.${hoveredSymbol.definition.key}.desc`, language).split('\n').map((line, i) => (
-                            <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
-                        ))}
+                        {getBoardSymbolTooltipDesc(hoveredSymbol.definition.key, language, unlockedKnowledgeUpgrades)
+                            .split('\n')
+                            .map((line, i) => (
+                                <div key={i} className="symbol-tooltip-desc-line">
+                                    <EffectText text={line} />
+                                </div>
+                            ))}
                     </div>
                 </div>
             )}

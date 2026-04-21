@@ -3,7 +3,7 @@ import { useGameStore, getRerollCost, getBronzeWorkingHpBonus } from '../game/st
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
-import { t } from '../i18n';
+import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
@@ -25,17 +25,19 @@ const RELIC_ANCIENT_TRIBE_JOIN = 19;
 const SymbolCard = ({
     symbol,
     hasBronzeWorking,
+    unlockedKnowledgeUpgrades,
     onClick,
 }: {
     symbol: SymbolDefinition;
     hasBronzeWorking: boolean;
+    unlockedKnowledgeUpgrades: number[];
     onClick: () => void;
 }) => {
     const language = useSettingsStore((s) => s.language);
     const eraColor = getSymbolColorHex(symbol.type);
     const eraName = t(ERA_NAME_KEYS[symbol.type] ?? 'era.ancient', language);
     const symName = t(`symbol.${symbol.key}.name`, language);
-    const symDesc = t(`symbol.${symbol.key}.desc`, language);
+    const symDesc = getBoardSymbolTooltipDesc(symbol.key, language, unlockedKnowledgeUpgrades);
     const displayHp =
         symbol.base_hp !== undefined
             ? symbol.base_hp + (hasBronzeWorking ? getBronzeWorkingHpBonus(symbol) : 0)
@@ -107,7 +109,8 @@ const SymbolSelection = () => {
     } = useGameStore();
     const language = useSettingsStore((s) => s.language);
     const relics = useRelicStore((s) => s.relics);
-    const hasBronzeWorking = useGameStore((s) => (s.unlockedKnowledgeUpgrades || []).includes(2));
+    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
+    const hasBronzeWorking = unlockedKnowledgeUpgrades.includes(2);
     const [isPeeked, setIsPeeked] = useState(false);
 
     /** 선택 패널이 보드를 가릴 때만 툴팁 억제; 본게임 ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
@@ -163,6 +166,7 @@ const SymbolSelection = () => {
                                 key={`${sym.id}-${i}`}
                                 symbol={sym}
                                 hasBronzeWorking={hasBronzeWorking}
+                                unlockedKnowledgeUpgrades={unlockedKnowledgeUpgrades}
                                 onClick={() => handleCardClick(sym.id)}
                             />
                         ))}

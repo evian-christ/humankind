@@ -870,9 +870,28 @@ export class PixiGameApp {
                     drawTarget.addChild(nameText);
                 }
 
-                if (symbol.effect_counter > 0 && symDef.type !== SymbolType.ENEMY && symDef.base_hp === undefined) {
+                const bananaCounterText =
+                    symDef.id === S.banana
+                        ? (() => {
+                              const perm = symbol.banana_permanent_food_bonus ?? 0;
+                              const pr = symbol.effect_counter || 0;
+                              const parts: string[] = [];
+                              if (perm > 0) parts.push(`+${perm}`);
+                              if (pr > 0) parts.push(`${pr}/10`);
+                              return parts.length ? parts.join(' ') : '';
+                          })()
+                        : '';
+                const genericCounterText =
+                    symDef.id !== S.banana &&
+                    symbol.effect_counter > 0 &&
+                    symDef.type !== SymbolType.ENEMY &&
+                    symDef.base_hp === undefined
+                        ? String(symbol.effect_counter)
+                        : '';
+                const boardCounterOverlay = bananaCounterText || genericCounterText;
+                if (boardCounterOverlay) {
                     const counterText = new PIXI.Text({
-                        text: String(symbol.effect_counter),
+                        text: boardCounterOverlay,
                         style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
                     });
                     counterText.anchor.set(0.5, 0.5);
