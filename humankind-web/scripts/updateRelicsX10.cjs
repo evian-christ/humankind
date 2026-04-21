@@ -6,7 +6,6 @@ const projectRoot = '/Users/chan/Documents/projects/humankind/humankind-web';
 function updateRelics() {
     const files = [
         'src/game/data/relicDefinitions.ts',
-        'src/game/data/relicCandidates.ts',
         'src/i18n/index.ts',
     ];
 

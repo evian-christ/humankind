@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback, useEffect, Fragment } from 'react';
 import { SYMBOLS, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition, isBasePool, EXCLUDED_FROM_BASE_POOL } from '../game/data/symbolDefinitions';
 import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
 import { RELICS } from '../game/data/relicDefinitions';
-import { RELIC_CANDIDATES } from '../game/data/relicCandidates';
 import { ENEMIES } from '../game/data/enemyDefinitions';
 import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../game/data/knowledgeUpgradeCandidates';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
@@ -13,7 +12,7 @@ import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
-type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'relicCandidates' | 'knowledgeUpgrades' | 'knowledgeUpgradeCandidates' | 'enemies' | 'leaders';
+type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'knowledgeUpgrades' | 'knowledgeUpgradeCandidates' | 'enemies' | 'leaders';
 type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
@@ -72,7 +71,6 @@ const DataBrowser = () => {
     const [symbolSort, setSymbolSort] = useState<SortState | null>(null);
     const [symbolCandSort, setSymbolCandSort] = useState<SortState | null>(null);
     const [relicSort, setRelicSort] = useState<SortState | null>(null);
-    const [relicCandSort, setRelicCandSort] = useState<SortState | null>(null);
     const [knowledgeUpgradeSort, setKnowledgeUpgradeSort] = useState<SortState | null>(null);
     const [knowledgeUpgradeCandidateSort, setKnowledgeUpgradeCandidateSort] = useState<SortState | null>(null);
     const [enemySort, setEnemySort] = useState<SortState | null>(null);
@@ -221,35 +219,6 @@ const DataBrowser = () => {
         }
         return list;
     }, [search, relicSort, language]);
-
-    const filteredRelicCandidates = useMemo(() => {
-        let list = Object.values(RELIC_CANDIDATES).filter(r =>
-            search === '' ||
-            t(`relic.${r.id}.name`, language).toLowerCase().includes(search.toLowerCase()) ||
-            r.name.toLowerCase().includes(search.toLowerCase()) ||
-            r.description.toLowerCase().includes(search.toLowerCase()) ||
-            String(r.id).includes(search)
-        );
-        if (relicCandSort) {
-            const { column, dir } = relicCandSort;
-            list = [...list].sort((a, b) => {
-                let va: unknown, vb: unknown;
-                switch (column) {
-                    case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = a.name; vb = b.name; break;
-                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
-                    case 'cost': va = a.cost; vb = b.cost; break;
-                    case 'desc': va = a.description; vb = b.description; break;
-                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
-                    default: va = a.id; vb = b.id;
-                }
-                return genericCompare(va, vb, dir);
-            });
-        } else {
-            list.sort((a, b) => a.id - b.id);
-        }
-        return list;
-    }, [search, language, relicCandSort]);
 
     // 지식 업그레이드 후보 목록
     const filteredKnowledgeUpgradeCandidates = useMemo(() => {
@@ -421,7 +390,6 @@ const DataBrowser = () => {
     const symSortHandler = toggleSort(setSymbolSort);
     const symCandSortHandler = toggleSort(setSymbolCandSort);
     const relSortHandler = toggleSort(setRelicSort);
-    const rcSortHandler = toggleSort(setRelicCandSort);
     const kuSortHandler = toggleSort(setKnowledgeUpgradeSort);
     const kucSortHandler = toggleSort(setKnowledgeUpgradeCandidateSort);
     const enSortHandler = toggleSort(setEnemySort);
@@ -457,12 +425,6 @@ const DataBrowser = () => {
                     onClick={() => setTab('relics')}
                 >
                     {t('dataBrowser.relics', language)} ({Object.keys(RELICS).length})
-                </button>
-                <button
-                    className={`databrowser-tab ${tab === 'relicCandidates' ? 'databrowser-tab--active' : ''}`}
-                    onClick={() => setTab('relicCandidates')}
-                >
-                    {t('dataBrowser.relicCandidates', language)} ({Object.keys(RELIC_CANDIDATES).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'knowledgeUpgrades' ? 'databrowser-tab--active' : ''}`}
@@ -716,45 +678,6 @@ const DataBrowser = () => {
                                                 <span style={{ fontSize: '11px', color: '#888' }}>{r.sprite}</span>
                                             </>
                                         ) : '-'}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-
-                {tab === 'relicCandidates' && (
-                    <table className="databrowser-table">
-                        <thead>
-                            <tr>
-                                <SortTh column="id" label="ID" sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--id" />
-                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--name" />
-                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--era" />
-                                <SortTh column="cost" label={t('dataBrowser.colCost', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--cost" />
-                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--desc" />
-                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={relicCandSort} onSort={rcSortHandler} className="databrowser-th--sprite" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredRelicCandidates.map(r => (
-                                <tr key={r.id} className="databrowser-row">
-                                    <td className="databrowser-cell--id">{r.id}</td>
-                                    <td className="databrowser-cell--name">{r.name}</td>
-                                    <td className="databrowser-cell--era">
-                                        <span style={{
-                                            color: getSymbolColorHex(r.type),
-                                            fontWeight: 'bold',
-                                            fontSize: '15px',
-                                            letterSpacing: '1px',
-                                            textShadow: `0 0 6px ${getSymbolColorHex(r.type)}80`
-                                        }}>
-                                            [{t(`era.${ERA_KEYS[r.type]}`, language)}]
-                                        </span>
-                                    </td>
-                                    <td className="databrowser-cell--cost">{r.cost}g</td>
-                                    <td className="databrowser-cell--desc"><EffectText text={r.description} /></td>
-                                    <td className="databrowser-cell--sprite" style={{ color: '#555' }}>
-                                        {r.sprite || '-'}
                                     </td>
                                 </tr>
                             ))}
