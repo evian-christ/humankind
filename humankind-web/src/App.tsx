@@ -116,7 +116,7 @@ function App() {
     }
   }, [isRelicShopOpen, hasNewRelicShopStock, clearRelicShopStockBadge]);
 
-  // 스페이스바로 스핀 (idle일 때만, 입력 필드 포커스 시 무시)
+  // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code !== 'Space') return;
@@ -124,7 +124,7 @@ function App() {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
       const st = useGameStore.getState();
       const rp = st.levelUpResearchPoints ?? 0;
-      const canSpin = st.phase === 'idle' || (st.phase === 'selection' && rp > 0);
+      const canSpin = st.phase === 'idle' && rp === 0;
       if (!canSpin) return;
       e.preventDefault();
       spinBoard();
@@ -150,8 +150,7 @@ function App() {
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
   const leaderId = useGameStore((s) => s.leaderId);
-  const canPressSpin =
-    phase === 'idle' || (phase === 'selection' && (levelUpResearchPoints ?? 0) > 0);
+  const canPressSpin = phase === 'idle' && (levelUpResearchPoints ?? 0) === 0;
 
   // 스테이지 선택 화면
   if (preGameScreen === 'intro') {
