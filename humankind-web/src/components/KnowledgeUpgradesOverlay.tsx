@@ -10,7 +10,17 @@ import { createPortal } from 'react-dom';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { isUpgradeLegalForKnowledgePick, useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
+import {
+    KNOWLEDGE_UPGRADES,
+    AGRICULTURE_UPGRADE_ID,
+    CELESTIAL_NAVIGATION_UPGRADE_ID,
+    FISHERIES_UPGRADE_ID,
+    IRRIGATION_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
+    HORSEMANSHIP_UPGRADE_ID,
+    SEAFARING_UPGRADE_ID,
+    MINING_UPGRADE_ID,
+} from '../game/data/knowledgeUpgrades';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
@@ -35,16 +45,23 @@ interface Props {
 
 type ResearchPointsMouseHint = { id: number; x: number; y: number };
 
-/** 칩 열 수 — 5열 고정 */
-const KNOWLEDGE_TREE_GRID_COLS = 5;
+/** 칩 열 수 — 6열 */
+const KNOWLEDGE_TREE_GRID_COLS = 6;
 
 const TIERS: { level: number; ids: (number | null)[] }[] = [
-    //           col1  col2  col3  col4  col5
-    { level: 1,  ids: [null, null, 25,   null, null] },
-    { level: 2,  ids: [26,   9,    3,    8,    5   ] },
-    { level: 4,  ids: [1,    7,    null, null, 2   ] },
-    { level: 7,  ids: [6,    4,    10,   null, null] },
-    { level: 10, ids: [null, null, 15,   null, null] },
+    //           col0–5 (6열)
+    { level: 1,  ids: [null, null, 25,   null, null, null] },
+    /** col3 궁술(5)–col4 채광(30)–col5 희생 제의(8) */
+    { level: 2,  ids: [26,   9,    27,   5,    MINING_UPGRADE_ID, 8] },
+    /** col0: 목축업(26)과 같은 열 — 기마술(7) */
+    /** col1: Lv2 어업(9)과 같은 열 — 항해술(28), 천문항법(29) */
+    /** col2: Lv2 농업(27)과 같은 열 — 관개(3); col3: Lv2 궁술(5)과 같은 열 — 청동(2) */
+    { level: 4,  ids: [7,    SEAFARING_UPGRADE_ID, IRRIGATION_UPGRADE_ID, 2,    null, null] },
+    /** col1: 천문항법(29); col3: Lv4 청동(2)과 같은 열 — 문자(1) */
+    { level: 5,  ids: [null, CELESTIAL_NAVIGATION_UPGRADE_ID, null, 1,    null, null] },
+    /** col4: 신학(4) */
+    { level: 7,  ids: [6,    10,   null, null, 4,    null] },
+    { level: 10, ids: [null, null, 15,   null, null, null] },
 ];
 
 const KNOWLEDGE_TREE_CHIP = 110;
@@ -82,7 +99,7 @@ const KNOWLEDGE_TREE_CHIP_IDLE_BG = '#1b1b1c';
 /** Selected chip: dark gray + pressed look (not hue shift) */
 const KNOWLEDGE_TREE_CHIP_SELECTED_BG = '#3a3a3a';
 
-/** 칩 9열 + 열 사이 간격(칩끼리 8칸) */
+/** 칩 6열 + 열 사이 간격 */
 function knowledgeTreeGridWidthPx(): number {
     return (
         KNOWLEDGE_TREE_GRID_COLS * KNOWLEDGE_TREE_CHIP +
@@ -117,10 +134,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const researchHintIdRef = useRef(0);
     const treeScrollRef = useRef<HTMLDivElement>(null);
     const treeContentRef = useRef<HTMLDivElement>(null);
-    const [connectorLine, setConnectorLine] = useState<{
-        x1: number; y1: number;
-        x2: number; y2: number;
-    } | null>(null);
+    const [connectorLines, setConnectorLines] = useState<
+        { x1: number; y1: number; x2: number; y2: number }[]
+    >([]);
 
     const selectedUpgrade = selectedId != null ? KNOWLEDGE_UPGRADES[selectedId] : null;
     const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
@@ -128,6 +144,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         ? (TIERS.find(tier => tier.ids.includes(selectedId!))?.level ?? 1)
         : 1;
     const archeryBlocksBronze = selectedId === 2 && !unlockedUpgrades.includes(5);
+    const irrigationBlocksAgriculture =
+        selectedId === IRRIGATION_UPGRADE_ID && !unlockedUpgrades.includes(AGRICULTURE_UPGRADE_ID);
+    const horsemanshipBlocksPastoralism =
+        selectedId === HORSEMANSHIP_UPGRADE_ID && !unlockedUpgrades.includes(PASTORALISM_UPGRADE_ID);
+    const seafaringBlocksFisheries =
+        selectedId === SEAFARING_UPGRADE_ID && !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID);
+    const celestialBlocksSeafaring =
+        selectedId === CELESTIAL_NAVIGATION_UPGRADE_ID && !unlockedUpgrades.includes(SEAFARING_UPGRADE_ID);
     const hasResearchPoints = levelUpResearchPoints > 0;
     const canResearchWithCurrentPick =
         currentLevel >= selectedTierLevel &&
@@ -137,20 +161,26 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         hasResearchPoints &&
         !selectedUnlocked &&
         !archeryBlocksBronze &&
+        !irrigationBlocksAgriculture &&
+        !horsemanshipBlocksPastoralism &&
+        !seafaringBlocksFisheries &&
+        !celestialBlocksSeafaring &&
         canResearchWithCurrentPick;
     const needsHigherLevel = selectedId != null && currentLevel < selectedTierLevel;
     const researchButtonDisabled =
         selectedUnlocked ||
         archeryBlocksBronze ||
+        irrigationBlocksAgriculture ||
+        horsemanshipBlocksPastoralism ||
+        seafaringBlocksFisheries ||
+        celestialBlocksSeafaring ||
         needsHigherLevel ||
         (hasResearchPoints && !canResearchWithCurrentPick);
 
-    const updateArcheryBronzeConnector = useCallback(() => {
+    const updateKnowledgeTreeConnectors = useCallback(() => {
         const contentEl = treeContentRef.current;
-        const archPos = findTierGridSlot(5);
-        const bronzePos = findTierGridSlot(2);
-        if (!contentEl || !archPos || !bronzePos || unlockedUpgrades.includes(2)) {
-            setConnectorLine(null);
+        if (!contentEl) {
+            setConnectorLines([]);
             return;
         }
         const gridWidth = knowledgeTreeGridWidthPx();
@@ -168,31 +198,83 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             rowTop(rowIdx) +
             (TIER_ROW_MIN_H - KNOWLEDGE_TREE_CHIP) / 2 +
             (pressed ? KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y : 0);
-        setConnectorLine({
-            x1: xForCol(archPos.colIdx),
-            y1: bottomAnchorY(archPos.rowIdx, selectedId === 5),
-            x2: xForCol(bronzePos.colIdx),
-            y2: topAnchorY(bronzePos.rowIdx, selectedId === 2),
-        });
+
+        const next: { x1: number; y1: number; x2: number; y2: number }[] = [];
+
+        const archPos = findTierGridSlot(5);
+        const bronzePos = findTierGridSlot(2);
+        if (!unlockedUpgrades.includes(2) && archPos && bronzePos) {
+            next.push({
+                x1: xForCol(archPos.colIdx),
+                y1: bottomAnchorY(archPos.rowIdx, selectedId === 5),
+                x2: xForCol(bronzePos.colIdx),
+                y2: topAnchorY(bronzePos.rowIdx, selectedId === 2),
+            });
+        }
+
+        const agPos = findTierGridSlot(AGRICULTURE_UPGRADE_ID);
+        const irrPos = findTierGridSlot(IRRIGATION_UPGRADE_ID);
+        if (!unlockedUpgrades.includes(IRRIGATION_UPGRADE_ID) && agPos && irrPos) {
+            next.push({
+                x1: xForCol(agPos.colIdx),
+                y1: bottomAnchorY(agPos.rowIdx, selectedId === AGRICULTURE_UPGRADE_ID),
+                x2: xForCol(irrPos.colIdx),
+                y2: topAnchorY(irrPos.rowIdx, selectedId === IRRIGATION_UPGRADE_ID),
+            });
+        }
+
+        const pastPos = findTierGridSlot(PASTORALISM_UPGRADE_ID);
+        const horsePos = findTierGridSlot(HORSEMANSHIP_UPGRADE_ID);
+        if (!unlockedUpgrades.includes(HORSEMANSHIP_UPGRADE_ID) && pastPos && horsePos) {
+            next.push({
+                x1: xForCol(pastPos.colIdx),
+                y1: bottomAnchorY(pastPos.rowIdx, selectedId === PASTORALISM_UPGRADE_ID),
+                x2: xForCol(horsePos.colIdx),
+                y2: topAnchorY(horsePos.rowIdx, selectedId === HORSEMANSHIP_UPGRADE_ID),
+            });
+        }
+
+        const fisheriesPos = findTierGridSlot(FISHERIES_UPGRADE_ID);
+        const seafaringPos = findTierGridSlot(SEAFARING_UPGRADE_ID);
+        if (!unlockedUpgrades.includes(SEAFARING_UPGRADE_ID) && fisheriesPos && seafaringPos) {
+            next.push({
+                x1: xForCol(fisheriesPos.colIdx),
+                y1: bottomAnchorY(fisheriesPos.rowIdx, selectedId === FISHERIES_UPGRADE_ID),
+                x2: xForCol(seafaringPos.colIdx),
+                y2: topAnchorY(seafaringPos.rowIdx, selectedId === SEAFARING_UPGRADE_ID),
+            });
+        }
+
+        const celestialPos = findTierGridSlot(CELESTIAL_NAVIGATION_UPGRADE_ID);
+        if (!unlockedUpgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID) && seafaringPos && celestialPos) {
+            next.push({
+                x1: xForCol(seafaringPos.colIdx),
+                y1: bottomAnchorY(seafaringPos.rowIdx, selectedId === SEAFARING_UPGRADE_ID),
+                x2: xForCol(celestialPos.colIdx),
+                y2: topAnchorY(celestialPos.rowIdx, selectedId === CELESTIAL_NAVIGATION_UPGRADE_ID),
+            });
+        }
+
+        setConnectorLines(next);
     }, [selectedId, unlockedUpgrades]);
 
     useLayoutEffect(() => {
         if (!isOpen) return;
-        const raf = requestAnimationFrame(() => updateArcheryBronzeConnector());
+        const raf = requestAnimationFrame(() => updateKnowledgeTreeConnectors());
         const contentEl = treeContentRef.current;
         const scrollEl = treeScrollRef.current;
         if (!contentEl) return () => cancelAnimationFrame(raf);
-        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateArcheryBronzeConnector()) : null;
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateKnowledgeTreeConnectors()) : null;
         ro?.observe(contentEl);
-        scrollEl?.addEventListener('scroll', updateArcheryBronzeConnector, { passive: true });
-        window.addEventListener('resize', updateArcheryBronzeConnector);
+        scrollEl?.addEventListener('scroll', updateKnowledgeTreeConnectors, { passive: true });
+        window.addEventListener('resize', updateKnowledgeTreeConnectors);
         return () => {
             cancelAnimationFrame(raf);
             ro?.disconnect();
-            scrollEl?.removeEventListener('scroll', updateArcheryBronzeConnector);
-            window.removeEventListener('resize', updateArcheryBronzeConnector);
+            scrollEl?.removeEventListener('scroll', updateKnowledgeTreeConnectors);
+            window.removeEventListener('resize', updateKnowledgeTreeConnectors);
         };
-    }, [isOpen, updateArcheryBronzeConnector, language, selectedId]);
+    }, [isOpen, updateKnowledgeTreeConnectors, language, selectedId]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -220,7 +302,16 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         selectedUpgrade != null ? getSymbolColorHex(selectedUpgrade.type) : '#888888';
 
     const handleUnlock = (e: ReactMouseEvent<HTMLButtonElement>) => {
-        if (!selectedId || selectedUnlocked || archeryBlocksBronze) return;
+        if (
+            !selectedId ||
+            selectedUnlocked ||
+            archeryBlocksBronze ||
+            irrigationBlocksAgriculture ||
+            horsemanshipBlocksPastoralism ||
+            seafaringBlocksFisheries ||
+            celestialBlocksSeafaring
+        )
+            return;
         if (!hasResearchPoints) {
             researchHintIdRef.current += 1;
             const id = researchHintIdRef.current;
@@ -450,7 +541,16 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                             const upgrade = KNOWLEDGE_UPGRADES[id];
                                             if (!upgrade) return null;
                                             const unlocked = unlockedUpgrades.includes(id);
-                                            const isLockedByDependency = id === 2 && !unlockedUpgrades.includes(5);
+                                            const isLockedByDependency =
+                                                (id === 2 && !unlockedUpgrades.includes(5)) ||
+                                                (id === IRRIGATION_UPGRADE_ID &&
+                                                    !unlockedUpgrades.includes(AGRICULTURE_UPGRADE_ID)) ||
+                                                (id === HORSEMANSHIP_UPGRADE_ID &&
+                                                    !unlockedUpgrades.includes(PASTORALISM_UPGRADE_ID)) ||
+                                                (id === SEAFARING_UPGRADE_ID &&
+                                                    !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID)) ||
+                                                (id === CELESTIAL_NAVIGATION_UPGRADE_ID &&
+                                                    !unlockedUpgrades.includes(SEAFARING_UPGRADE_ID));
                                             const isSelected = selectedId === id;
                                             const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
                                             const rowBright = tierUnlockable && !isLockedByDependency;
@@ -506,7 +606,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             </div>
                         );
                     })}
-                    {!unlockedUpgrades.includes(2) && connectorLine && (
+                    {connectorLines.length > 0 && (
                         <svg
                             aria-hidden
                             style={{
@@ -520,15 +620,18 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                 zIndex: 3,
                             }}
                         >
-                            <line
-                                x1={connectorLine.x1}
-                                y1={connectorLine.y1}
-                                x2={connectorLine.x2}
-                                y2={connectorLine.y2}
-                                stroke={ARCHERY_BRONZE_LINE_GRAY}
-                                strokeWidth={ARCHERY_BRONZE_LINE_WIDTH}
-                                strokeLinecap="round"
-                            />
+                            {connectorLines.map((seg, i) => (
+                                <line
+                                    key={i}
+                                    x1={seg.x1}
+                                    y1={seg.y1}
+                                    x2={seg.x2}
+                                    y2={seg.y2}
+                                    stroke={ARCHERY_BRONZE_LINE_GRAY}
+                                    strokeWidth={ARCHERY_BRONZE_LINE_WIDTH}
+                                    strokeLinecap="round"
+                                />
+                            ))}
                         </svg>
                     )}
                 </div>
@@ -616,6 +719,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                     ? '이미 연구됨'
                                     : archeryBlocksBronze
                                         ? t('knowledgeUpgrade.requiresArcheryShort', language)
+                                        : irrigationBlocksAgriculture
+                                            ? t('knowledgeUpgrade.requiresAgricultureShort', language)
+                                        : horsemanshipBlocksPastoralism
+                                            ? t('knowledgeUpgrade.requiresPastoralismShort', language)
+                                        : seafaringBlocksFisheries
+                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                        : celestialBlocksSeafaring
+                                            ? t('knowledgeUpgrade.requiresSeafaringShort', language)
                                         : needsHigherLevel
                                             ? `Lv.${selectedTierLevel} 필요`
                                             : hasResearchPoints &&

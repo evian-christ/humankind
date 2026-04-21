@@ -7,7 +7,8 @@ import type {
     KnowledgeUpgradeDescSymbolKey,
     KnowledgeUpgradeSymbolRelation,
 } from '../game/data/knowledgeUpgrades';
-import { t } from '../i18n';
+import { useGameStore } from '../game/state/gameStore';
+import { getBoardSymbolTooltipDesc, unlocksExcluding, unlocksIncluding, t } from '../i18n';
 import { EffectText } from './EffectText';
 
 const RELATION_BADGE: Record<KnowledgeUpgradeSymbolRelation, string> = {
@@ -60,23 +61,6 @@ function resolveUpgradeDescSymbolVisual(
     return DESC_ONLY_SYMBOL_VISUAL[symbolKey] ?? null;
 }
 
-/** 적용 전: 항상 공식 symbol.*.desc 와 동일 */
-function getCanonicalSymbolDesc(symbolKey: KnowledgeUpgradeDescSymbolKey, language: Language): string {
-    return t(`symbol.${symbolKey}.desc`, language);
-}
-
-/** 적용 후 효과 문구 — symbol 카드와 같은 문체·형식으로 작성된 i18n */
-function resolveSymbolDescAfterUpgrade(
-    upgradeId: number,
-    symbolKey: KnowledgeUpgradeDescSymbolKey,
-    language: Language,
-): string | null {
-    if (!SYMBOLS_BY_KEY[symbolKey as SymbolKey]) return null;
-    const key = `knowledgeUpgrade.symbolDescAfter.${upgradeId}.${symbolKey}`;
-    const val = t(key, language);
-    return val === key ? null : val;
-}
-
 export const UpgradeCardDescSymbols = ({
     upgradeId,
     entries,
@@ -88,6 +72,7 @@ export const UpgradeCardDescSymbols = ({
     layoutSize?: 'default' | 'panel';
 }) => {
     const language = useSettingsStore((s) => s.language);
+    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
     const [hover, setHover] = useState<{
         symbolKey: KnowledgeUpgradeDescSymbolKey;
         relation: KnowledgeUpgradeSymbolRelation;
@@ -114,12 +99,23 @@ export const UpgradeCardDescSymbols = ({
         const eraColor = getSymbolColorHex(def.type);
         const eraName = t(ERA_NAME_KEYS[def.type] ?? 'era.ancient', language);
         const isModify = hover.relation === 'effect_modify';
-        const beforeCanonical = isModify ? getCanonicalSymbolDesc(hover.symbolKey, language) : '';
-        const afterResolved = isModify ? resolveSymbolDescAfterUpgrade(upgradeId, hover.symbolKey, language) : null;
+        const beforeCanonical = isModify
+            ? getBoardSymbolTooltipDesc(
+                hover.symbolKey,
+                language,
+                unlocksExcluding(unlockedKnowledgeUpgrades, upgradeId),
+            )
+            : '';
+        const afterResolved = isModify
+            ? getBoardSymbolTooltipDesc(
+                hover.symbolKey,
+                language,
+                unlocksIncluding(unlockedKnowledgeUpgrades, upgradeId),
+            )
+            : null;
         const hasCompare =
             isModify &&
-            afterResolved !== null &&
-            normalizeDescForCompare(beforeCanonical) !== normalizeDescForCompare(afterResolved);
+            normalizeDescForCompare(beforeCanonical) !== normalizeDescForCompare(afterResolved ?? '');
         const tipW = isModify && hasCompare ? UPGRADE_DESC_SYMBOL_COMPARE_TIP_W : UPGRADE_DESC_SYMBOL_TIP_W;
         let left = hover.anchorRight + 10;
         const top = Math.max(8, hover.anchorTop);
@@ -172,7 +168,7 @@ export const UpgradeCardDescSymbols = ({
                                 {t('knowledgeUpgrade.effectCompare.afterLabel', language)}
                             </div>
                             <div className="upgrade-effect-compare-body symbol-tooltip-desc">
-                                {afterResolved!.split('\n').map((line, i) => (
+                                {(afterResolved ?? '').split('\n').map((line, i) => (
                                     <div key={i} className="symbol-tooltip-desc-line">
                                         <EffectText text={line} />
                                     </div>
@@ -182,11 +178,13 @@ export const UpgradeCardDescSymbols = ({
                     </div>
                 ) : (
                     <div className="symbol-tooltip-desc" style={{ marginTop: '8px' }}>
-                        {t(`symbol.${def.key}.desc`, language).split('\n').map((line, i) => (
-                            <div key={i} className="symbol-tooltip-desc-line">
-                                <EffectText text={line} />
-                            </div>
-                        ))}
+                        {getBoardSymbolTooltipDesc(hover.symbolKey, language, unlockedKnowledgeUpgrades)
+                            .split('\n')
+                            .map((line, i) => (
+                                <div key={i} className="symbol-tooltip-desc-line">
+                                    <EffectText text={line} />
+                                </div>
+                            ))}
                     </div>
                 )}
             </div>

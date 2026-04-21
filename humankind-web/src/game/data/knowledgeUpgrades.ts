@@ -54,8 +54,24 @@ export type KnowledgeUpgradeType = SymbolType;
 
 /** 고대 타입 심볼을 상점/선택 풀에 넣기 위한 선행 연구 */
 export const ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID = 25;
-/** 목축업 — 양 풀 해금 (등자와 분리) */
+/** 목축업 — 소·양 효과 업그레이드(상세는 심볼 툴팁) */
 export const PASTORALISM_UPGRADE_ID = 26;
+/** 기마술 — 말 풀 추가·평원 업그레이드(목축업 선행) */
+export const HORSEMANSHIP_UPGRADE_ID = 7;
+/** 등자 — 소 식량 +3 등 */
+export const STIRRUP_UPGRADE_ID = 19;
+/** 농업 — 밀·쌀 주기 식량 보정 */
+export const AGRICULTURE_UPGRADE_ID = 27;
+/** 관개 — 농업(27) 선행 */
+export const IRRIGATION_UPGRADE_ID = 3;
+/** 어업 — 게·진주 심볼 풀 해금 */
+export const FISHERIES_UPGRADE_ID = 9;
+/** 항해술 — 물고기·게 바다 인접 생산 업그레이드(어업 선행) */
+export const SEAFARING_UPGRADE_ID = 28;
+/** 천문항법 — 천체·해도로 항해를 정밀화(항해술 선행) */
+export const CELESTIAL_NAVIGATION_UPGRADE_ID = 29;
+/** 채광 — 열대우림·돌 업그레이드 */
+export const MINING_UPGRADE_ID = 30;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -71,9 +87,12 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: PASTORALISM_UPGRADE_ID,
         name: 'Pastoralism',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Sheep symbol for selection.',
+        description: 'Upgrades Cattle and Sheep.',
         sprite: '-',
-        descSymbols: [{ symbolKey: 'sheep', relation: 'pool_add' }],
+        descSymbols: [
+            { symbolKey: 'cattle', relation: 'effect_modify' },
+            { symbolKey: 'sheep', relation: 'effect_modify' },
+        ],
     },
     1: {
         id: 1,
@@ -94,15 +113,60 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'archer', relation: 'effect_modify' },
         ],
     },
-    3: {
-        id: 3,
+    [IRRIGATION_UPGRADE_ID]: {
+        id: IRRIGATION_UPGRADE_ID,
         name: 'Irrigation',
         type: SymbolType.ANCIENT,
-        description: 'All Grasslands produce triple Food instead of double.',
+        description: 'Upgrades Wheat, Rice, and Grassland.',
         sprite: '003.png',
         descSymbols: [
             { symbolKey: 'wheat', relation: 'effect_modify' },
             { symbolKey: 'rice', relation: 'effect_modify' },
+            { symbolKey: 'grassland', relation: 'effect_modify' },
+        ],
+    },
+    [AGRICULTURE_UPGRADE_ID]: {
+        id: AGRICULTURE_UPGRADE_ID,
+        name: 'Agriculture',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Wheat and Rice.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'wheat', relation: 'effect_modify' },
+            { symbolKey: 'rice', relation: 'effect_modify' },
+        ],
+    },
+    [SEAFARING_UPGRADE_ID]: {
+        id: SEAFARING_UPGRADE_ID,
+        name: 'Navigation',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Fish and Crab.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'fish', relation: 'effect_modify' },
+            { symbolKey: 'crab', relation: 'effect_modify' },
+        ],
+    },
+    [CELESTIAL_NAVIGATION_UPGRADE_ID]: {
+        id: CELESTIAL_NAVIGATION_UPGRADE_ID,
+        name: 'Celestial Navigation',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Pearl and Sea.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'pearl', relation: 'effect_modify' },
+            { symbolKey: 'sea', relation: 'effect_modify' },
+        ],
+    },
+    [MINING_UPGRADE_ID]: {
+        id: MINING_UPGRADE_ID,
+        name: 'Mining',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Rainforest and Stone.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'rainforest', relation: 'effect_modify' },
+            { symbolKey: 'stone', relation: 'effect_modify' },
         ],
     },
     4: {
@@ -134,11 +198,11 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         sprite: '006.png',
         descSymbols: [{ symbolKey: 'merchant', relation: 'pool_add' }],
     },
-    7: {
-        id: 7,
+    [HORSEMANSHIP_UPGRADE_ID]: {
+        id: HORSEMANSHIP_UPGRADE_ID,
         name: 'Horsemanship',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Horse symbol. Plains base Food production +1.',
+        description: 'Adds Horse to the symbol selection pool. Upgrades Plains.',
         sprite: '007.png',
         descSymbols: [
             { symbolKey: 'horse', relation: 'pool_add' },
@@ -153,11 +217,11 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             'Gain 3 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
         sprite: '-',
     },
-    9: {
-        id: 9,
-        name: 'Celestial Navigation',
+    [FISHERIES_UPGRADE_ID]: {
+        id: FISHERIES_UPGRADE_ID,
+        name: 'Fisheries',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Crab and Pearl symbols for selection.',
+        description: 'Crab and Pearl are added to the symbol selection pool.',
         sprite: '-',
         descSymbols: [
             { symbolKey: 'crab', relation: 'pool_add' },
@@ -218,7 +282,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Stirrup',
         type: SymbolType.MEDIEVAL,
         description:
-            'Warrior adjacent to Horse becomes Knight (+3 Attack, +3 HP); Horse is removed. Sheep (Pastoralism): +1 Food; 10% chance to produce Sheep; 10% chance to produce Wool; butcher when adjacent to Plains: +5 Food, +5 Gold. Cattle: +3 Food per turn; 10% chance to produce Cattle; butcher when adjacent to Plains: +10 Food.',
+            'Warrior adjacent to Horse becomes Knight (+3 Attack, +3 HP); Horse is removed. Cattle: +3 Food per turn; butcher when adjacent to Plains: +10 Food.',
         sprite: '-',
         descSymbols: [
             { symbolKey: 'warrior', relation: 'effect_modify' },
@@ -285,3 +349,13 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
 export const FEUDALISM_UPGRADE_ID = 15;
 export const SACRIFICIAL_RITE_UPGRADE_ID = 8;
 export const TERRITORIAL_REORG_UPGRADE_ID = 22;
+
+/** 지식 트리 Lv2 행 — `KnowledgeUpgradesOverlay` TIERS(level 2)와 동기. 고대 시대(25) 없이도 연구 가능. */
+export const KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS: readonly number[] = [
+    PASTORALISM_UPGRADE_ID,
+    FISHERIES_UPGRADE_ID,
+    AGRICULTURE_UPGRADE_ID,
+    5,
+    MINING_UPGRADE_ID,
+    SACRIFICIAL_RITE_UPGRADE_ID,
+];
