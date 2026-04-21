@@ -15,9 +15,9 @@ interface PreGameState {
   selectStage: (stageId: number) => void;
   selectLeader: (leaderId: LeaderId) => void;
   exitPreGame: () => void;
-  /** 게임오버/승리 후 재진입: 난이도(스테이지) 선택 화면으로 */
+  /** 게임오버/승리 후 재진입: 스테이지 선택 화면으로 */
   returnToStageSelect: () => void;
-  /** 데모 시작 화면에서 S: 개척(1) + 진시황으로 바로 게임 진입 */
+  /** 데모 시작 화면에서 S: 스테이지 1 + 진시황으로 바로 게임 진입 */
   skipIntroToDefaults: () => void;
 }
 
