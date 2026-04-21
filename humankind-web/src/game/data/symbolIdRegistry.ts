@@ -3,7 +3,7 @@
  * ID를 바꿀 때는 이 파일의 값만 수정하면 되며,
  * 게임 로직에서는 `SYMBOL_NUMERIC_ID`(숫자 비교) 또는 `definition.key`(문자 식별)를 사용합니다.
  *
- * 배치 규칙: 지형(1–8) → 일반(9–39) → 고대(40–48) → 중세(49–56) → 종교(57–60) → 유닛(61–64) → 적(65–66) → 재해(67–69)
+ * 배치 규칙: 지형(1–8) → 일반(9–39) → 고대(40–48, 43 미사용) → 중세(49–56) → 종교(57–60) → 유닛(61–64) → 적(65–66) → 재해(67–69)
  */
 export const SYMBOL_NUMERIC_ID = {
     // ── Terrain (1–8): 초원→평원→바다→숲→열대우림→사막→오아시스→산 ──
@@ -53,7 +53,6 @@ export const SYMBOL_NUMERIC_ID = {
     monument: 40,
     oral_tradition: 41,
     totem: 42,
-    offering: 43,
     omen: 44,
     campfire: 45,
     pottery: 46,

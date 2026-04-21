@@ -1,6 +1,16 @@
 import type { PlayerSymbolInstance } from '../types';
 import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S, SYMBOLS } from '../data/symbolDefinitions';
-import { ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, FEUDALISM_UPGRADE_ID } from '../data/knowledgeUpgrades';
+import {
+    AGRICULTURE_UPGRADE_ID,
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    CELESTIAL_NAVIGATION_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
+    MINING_UPGRADE_ID,
+    IRRIGATION_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
+    SEAFARING_UPGRADE_ID,
+    STIRRUP_UPGRADE_ID,
+} from '../data/knowledgeUpgrades';
 
 import { useGameStore } from '../state/gameStore';
 
@@ -28,27 +38,17 @@ export interface EffectResult {
     freeSelectionRerolls?: number;
 }
 
-/** 현재 보유 유물의 활성 효과 플래그 (gameStore에서 조합해서 전달) */
+/** 현재 보유 유물의 활성 효과 플래그 (`relicDefinitions` 1–19 + 지식 업그레이드 일부, gameStore에서 조합) */
 export interface ActiveRelicEffects {
     /** 유물 보유 수 (석판 효과용) */
     relicCount: number;
-    /** ID 5: 이집트 구리 톱 - 채석장 인접 빈 슬롯마다 골드 +10 */
+    /** 유물 5 이집트 구리 톱 — 산 인접 빈 슬롯마다 골드 */
     quarryEmptyGold: boolean;
-    /** ID 7: 쿠크 늪지대 바나나 화석 - 열대 과수원이 인접한 바나나 당 +20 식량 */
+    /** 유물 7 쿠크 바나나 화석 — 열대우림 인접 바나나 보너스 */
     bananaFossilBonus: boolean;
-    /** ID 103: 가나안의 번제물 - 매 턴 빈 슬롯마다 식량 -10 */
-    burnOfferingEmptyPenalty: boolean;
-    /** ID 107: 예리코 점토 두개골 - 제단/기념비 지식 +20 추가 */
-    jerichoMonumentBonus: boolean;
-    /** ID 111: 괴베클리 테페 짐승 뼈 - 목장 인접 동물 심볼 5% 잭팟 +150 */
-    gobekliAnimalJackpot: boolean;
-    /** ID 112: 길가메시 서사시 토판 - 종교 패널티 무효화 */
-    gilgameshReligionNoPenalty: boolean;
-    /** ID 115: 막달레니안 뼈 낚싯바늘 - 물고기가 골드 +1 추가 */
-    fishBoneHookGold: boolean;
-    /** 기마술 업그레이드 - 목장 자체 생산량 +10 */
+    /** 기마술 업그레이드 — 평원 식량 */
     horsemansihpPastureBonus: boolean;
-    /** ID 16: 테라의 화석 포도 — 자연재해 심볼 식량 +2 */
+    /** 유물 16 테라의 화석 포도 — 자연재해 심볼 식량 +2 */
     terraFossilDisasterFood: boolean;
 }
 
@@ -56,11 +56,6 @@ export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
     relicCount: 0,
     quarryEmptyGold: false,
     bananaFossilBonus: false,
-    burnOfferingEmptyPenalty: false,
-    jerichoMonumentBonus: false,
-    gobekliAnimalJackpot: false,
-    gilgameshReligionNoPenalty: false,
-    fishBoneHookGold: false,
     horsemansihpPastureBonus: false,
     terraFossilDisasterFood: false,
 };
@@ -91,6 +86,18 @@ const hasSeaOrHarborAdjacent = (boardGrid: (PlayerSymbolInstance | null)[][], x:
         const nid = boardGrid[p.x][p.y]?.definition.id;
         return nid === SEA_TERRAIN_ID || nid === HARBOR_ID;
     });
+
+/** 돌과 같은 x열(세로줄)에 산 지형이 있는지 — 첫 산 좌표 반환 */
+const findMountainSameColumn = (
+    boardGrid: (PlayerSymbolInstance | null)[][],
+    stoneX: number,
+): { x: number; y: number } | null => {
+    for (let yy = 0; yy < BOARD_HEIGHT; yy++) {
+        const cell = boardGrid[stoneX][yy];
+        if (cell?.definition.id === S.mountain) return { x: stoneX, y: yy };
+    }
+    return null;
+};
 
 const countPlacedSymbols = (boardGrid: (PlayerSymbolInstance | null)[][]): number => {
     let n = 0;
@@ -130,12 +137,12 @@ const SYMBOL_BASE_FOOD: Record<number, number> = {
     [S.wheat]: 0,
     [S.rice]: 0,
     [S.cattle]: 1,
-    [S.banana]: 3,
+    [S.banana]: 1,
     [S.fish]: 1,
     [S.sea]: 1,
     [S.stone]: 1,
     [S.copper]: 0,
-    [S.grassland]: 2,
+    [S.grassland]: 1,
     [S.monument]: 0,
     [S.oasis]: 0,
     [S.oral_tradition]: 0,
@@ -143,7 +150,6 @@ const SYMBOL_BASE_FOOD: Record<number, number> = {
     [S.plains]: 1,
     [S.mountain]: 1,
     [S.totem]: 0,
-    [S.offering]: -1,
     [S.omen]: 2,
     [S.campfire]: 1,
     [S.pottery]: 0,
@@ -179,7 +185,7 @@ const SYMBOL_BASE_FOOD: Record<number, number> = {
 
 /** Era 1 심볼 중 랜덤 하나 반환 — 고대 시대(25) 미연구 시 고대 타입 제외 */
 const randomEra1SymbolId = (): number => {
-    const ids = [S.wheat, S.rice, S.cattle, S.banana, S.fish, S.sea, S.stone, S.copper, S.grassland, S.monument, S.oasis, S.oral_tradition, S.rainforest, S.plains, S.mountain, S.totem, S.offering, S.omen, S.campfire, S.pottery, S.tribal_village, S.deer, S.date, S.warrior];
+    const ids = [S.wheat, S.rice, S.cattle, S.banana, S.fish, S.sea, S.stone, S.copper, S.grassland, S.monument, S.oasis, S.oral_tradition, S.rainforest, S.plains, S.mountain, S.totem, S.omen, S.campfire, S.pottery, S.tribal_village, S.deer, S.date, S.warrior];
     const ancientOk = (useGameStore.getState().unlockedKnowledgeUpgrades || []).includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
     const pool = ancientOk
         ? ids
@@ -224,7 +230,8 @@ export const processSingleSymbolEffects = (
     symbolInstance.effect_counter = (symbolInstance.effect_counter || 0);
     const adj = getAdjacentCoords(x, y);
     const state = useGameStore.getState();
-    const upgrades = state.unlockedKnowledgeUpgrades || [];
+    /** 지식 업그레이드 ID는 항상 숫자로 비교 (스토어·직렬화 혼선 방지) */
+    const upgrades = (state.unlockedKnowledgeUpgrades || []).map((id) => Number(id));
 
     // 홍수 등으로 이번 턴 생산이 비활성화된 지형은 효과를 발동하지 않음 (순서 무관)
     if (
@@ -272,54 +279,50 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.wheat: { // Wheat: every 10 turns +10 Food; per adjacent Grassland: counter +1 (×2 with Irrigation).
+        case S.wheat: { // Wheat: +Food every 10 accumulated counter; +1/turn if any Grassland adjacent, or +1 per adjacent Grassland with Irrigation.
             const grassAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.grassland);
-            grassAdj.forEach((pos) => contributors.push(pos));
             const grassCount = grassAdj.length;
+            if (grassCount > 0) grassAdj.forEach((pos) => contributors.push(pos));
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
-            const irrigated = upgrades.includes(3);
-            symbolInstance.effect_counter += grassCount * (irrigated ? 2 : 1);
+            const irrigated = upgrades.includes(IRRIGATION_UPGRADE_ID);
+            if (irrigated) symbolInstance.effect_counter += grassCount;
+            else if (grassCount > 0) symbolInstance.effect_counter += 1;
 
             if (symbolInstance.effect_counter >= 10) {
-                food += 10;
+                food += upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 15 : 10;
                 symbolInstance.effect_counter -= 10;
             }
             break;
         }
 
-        case S.rice: { // Rice: every 20 turns +25 Food; per adjacent Grassland: counter +1 (×2 with Irrigation).
+        case S.rice: { // Rice: +Food every 20 accumulated counter; +1/turn if any Grassland adjacent, or +1 per adjacent Grassland with Irrigation.
             const grassAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.grassland);
-            grassAdj.forEach((pos) => contributors.push(pos));
             const grassCount = grassAdj.length;
+            if (grassCount > 0) grassAdj.forEach((pos) => contributors.push(pos));
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
-            const irrigated = upgrades.includes(3);
-            symbolInstance.effect_counter += grassCount * (irrigated ? 2 : 1);
+            const irrigated = upgrades.includes(IRRIGATION_UPGRADE_ID);
+            if (irrigated) symbolInstance.effect_counter += grassCount;
+            else if (grassCount > 0) symbolInstance.effect_counter += 1;
 
             if (symbolInstance.effect_counter >= 20) {
-                food += 25;
+                food += upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 30 : 25;
                 symbolInstance.effect_counter -= 20;
             }
             break;
         }
 
-        case S.cattle: { // Cattle: +1 Food (등자 +3); 10%로 보유에 소 1; 평원 인접·idle 시 도축(+10 Food)
-            food += upgrades.includes(19) ? 3 : 1;
-            if (Math.random() < 0.1) {
+        case S.cattle: { // Cattle: +1 Food (등자 +3); 목축업 시 10%로 보유에 소 1; 평원 인접·idle 시 도축(+10 Food)
+            food += upgrades.includes(STIRRUP_UPGRADE_ID) ? 3 : 1;
+            if (upgrades.includes(PASTORALISM_UPGRADE_ID) && Math.random() < 0.1) {
                 addSymbolIds.push(S.cattle);
                 contributors.push({ x, y });
-            }
-            // ID 111: 괴베클리 테페 — 평원 인접 시 5% 잭팟
-            if (relicEffects.gobekliAnimalJackpot) {
-                const nearPasture = adj.some((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.plains);
-                if (nearPasture && Math.random() < 0.05) {
-                    food += 15;
-                }
             }
             break;
         }
 
-        case S.banana: { // Banana: Every spin: +2 Food. Destroyed after 6 spins. Reset if adjacent to Rainforest
-            food += 2;
+        case S.banana: { // +1 Food; every 10 turns adjacent to Rainforest: +1 permanent extra Food from this tile
+            const perm = symbolInstance.banana_permanent_food_bonus ?? 0;
+            food += 1 + perm;
             let nearRainforest = false;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -329,38 +332,32 @@ export const processSingleSymbolEffects = (
                 }
             });
             if (nearRainforest) {
-                symbolInstance.effect_counter = 0;
-            } else {
-                symbolInstance.effect_counter++;
-            }
-            if (symbolInstance.effect_counter >= 6) {
-                symbolInstance.is_marked_for_destruction = true;
+                let p = (symbolInstance.effect_counter || 0) + 1;
+                if (p >= 10) {
+                    p = 0;
+                    symbolInstance.banana_permanent_food_bonus = perm + 1;
+                }
+                symbolInstance.effect_counter = p;
             }
             break;
         }
 
-        case S.fish: { // Fish: when adjacent to Sea: +2 Food (no base)
-            // ID 115: 막달레니안 뼈 낚싯바늘 - 물고기 골드 +1
-            if (relicEffects.fishBoneHookGold) gold += 1;
+        case S.fish: { // Fish: when adjacent to Sea/Harbor: +2 Food (+3 with seafaring upgrade)
             if (hasSeaOrHarborAdjacent(boardGrid, x, y)) {
                 const seaAdj = adj.find(pos => {
                     const nid = boardGrid[pos.x][pos.y]?.definition.id;
                     return nid === SEA_TERRAIN_ID || nid === HARBOR_ID;
                 });
-                food += 2;
+                food += upgrades.includes(SEAFARING_UPGRADE_ID) ? 3 : 2;
                 if (seaAdj) contributors.push(seaAdj);
-            }
-            // ID 111: 괴베클리 테페 - 목장 인접 시 5% 잭팟
-            if (relicEffects.gobekliAnimalJackpot) {
-                const nearPasture = adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === S.plains);
-                if (nearPasture && Math.random() < 0.05) food += 15;
             }
             break;
         }
 
-        case S.sea: { // Sea: +1 Gold per 4 adjacent symbols
+        case S.sea: { // Sea: +1 Gold per 3 adjacent symbols (per 2 with Celestial Navigation)
             const occupiedAdj = adj.filter(pos => boardGrid[pos.x][pos.y] != null);
-            const seaGold = Math.floor(occupiedAdj.length / 4);
+            const divisor = upgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID) ? 2 : 3;
+            const seaGold = Math.floor(occupiedAdj.length / divisor);
             gold += seaGold;
             if (seaGold > 0) {
                 occupiedAdj.forEach(pos => contributors.push(pos));
@@ -368,12 +365,12 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.stone: { // Stone: +1 Gold; if adjacent to any Mountain: +2 Gold once.
+        case S.stone: { // Stone: +1 Gold; same column as Mountain: +2 Gold (+5 with Mining)
             gold += 1;
-            const mountainAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === S.mountain);
-            if (mountainAdj) {
-                gold += 2;
-                contributors.push(mountainAdj);
+            const mountainCol = findMountainSameColumn(boardGrid, x);
+            if (mountainCol) {
+                gold += upgrades.includes(MINING_UPGRADE_ID) ? 5 : 2;
+                contributors.push(mountainCol);
             }
             break;
         }
@@ -385,14 +382,12 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.grassland: // Grassland: Every spin: +2 Food.
-            food += 2;
+        case S.grassland: // Grassland: +1 Food; +2 with Irrigation.
+            food += upgrades.includes(IRRIGATION_UPGRADE_ID) ? 2 : 1;
             break;
 
         case S.monument: // Monument: Every spin: +5 Knowledge
             knowledge += 5;
-            // ID 107: 예리코 점토 두개골 - 기념비 지식 +20 추가
-            if (relicEffects.jerichoMonumentBonus) knowledge += 20;
             break;
 
         case S.oasis: { // Oasis: +1 Food per 2 adjacent empty slots
@@ -418,8 +413,8 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.rainforest: { // Rainforest: Every spin: +1 Food.
-            food += 1;
+        case S.rainforest: { // Rainforest: +1 Food (+3 with Mining); banana bonus unchanged
+            food += upgrades.includes(MINING_UPGRADE_ID) ? 3 : 1;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t && t.definition.id === S.banana) {
@@ -471,13 +466,6 @@ export const processSingleSymbolEffects = (
             }
             break;
         }
-
-        case S.offering: // Offering: Every spin: -1 Food, +10 Knowledge
-            food -= 1;
-            knowledge += 10;
-            // ID 107: 예리코 점토 두개골 - 제단 지식 +20 추가
-            if (relicEffects.jerichoMonumentBonus) knowledge += 20;
-            break;
 
         case S.omen: { // Omen: 50% chance +3 Food
             if (Math.random() < 0.5) {
@@ -538,7 +526,7 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.crab: { // Crab: +3 Food if adjacent to Sea or Harbor.
+        case S.crab: { // Crab: +1 Food (+2 with seafaring upgrade), +2 Gold if adjacent to Sea or Harbor.
             let adjacentSea = false;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -547,7 +535,10 @@ export const processSingleSymbolEffects = (
                     contributors.push(pos);
                 }
             });
-            if (adjacentSea) food += 3;
+            if (adjacentSea) {
+                food += upgrades.includes(SEAFARING_UPGRADE_ID) ? 2 : 1;
+                gold += 2;
+            }
             break;
         }
 
@@ -556,16 +547,22 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.pearl: { // Pearl: +3 Gold if adjacent to Sea or Harbor.
-            let adjacentSea = false;
+        case S.pearl: { // Pearl: +3 Gold if adjacent to Sea or Harbor; +5 when adjacent to Sea with Celestial Navigation
+            let adjacentSeaOrHarbor = false;
+            let adjacentSeaTerrain = false;
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
-                if (t && (t.definition.id === SEA_TERRAIN_ID || t.definition.id === HARBOR_ID)) {
-                    adjacentSea = true;
+                if (!t) return;
+                const nid = t.definition.id;
+                if (nid === SEA_TERRAIN_ID || nid === HARBOR_ID) {
+                    adjacentSeaOrHarbor = true;
                     contributors.push(pos);
                 }
+                if (nid === SEA_TERRAIN_ID) adjacentSeaTerrain = true;
             });
-            if (adjacentSea) gold += 3;
+            if (!adjacentSeaOrHarbor) break;
+            if (upgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID) && adjacentSeaTerrain) gold += 5;
+            else gold += 3;
             break;
         }
 
@@ -696,9 +693,9 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.sheep: { // Sheep: +1 Food; 10% 양·10% 양모 보유 추가; 평원 인접·idle 시 도축(+5 Food,+5 Gold)
+        case S.sheep: { // Sheep: +1 Food; 목축업 시 10% 양 보유; 10% 양모; 평원 인접·idle 시 도축(+5 Food,+5 Gold)
             food += 1;
-            if (Math.random() < 0.1) {
+            if (upgrades.includes(PASTORALISM_UPGRADE_ID) && Math.random() < 0.1) {
                 addSymbolIds.push(S.sheep);
                 contributors.push({ x, y });
             }
@@ -708,9 +705,12 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.wool: { // Wool: 파괴; 파괴 시 골드 +5 (이번 턴 효과에 반영)
-            symbolInstance.is_marked_for_destruction = true;
-            gold += 5;
+        case S.wool: { // Wool: 3턴 후 파괴; 파괴 시 골드 +5 (이번 턴 해당 슬롯 효과에 반영)
+            symbolInstance.effect_counter += 1;
+            if (symbolInstance.effect_counter >= 3) {
+                symbolInstance.is_marked_for_destruction = true;
+                gold += 5;
+            }
             break;
         }
 
@@ -901,19 +901,13 @@ export const processSingleSymbolEffects = (
         }
     }
 
-    // ── ID 103: 가나안의 번제물 - 빈 슬롯마다 식량 -10 ──
-    if (relicEffects.burnOfferingEmptyPenalty && id !== 0) {
-        // 이건 보드 전체 빈 슬롯 처리라 gameStore에서 한 번만 처리
-        // 심볼별로는 여기서 적용하지 않음 (gameStore에서 처리)
-    }
-
     // ── 교리 패널티: 다른 교리 심볼에 인접 시 -50 Food ──
     if (RELIGION_DOCTRINE_IDS.has(id)) {
         const hasAdjacentDoctrine = adj.some(pos => {
             const t = boardGrid[pos.x][pos.y];
             return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
         });
-        if (hasAdjacentDoctrine && !relicEffects.gilgameshReligionNoPenalty) {
+        if (hasAdjacentDoctrine) {
             food -= 50;
         }
     }
