@@ -3,14 +3,35 @@ import {
     getStageStartingRelicCounts,
     TOTAL_STAGE_COUNT,
 } from '../data/stages';
-import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EDICT_SYMBOL_ID, S, Sym } from '../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition, EDICT_SYMBOL_ID, S, Sym } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
 import { RELIC_LIST, RELICS, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
 import { RELIC_ID } from '../logic/relics/relicIds';
 import { runPostEffectsHooks } from '../logic/turn/postEffectsHooks';
-import { applyFixedDamageToEnemy, buildCombatEvents, pickRandomLivingEnemy, resolveCombatTarget } from '../logic/combat/combatEngine';
+import {
+    applyClovisPreDamage,
+    collectCombatDestroyedSymbols,
+    collectCombatEvents,
+    collectLootFromDestroyedCamps,
+    pickClovisPreDamageTarget,
+    resolveCombatStep,
+} from '../logic/turn/combatResolution';
+import { resolveTurnEndPhase } from '../logic/turn/phaseResolution';
+import { createMathRng } from '../logic/turn/rng';
+import {
+    applySlotEffectResult,
+    applyGeneratedSymbols,
+    collectRemovedSymbolInstanceIds,
+    completeSlotEffects,
+    computeTurnStartBaseTotals,
+    createSlotEffectPipeline,
+    removeMarkedSymbolsFromBoard,
+    resolveSlotEffect,
+    type ProcessSlotArgs,
+} from '../logic/turn/turnPipeline';
+import { prepareTurn } from '../logic/turn/turnPreparation';
 import {
     generateChoices as generateChoicesSelection,
     generateTerrainOnlyChoices as generateTerrainOnlyChoicesSelection,
@@ -18,9 +39,7 @@ import {
 } from '../logic/selection/selectionLogic';
 import { applyKnowledgeAndLevelUps } from '../logic/progression/eraTransition';
 import type { PlayerSymbolInstance } from '../types';
-import { t } from '../../i18n';
 import {
-    calculateFoodCost,
     getBronzeWorkingHpBonus,
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
@@ -28,6 +47,7 @@ import {
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
 } from './gameCalculations';
+import { t } from '../../i18n';
 
 export { type PlayerSymbolInstance } from '../types';
 
@@ -324,70 +344,6 @@ const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => 
     return adj;
 };
 
-/** 등자(19)/조선(21): 전사+말→기사, 전사+바다→캐러벨 (보드 배치 직후) */
-const applyWarriorEliteTransforms = (
-    board: (PlayerSymbolInstance | null)[][],
-    playerSymbols: PlayerSymbolInstance[]
-): { board: (PlayerSymbolInstance | null)[][]; playerSymbols: PlayerSymbolInstance[] } => {
-    const upgrades = useGameStore.getState().unlockedKnowledgeUpgrades || [];
-    const b = board.map((col) => [...col]);
-    const symList = [...playerSymbols];
-
-    const removeFromList = (instanceId: string) => {
-        const idx = symList.findIndex((s) => s.instanceId === instanceId);
-        if (idx >= 0) symList.splice(idx, 1);
-    };
-
-    for (let x = 0; x < BOARD_WIDTH; x++) {
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            const cell = b[x][y];
-            if (!cell || cell.definition.id !== S.warrior) continue;
-
-            if (upgrades.includes(STIRRUP_UPGRADE_ID)) {
-                const horsePos = getAdjacentCoords(x, y).find((p) => b[p.x][p.y]?.definition.id === S.horse);
-                if (horsePos) {
-                    const horseInst = b[horsePos.x][horsePos.y]!;
-                    b[horsePos.x][horsePos.y] = null;
-                    removeFromList(horseInst.instanceId);
-                    const knDef = Sym.knight;
-                    const knBase = knDef.base_hp ?? 0;
-                    const knHp = knBase + (upgrades.includes(2) ? getBronzeWorkingHpBonus(knDef) : 0);
-                    const knight: PlayerSymbolInstance = {
-                        ...cell,
-                        definition: knDef,
-                        enemy_hp: knHp,
-                        remaining_attacks: knDef.base_attack ? 3 : 0,
-                    };
-                    b[x][y] = knight;
-                    const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
-                    if (wi >= 0) symList[wi] = knight;
-                    continue;
-                }
-            }
-
-            if (upgrades.includes(21)) {
-                const seaAdj = getAdjacentCoords(x, y).some((p) => b[p.x][p.y]?.definition.id === S.sea);
-                if (seaAdj) {
-                    const cvDef = Sym.caravel;
-                    const cvBase = cvDef.base_hp ?? 0;
-                    const cvHp = cvBase + (upgrades.includes(2) ? getBronzeWorkingHpBonus(cvDef) : 0);
-                    const caravel: PlayerSymbolInstance = {
-                        ...cell,
-                        definition: cvDef,
-                        enemy_hp: cvHp,
-                        remaining_attacks: cvDef.base_attack ? 3 : 0,
-                    };
-                    b[x][y] = caravel;
-                    const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
-                    if (wi >= 0) symList[wi] = caravel;
-                }
-            }
-        }
-    }
-
-    return { board: b, playerSymbols: symList };
-};
-
 const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => {
     return Array(BOARD_WIDTH).fill(null).map(() => Array(BOARD_HEIGHT).fill(null));
 };
@@ -405,7 +361,7 @@ const shuffle = <T>(arr: T[]): T[] => {
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
 
-const createInstance = (def: SymbolDefinition, unlockedUpgrades: number[] = []): PlayerSymbolInstance => {
+const createInstance = (def: SymbolDefinition, unlockedUpgrades: readonly number[] = []): PlayerSymbolInstance => {
     const finalDef = def;
     // Relic ID 8 (십계명 석판): Unlocks Stone Tablet in the symbol selection pool.
 
@@ -615,7 +571,6 @@ import {
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    STIRRUP_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
@@ -709,139 +664,36 @@ export const useGameStore = create<GameState>((set, get) => ({
         if ((state.levelUpResearchPoints ?? 0) > 0) return;
         if (state.phase !== 'idle') return;
 
-        let { barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = state;
-
-        const newPlayerSymbols = [...state.playerSymbols];
-        const spinUpgrades = state.unlockedKnowledgeUpgrades || [];
-        /** 이번 턴 새로 추가된 위협 심볼 (플로팅 라벨용) */
-        const newThreats: { instanceId: string; label: string }[] = [];
-
         get().appendEventLog({ turn: state.turn + 1, kind: 'turn_start' });
 
-        // Threat increment logic (카운트다운 알림 없음 — 첫 배치 시 셀 위 플로팅으로만 표시)
-        if (state.era === 1) {
-            const lang = useSettingsStore.getState().language;
-            const threatLabel = (key: string) => t(key, lang);
-            const castleSlow = (state.unlockedKnowledgeUpgrades || []).includes(23);
-
-            // 1번: 야만인 전사 침공 (확률 통과 시 당 턴 즉시 1기 추가)
-            barbarianSymbolThreat += castleSlow ? 0.5 : 1;
-            if (Math.random() * 100 < barbarianSymbolThreat) {
-                barbarianSymbolThreat = 0;
-                const enemyDef = Sym.enemy_warrior;
-                if (enemyDef) {
-                    const inst = createInstance(enemyDef, spinUpgrades);
-                    newPlayerSymbols.push(inst);
-                    newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.barbarian_invasion') });
-                }
-            }
-
-            // 2번: 야만인 주둔지 (확률 통과 시 당 턴 즉시 1기 추가)
-            barbarianCampThreat += castleSlow ? 0.1 : 0.2;
-            if (Math.random() * 100 < barbarianCampThreat) {
-                barbarianCampThreat = 0;
-                const campDef = Sym.barbarian_camp;
-                if (campDef) {
-                    const inst = createInstance(campDef, spinUpgrades);
-                    newPlayerSymbols.push(inst);
-                    newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.barbarian_camp') });
-                }
-            }
-
-            // 3번: 자연재해
-            naturalDisasterThreat += 0.5;
-            if (Math.random() * 100 < naturalDisasterThreat) {
-                naturalDisasterThreat = 0;
-                const randInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
-                const FLOOD_ID = S.flood;
-                const EARTHQUAKE_ID = S.earthquake;
-                const DROUGHT_ID = S.drought;
-                const pick = [FLOOD_ID, EARTHQUAKE_ID, DROUGHT_ID][Math.floor(Math.random() * 3)];
-
-                const addDisaster = (symId: number, counterMin: number, counterMax: number, labelKey: string) => {
-                    const def = SYMBOLS[symId];
-                    if (!def) return;
-                    const inst = createInstance(def, spinUpgrades);
-                    inst.effect_counter = randInt(counterMin, counterMax);
-                    newPlayerSymbols.push(inst);
-                    newThreats.push({ instanceId: inst.instanceId, label: threatLabel(labelKey) });
-                };
-
-                if (pick === FLOOD_ID) {
-                    const count = randInt(2, 3);
-                    for (let i = 0; i < count; i++) addDisaster(FLOOD_ID, 6, 8, 'threat.flood');
-                } else if (pick === EARTHQUAKE_ID) {
-                    const def = SYMBOLS[EARTHQUAKE_ID];
-                    if (def) {
-                        const inst = createInstance(def, spinUpgrades);
-                        newPlayerSymbols.push(inst);
-                        newThreats.push({ instanceId: inst.instanceId, label: threatLabel('threat.earthquake') });
-                    }
-                } else {
-                    const count = randInt(3, 6);
-                    for (let i = 0; i < count; i++) addDisaster(DROUGHT_ID, 5, 8, 'threat.drought');
-                }
-            }
-        }
-
-        // 1. Clear Board & Place Symbols (reuse existing instances to preserve counters)
-        const newBoard = createEmptyBoard();
-        // 전투/적 심볼 우선 배치: 컬렉션에 있으면 거의 항상 보드에 등장
-        const combatAndEnemy = shuffle(newPlayerSymbols
-            .filter(s => s.definition.type === SymbolType.ENEMY || s.definition.type === SymbolType.UNIT));
-        const friendly = shuffle(newPlayerSymbols
-            .filter(s => s.definition.type !== SymbolType.ENEMY && s.definition.type !== SymbolType.UNIT));
-        const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, BOARD_WIDTH * BOARD_HEIGHT);
-
-        const positions: { x: number, y: number }[] = [];
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-            for (let y = 0; y < BOARD_HEIGHT; y++) {
-                positions.push({ x, y });
-            }
-        }
-        const shuffledPositions = shuffle(positions);
-
-        shuffledSymbols.forEach((instance, idx) => {
-            const pos = shuffledPositions[idx];
-            newBoard[pos.x][pos.y] = instance;
+        const prepared = prepareTurn({
+            board: state.board,
+            playerSymbols: state.playerSymbols,
+            turn: state.turn,
+            era: state.era,
+            boardWidth: BOARD_WIDTH,
+            boardHeight: BOARD_HEIGHT,
+            unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
+            threatState: {
+                barbarianSymbolThreat: state.barbarianSymbolThreat,
+                barbarianCampThreat: state.barbarianCampThreat,
+                naturalDisasterThreat: state.naturalDisasterThreat,
+            },
+            rng: createMathRng(),
+            createSymbolInstance: createInstance,
+            getThreatLabel: (key) => t(key, useSettingsStore.getState().language),
         });
-
-        const { board: placedBoard, playerSymbols: placedSymbols } = applyWarriorEliteTransforms(
-            newBoard,
-            newPlayerSymbols
-        );
-
-        // 첫 스핀(턴 0 → 1)에서만 구전 설화를 보드 중앙에 고정
-        const anchored =
-            state.turn === 0
-                ? placeOralTraditionAtBoardCenter(placedBoard, placedSymbols)
-                : { board: placedBoard, playerSymbols: placedSymbols };
-        const anchoredBoard = anchored.board;
-        const anchoredSymbols = anchored.playerSymbols;
-
-        const newThreatLabels = new Map<string, string>(newThreats.map(n => [n.instanceId, n.label]));
-        const pendingNewThreatFloats: { x: number; y: number; label: string }[] = [];
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-            for (let y = 0; y < BOARD_HEIGHT; y++) {
-                const inst = anchoredBoard[x][y];
-                if (inst && newThreatLabels.has(inst.instanceId)) {
-                    pendingNewThreatFloats.push({ x, y, label: newThreatLabels.get(inst.instanceId)! });
-                }
-            }
-        }
-
-        const newTurn = state.turn + 1;
 
         // board와 phase를 한 번에 set → renderBoard 시 릴이 새 board를 읽음
         set({
-            playerSymbols: anchoredSymbols,
-            barbarianSymbolThreat,
-            barbarianCampThreat,
-            naturalDisasterThreat,
-            pendingNewThreatFloats,
-            prevBoard: state.board,
-            board: anchoredBoard,
-            turn: newTurn,
+            playerSymbols: prepared.playerSymbols,
+            barbarianSymbolThreat: prepared.threatState.barbarianSymbolThreat,
+            barbarianCampThreat: prepared.threatState.barbarianCampThreat,
+            naturalDisasterThreat: prepared.threatState.naturalDisasterThreat,
+            pendingNewThreatFloats: prepared.pendingNewThreatFloats,
+            prevBoard: prepared.prevBoard,
+            board: prepared.board,
+            turn: prepared.turn,
             phase: 'spinning',
             lastEffects: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
@@ -863,7 +715,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             set({ phase: 'showing_new_threats' });
             return;
         }
-        const baseTotals = getHudTurnStartPassiveTotals(state);
+        const baseTotals = computeTurnStartBaseTotals({
+            state,
+            getHudTurnStartPassiveTotals,
+        });
         const startFood = baseTotals.food;
         const startGold = baseTotals.gold;
         const startKnowledge = baseTotals.knowledge;
@@ -879,225 +734,58 @@ export const useGameStore = create<GameState>((set, get) => ({
             meta: { base: { food: startFood, gold: startGold, knowledge: startKnowledge } },
         });
 
-        // ── 홍수(44): 인접 지형 생산 비활성화(순서 무관) ──
-        const FLOOD_ID = S.flood;
-        const disabledTerrainCoords = new Set<string>();
-        for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-            for (let by = 0; by < BOARD_HEIGHT; by++) {
-                const s = get().board[bx][by];
-                if (!s || s.definition.id !== FLOOD_ID) continue;
-
-                // counter가 0/미설정이면 이번 턴부터 활성(3으로 시작)
-                if (!s.effect_counter || s.effect_counter <= 0) s.effect_counter = 3;
-                if (s.effect_counter <= 0) continue;
-
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        const nx = bx + dx;
-                        const ny = by + dy;
-                        if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-                        const n = get().board[nx][ny];
-                        if (n?.definition.type === SymbolType.TERRAIN) {
-                            disabledTerrainCoords.add(`${nx},${ny}`);
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── 효과 페이즈 인프라 ────────────────────────────────────────────────
-        // 2. 순차 이펙트 처리: 슬롯 1(y=0,x=0)부터 슬롯 20(y=3,x=4)까지
-        const slotOrder: { x: number; y: number }[] = [];
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                slotOrder.push({ x, y });
-            }
-        }
-
-        let totalFood = startFood;
-        const baseGoldFinish = startGold;
-        // `startKnowledge`는 순수 기본 생산량만 담고, 유물/지도자/심볼식 턴당 보너스는 finishProcessing에서 별도 합산한다.
-        let totalKnowledge = startKnowledge;
-        let totalGold = baseGoldFinish;
-        const symbolsToAdd: number[] = [];
-        const symbolsToSpawnOnBoard: number[] = [];
-        const accumulatedEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }> = [];
-
-        // 종교 심볼(31=Christianity, 32=Islam)은 인접 심볼의 "이번 스핀 산출량"을 기준으로 계산해야 해서,
-        // 기존 symbolEffects.ts의 정적 테이블 계산과 충돌하지 않도록 effectPhase에서 임시 보류 후 여기서 최종 계산한다.
-        const RELIGION_RECALC_IDS = new Set<number>([S.christianity, S.islam]);
-        const religionEffectCache = new Map<string, { food: number; knowledge: number; gold: number }>();
-        const religionSlotsToRecalculate: { x: number; y: number; id: number }[] = [];
+        const slotPipeline = createSlotEffectPipeline({
+            board: get().board,
+            boardWidth: BOARD_WIDTH,
+            boardHeight: BOARD_HEIGHT,
+            baseTotals,
+        });
         const relicEffects = buildActiveRelicEffects();
         const effectCtx = { upgrades: (state.unlockedKnowledgeUpgrades || []).map((id) => Number(id)) };
-
-        const getKey = (x: number, y: number) => `${x},${y}`;
-        const computeReligionEffects = () => {
-            if (religionSlotsToRecalculate.length === 0) return;
-
-            // effectPhase 진행 중 심볼 인스턴스의 상태가 변경될 수 있으므로,
-            // 여기서는 "현재 보드 스냅샷"을 기준으로 계산한다.
-            const currentBoardRef = get().board;
-            const doctrineFood = new Map<string, number>();
-            const doctrineGold = new Map<string, number>();
-
-            for (const s of religionSlotsToRecalculate) {
-                const key = getKey(s.x, s.y);
-                doctrineFood.set(key, 0);
-                doctrineGold.set(key, 0);
-            }
-
-            // Christianity(31)은 인접 심볼의 food 중 최대값, Islam(32)은 인접 지식 생산 심볼 개수에 비례한 골드.
-            // doctrine끼리 인접해 있으면 max(Christianity)가 서로 영향을 줄 수 있으므로,
-            // 소규모 고정점 반복으로 안정화한다(실전 보드에선 1~2회로 충분할 가능성이 큼).
-            const MAX_ITERS = 4;
-            for (let iter = 0; iter < MAX_ITERS; iter++) {
-                let anyChanged = false;
-
-                for (const slot of religionSlotsToRecalculate) {
-                    const key = getKey(slot.x, slot.y);
-                    const sym = currentBoardRef[slot.x][slot.y];
-                    if (!sym) continue;
-                    if (sym.is_marked_for_destruction) continue;
-
-                    // 빈 슬롯은 식량/지식 0으로 취급한다(텍스트의 "인접 심볼"을 정량화).
-                    let maxAdjFood = -Infinity;
-                    let knowledgeProducerCount = 0;
-
-                    const adj = getAdjacentCoords(slot.x, slot.y);
-                    for (const pos of adj) {
-                        const adjSym = currentBoardRef[pos.x][pos.y];
-                        if (!adjSym) {
-                            maxAdjFood = Math.max(maxAdjFood, 0);
-                            continue;
-                        }
-                        const adjKey = getKey(pos.x, pos.y);
-
-                        // 이번 스핀에 실제로 계산된 값은 religionEffectCache에 들어있다.
-                        // 종교 심볼(31/32)은 여기서 계산하므로 현재 반복값을 사용한다.
-                        const adjFoodFromCache =
-                            adjSym.definition.id === S.christianity || adjSym.definition.id === S.islam
-                                ? (doctrineFood.get(adjKey) ?? 0)
-                                : (religionEffectCache.get(adjKey)?.food ?? 0);
-
-                        const adjKnowledgeFromCache =
-                            adjSym.definition.id === S.christianity || adjSym.definition.id === S.islam
-                                ? 0
-                                : (religionEffectCache.get(adjKey)?.knowledge ?? 0);
-
-                        maxAdjFood = Math.max(maxAdjFood, adjFoodFromCache);
-                        if (adjKnowledgeFromCache > 0) knowledgeProducerCount++;
-                    }
-
-                    if (maxAdjFood === -Infinity) maxAdjFood = 0;
-
-                    let food = 0;
-                    let gold = 0;
-                    if (sym.definition.id === S.christianity) {
-                        food = maxAdjFood;
-                    } else if (sym.definition.id === S.islam) {
-                        // 지식을 생산하는 인접 심볼 1개당 골드 +2
-                        gold = knowledgeProducerCount * 2;
-                    }
-
-                    // 교리(종교 심볼) 인접 페널티: 인접한 다른 교리 심볼이 있으면 -500 Food
-                    const hasAdjacentDoctrine = adj.some(pos => {
-                        const t = currentBoardRef[pos.x][pos.y];
-                        return t && RELIGION_DOCTRINE_IDS.has(t.definition.id);
-                    });
-                    if (hasAdjacentDoctrine) {
-                        food -= 50;
-                    }
-
-                    const prevFood = doctrineFood.get(key) ?? 0;
-                    const prevGold = doctrineGold.get(key) ?? 0;
-                    if (prevFood !== food || prevGold !== gold) anyChanged = true;
-                    doctrineFood.set(key, food);
-                    doctrineGold.set(key, gold);
-
-                    if (anyChanged && iter === MAX_ITERS - 1) {
-                        // 마지막 반복이라도 변동이 있으면 그대로 최종값을 사용한다.
-                    }
-                }
-
-                if (!anyChanged) break;
-            }
-
-            // 최종값을 totals/lastEffects에 반영
-            for (const slot of religionSlotsToRecalculate) {
-                const key = getKey(slot.x, slot.y);
-                const sym = currentBoardRef[slot.x][slot.y];
-                if (!sym || sym.is_marked_for_destruction) continue;
-
-                const food = doctrineFood.get(key) ?? 0;
-                const gold = doctrineGold.get(key) ?? 0;
-
-                if (food !== 0 || gold !== 0) {
-                    accumulatedEffects.push({ x: slot.x, y: slot.y, food, gold, knowledge: 0 });
-                    totalFood += food;
-                    totalGold += gold;
-                }
-
-            }
-
-            // 캐시에는 인접 심볼 계산용 값만 필요하므로, doctrine는 여기서 추가로 채우지 않는다.
+        const slotEffectDeps = {
+            processSingleSymbolEffects: (args: ProcessSlotArgs) =>
+                processSingleSymbolEffects(
+                    args.symbol,
+                    args.board,
+                    args.x,
+                    args.y,
+                    args.effectCtx,
+                    args.relicEffects,
+                    args.disabledTerrainCoords,
+                ),
         };
 
         const processSlot = (slotIdx: number) => {
-            if (slotIdx >= slotOrder.length) {
+            if (slotIdx >= slotPipeline.slotOrder.length) {
                 // effectPhase 종료 직전에 종교 심볼(31/32)을 최종 계산한다.
-                computeReligionEffects();
-
-                // Merchant(22): 이번 턴의 "실제 인접 심볼 식량"을 기준으로
-                // effectPhase 전체 종료 후 저장값을 갱신한다.
-                {
-                    const foodBySlotKey = new Map<string, number>();
-                    for (const e of accumulatedEffects) {
-                        const k = `${e.x},${e.y}`;
-                        foodBySlotKey.set(k, (foodBySlotKey.get(k) ?? 0) + (e.food ?? 0));
-                    }
-
-                    const currentBoardRef = get().board;
-                    const computeIsCorner = (cx: number, cy: number) =>
-                        (cx === 0 && cy === 0) ||
-                        (cx === 0 && cy === BOARD_HEIGHT - 1) ||
-                        (cx === BOARD_WIDTH - 1 && cy === 0) ||
-                        (cx === BOARD_WIDTH - 1 && cy === BOARD_HEIGHT - 1);
-
-                    for (let mx = 0; mx < BOARD_WIDTH; mx++) {
-                        for (let my = 0; my < BOARD_HEIGHT; my++) {
-                            const sym = currentBoardRef[mx][my];
-                            if (!sym || sym.definition.id !== S.merchant) continue;
-                            if (!sym.merchant_store_pending) continue;
-                            if (computeIsCorner(mx, my)) continue; // 안전장치: corner merchant는 즉시 현금화 처리됨
-
-                            let maxAdjFood = 0;
-                            for (const pos of getAdjacentCoords(mx, my)) {
-                                const adjFood = foodBySlotKey.get(`${pos.x},${pos.y}`) ?? 0;
-                                const adjPositive = Math.max(0, adjFood);
-                                if (adjPositive > maxAdjFood) maxAdjFood = adjPositive;
-                            }
-
-                            sym.stored_gold = (sym.stored_gold ?? 0) + maxAdjFood;
-                            sym.merchant_store_pending = false;
-                        }
-                    }
-                }
+                completeSlotEffects({
+                    pipeline: slotPipeline,
+                    board: get().board,
+                    boardWidth: BOARD_WIDTH,
+                    boardHeight: BOARD_HEIGHT,
+                    getAdjacentCoords,
+                });
 
                 // 마지막 효과 후 0.5초 대기 → 스탯 합산. effectPhase/effectPhase3ReachedThisRun은 유지해 X가 0.5초 동안 계속 보이게 하고, finishProcessing에서 보드 제거와 함께 한 번에 초기화
                 set({ activeSlot: null, activeContributors: [], pendingContributors: [] });
                 set({
-                    lastEffects: [...accumulatedEffects],
-                    runningTotals: { food: totalFood, gold: totalGold, knowledge: totalKnowledge },
+                    lastEffects: [...slotPipeline.accumulatedEffects],
+                    runningTotals: { ...slotPipeline.totals },
                 });
                 setTimeout(() => {
-                    finishProcessing(totalFood, totalKnowledge, totalGold, symbolsToAdd, symbolsToSpawnOnBoard, accumulatedEffects);
+                    finishProcessing(
+                        slotPipeline.totals.food,
+                        slotPipeline.totals.knowledge,
+                        slotPipeline.totals.gold,
+                        slotPipeline.symbolsToAdd,
+                        slotPipeline.symbolsToSpawnOnBoard,
+                        slotPipeline.accumulatedEffects,
+                    );
                 }, 500);
                 return;
             }
 
-            const { x, y } = slotOrder[slotIdx];
+            const { x, y } = slotPipeline.slotOrder[slotIdx];
             const currentState = get();
             const currentBoard = currentState.board;
             const symbol = currentBoard[x][y];
@@ -1112,33 +800,18 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             // Christianity/Islam(31/32)은 여기서 임시 보류하고, effectPhase 종료 후 computeReligionEffects()에서
             // 인접 심볼의 '이번 스핀 실제 산출량'을 기반으로 최종 계산한다.
-            const isReligionRecalc = RELIGION_RECALC_IDS.has(symbol.definition.id);
-            const rawResult = isReligionRecalc
-                ? { food: 0, knowledge: 0, gold: 0 }
-                : processSingleSymbolEffects(
-                      symbol,
-                      currentBoard,
-                      x,
-                      y,
-                      effectCtx,
-                      relicEffects,
-                      disabledTerrainCoords
-                  );
+            const rawResult = resolveSlotEffect({
+                pipeline: slotPipeline,
+                deps: slotEffectDeps,
+                symbol,
+                board: currentBoard,
+                x,
+                y,
+                effectCtx,
+                relicEffects,
+            });
             // `processSingleSymbolEffects`의 food/gold는 게임 표시 단위(1단위)입니다.
             const result = rawResult;
-
-            if (isReligionRecalc) {
-                religionSlotsToRecalculate.push({ x, y, id: symbol.definition.id });
-            } else {
-                religionEffectCache.set(getKey(x, y), {
-                    food: result.food,
-                    knowledge: result.knowledge,
-                    gold: result.gold,
-                });
-            }
-
-            if (result.addSymbolIds) symbolsToAdd.push(...result.addSymbolIds);
-            if (result.spawnOnBoard) symbolsToSpawnOnBoard.push(...result.spawnOnBoard);
 
             if (result.triggerRelicRefresh) {
                 get().refreshRelicShop(true);
@@ -1169,12 +842,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             const applyEffectsAndContinue = () => {
                 set({ effectPhase: 3, effectPhase3ReachedThisRun: true }); // wobble 끝 → 파괴 X 등 표시 가능, 이후 계속 표시
-                if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
-                    accumulatedEffects.push({ x, y, food: result.food, gold: result.gold, knowledge: result.knowledge });
-                    totalFood += result.food;
-                    totalKnowledge += result.knowledge;
-                    totalGold += result.gold;
-                }
+                applySlotEffectResult(slotPipeline, { x, y }, result);
 
                 if (result.bonusXpPerTurnDelta) {
                     set((s) => ({ bonusXpPerTurn: s.bonusXpPerTurn + result.bonusXpPerTurnDelta! }));
@@ -1192,8 +860,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
 
                 set({
-                    lastEffects: [...accumulatedEffects],
-                    runningTotals: { food: totalFood, gold: totalGold, knowledge: totalKnowledge },
+                    lastEffects: [...slotPipeline.accumulatedEffects],
+                    runningTotals: { ...slotPipeline.totals },
                 });
 
                 // F12 이벤트 로그: 기본 UI는 간단히 유지하고, 상세는 로그 오버레이에서 확인
@@ -1347,56 +1015,23 @@ export const useGameStore = create<GameState>((set, get) => ({
                 const gainedResearchPicks = prog.gainedResearchPicks;
                 const newEra = prog.newEra;
 
-                const cleanBoard = prev.board.map((col) =>
-                    col.map((s) => {
-                        if (!s) return null;
-                        if (s.is_marked_for_destruction) return null;
-                        return s;
-                    })
-                );
-
-                const newPlayerSymbols = [...prev.playerSymbols];
-
-                for (const symId of toSpawn) {
-                    const def = SYMBOLS[symId];
-                    if (def) {
-                        let placed = false;
-                        for (let bx = 0; bx < BOARD_WIDTH && !placed; bx++) {
-                            for (let by = 0; by < BOARD_HEIGHT && !placed; by++) {
-                                if (!cleanBoard[bx][by]) {
-                                    const inst = createInstance(def, finishUpgrades);
-                                    cleanBoard[bx][by] = inst;
-                                    newPlayerSymbols.push(inst);
-                                    placed = true;
-                                }
-                            }
-                        }
-                        if (!placed) {
-                            newPlayerSymbols.push(createInstance(def, finishUpgrades));
-                        }
-                    }
-                }
-
-                for (const symId of toAdd) {
-                    const def = SYMBOLS[symId];
-                    if (def) {
-                        newPlayerSymbols.push(createInstance(def, finishUpgrades));
-                    }
-                }
+                const cleanBoard = removeMarkedSymbolsFromBoard(prev.board);
+                const generated = applyGeneratedSymbols({
+                    board: cleanBoard,
+                    playerSymbols: prev.playerSymbols,
+                    symbolsToSpawnOnBoard: toSpawn,
+                    symbolsToAdd: toAdd,
+                    symbolDefinitions: SYMBOLS,
+                    unlockedKnowledgeUpgrades: finishUpgrades,
+                    boardWidth: BOARD_WIDTH,
+                    boardHeight: BOARD_HEIGHT,
+                    createSymbolInstance: createInstance,
+                });
 
                 // combatDestroyedIds는 이미 playerSymbols에서 제거됨
                 // 여기선 효과 페이즈 중 파괴된 심볼(Banana 등)만 추가로 처리
-                const effectDestroyedIds = new Set<string>();
-                for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-                    for (let by = 0; by < BOARD_HEIGHT; by++) {
-                        const prevSym = prev.board[bx][by];
-                        if (prevSym && !cleanBoard[bx][by]) {
-                            effectDestroyedIds.add(prevSym.instanceId);
-                        }
-                    }
-                }
-
-                const filteredSymbols = newPlayerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
+                const effectDestroyedIds = collectRemovedSymbolInstanceIds(prev.board, cleanBoard);
+                const filteredSymbols = generated.playerSymbols.filter(s => !effectDestroyedIds.has(s.instanceId));
                 const selCtx = {
                     era: newEra,
                     religionUnlocked: prev.religionUnlocked,
@@ -1419,7 +1054,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     effectPhase: null,
                     effectPhase3ReachedThisRun: false,
                     era: newEra,
-                    board: cleanBoard,
+                    board: generated.board,
                     playerSymbols: filteredSymbols,
                     lastEffects: [...effects],
                     phase: 'processing' as GamePhase,
@@ -1466,30 +1101,42 @@ export const useGameStore = create<GameState>((set, get) => ({
             setTimeout(() => {
                 const finalState = get();
                 if (finalState.phase === 'processing') {
-                    // 식량 납부 및 유물 상점 자동 갱신 (10턴마다)
-                    if (finalState.turn > 0 && finalState.turn % 10 === 0) {
-                        const cost = calculateFoodCost(finalState.turn, finalState.stageId);
-                        if (finalState.food < cost) {
-                            set({ phase: 'game_over' as GamePhase });
-                            return;
-                        }
+                    const phaseResolution = resolveTurnEndPhase({
+                        turn: finalState.turn,
+                        stageId: finalState.stageId,
+                        food: finalState.food,
+                        edictRemovalPending: finalState.edictRemovalPending,
+                    });
+
+                    if (phaseResolution.nextPhase === 'game_over') {
+                        set({ phase: 'game_over' as GamePhase });
+                        return;
+                    }
+
+                    if (phaseResolution.foodDelta !== 0) {
                         set((s) => ({
-                            food: s.food - cost,
+                            food: s.food + phaseResolution.foodDelta,
                         }));
+                    }
+
+                    if (phaseResolution.shouldRefreshRelicShop) {
                         get().refreshRelicShop(true); // Auto refresh shop inventory every 10 turns
                     }
+
                     // Level-ups add research points only; unlocks use the knowledge tree overlay.
                     // 칙령(69): 보유 심볼 1개 제거 후 심볼 선택
-                    if (finalState.edictRemovalPending) {
+                    if (phaseResolution.nextPhase === 'destroy_selection' && phaseResolution.destroySelection) {
                         set({
-                            edictRemovalPending: false,
+                            ...phaseResolution.destroySelection,
                             phase: 'destroy_selection' as GamePhase,
-                            pendingDestroySource: EDICT_SYMBOL_ID,
-                            destroySelectionMaxSymbols: 1,
                         });
                         return;
                     }
-                    set({ phase: 'selection' as GamePhase, symbolSelectionRelicSourceId: null });
+
+                    set({
+                        phase: 'selection' as GamePhase,
+                        symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
+                    });
                 }
             }, 600);
             };
@@ -1521,30 +1168,24 @@ export const useGameStore = create<GameState>((set, get) => ({
         };
 
         const applyClovisDamage = (pos: { x: number; y: number }) => {
-            applyFixedDamageToEnemy(combatBoard, pos, 1, getEffectiveMaxHP);
+            const result = applyClovisPreDamage({
+                board: combatBoard,
+                target: pos,
+                getEffectiveMaxHP,
+            });
             // 플로팅 -1
             set((s) => {
-                const next = [...(s.combatFloats ?? []), { x: pos.x, y: pos.y, text: '-1', color: '#ef4444' }];
+                const next = [...(s.combatFloats ?? []), result.float];
                 return { combatFloats: next.length > 80 ? next.slice(next.length - 80) : next };
             });
         };
 
         // UNIT + ENEMY 모두 슬롯 순(1→20)으로 각자 1회 공격. 반격 없음.
-        const combatEvents = buildCombatEvents(combatBoard, BOARD_WIDTH, BOARD_HEIGHT).filter(({ ax, ay }) => {
-            const s = combatBoard[ax][ay];
-            return !!s && !s.is_marked_for_destruction;
-        });
+        const combatEvents = collectCombatEvents(combatBoard, BOARD_WIDTH, BOARD_HEIGHT);
 
         // 전투 종료 후: 파괴 심볼 진동 표시 → 보드·컬렉션에서 제거 → 효과 페이즈 시작
         const startEffectPhase = () => {
-            const combatDestroyedIds = new Set<string>();
-            const b = get().board;
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                for (let y = 0; y < BOARD_HEIGHT; y++) {
-                    const sym = b[x][y];
-                    if (sym?.is_marked_for_destruction) combatDestroyedIds.add(sym.instanceId);
-                }
-            }
+            const combatDestroyedIds = new Set(collectCombatDestroyedSymbols(get().board, BOARD_WIDTH, BOARD_HEIGHT));
 
             const effectSpeed = useSettingsStore.getState().effectSpeed;
             const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
@@ -1552,19 +1193,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             const doRemoveAndStart = () => {
                 if (combatDestroyedIds.size > 0) {
                     set(prev => {
-                        const lootFromCamps: number[] = [];
-                        for (let cx = 0; cx < BOARD_WIDTH; cx++) {
-                            for (let cy = 0; cy < BOARD_HEIGHT; cy++) {
-                                const s = prev.board[cx][cy];
-                                if (
-                                    s?.is_marked_for_destruction &&
-                                    combatDestroyedIds.has(s.instanceId) &&
-                                    s.definition.id === S.barbarian_camp
-                                ) {
-                                    lootFromCamps.push(S.loot);
-                                }
-                            }
-                        }
+                        const lootFromCamps = collectLootFromDestroyedCamps(
+                            prev.board,
+                            BOARD_WIDTH,
+                            BOARD_HEIGHT,
+                            combatDestroyedIds,
+                        );
                         return {
                             board: prev.board.map(col => col.map(s => s?.is_marked_for_destruction ? null : s)),
                             playerSymbols: prev.playerSymbols.filter(s => !combatDestroyedIds.has(s.instanceId)),
@@ -1604,35 +1238,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             const { ax, ay } = combatEvents[eventIdx];
             const board = get().board;
-            const attacker = board[ax][ay];
-            const picked = resolveCombatTarget({
+            const result = resolveCombatStep({
                 board,
                 width: BOARD_WIDTH,
                 height: BOARD_HEIGHT,
-                ax,
-                ay,
+                event: { ax, ay },
                 getAdjacentCoords,
+                getEffectiveMaxHP,
             });
-            const tx = picked?.tx ?? -1;
-            const ty = picked?.ty ?? -1;
-            const target = picked ? board[tx][ty] : null;
-
-            let atkDmg = 0;
-            if (
-                picked &&
-                attacker &&
-                !attacker.is_marked_for_destruction &&
-                target &&
-                !target.is_marked_for_destruction
-            ) {
-                atkDmg = attacker.definition.base_attack ?? 0;
-
-                if (atkDmg > 0) {
-                    const maxHP = getEffectiveMaxHP(target);
-                    target.enemy_hp = (target.enemy_hp ?? maxHP) - atkDmg;
-                    if (target.enemy_hp <= 0) target.is_marked_for_destruction = true;
-                }
-            }
 
             const effectSpeed = useSettingsStore.getState().effectSpeed;
             const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
@@ -1645,8 +1258,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             const stepDelay = bounceDur + 40;
 
-            if (atkDmg > 0 && picked) {
-                set({ combatAnimation: { ax, ay, tx, ty, atkDmg, counterDmg: 0 } });
+            if (result.animation) {
+                set({ combatAnimation: result.animation });
                 setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
             } else {
                 processCombatEvent(eventIdx + 1);
@@ -1655,7 +1268,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 클로비스 연출이 있으면 먼저 처리 후 전투 진행
         if (hasClovis) {
-            const pos = pickRandomLivingEnemy(combatBoard, BOARD_WIDTH, BOARD_HEIGHT);
+            const pos = pickClovisPreDamageTarget(combatBoard, BOARD_WIDTH, BOARD_HEIGHT);
             const effectSpeed = useSettingsStore.getState().effectSpeed;
             const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
 
