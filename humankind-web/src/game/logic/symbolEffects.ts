@@ -1,8 +1,8 @@
 import type { PlayerSymbolInstance } from '../types';
-import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S, SYMBOLS, EXCLUDED_FROM_BASE_POOL } from '../data/symbolDefinitions';
+import { RELIGION_DOCTRINE_IDS, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S, SYMBOLS, EXCLUDED_FROM_BASE_POOL } from '../data/symbolDefinitions';
+import { DEFAULT_RELIC_EFFECTS, type EffectResult, type ActiveRelicEffects } from './symbolEffects/types';
 import {
     AGRICULTURE_UPGRADE_ID,
-    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
@@ -14,53 +14,17 @@ import {
     STIRRUP_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 
-import { useGameStore } from '../state/gameStore';
-
-export interface EffectResult {
-    food: number;
-    knowledge: number;
-    gold: number;
-    /** 이번 턴에서 컬렉션에 추가할 심볼 ID 목록 */
-    addSymbolIds?: number[];
-    /** 이번 턴에서 보드에 추가할 심볼 ID 목록 (빈 슬롯에 배치) */
-    spawnOnBoard?: number[];
-    /** 강제로 유물 선택 상점을 열어야 하는지 여부 */
-    triggerRelicSelection?: boolean;
-    /** 유물 상점을 강제로 새로고침해야 하는지 여부 */
-    triggerRelicRefresh?: boolean;
-    /** 이 심볼의 효과에 기여한 인접 심볼 좌표 */
-    contributors?: { x: number; y: number }[];
-    /** 영구 턴당 지식 보너스 증가 (gameStore bonusXpPerTurn) */
-    bonusXpPerTurnDelta?: number;
-    /** 다음 심볼 선택지에 지형 1칸 이상 포함 */
-    forceTerrainInNextChoices?: boolean;
-    /** 턴 종료 후 칙령: 보유 심볼 1개 제거 UI */
-    edictRemovalPending?: boolean;
-    /** 다음 심볼 선택 단계에서 소비할 무료 리롤 횟수 */
-    freeSelectionRerolls?: number;
+export interface SymbolEffectContext {
+    /** 지식 업그레이드 ID는 항상 숫자로 비교 (직렬화 혼선 방지) */
+    upgrades: number[];
 }
+
+export type { EffectResult } from './symbolEffects/types';
 
 /** 현재 보유 유물의 활성 효과 플래그 (`relicDefinitions` 1–19 + 지식 업그레이드 일부, gameStore에서 조합) */
-export interface ActiveRelicEffects {
-    /** 유물 보유 수 (석판 효과용) */
-    relicCount: number;
-    /** 유물 5 이집트 구리 톱 — 산 인접 빈 슬롯마다 골드 */
-    quarryEmptyGold: boolean;
-    /** 유물 7 쿠크 바나나 화석 — 열대우림 인접 바나나 보너스 */
-    bananaFossilBonus: boolean;
-    /** 기마술 업그레이드 — 평원 식량 */
-    horsemansihpPastureBonus: boolean;
-    /** 유물 16 테라의 화석 포도 — 자연재해 심볼 식량 +2 */
-    terraFossilDisasterFood: boolean;
-}
+export type { ActiveRelicEffects } from './symbolEffects/types';
 
-export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
-    relicCount: 0,
-    quarryEmptyGold: false,
-    bananaFossilBonus: false,
-    horsemansihpPastureBonus: false,
-    terraFossilDisasterFood: false,
-};
+export { DEFAULT_RELIC_EFFECTS } from './symbolEffects/types';
 
 const BOARD_WIDTH = 5;
 const BOARD_HEIGHT = 4;
@@ -134,78 +98,12 @@ const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Se
     return count;
 };
 
-/** 심볼별 기본 식량 생산량 추정치 (상인 인접 시 저장 골드 산정용). food/gold는 모두 게임 표시 단위(1단위) */
-const SYMBOL_BASE_FOOD: Record<number, number> = {
-    [S.wheat]: 0,
-    [S.rice]: 0,
-    [S.cattle]: 1,
-    [S.banana]: 1,
-    [S.fish]: 1,
-    [S.sea]: 1,
-    [S.stone]: 1,
-    [S.copper]: 0,
-    [S.grassland]: 1,
-    [S.monument]: 0,
-    [S.oasis]: 0,
-    [S.oral_tradition]: 0,
-    [S.rainforest]: 1,
-    [S.plains]: 1,
-    [S.mountain]: 1,
-    [S.totem]: 0,
-    [S.omen]: 2,
-    [S.campfire]: 1,
-    [S.pottery]: 0,
-    [S.tribal_village]: 0,
-    [S.merchant]: 0,
-    [S.horse]: 1,
-    [S.library]: 0,
-    [S.forest]: 0,
-    [S.deer]: 0,
-    [S.fur]: 0,
-    [S.date]: 1,
-    [S.salt]: 1,
-    [S.honey]: 0,
-    [S.corn]: 2,
-    [S.wild_berries]: 1,
-    [S.spices]: 0,
-    [S.tax]: 0,
-    [S.university]: 0,
-    [S.harbor]: 2,
-    [S.sheep]: 1,
-    [S.wool]: 0,
-    [S.wild_boar]: 0,
-    [S.sawmill]: 0,
-    [S.gold_vein]: 0,
-    [S.scholar]: 0,
-    [S.holy_relic]: 0,
-    [S.telescope]: 0,
-    [S.scales]: 0,
-    [S.pioneer]: 0,
-    [S.edict]: 0,
-    [S.embassy]: 0,
-    [S.wild_seeds]: 1,
-};
-
-/** Era 1 심볼 중 랜덤 하나 반환 — 고대 시대(25) 미연구 시 고대 타입 제외 */
-const randomEra1SymbolId = (): number => {
-    const ids = [S.wheat, S.rice, S.cattle, S.banana, S.fish, S.sea, S.stone, S.copper, S.grassland, S.monument, S.oasis, S.oral_tradition, S.rainforest, S.plains, S.mountain, S.totem, S.omen, S.campfire, S.pottery, S.tribal_village, S.deer, S.date, S.warrior];
-    const ancientOk = (useGameStore.getState().unlockedKnowledgeUpgrades || []).includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
-    const pool = ancientOk
-        ? ids
-        : ids.filter((id) => SYMBOLS[id] && SYMBOLS[id].type !== SymbolType.ANCIENT);
-    const pick = pool.length > 0 ? pool : [S.wheat];
-    return pick[Math.floor(Math.random() * pick.length)];
-};
-
 /** 무작위 일반(NORMAL) 심볼 1개 — 기본 풀 기준(조건부 해금 심볼 제외) */
 const randomBaseNormalSymbolId = (): number => {
     const pool = Object.values(SYMBOLS).filter((s) => s.type === SymbolType.NORMAL && !EXCLUDED_FROM_BASE_POOL.has(s.id));
     const pick = pool.length > 0 ? pool : [SYMBOLS[S.wheat]!];
     return pick[Math.floor(Math.random() * pick.length)]!.id;
 };
-
-/** 목장 인접 동물 심볼 태그 */
-const ANIMAL_SYMBOL_IDS = new Set([S.cattle, S.fish, S.horse]); // Cattle, Fish, Horse
 
 /** 사막이 무작위 파괴하는 대상: 일반·시대 심볼. 지형·유닛·종교 등 제외 */
 const DESERT_DESTRUCTIBLE_TYPES = new Set<SymbolType>([
@@ -220,6 +118,7 @@ export const processSingleSymbolEffects = (
     boardGrid: (PlayerSymbolInstance | null)[][],
     x: number,
     y: number,
+    ctx: SymbolEffectContext,
     relicEffects: ActiveRelicEffects = DEFAULT_RELIC_EFFECTS,
     disabledTerrainCoords?: ReadonlySet<string>
 ): EffectResult => {
@@ -239,9 +138,7 @@ export const processSingleSymbolEffects = (
 
     symbolInstance.effect_counter = (symbolInstance.effect_counter || 0);
     const adj = getAdjacentCoords(x, y);
-    const state = useGameStore.getState();
-    /** 지식 업그레이드 ID는 항상 숫자로 비교 (스토어·직렬화 혼선 방지) */
-    const upgrades = (state.unlockedKnowledgeUpgrades || []).map((id) => Number(id));
+    const upgrades = ctx.upgrades;
 
     // 홍수 등으로 이번 턴 생산이 비활성화된 지형은 효과를 발동하지 않음 (순서 무관)
     if (
