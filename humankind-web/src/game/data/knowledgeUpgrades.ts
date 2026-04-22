@@ -72,6 +72,14 @@ export const SEAFARING_UPGRADE_ID = 28;
 export const CELESTIAL_NAVIGATION_UPGRADE_ID = 29;
 /** 채광 — 열대우림·돌 업그레이드 */
 export const MINING_UPGRADE_ID = 30;
+/** 수렵 — 멧돼지·모피 심볼 풀 해금 */
+export const HUNTING_UPGRADE_ID = 31;
+/** 법전 — 기본 지식 생산 +2 */
+export const LAW_CODE_UPGRADE_ID = 32;
+/** 외국 무역 — 사막 업그레이드 */
+export const FOREIGN_TRADE_UPGRADE_ID = 33;
+/** 족장제 — 기본 식량 +2, 야생열매 업그레이드 */
+export const CHIEFDOM_UPGRADE_ID = 34;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -169,6 +177,40 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'stone', relation: 'effect_modify' },
         ],
     },
+    [HUNTING_UPGRADE_ID]: {
+        id: HUNTING_UPGRADE_ID,
+        name: 'Hunting',
+        type: SymbolType.ANCIENT,
+        description: 'Unlocks Wild Boar and Fur for the symbol selection pool.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'wild_boar', relation: 'pool_add' },
+            { symbolKey: 'fur', relation: 'pool_add' },
+        ],
+    },
+    [LAW_CODE_UPGRADE_ID]: {
+        id: LAW_CODE_UPGRADE_ID,
+        name: 'Law Code',
+        type: SymbolType.ANCIENT,
+        description: 'Permanently increases base Knowledge generation by +2.',
+        sprite: '-',
+    },
+    [FOREIGN_TRADE_UPGRADE_ID]: {
+        id: FOREIGN_TRADE_UPGRADE_ID,
+        name: 'Foreign Trade',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Desert.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'desert', relation: 'effect_modify' }],
+    },
+    [CHIEFDOM_UPGRADE_ID]: {
+        id: CHIEFDOM_UPGRADE_ID,
+        name: 'Chiefdom',
+        type: SymbolType.ANCIENT,
+        description: 'Base Food production +2. Upgrades Wild Berries.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'wild_berries', relation: 'effect_modify' }],
+    },
     4: {
         id: 4,
         name: 'Theology',
@@ -239,7 +281,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     15: {
         id: 15,
         name: 'Medieval Age',
-        type: SymbolType.ANCIENT,
+        type: SymbolType.MEDIEVAL,
         description:
             'Medieval age: Ancient symbols leave the shop pool; Medieval symbols are added. Terrain symbol odds x0.2. Mountains +1 Food. Adjacent enemy units lose 3 HP each turn from Mountains.',
         sprite: '-',
@@ -350,12 +392,15 @@ export const FEUDALISM_UPGRADE_ID = 15;
 export const SACRIFICIAL_RITE_UPGRADE_ID = 8;
 export const TERRITORIAL_REORG_UPGRADE_ID = 22;
 
-/** 지식 트리 Lv2 행 — `KnowledgeUpgradesOverlay` TIERS(level 2)와 동기. 고대 시대(25) 없이도 연구 가능. */
+/** 초기 지식 트리(고대 시대 25 없이도 연구 가능) — `KnowledgeUpgradesOverlay`와 동기 유지 필요 */
 export const KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS: readonly number[] = [
+    HUNTING_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     AGRICULTURE_UPGRADE_ID,
     5,
     MINING_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
+    // Lv3로 이동했지만 초기 트리 카드이므로 고대 시대(25) 없이도 연구 가능하게 유지
     SACRIFICIAL_RITE_UPGRADE_ID,
 ];

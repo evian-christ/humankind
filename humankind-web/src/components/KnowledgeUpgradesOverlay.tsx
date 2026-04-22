@@ -14,7 +14,11 @@ import {
     KNOWLEDGE_UPGRADES,
     AGRICULTURE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
+    HUNTING_UPGRADE_ID,
+    LAW_CODE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
@@ -45,23 +49,28 @@ interface Props {
 
 type ResearchPointsMouseHint = { id: number; x: number; y: number };
 
-/** 칩 열 수 — 6열 */
-const KNOWLEDGE_TREE_GRID_COLS = 6;
+/** 칩 열 수 — 7열 */
+const KNOWLEDGE_TREE_GRID_COLS = 7;
 
 const TIERS: { level: number; ids: (number | null)[] }[] = [
-    //           col0–5 (6열)
-    { level: 1,  ids: [null, null, 25,   null, null, null] },
-    /** col3 궁술(5)–col4 채광(30)–col5 희생 제의(8) */
-    { level: 2,  ids: [26,   9,    27,   5,    MINING_UPGRADE_ID, 8] },
-    /** col0: 목축업(26)과 같은 열 — 기마술(7) */
-    /** col1: Lv2 어업(9)과 같은 열 — 항해술(28), 천문항법(29) */
-    /** col2: Lv2 농업(27)과 같은 열 — 관개(3); col3: Lv2 궁술(5)과 같은 열 — 청동(2) */
-    { level: 4,  ids: [7,    SEAFARING_UPGRADE_ID, IRRIGATION_UPGRADE_ID, 2,    null, null] },
-    /** col1: 천문항법(29); col3: Lv4 청동(2)과 같은 열 — 문자(1) */
-    { level: 5,  ids: [null, CELESTIAL_NAVIGATION_UPGRADE_ID, null, 1,    null, null] },
-    /** col4: 신학(4) */
-    { level: 7,  ids: [6,    10,   null, null, 4,    null] },
-    { level: 10, ids: [null, null, 15,   null, null, null] },
+    //           col0–6 (7열)
+    { level: 1,  ids: [null, null, null, 25,   null, null, null] },
+    /** col0 수렵(31)–col4 궁술(5)–col5 채광(30)–col6 외국 무역(33) */
+    { level: 2,  ids: [HUNTING_UPGRADE_ID, 26,   9,    27,   5,    MINING_UPGRADE_ID, FOREIGN_TRADE_UPGRADE_ID] },
+    /** col5: 법전(32); col6: 희생 제의(8) */
+    { level: 3,  ids: [CHIEFDOM_UPGRADE_ID, null, null, null, null, LAW_CODE_UPGRADE_ID, 8] },
+    /** col2: Lv2 어업(9)과 같은 열 — 항해술(28), 천문항법(29) */
+    { level: 4,  ids: [null, null, SEAFARING_UPGRADE_ID, null, null, null, null] },
+    /** col1: 목축업(26)과 같은 열 — 기마술(7) */
+    /** col2: 항해술(28) 선행 — 천문항법(29) */
+    /** col3: Lv2 농업(27)과 같은 열 — 관개(3); col4: Lv2 궁술(5)과 같은 열 — 청동(2) */
+    /** col6: 문자(1) */
+    { level: 5,  ids: [null, 7,    CELESTIAL_NAVIGATION_UPGRADE_ID, IRRIGATION_UPGRADE_ID, 2,    null, 1] },
+    /** col5: 신학(4) */
+    { level: 7,  ids: [null, 6,    null, null, null, 4,    null] },
+    /** col2: 수학(10) */
+    { level: 9,  ids: [null, null, 10,   null, null, null, null] },
+    { level: 10, ids: [null, null, null, 15,   null, null, null] },
 ];
 
 const KNOWLEDGE_TREE_CHIP = 110;
