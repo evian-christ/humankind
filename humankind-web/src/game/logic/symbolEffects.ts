@@ -1,10 +1,12 @@
 import type { PlayerSymbolInstance } from '../types';
-import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S, SYMBOLS } from '../data/symbolDefinitions';
+import { RELIGION_SYMBOL_IDS, KNOWLEDGE_PRODUCING_IDS, RELIGION_DOCTRINE_IDS, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S, SYMBOLS, EXCLUDED_FROM_BASE_POOL } from '../data/symbolDefinitions';
 import {
     AGRICULTURE_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
     MINING_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
@@ -158,19 +160,20 @@ const SYMBOL_BASE_FOOD: Record<number, number> = {
     [S.horse]: 1,
     [S.library]: 0,
     [S.forest]: 0,
-    [S.deer]: 1,
+    [S.deer]: 0,
+    [S.fur]: 0,
     [S.date]: 1,
     [S.salt]: 1,
     [S.honey]: 0,
     [S.corn]: 2,
-    [S.wild_berries]: 2,
+    [S.wild_berries]: 1,
     [S.spices]: 0,
     [S.tax]: 0,
     [S.university]: 0,
     [S.harbor]: 2,
     [S.sheep]: 1,
     [S.wool]: 0,
-    [S.wild_boar]: 2,
+    [S.wild_boar]: 0,
     [S.sawmill]: 0,
     [S.gold_vein]: 0,
     [S.scholar]: 0,
@@ -192,6 +195,13 @@ const randomEra1SymbolId = (): number => {
         : ids.filter((id) => SYMBOLS[id] && SYMBOLS[id].type !== SymbolType.ANCIENT);
     const pick = pool.length > 0 ? pool : [S.wheat];
     return pick[Math.floor(Math.random() * pick.length)];
+};
+
+/** 무작위 일반(NORMAL) 심볼 1개 — 기본 풀 기준(조건부 해금 심볼 제외) */
+const randomBaseNormalSymbolId = (): number => {
+    const pool = Object.values(SYMBOLS).filter((s) => s.type === SymbolType.NORMAL && !EXCLUDED_FROM_BASE_POOL.has(s.id));
+    const pick = pool.length > 0 ? pool : [SYMBOLS[S.wheat]!];
+    return pick[Math.floor(Math.random() * pick.length)]!.id;
 };
 
 /** 목장 인접 동물 심볼 태그 */
@@ -407,8 +417,7 @@ export const processSingleSymbolEffects = (
                         contributors.push(pos);
                     }
                 });
-                const multiplier = upgrades.includes(208) ? 20 : 10;
-                knowledge += adjCount * multiplier;
+                knowledge += adjCount * 10;
             }
             break;
         }
@@ -503,8 +512,8 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.tribal_village: // Tribal Village: After 1 spin: adds 2 random Ancient symbols. Destroys self
-            addSymbolIds.push(randomEra1SymbolId(), randomEra1SymbolId());
+        case S.tribal_village: // Tribal Village: Destroyed; on destroy: adds 1 random Normal symbol
+            addSymbolIds.push(randomBaseNormalSymbolId());
             symbolInstance.is_marked_for_destruction = true;
             break;
 
@@ -567,6 +576,7 @@ export const processSingleSymbolEffects = (
         }
 
         case S.desert: { // Desert: random adjacent Normal or era symbol
+            if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) gold += 2;
             const validTargets = adj.filter(pos => {
                 const target = boardGrid[pos.x][pos.y];
                 return (
@@ -580,10 +590,6 @@ export const processSingleSymbolEffects = (
                 const targetInstance = boardGrid[randomTarget.x][randomTarget.y];
                 if (targetInstance) {
                     targetInstance.is_marked_for_destruction = true;
-                    if (targetInstance.definition.id === S.date) {
-                        food += 2;
-                        addSymbolIds.push(S.date);
-                    }
                     contributors.push(randomTarget);
                 }
             }
@@ -591,27 +597,12 @@ export const processSingleSymbolEffects = (
         }
 
         case S.forest: { // Forest: +1 Food per adjacent Forest (no standalone base)
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === S.forest) {
-                    food += 1;
-                    contributors.push(pos);
-                }
-            });
+            if (countOnBoard(boardGrid, S.forest) >= 4) food += 2;
             break;
         }
 
-        case S.deer: { // Deer: +1 Food; if 2 or more adjacent Forests: +2 Food.
-            food += 1;
-            let forestCount = 0;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === S.forest) {
-                    forestCount++;
-                    contributors.push(pos);
-                }
-            });
-            if (forestCount >= 2) {
-                food += 2;
-            }
+        case S.deer: { // Deer: if 2+ Forests on board: +2 Food
+            if (countOnBoard(boardGrid, S.forest) >= 2) food += 2;
             break;
         }
 
@@ -633,11 +624,11 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.honey: { // Honey: After 5 turns: destroy; on destroy: +5 Food.
+        case S.honey: { // Honey: 6 turns: destroyed; on destroy: +10 Food.
             symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 5) {
+            if (symbolInstance.effect_counter >= 6) {
                 symbolInstance.is_marked_for_destruction = true;
-                food += 5;
+                food += 10;
             }
             break;
         }
@@ -647,12 +638,21 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.wild_berries: { // Wild Berries: +1 Food for adjacent Forest, +1 Food for adjacent Rainforest
-            if (adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === S.forest)) {
-                food += 1;
+        case S.wild_berries: { // Wild Berries: base +1; forest/rainforest adjacency; mountain adjacency; upgraded by Chiefdom
+            const hasForestOrRain = adj.some((pos) => {
+                const id = boardGrid[pos.x][pos.y]?.definition.id;
+                return id === S.forest || id === S.rainforest;
+            });
+            if (upgrades.includes(CHIEFDOM_UPGRADE_ID)) {
+                food += hasForestOrRain ? 4 : 1;
+            } else {
+                food += hasForestOrRain ? 2 : 1;
             }
-            if (adj.some(pos => boardGrid[pos.x][pos.y]?.definition.id === S.rainforest)) {
-                food += 1;
+
+            const mountainAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.mountain);
+            if (mountainAdj.length > 0) {
+                knowledge += upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 5 : 2;
+                mountainAdj.forEach((p) => contributors.push(p));
             }
             break;
         }
@@ -714,16 +714,18 @@ export const processSingleSymbolEffects = (
             break;
         }
 
-        case S.wild_boar: { // Wild Boar: +2 Food; 3+ adjacent Forests: +4 Food
-            food += 2;
-            let fc = 0;
-            adj.forEach(pos => {
-                if (boardGrid[pos.x][pos.y]?.definition.id === S.forest) {
-                    fc++;
-                    contributors.push(pos);
-                }
-            });
-            if (fc >= 3) food += 4;
+        case S.wild_boar: { // Wild Boar: if 4+ Forests on board: +4 Food
+            if (countOnBoard(boardGrid, S.forest) >= 4) food += 4;
+            break;
+        }
+
+        case S.fur: { // Fur: per 2 Forests on board: +1 Gold, +1 Knowledge
+            const forests = countOnBoard(boardGrid, S.forest);
+            const n = Math.floor(forests / 2);
+            if (n > 0) {
+                gold += n;
+                knowledge += n;
+            }
             break;
         }
 
@@ -912,15 +914,6 @@ export const processSingleSymbolEffects = (
         }
     }
     // Adjacency and double bonuses moved to individual symbol cases.
-
-    // Candidate 203: Masonry (Monument Knowledge x2) -> No, 203 is Spearcraft mapping now.
-    // Wait, the previous logic had 203 Masonry. Let's completely replace the Candidate effects logic!
-
-    // Candidate 207: Jewelry (Stone produces -0.5 Food but +1.5 Gold)
-    if (upgrades.includes(207) && id === S.stone) {
-        food -= 0.5;
-        gold += 1.5;
-    }
 
     const result: EffectResult = { food, knowledge, gold };
     if (addSymbolIds.length > 0) result.addSymbolIds = addSymbolIds;

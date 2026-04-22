@@ -6,7 +6,6 @@ import {
     TOTAL_STAGE_COUNT,
 } from '../data/stages';
 import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, TAX_SYMBOL_ID, EDICT_SYMBOL_ID, S, Sym } from '../data/symbolDefinitions';
-import { SYMBOL_CANDIDATES } from '../data/symbolCandidates';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
 import { RELIC_LIST, RELICS, type RelicDefinition } from '../data/relicDefinitions';
@@ -142,14 +141,13 @@ const ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
     3: { 0: 10, 1: 20, 2: 30, 3: 30, 4: 10 },
 };
 
-// 레벨업에 필요한 경험치(Knowledge)
-// 0~9렙: 50
-// 10~19렙: 100
-// 20~29렙: 200
-const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
-    if (currentLevel < 10) return 50;
-    if (currentLevel < 20) return 100;
-    return 200;
+// 레벨업 1회당 필요 지식(Knowledge): Lv.0→1은 50부터, 레벨마다 +5씩 증가 (Lv.29→30은 195).
+const KNOWLEDGE_LEVELUP_BASE = 50;
+const KNOWLEDGE_LEVELUP_STEP = 5;
+
+export const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
+    const L = Math.max(0, Math.min(29, Math.floor(currentLevel)));
+    return KNOWLEDGE_LEVELUP_BASE + L * KNOWLEDGE_LEVELUP_STEP;
 };
 
 // 레벨을 기반으로 현재 시대를 반환 (1: Ancient, 2: Medieval, 3: Modern)
@@ -353,27 +351,22 @@ export interface GameState {
     clearEventLog: () => void;
 }
 
-const hasTextileSourceOnBoard = (board: (PlayerSymbolInstance | null)[][]): boolean => {
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
-            const sym = board[bx][by];
-            if (sym?.definition.id === S.plains || sym?.definition.id === S.grassland) return true;
-        }
-    }
-    return false;
-};
-
 /** 스테이지 보너스 + "기본 생산 +N" 업그레이드만 반영한 순수 기본 생산량. */
 export function getHudTurnStartPassiveTotals(state: GameState): { food: number; gold: number; knowledge: number } {
     const upgrades = state.unlockedKnowledgeUpgrades || [];
     const knowledge =
-        (upgrades.includes(1) ? 4 : 2) +
+        2 +
+        (upgrades.includes(1) ? 2 : 0) +
+        (upgrades.includes(32) ? 2 : 0) +
         (upgrades.includes(10) ? 2 : 0) +
         (upgrades.includes(16) ? 2 : 0) + 
         (upgrades.includes(24) ? 5 : 0);
     const gold =
         (upgrades.includes(6) ? 2 : 0) + (upgrades.includes(10) ? 2 : 0) + (upgrades.includes(24) ? 5 : 0);
-    const food = (upgrades.includes(10) ? 5 : 0) + (upgrades.includes(24) ? 10 : 0);
+    const food =
+        (upgrades.includes(34) ? 2 : 0) +
+        (upgrades.includes(10) ? 5 : 0) +
+        (upgrades.includes(24) ? 10 : 0);
     const stageBonus = getStagePassiveBonus(state.stageId ?? 1);
     return {
         food: food + stageBonus.food,
@@ -638,32 +631,20 @@ const appendSymbolDefIdsToPlayer = (
     return next;
 };
 
-/** 시작 심볼: Wheat x2, Stone x1, Oral Tradition x1 */
+/** 시작 심볼: Oral Tradition만 */
 const getStartingSymbols = (): PlayerSymbolInstance[] => {
-    return [
-        Sym.wheat,  // Wheat
-        Sym.wheat,  // Wheat
-        Sym.stone,  // Stone
-        Sym.oral_tradition, // Oral Tradition
-    ].map((d) => createInstance(d, []));
+    return [Sym.oral_tradition].map((d) => createInstance(d, []));
 };
 
-/**
- * 시작 보드: 고정 슬롯에 시작 심볼을 배치한 채 반환
- * 슬롯 7 (x=1, y=1) → Wheat
- * 슬롯 9 (x=3, y=1) → Wheat
- * 슬롯 13 (x=2, y=2) → Stone
- * 보드 중앙 (x=2, y=1) → Oral Tradition
- */
+/** 시작 보드: 중앙에 Oral Tradition만 배치 */
 const createStartingBoard = (): { board: (PlayerSymbolInstance | null)[][], playerSymbols: PlayerSymbolInstance[] } => {
     const symbols = getStartingSymbols();
     const board = createEmptyBoard();
-    board[1][1] = symbols[0]; // Wheat  — 슬롯 7
-    board[3][1] = symbols[1]; // Wheat  — 슬롯 9
-    board[2][2] = symbols[2]; // Stone  — 슬롯 13
-    board[ORAL_TRADITION_ANCHOR.x][ORAL_TRADITION_ANCHOR.y] = symbols[3]; // Oral Tradition — 중앙
+    board[ORAL_TRADITION_ANCHOR.x][ORAL_TRADITION_ANCHOR.y] = symbols[0];
     return { board, playerSymbols: symbols };
 };
+
+const INITIAL_STARTING_BOARD_STATE = createStartingBoard();
 
 
 /** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
@@ -710,11 +691,10 @@ const getSymbolsByEra = (): Record<number, SymbolDefinition[]> => {
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && useGameStore.getState().religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
         if (sym.id === S.harbor && upgrades.includes(17)) isUnlocked = true;
         if ((sym.id === S.wild_boar || sym.id === S.sawmill) && upgrades.includes(20)) isUnlocked = true;
+        if ((sym.id === S.wild_boar || sym.id === S.fur) && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
         if (sym.id === S.gold_vein && upgrades.includes(21)) isUnlocked = true;
 
         // 금지(Ban) 목록
-        if (sym.id === S.banana && upgrades.includes(201)) isUnlocked = false; // Hunting -> Ban Banana
-        if (sym.id === S.warrior && upgrades.includes(203)) isUnlocked = false; // Spearcraft -> Ban Warrior
 
         if (!isUnlocked && !isReplacementTarget) continue;
 
@@ -879,8 +859,8 @@ import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
+    HUNTING_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
-import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../data/knowledgeUpgradeCandidates';
 import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
 
 const upgradeEraBySymbolType = (type: number): number | null => {
@@ -950,8 +930,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     era: 1,
     turn: 0,
     stageId: 1,
-    board: (() => { const s = createStartingBoard(); return s.board; })(),
-    playerSymbols: (() => { const s = createStartingBoard(); return s.playerSymbols; })(),
+    board: INITIAL_STARTING_BOARD_STATE.board,
+    playerSymbols: INITIAL_STARTING_BOARD_STATE.playerSymbols,
     phase: 'idle' as GamePhase,
     symbolChoices: [],
     symbolSelectionRelicSourceId: null,
@@ -1629,6 +1609,16 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             }
 
+            // ── Date (30): 파괴 시 +5 Food, 50% 확률로 Date 1개 추가 ──
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    const s = currentBoard[x][y];
+                    if (!s || s.definition.id !== S.date || !s.is_marked_for_destruction) continue;
+                    bonusFood += 5;
+                    if (Math.random() < 0.5) toAdd.push(S.date);
+                }
+            }
+
             // ── 유물 ID 4: 조몬 토기 조각 — 매 턴 유물에 식량 1 저장(bonus_stacks)
             const jomonRelicInst = getRelicInst(RELIC_ID.JOMON_POTTERY);
             if (jomonRelicInst) {
@@ -1911,12 +1901,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             // ── 영구 턴당 지식 보너스(`bonusXpPerTurn`)는 기본 생산이 아니라 별도 심볼/효과 보너스 ──
             if ((state.bonusXpPerTurn ?? 0) > 0) {
                 bonusKnowledge += state.bonusXpPerTurn ?? 0;
-            }
-
-            // ── 베틀(206): 초원/평원이 있으면 골드 +10/턴 — 기본 생산이 아닌 조건부 보너스 ──
-            if ((state.unlockedKnowledgeUpgrades || []).includes(206) && hasTextileSourceOnBoard(state.board)) {
-                bonusGold += 10;
-                knowledgeOwnEffectFloats.push({ upgradeId: 206, text: '+10', color: '#fbbf24' });
             }
 
             // ── 유물 ID 12: 고대 이집트 쇠똥구리 부적 — 심볼 파괴 시 G+3/파괴 (유물 자체 보너스) ──
@@ -2510,17 +2494,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         const pickLevel = state.level;
         const uid = Number(upgradeId);
         const unlockedNorm = (state.unlockedKnowledgeUpgrades || []).map((x) => Number(x));
-        if (
-            KNOWLEDGE_UPGRADES[uid] != null &&
-            !isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel)
-        ) {
-            return;
-        }
+        if (!KNOWLEDGE_UPGRADES[uid]) return;
+        if (!isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel)) return;
 
         const nextResearchPts = Math.max(0, pts - 1);
 
-        const upgrade = KNOWLEDGE_UPGRADES[uid] || KNOWLEDGE_UPGRADE_CANDIDATES[uid];
-        if (!upgrade) return;
+        const upgrade = KNOWLEDGE_UPGRADES[uid];
 
         if (uid === TERRITORIAL_REORG_UPGRADE_ID) {
             set({
@@ -2553,33 +2532,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         let newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];
-        let addedKnowledge = 0;
-        let addedGold = 0;
-
-        // 201 Hunting: Destroy 1 Banana(4) for +100 Gold
-        if (uid === 201) {
-            const idx = newPlayerSymbols.findIndex(s => s.definition.id === S.banana);
-            if (idx !== -1) {
-                newPlayerSymbols.splice(idx, 1);
-                addedGold += 10;
-            }
-        }
-
-        // 204 Shipbuilding: All Oasis(11) -> Sea(6)
-        if (uid === 204) {
-            newPlayerSymbols = newPlayerSymbols.map(s =>
-                s.definition.id === S.oasis ? { ...s, definition: Sym.sea } : s
-            );
-        }
-
-        // 205 Shamanism: Destroy 1 Omen(18) for +50 Knowledge
-        if (uid === 205) {
-            const idx = newPlayerSymbols.findIndex(s => s.definition.id === S.omen);
-            if (idx !== -1) {
-                newPlayerSymbols.splice(idx, 1);
-                addedKnowledge += 50;
-            }
-        }
 
         // 16 Education: Library → University
         if (uid === 16) {
@@ -2625,8 +2577,8 @@ export const useGameStore = create<GameState>((set, get) => ({
             religionUnlocked: religionUnlocked,
             board: newBoard,
             playerSymbols: newPlayerSymbols,
-            knowledge: state.knowledge + addedKnowledge,
-            gold: state.gold + addedGold,
+            knowledge: state.knowledge,
+            gold: state.gold,
             levelUpResearchPoints: nextResearchPts,
         };
 
@@ -3175,7 +3127,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     devAddSymbol: (symbolId: number) => {
-        const def = SYMBOLS[symbolId] || SYMBOL_CANDIDATES[symbolId];
+        const def = SYMBOLS[symbolId];
         if (!def) return;
         set((prev) => ({
             playerSymbols: [

@@ -20,7 +20,7 @@ import SymbolPoolModal from './components/SymbolPoolModal';
 import OwnedSymbolsModal from './components/OwnedSymbolsModal';
 import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
-import { calculateFoodCost, getHudTurnStartPassiveTotals } from './game/state/gameStore';
+import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameStore';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 
 const CustomCursor = () => {
@@ -185,7 +185,7 @@ function App() {
   // ===== 본게임 =====
   const eraName = t(ERA_NAME_KEYS[era] ?? 'era.ancient', language);
 
-  const knowledgeRequired = level < 10 ? 50 : level < 20 ? 100 : 200;
+  const knowledgeRequired = getKnowledgeRequiredForLevel(Math.min(level, 29));
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
   const turnsUntilPayment = turn % 10 === 0 ? 10 : 10 - (turn % 10);
   const nextCost = calculateFoodCost(turn + turnsUntilPayment, stageId);

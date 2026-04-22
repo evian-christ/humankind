@@ -53,6 +53,8 @@ export const SYMBOL_NUMERIC_ID = {
     monument: 40,
     oral_tradition: 41,
     totem: 42,
+    /** 모피(신규): Normal 심볼이지만 43(미사용 슬롯) 사용 */
+    fur: 43,
     omen: 44,
     campfire: 45,
     pottery: 46,

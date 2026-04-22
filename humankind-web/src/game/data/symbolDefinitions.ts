@@ -46,7 +46,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('stone', { name: "Stone", type: SymbolType.NORMAL, description: "+1 Gold; when a Mountain is in the same column: +2 additional Gold.", sprite: "007.png" }),
     def('copper', { name: "Copper", type: SymbolType.NORMAL, description: "+1 Gold; if exactly 3 Copper on board: x3 Gold production.", sprite: "008.png" }),
     def('grassland', { name: "Grassland", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "009.png" }),
-    def('monument', { name: "Monument", type: SymbolType.ANCIENT, description: "+5 Knowledge.", sprite: "010.png" }),
+    def('monument', { name: "Monument", type: SymbolType.NORMAL, description: "+5 Knowledge.", sprite: "010.png" }),
     def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+1 Food per 2 adjacent empty slots.", sprite: "011.png" }),
     def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.", sprite: "012.png" }),
     def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "013.png" }),
@@ -56,15 +56,16 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('omen', { name: "Omen", type: SymbolType.ANCIENT, description: "50% chance for +3 Food.", sprite: "018.png" }),
     def('campfire', { name: "Campfire", type: SymbolType.ANCIENT, description: "+1 Food; 10 turns: destroyed; on destroy: copies the effect of the adjacent symbol with the highest Food produced this turn.", sprite: "019.png" }),
     def('pottery', { name: "Pottery", type: SymbolType.ANCIENT, description: "+3 Food stored per turn; on destroy: gain Food equal to stored Counter.", sprite: "020.png" }),
-    def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Destroyed; on destroy: adds 2 random Ancient symbols.", sprite: "021.png" }),
+    def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Destroyed; on destroy: adds 1 random Normal symbol.", sprite: "021.png" }),
     def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Not in corner: stores Gold equal to highest adjacent Food; in corner: gains stored Gold.", sprite: "022.png" }),
     def('crab', { name: "Crab", type: SymbolType.NORMAL, description: "When adjacent to Sea or Harbor: +1 Food, +2 Gold.", sprite: "024.png" }),
     def('library', { name: "Library", type: SymbolType.NORMAL, description: "+7 Knowledge.", sprite: "025.png" }),
     def('pearl', { name: "Pearl", type: SymbolType.NORMAL, description: "When adjacent to Sea: +3 Gold.", sprite: "026.png" }),
     def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol.", sprite: "027.png" }),
-    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "Per adjacent Forest: +1 Food.", sprite: "028.png" }),
-    def('deer', { name: "Deer", type: SymbolType.NORMAL, description: "+1 Food; if 2 or more adjacent Forests: +2 Food.", sprite: "029.png" }),
-    def('date', { name: "Date", type: SymbolType.NORMAL, description: "+1 Food; when destroyed by Desert: +2 Food and adds Date.", sprite: "030.png" }),
+    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 4 or more Forests are placed on the board: +2 Food.", sprite: "028.png" }),
+    def('deer', { name: "Deer", type: SymbolType.NORMAL, description: "If 2 or more Forests are placed on the board: +2 Food.", sprite: "029.png" }),
+    def('date', { name: "Date", type: SymbolType.NORMAL, description: "+1 Food; on destroy: +5 Food and 50% chance to add Date.", sprite: "030.png" }),
+    def('fur', { name: "Fur", type: SymbolType.NORMAL, description: "Per 2 Forests placed on the board: +1 Gold, +1 Knowledge.", sprite: "-" }),
 
     def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Ancient era melee unit.", base_attack: 5, base_hp: 10, sprite: "035.png" }),
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "037.png" }),
@@ -81,9 +82,9 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('drought', { name: "Drought", type: SymbolType.DISASTER, description: "When counter reaches 0: Destroy.", sprite: "046.png" }),
 
     def('salt', { name: "Salt", type: SymbolType.NORMAL, description: "+1 Food per adjacent terrain symbol.", sprite: "047.png" }),
-    def('honey', { name: "Honey", type: SymbolType.NORMAL, description: "After 5 turns: destroyed; on destruction: +5 Food.", sprite: "048.png" }),
+    def('honey', { name: "Honey", type: SymbolType.NORMAL, description: "After 6 turns: destroyed; on destruction: +10 Food.", sprite: "048.png" }),
     def('corn', { name: "Corn", type: SymbolType.NORMAL, description: "+2 Food.", sprite: "049.png" }),
-    def('wild_berries', { name: "Wild Berries", type: SymbolType.NORMAL, description: "When adjacent to Forest: +1 Food. When adjacent to Rainforest: +1 Food.", sprite: "050.png" }),
+    def('wild_berries', { name: "Wild Berries", type: SymbolType.NORMAL, description: "+1 Food; when adjacent to Forest or Rainforest: +2 Food; when adjacent to Mountain: +2 Knowledge.", sprite: "050.png" }),
     def('spices', { name: "Spices", type: SymbolType.NORMAL, description: "+1 Food per different terrain type placed.", sprite: "052.png" }),
     def('tax', {
         name: "Tax",
@@ -120,7 +121,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('wild_boar', {
         name: "Wild Boar",
         type: SymbolType.NORMAL,
-        description: "+2 Food; if 3 or more adjacent Forests: +4 additional Food.",
+        description: "If 4 or more Forests are placed on the board: +4 Food.",
         sprite: "059.png",
     }),
     def('sawmill', {
@@ -221,7 +222,7 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'christianity', 'islam', 'buddhism', 'hinduism',
     'archer', 'stone_tablet', 'loot', 'glowing_amber', 'enemy_warrior',
     'flood', 'earthquake', 'drought',
-    'university', 'harbor', 'wool', 'wild_boar', 'sawmill', 'gold_vein', 'knight', 'caravel',
+    'university', 'harbor', 'wool', 'wild_boar', 'fur', 'sawmill', 'gold_vein', 'knight', 'caravel',
 ];
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
@@ -236,14 +237,14 @@ export const isBasePool = (s: SymbolDefinition) => {
 
 const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
     'monument', 'totem', 'library', 'pearl', 'stargazer', 'stone_tablet',
-    'university', 'sawmill', 'scholar', 'holy_relic', 'telescope', 'scales',
+    'university', 'sawmill', 'scholar', 'holy_relic', 'telescope', 'scales', 'fur',
 ];
 
 /** Knowledge를 생산하는 심볼 ID 목록 */
 export const KNOWLEDGE_PRODUCING_IDS = new Set<number>(KNOWLEDGE_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
 const GOLD_PRODUCING_KEYS: SymbolKey[] = [
-    'sea', 'stone', 'copper', 'mountain', 'merchant', 'harbor', 'sawmill', 'gold_vein',
+    'sea', 'stone', 'copper', 'mountain', 'merchant', 'harbor', 'sawmill', 'gold_vein', 'fur',
 ];
 
 /** Gold를 생산하는 심볼 ID 목록 */
