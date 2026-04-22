@@ -48,11 +48,9 @@ flowchart TB
                 end
                 subgraph data["data/"]
                     symbolDefinitions["symbolDefinitions.ts"]
-                    symbolCandidates["symbolCandidates.ts"]
                     relicDefinitions["relicDefinitions.ts"]
                     relicCandidates["relicCandidates.ts"]
                     knowledgeUpgrades["knowledgeUpgrades.ts"]
-                    knowledgeUpgradeCandidates["knowledgeUpgradeCandidates.ts"]
                     enemyDefinitions["enemyDefinitions.ts"]
                 end
                 subgraph logic["logic/"]
@@ -269,9 +267,9 @@ erDiagram
 | **상태** | `settingsStore.ts` | 언어, 효과/스핀 속도, 해상도 |
 | **상태** | `notificationStore.ts` | 인게임 알림 |
 | **로직** | `symbolEffects.ts` | 심볼별 효과 계산 (인접, 유물 연동) |
-| **데이터** | `symbolDefinitions.ts`, `symbolCandidates.ts` | 심볼 정의·후보 |
+| **데이터** | `symbolDefinitions.ts` | 심볼 정의 |
 | **데이터** | `relicDefinitions.ts`, `relicCandidates.ts` | 유물 정의·후보 |
-| **데이터** | `knowledgeUpgrades.ts`, `knowledgeUpgradeCandidates.ts` | 지식 업그레이드 |
+| **데이터** | `knowledgeUpgrades.ts` | 지식 업그레이드 |
 | **타입** | `types/index.ts` | PlayerSymbolInstance 등 공용 타입 |
 
 ---
