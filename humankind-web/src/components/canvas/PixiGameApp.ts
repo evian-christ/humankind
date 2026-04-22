@@ -130,7 +130,7 @@ export class PixiGameApp {
             g.filters = [new BlurFilterCtor(blur)];
         }
         // add(더하기) 블렌딩: 빛 번짐 느낌의 핵심
-        g.blendMode = PIXI.BLEND_MODES.ADD;
+        g.blendMode = 'add';
 
         // outer soft blob
         g.circle(cx, cy, blobR);
