@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import {
-    getStageFoodPaymentBase,
-    getStagePassiveBonus,
     getStageStartingRelicCounts,
     TOTAL_STAGE_COUNT,
 } from '../data/stages';
@@ -21,6 +19,15 @@ import {
 import { applyKnowledgeAndLevelUps } from '../logic/progression/eraTransition';
 import type { PlayerSymbolInstance } from '../types';
 import { t } from '../../i18n';
+import {
+    calculateFoodCost,
+    getBronzeWorkingHpBonus,
+    getEraFromLevel,
+    getHudTurnStartPassiveTotals,
+    getKnowledgeRequiredForLevel,
+    getRerollCost,
+    isUpgradeLegalForKnowledgePick,
+} from './gameCalculations';
 
 export { type PlayerSymbolInstance } from '../types';
 
@@ -90,8 +97,6 @@ export const BOARD_CELL_HEIGHT_PX   = 163.2;  // 1920 기준 셀 세로
 export const BOARD_COL_GAP_PX       = 12;     // 1920 기준 열 간격
 /** slot_bg 스프라이트가 보드 바깥으로 더 나오는 여백(1920 기준) */
 export const BOARD_BG_SPRITE_PADDING_PX = 8;
-/** 레벨에 따라 증가하는 리롤 비용: 2G(Lv0) → 5G(Lv9+) */
-export const getRerollCost = (level: number): number => Math.min(2 + Math.floor(level / 3), 5);
 
 
 
@@ -127,22 +132,6 @@ const _ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = 
     3: { 0: 10, 1: 20, 2: 30, 3: 30, 4: 10 },
 };
 
-// 레벨업 1회당 필요 지식(Knowledge): Lv.0→1은 50부터, 레벨마다 +5씩 증가 (Lv.29→30은 195).
-const KNOWLEDGE_LEVELUP_BASE = 50;
-const KNOWLEDGE_LEVELUP_STEP = 5;
-
-export const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
-    const L = Math.max(0, Math.min(29, Math.floor(currentLevel)));
-    return KNOWLEDGE_LEVELUP_BASE + L * KNOWLEDGE_LEVELUP_STEP;
-};
-
-// 레벨을 기반으로 현재 시대를 반환 (1: Ancient, 2: Medieval, 3: Modern)
-export const getEraFromLevel = (level: number): number => {
-    if (level <= 10) return 1;
-    if (level <= 20) return 2;
-    return 3;
-};
-
 /** 데모 승리: 이 레벨 이상이면 턴(선택 흐름) 종료 시 victory */
 export const DEMO_VICTORY_LEVEL = 15;
 
@@ -159,20 +148,6 @@ type GamePhase =
     | 'oblivion_furnace_board'
     | 'game_over'
     | 'victory';
-/** 10·20·30…턴마다 식량 납부 비용 — 선택한 스테이지 규칙을 반영 */
-export const calculateFoodCost = (turn: number, stageId: number = 1): number => {
-    const base = getStageFoodPaymentBase(stageId);
-    const nth = Math.floor(turn / 10);
-    if (nth < 1) return base;
-    // nth: 1@10턴, 2@20턴… — 증가분이 회차마다 커지는(가속) 누적 합
-    // extra(nth) = 50*1 + 60*2 + 70*3 + ... = Σ (40 + 10*k) * k, k=1..(nth-1)
-    let extra = 0;
-    for (let k = 1; k <= nth - 1; k++) {
-        extra += (40 + 10 * k) * k;
-    }
-    return base + extra;
-};
-
 export type GameEventLogKind =
     | 'turn_start'
     | 'processing_start'
@@ -337,30 +312,6 @@ export interface GameState {
     clearEventLog: () => void;
 }
 
-/** 스테이지 보너스 + "기본 생산 +N" 업그레이드만 반영한 순수 기본 생산량. */
-export function getHudTurnStartPassiveTotals(state: GameState): { food: number; gold: number; knowledge: number } {
-    const upgrades = state.unlockedKnowledgeUpgrades || [];
-    const knowledge =
-        2 +
-        (upgrades.includes(1) ? 2 : 0) +
-        (upgrades.includes(32) ? 2 : 0) +
-        (upgrades.includes(10) ? 2 : 0) +
-        (upgrades.includes(16) ? 2 : 0) + 
-        (upgrades.includes(24) ? 5 : 0);
-    const gold =
-        (upgrades.includes(6) ? 2 : 0) + (upgrades.includes(10) ? 2 : 0) + (upgrades.includes(24) ? 5 : 0);
-    const food =
-        (upgrades.includes(34) ? 2 : 0) +
-        (upgrades.includes(10) ? 5 : 0) +
-        (upgrades.includes(24) ? 10 : 0);
-    const stageBonus = getStagePassiveBonus(state.stageId ?? 1);
-    return {
-        food: food + stageBonus.food,
-        gold: gold + stageBonus.gold,
-        knowledge: knowledge + stageBonus.knowledge,
-    };
-}
-
 const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => {
     const adj: { x: number; y: number }[] = [];
     for (let dx = -1; dx <= 1; dx++) {
@@ -453,14 +404,6 @@ const shuffle = <T>(arr: T[]): T[] => {
 
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
-
-/** 지식 업그레이드 2 (청동 기술): 전사·기사·캐러벨 +10, 궁수 +3 — 전투 `getEffectiveMaxHP`와 동일 규칙 */
-export const getBronzeWorkingHpBonus = (def: SymbolDefinition): number => {
-    if (def.type !== SymbolType.UNIT) return 0;
-    if (def.id === S.warrior || def.id === S.knight || def.id === S.caravel) return 10;
-    if (def.id === S.archer) return 3;
-    return 0;
-};
 
 const createInstance = (def: SymbolDefinition, unlockedUpgrades: number[] = []): PlayerSymbolInstance => {
     const finalDef = def;
@@ -669,63 +612,13 @@ const pickRelicHalfPriceIdForGoldenTrade = (inStock: RelicDefinition[], hasGolde
 
 import {
     KNOWLEDGE_UPGRADES,
-    FEUDALISM_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS,
-    PASTORALISM_UPGRADE_ID,
-    AGRICULTURE_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
     STIRRUP_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
-    CELESTIAL_NAVIGATION_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    SEAFARING_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
-
-const upgradeEraBySymbolType = (type: number): number | null => {
-    switch (type) {
-        case SymbolType.ANCIENT: return 1;
-        case SymbolType.MEDIEVAL: return 2;
-        case SymbolType.MODERN: return 3;
-        default: return null;
-    }
-};
-
-/** Skill tree: whether this upgrade can be researched at the current level (era / prerequisites). */
-export function isUpgradeLegalForKnowledgePick(
-    upgradeId: number,
-    unlocked: number[],
-    level: number,
-): boolean {
-    const uid = Number(upgradeId);
-    const have = new Set((unlocked ?? []).map((x) => Number(x)));
-    const u = KNOWLEDGE_UPGRADES[uid];
-    if (!u) return false;
-    if (have.has(uid)) return false;
-    const upgradeEra = upgradeEraBySymbolType(u.type);
-    if (upgradeEra == null) return false;
-    const currentEra = getEraFromLevel(level);
-    const medievalUnlocked = have.has(FEUDALISM_UPGRADE_ID) || currentEra >= 2;
-    if (uid === FEUDALISM_UPGRADE_ID) return level >= 10;
-    if (u.type === SymbolType.MEDIEVAL) return medievalUnlocked;
-    // 고대 시대(25) 연구 전: 다른 고대 지식 카드 불가(Lv2 트리 행은 예외)
-    if (
-        u.type === SymbolType.ANCIENT &&
-        uid !== ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID &&
-        !KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS.includes(uid) &&
-        !have.has(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)
-    ) {
-        return false;
-    }
-    if (uid === IRRIGATION_UPGRADE_ID && !have.has(AGRICULTURE_UPGRADE_ID)) return false;
-    if (uid === HORSEMANSHIP_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
-    if (uid === SEAFARING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
-    if (uid === CELESTIAL_NAVIGATION_UPGRADE_ID && !have.has(SEAFARING_UPGRADE_ID)) return false;
-    return upgradeEra <= currentEra;
-}
 
 /** 현재 보유 유물에서 ActiveRelicEffects 플래그를 조합 */
 const buildActiveRelicEffects = (): ActiveRelicEffects => {

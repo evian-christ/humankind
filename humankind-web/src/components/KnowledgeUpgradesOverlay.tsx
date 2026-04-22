@@ -8,7 +8,8 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
-import { isUpgradeLegalForKnowledgePick, useGameStore } from '../game/state/gameStore';
+import { useGameStore } from '../game/state/gameStore';
+import { isUpgradeLegalForKnowledgePick } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
     KNOWLEDGE_UPGRADES,

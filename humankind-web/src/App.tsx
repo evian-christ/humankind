@@ -20,7 +20,7 @@ import SymbolPoolModal from './components/SymbolPoolModal';
 import OwnedSymbolsModal from './components/OwnedSymbolsModal';
 import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
-import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameStore';
+import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 
 const CustomCursor = () => {

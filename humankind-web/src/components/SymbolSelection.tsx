@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useGameStore, getRerollCost, getBronzeWorkingHpBonus } from '../game/state/gameStore';
+import { useGameStore } from '../game/state/gameStore';
+import { getBronzeWorkingHpBonus, getRerollCost } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useRelicStore } from '../game/state/relicStore';

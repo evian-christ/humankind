@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
-import { useGameStore, getHudTurnStartPassiveTotals } from '../game/state/gameStore';
+import { useGameStore } from '../game/state/gameStore';
+import { getHudTurnStartPassiveTotals } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
