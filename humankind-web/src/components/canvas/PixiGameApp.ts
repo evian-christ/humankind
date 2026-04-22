@@ -18,7 +18,6 @@ import type { RelicInstance } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
 import type { PlayerSymbolInstance } from '../../game/types';
 import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
-import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../../game/data/knowledgeUpgradeCandidates';
 import { loadGameAssets } from './AssetLoader';
 import {
     FOOD_RESOURCE_ICON_URL,
@@ -57,10 +56,6 @@ const THREAT_FLOAT_UP = 85;
 
 /** 클릭으로 발동하는 유물 (gameStore.activateClickableRelic) */
 const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19]);
-
-/** 호버 시 3D 카드 틸트처럼 보이는 원근 투영 */
-const RELIC_STICKER_FOCAL   = 360; // 가상 카메라 초점거리 (클수록 왜곡 약함)
-const RELIC_STICKER_MAX_DEG = 18;  // 최대 기울기 (도)
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -126,67 +121,6 @@ export class PixiGameApp {
     private getPulse01() {
         // 0..1 부드러운 펄스
         return 0.5 + 0.5 * Math.sin(Date.now() / 140);
-    }
-
-    /**
-     * 유물 평면 전체를 하나의 빳빳한 카드처럼 취급해 3D 회전 후 PerspectiveMesh에 corners를 넘긴다.
-     * 텍스처 원근 보정은 Pixi의 PerspectiveMesh가 담당하므로, 2삼각형 메쉬처럼 중간이 접히는 왜곡이 줄어든다.
-     */
-    private updateRelicPerspectiveTilt(
-        e: PIXI.FederatedPointerEvent,
-        panel: PIXI.Container,
-        mesh: PIXI.PerspectiveMesh,
-        displaySize: number,
-        localWidth: number,
-        localHeight: number,
-        panelCX: number,
-        panelCY: number
-    ): { nx: number; ny: number } {
-        const lp = panel.toLocal(e.global);
-        const half = displaySize / 2;
-        let nx = (lp.x - panelCX) / half;
-        let ny = (lp.y - panelCY) / half;
-        nx = Math.max(-1, Math.min(1, nx));
-        ny = Math.max(-1, Math.min(1, ny));
-
-        const maxRad = RELIC_STICKER_MAX_DEG * (Math.PI / 180);
-        const ay = nx * maxRad; // 마우스가 오른쪽이면 오른쪽 면이 뒤로
-        const ax = ny * maxRad; // 마우스가 아래면 아래쪽 면이 뒤로
-        const sinX = Math.sin(ax);
-        const cosX = Math.cos(ax);
-        const sinY = Math.sin(ay);
-        const cosY = Math.cos(ay);
-        const f = RELIC_STICKER_FOCAL * (localWidth / displaySize);
-        const halfW = localWidth / 2;
-        const halfH = localHeight / 2;
-
-        // 4 꼭짓점: TL TR BL BR (중심 원점 기준)
-        const corners: [number, number][] = [
-            [-halfW, -halfH], [halfW, -halfH],
-            [halfW, halfH], [-halfW, halfH],
-        ];
-        const out: number[] = [];
-        for (const [vx, vy] of corners) {
-            // X축 회전
-            const y1 = vy * cosX;
-            const z1 = vy * sinX;
-            // Y축 회전
-            const x2 = vx * cosY - z1 * sinY;
-            const z2 = vx * sinY + z1 * cosY;
-            const s = f / (f + z2);
-            out.push(x2 * s + halfW, y1 * s + halfH);
-        }
-        mesh.setCorners(
-            out[0], out[1],
-            out[2], out[3],
-            out[4], out[5],
-            out[6], out[7]
-        );
-        return { nx, ny };
-    }
-
-    private resetRelicPerspectiveMesh(mesh: PIXI.PerspectiveMesh, localWidth: number, localHeight: number) {
-        mesh.setCorners(0, 0, localWidth, 0, localWidth, localHeight, 0, localHeight);
     }
 
     private drawBackGlow(
@@ -1212,32 +1146,16 @@ export class PixiGameApp {
             const cx = iconX + iconSize / 2 + shakeX;
             const cy = iconY + iconSize / 2 + shakeY;
 
-            let relicMesh: PIXI.PerspectiveMesh | null = null;
-
             if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
                 const texture =
                     (PIXI.Assets.get(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`) as PIXI.Texture | undefined)
                     ?? PIXI.Texture.from(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`);
-                const localWidth = texture.width || 1;
-                const localHeight = texture.height || 1;
-                const mesh = new PIXI.PerspectiveMesh({
-                    texture,
-                    verticesX: 12,
-                    verticesY: 12,
-                    x0: 0,
-                    y0: 0,
-                    x1: localWidth,
-                    y1: 0,
-                    x2: localWidth,
-                    y2: localHeight,
-                    x3: 0,
-                    y3: localHeight,
-                });
-                mesh.x = iconX + shakeX;
-                mesh.y = iconY + shakeY;
-                mesh.scale.set(iconSize / localWidth, iconSize / localHeight);
-                relicPanel.addChild(mesh);
-                relicMesh = mesh;
+                const sp = new PIXI.Sprite(texture);
+                sp.x = iconX + shakeX;
+                sp.y = iconY + shakeY;
+                sp.width = iconSize;
+                sp.height = iconSize;
+                relicPanel.addChild(sp);
             } else {
                 const spPlaceholder = new PIXI.Text({
                     text: '🏺',
@@ -1256,30 +1174,7 @@ export class PixiGameApp {
             const relicClickable = CLICKABLE_RELIC_IDS.has(relic.definition.id);
             hitArea.cursor = relicClickable ? GAME_CURSOR_POINTER : GAME_CURSOR_HELP;
 
-            const onStickerMove = (e: PIXI.FederatedPointerEvent) => {
-                if (relicMesh) {
-                    const texture = relicMesh.texture;
-                    this.updateRelicPerspectiveTilt(
-                        e,
-                        relicPanel,
-                        relicMesh,
-                        iconSize,
-                        texture.width || 1,
-                        texture.height || 1,
-                        cx,
-                        cy
-                    );
-                }
-            };
-            const onStickerOut = () => {
-                if (relicMesh) {
-                    const texture = relicMesh.texture;
-                    this.resetRelicPerspectiveMesh(relicMesh, texture.width || 1, texture.height || 1);
-                }
-            };
-
-            hitArea.on('pointerover', (e: PIXI.FederatedPointerEvent) => {
-                onStickerMove(e);
+            hitArea.on('pointerover', () => {
                 this.relicHoverSnapshot = {
                     instanceId: relic.instanceId,
                     screenX: worldIconX + iconSize,
@@ -1287,9 +1182,7 @@ export class PixiGameApp {
                 };
                 this.onHoverRelic({ relicInfo: relic, screenX: worldIconX + iconSize, screenY: worldIconY });
             });
-            hitArea.on('pointermove', onStickerMove);
             hitArea.on('pointerout', () => {
-                onStickerOut();
                 this.relicHoverSnapshot = null;
                 this.onHoverRelic(null);
             });

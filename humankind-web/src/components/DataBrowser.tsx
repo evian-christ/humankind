@@ -1,9 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, Fragment } from 'react';
-import { SYMBOLS, SymbolType, getSymbolColorHex, RELIGION_DOCTRINE_IDS, type SymbolDefinition, isBasePool, EXCLUDED_FROM_BASE_POOL } from '../game/data/symbolDefinitions';
-import { SYMBOL_CANDIDATES } from '../game/data/symbolCandidates';
+import { SYMBOLS, SymbolType, getSymbolColorHex, isBasePool } from '../game/data/symbolDefinitions';
 import { RELICS } from '../game/data/relicDefinitions';
 import { ENEMIES } from '../game/data/enemyDefinitions';
-import { KNOWLEDGE_UPGRADE_CANDIDATES } from '../game/data/knowledgeUpgradeCandidates';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { LEADERS } from '../game/data/leaders';
 import { useSettingsStore } from '../game/state/settingsStore';
@@ -12,7 +10,7 @@ import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
-type Tab = 'symbols' | 'symbolCandidates' | 'relics' | 'knowledgeUpgrades' | 'knowledgeUpgradeCandidates' | 'enemies' | 'leaders';
+type Tab = 'symbols' | 'relics' | 'knowledgeUpgrades' | 'enemies' | 'leaders';
 type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
@@ -69,10 +67,8 @@ const DataBrowser = () => {
 
     // Per-tab sort state
     const [symbolSort, setSymbolSort] = useState<SortState | null>(null);
-    const [symbolCandSort, setSymbolCandSort] = useState<SortState | null>(null);
     const [relicSort, setRelicSort] = useState<SortState | null>(null);
     const [knowledgeUpgradeSort, setKnowledgeUpgradeSort] = useState<SortState | null>(null);
-    const [knowledgeUpgradeCandidateSort, setKnowledgeUpgradeCandidateSort] = useState<SortState | null>(null);
     const [enemySort, setEnemySort] = useState<SortState | null>(null);
     const [leaderSort, setLeaderSort] = useState<SortState | null>(null);
 
@@ -150,47 +146,6 @@ const DataBrowser = () => {
         return list;
     }, [eraFilter, search, language, symbolSort]);
 
-    // 심볼 후보 목록
-    const filteredSymbolCandidates = useMemo(() => {
-        let list = Object.values(SYMBOL_CANDIDATES);
-
-        if (eraFilter !== 'all') {
-            list = list.filter(s => s.type === eraFilter);
-        }
-
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            list = list.filter(s => {
-                const name = tl(`symbolCandidate.${s.id}.name`, s.name).toLowerCase();
-                const desc = tl(`symbolCandidate.${s.id}.desc`, s.description).toLowerCase();
-                return name.includes(q) || desc.includes(q) || String(s.id).includes(q);
-            });
-        }
-
-        if (symbolCandSort) {
-            const { column, dir } = symbolCandSort;
-            list = [...list].sort((a, b) => {
-                let va: unknown, vb: unknown;
-                switch (column) {
-                    case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = tl(`symbolCandidate.${a.id}.name`, a.name); vb = tl(`symbolCandidate.${b.id}.name`, b.name); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
-                    case 'type': va = a.type; vb = b.type; break;
-                    case 'desc': va = tl(`symbolCandidate.${a.id}.desc`, a.description); vb = tl(`symbolCandidate.${b.id}.desc`, b.description); break;
-                    case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
-                    case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
-                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
-                    default: va = a.id; vb = b.id;
-                }
-                return genericCompare(va, vb, dir);
-            });
-        } else {
-            list.sort((a, b) => a.id - b.id);
-        }
-
-        return list;
-    }, [eraFilter, search, language, symbolCandSort]);
-
     // 유물 목록
     const filteredRelics = useMemo(() => {
         let list = Object.values(RELICS).filter(r => {
@@ -219,46 +174,6 @@ const DataBrowser = () => {
         }
         return list;
     }, [search, relicSort, language]);
-
-    // 지식 업그레이드 후보 목록
-    const filteredKnowledgeUpgradeCandidates = useMemo(() => {
-        let list = Object.values(KNOWLEDGE_UPGRADE_CANDIDATES);
-
-        if (eraFilter !== 'all') {
-            list = list.filter(u => typeof u.type === 'number' && u.type === eraFilter);
-        }
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            list = list.filter(u => {
-                const name = tl(`knowledgeUpgradeCandidate.${u.id}.name`, u.name).toLowerCase();
-                const desc = tl(`knowledgeUpgradeCandidate.${u.id}.desc`, u.description).toLowerCase();
-                return name.includes(q) || desc.includes(q) || String(u.id).includes(q);
-            });
-        }
-
-        if (knowledgeUpgradeCandidateSort) {
-            const { column, dir } = knowledgeUpgradeCandidateSort;
-            list = [...list].sort((a, b) => {
-                let va: unknown, vb: unknown;
-                switch (column) {
-                    case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = tl(`knowledgeUpgradeCandidate.${a.id}.name`, a.name); vb = tl(`knowledgeUpgradeCandidate.${b.id}.name`, b.name); break;
-                    case 'era':
-                        va = ERA_ORDER.indexOf((typeof a.type === 'number' ? a.type : -1) as SymbolType);
-                        vb = ERA_ORDER.indexOf((typeof b.type === 'number' ? b.type : -1) as SymbolType);
-                        break;
-                    case 'desc': va = tl(`knowledgeUpgradeCandidate.${a.id}.desc`, a.description); vb = tl(`knowledgeUpgradeCandidate.${b.id}.desc`, b.description); break;
-                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
-                    default: va = a.id; vb = b.id;
-                }
-                return genericCompare(va, vb, dir);
-            });
-        } else {
-            list.sort((a, b) => a.id - b.id);
-        }
-
-        return list;
-    }, [eraFilter, search, language, knowledgeUpgradeCandidateSort]);
 
     // 적 유닛 목록
     const filteredEnemies = useMemo(() => {
@@ -388,10 +303,8 @@ const DataBrowser = () => {
     if (!open) return null;
 
     const symSortHandler = toggleSort(setSymbolSort);
-    const symCandSortHandler = toggleSort(setSymbolCandSort);
     const relSortHandler = toggleSort(setRelicSort);
     const kuSortHandler = toggleSort(setKnowledgeUpgradeSort);
-    const kucSortHandler = toggleSort(setKnowledgeUpgradeCandidateSort);
     const enSortHandler = toggleSort(setEnemySort);
     const leaderSortHandler = toggleSort(setLeaderSort);
 
@@ -415,12 +328,6 @@ const DataBrowser = () => {
                     {t('dataBrowser.symbols', language)} ({Object.keys(SYMBOLS).length})
                 </button>
                 <button
-                    className={`databrowser-tab ${tab === 'symbolCandidates' ? 'databrowser-tab--active' : ''}`}
-                    onClick={() => setTab('symbolCandidates')}
-                >
-                    {t('dataBrowser.symbolCandidates', language)} ({Object.keys(SYMBOL_CANDIDATES).length})
-                </button>
-                <button
                     className={`databrowser-tab ${tab === 'relics' ? 'databrowser-tab--active' : ''}`}
                     onClick={() => setTab('relics')}
                 >
@@ -431,12 +338,6 @@ const DataBrowser = () => {
                     onClick={() => setTab('knowledgeUpgrades')}
                 >
                     {t('dataBrowser.knowledgeUpgrades', language)} ({Object.keys(KNOWLEDGE_UPGRADES).length})
-                </button>
-                <button
-                    className={`databrowser-tab ${tab === 'knowledgeUpgradeCandidates' ? 'databrowser-tab--active' : ''}`}
-                    onClick={() => setTab('knowledgeUpgradeCandidates')}
-                >
-                    {t('dataBrowser.knowledgeUpgradeCandidates', language)} ({Object.keys(KNOWLEDGE_UPGRADE_CANDIDATES).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'enemies' ? 'databrowser-tab--active' : ''}`}
@@ -461,7 +362,7 @@ const DataBrowser = () => {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
-                {(tab === 'symbols' || tab === 'symbolCandidates') && (
+                {tab === 'symbols' && (
                     <>
                         <select
                             className="databrowser-filter"
@@ -478,7 +379,7 @@ const DataBrowser = () => {
 
                     </>
                 )}
-                {(tab === 'enemies' || tab === 'knowledgeUpgrades' || tab === 'knowledgeUpgradeCandidates') && (
+                {(tab === 'enemies' || tab === 'knowledgeUpgrades') && (
                     <select
                         className="databrowser-filter"
                         value={eraFilter === 'all' ? 'all' : String(eraFilter)}
@@ -594,53 +495,6 @@ const DataBrowser = () => {
                     </table>
                 )}
 
-                {tab === 'symbolCandidates' && (
-                    <table className="databrowser-table">
-                        <thead>
-                            <tr>
-                                <SortTh column="id" label="ID" sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--id" />
-                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--name" />
-                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--era" />
-
-                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--desc" />
-                                <SortTh column="atk" label="ATK" sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--stat" />
-                                <SortTh column="hp" label="HP" sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--stat" />
-                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={symbolCandSort} onSort={symCandSortHandler} className="databrowser-th--sprite" />
-                                <th className="databrowser-th--action" style={{ width: '80px', textAlign: 'center' }}>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredSymbolCandidates.map(s => (
-                                <tr key={s.id} className="databrowser-row">
-                                    <td className="databrowser-cell--id">{s.id}</td>
-                                    <td className="databrowser-cell--name">{tl(`symbolCandidate.${s.id}.name`, s.name)}</td>
-                                    <td>
-                                        <span
-                                            style={{
-                                                color: getSymbolColorHex(s.type),
-                                                fontWeight: 'bold',
-                                                fontSize: '15px',
-                                                letterSpacing: '1px',
-                                                textShadow: `0 0 6px ${getSymbolColorHex(s.type)}80`
-                                            }}
-                                        >
-                                            [{t(`era.${ERA_KEYS[s.type]}`, language)}]
-                                        </span>
-                                    </td>
-
-                                    <td className="databrowser-cell--desc"><EffectText text={tl(`symbolCandidate.${s.id}.desc`, s.description)} /></td>
-                                    <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
-                                    <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
-                                    <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-
                 {tab === 'relics' && (
                     <table className="databrowser-table">
                         <thead>
@@ -679,39 +533,6 @@ const DataBrowser = () => {
                                             </>
                                         ) : '-'}
                                     </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-
-                {tab === 'knowledgeUpgradeCandidates' && (
-                    <table className="databrowser-table">
-                        <thead>
-                            <tr>
-                                <SortTh column="id" label="ID" sort={knowledgeUpgradeCandidateSort} onSort={kucSortHandler} className="databrowser-th--id" />
-                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={knowledgeUpgradeCandidateSort} onSort={kucSortHandler} className="databrowser-th--name" />
-                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={knowledgeUpgradeCandidateSort} onSort={kucSortHandler} className="databrowser-th--era" />
-                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={knowledgeUpgradeCandidateSort} onSort={kucSortHandler} className="databrowser-th--desc" />
-                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={knowledgeUpgradeCandidateSort} onSort={kucSortHandler} className="databrowser-th--sprite" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredKnowledgeUpgradeCandidates.map(u => (
-                                <tr key={u.id} className="databrowser-row">
-                                    <td className="databrowser-cell--id">{u.id}</td>
-                                    <td className="databrowser-cell--name">{tl(`knowledgeUpgradeCandidate.${u.id}.name`, u.name)}</td>
-                                    <td>
-                                        {typeof u.type === 'number' ? (
-                                            <span style={{ color: getSymbolColorHex(u.type), fontWeight: 'bold' }}>
-                                                [{t(`era.${ERA_KEYS[u.type]}`, language)}]
-                                            </span>
-                                        ) : (
-                                            <span style={{ color: '#9ca3af' }}>—</span>
-                                        )}
-                                    </td>
-                                    <td className="databrowser-cell--desc"><EffectText text={tl(`knowledgeUpgradeCandidate.${u.id}.desc`, u.description)} /></td>
-                                    <td className="databrowser-cell--sprite">{u.sprite || '-'}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -866,10 +687,8 @@ const DataBrowser = () => {
 
 
                 {((tab === 'symbols' && filteredSymbols.length === 0) ||
-                    (tab === 'symbolCandidates' && filteredSymbolCandidates.length === 0) ||
                     (tab === 'relics' && filteredRelics.length === 0) ||
                     (tab === 'knowledgeUpgrades' && filteredKnowledgeUpgrades.length === 0) ||
-                    (tab === 'knowledgeUpgradeCandidates' && filteredKnowledgeUpgradeCandidates.length === 0) ||
                     (tab === 'enemies' && filteredEnemies.length === 0)) && (
                         <div className="databrowser-empty">{t('dataBrowser.noResults', language)}</div>
                     )}
