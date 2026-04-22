@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { usePreGameStore } from '../game/state/preGameStore';
 import {
   isLeaderPlayable,
@@ -70,10 +70,6 @@ export default function LeaderSelectScreen() {
     [],
   );
   const [chosenLeaderId, setChosenLeaderId] = useState<LeaderId | null>(defaultLeaderId);
-
-  useEffect(() => {
-    if (defaultLeaderId != null) setChosenLeaderId(defaultLeaderId);
-  }, [defaultLeaderId]);
 
   const getLeaderById = (id: LeaderId | null): LeaderDefinition | null => {
     if (id == null) return null;

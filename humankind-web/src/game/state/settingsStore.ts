@@ -42,19 +42,6 @@ export function getResolutionOptions(): ResolutionOption[] {
     const sw = window.screen.width;
     const sh = window.screen.height;
 
-    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-    const g = gcd(sw, sh);
-    const rw = sw / g;
-    const rh = sh / g;
-
-    // 비율 라벨 생성
-    const KNOWN_RATIOS: Record<string, string> = {
-        '16:9': '16:9', '8:5': '16:10', '16:10': '16:10',
-        '4:3': '4:3', '21:9': '21:9', '32:9': '32:9',
-    };
-    const rawRatio = `${rw}:${rh}`;
-    const ratioLabel = KNOWN_RATIOS[rawRatio] || rawRatio;
-
     const percentages = [100, 85, 75, 65, 50];
     return percentages.map(pct => {
         const w = Math.round(sw * pct / 100);

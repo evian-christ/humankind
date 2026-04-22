@@ -212,7 +212,7 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [eraFilter, search, language, enemySort]);
+    }, [eraFilter, search, enemySort]);
 
     // 지식 업그레이드 목록
     const filteredKnowledgeUpgrades = useMemo(() => {
@@ -252,7 +252,7 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [eraFilter, search, language, knowledgeUpgradeSort]);
+    }, [eraFilter, search, knowledgeUpgradeSort, tl]);
 
     // 지도자 목록
     const filteredLeaders = useMemo(() => {

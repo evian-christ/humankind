@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint \"src\" \"vite.config.ts\" --max-warnings 0",
+    "lint:all": "eslint . --max-warnings 0",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

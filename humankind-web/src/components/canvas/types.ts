@@ -8,7 +8,7 @@ export interface HoveredSymbol {
 }
 
 export interface HoveredRelic {
-    relicInfo: any; // Type defined in gameStore/relicDefinitions but let's keep it loose here or import from relicDefinitions
+    relicInfo: unknown; // Type is defined elsewhere; keep loose here.
     screenX: number;
     screenY: number;
 }

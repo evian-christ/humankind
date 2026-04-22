@@ -28,7 +28,8 @@ import {
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
-import { UpgradeCardDescSymbols, resolveUpgradeSprite } from './KnowledgeUpgradeCardWidgets';
+import { UpgradeCardDescSymbols } from './KnowledgeUpgradeCardWidgets';
+import { resolveUpgradeSprite } from './knowledgeUpgradeSprites';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -117,7 +118,7 @@ function knowledgeTreeGridWidthPx(): number {
 }
 
 /** Lv 라벨 열 + 간격 + 칩 그리드 — 트리 전체 한 격자 너비 */
-function knowledgeTreeFullGridWidthPx(): number {
+function _knowledgeTreeFullGridWidthPx(): number {
     return KNOWLEDGE_TREE_LABEL_BAND_PX + KNOWLEDGE_TREE_GAP + knowledgeTreeGridWidthPx();
 }
 
@@ -300,8 +301,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     // 패널 닫기 (오버레이 닫힐 때 선택 초기화)
     useEffect(() => {
         if (!isOpen) {
-            setSelectedId(null);
-            setResearchPointsMouseHints([]);
+            queueMicrotask(() => {
+                setSelectedId(null);
+                setResearchPointsMouseHints([]);
+            });
         }
     }, [isOpen]);
 

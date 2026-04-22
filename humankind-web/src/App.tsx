@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore } from './game/state/settingsStore';
@@ -108,7 +108,7 @@ function App() {
   // 앱 최초 로드 시 저장된 해상도를 DOM에 적용
   useEffect(() => {
     setResolution(resolutionWidth, resolutionHeight);
-  }, []);
+  }, [resolutionHeight, resolutionWidth, setResolution]);
 
   useEffect(() => {
     if (isRelicShopOpen && hasNewRelicShopStock) {
@@ -149,7 +149,6 @@ function App() {
   const stageId = useGameStore((s) => s.stageId);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
-  const leaderId = useGameStore((s) => s.leaderId);
   const canPressSpin = phase === 'idle' && (levelUpResearchPoints ?? 0) === 0;
 
   // 스테이지 선택 화면

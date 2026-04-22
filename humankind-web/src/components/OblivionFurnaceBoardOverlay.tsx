@@ -39,7 +39,9 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     }, [anchorRef, measure]);
 
     useEffect(() => {
-        if (phase !== 'oblivion_furnace_board') setHovered(null);
+        if (phase !== 'oblivion_furnace_board') {
+            queueMicrotask(() => setHovered(null));
+        }
     }, [phase]);
 
     useEffect(() => {

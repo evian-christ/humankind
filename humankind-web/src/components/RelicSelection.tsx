@@ -1,5 +1,5 @@
 import { useGameStore } from '../game/state/gameStore';
-import { useSettingsStore, type Language } from '../game/state/settingsStore';
+import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';

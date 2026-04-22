@@ -29,7 +29,6 @@ export function computeBoardPixelLayout(viewW: number, viewH: number): BoardView
     const cellWidth = BOARD_CELL_WIDTH_PX * scale;
     const cellHeight = BOARD_CELL_HEIGHT_PX * scale;
     const colGap = BOARD_COL_GAP_PX * scale;
-    const rowGap = 0;
 
     const totalSlotsWidth = cellWidth * BOARD_WIDTH + colGap * (BOARD_WIDTH - 1);
     const totalSlotsHeight = cellHeight * BOARD_HEIGHT;

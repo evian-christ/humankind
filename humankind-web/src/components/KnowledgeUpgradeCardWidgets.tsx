@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useSettingsStore, type Language } from '../game/state/settingsStore';
+import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SYMBOLS_BY_KEY, SymbolType, type SymbolDefinition, type SymbolKey } from '../game/data/symbolDefinitions';
 import type {
     KnowledgeUpgradeDescSymbol,
@@ -30,12 +30,6 @@ const ERA_NAME_KEYS: Record<number, string> = {
 };
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
-
-/** upgrades/ 폴더의 스프라이트를 불러옵니다. sprite가 없으면 000.png 사용 */
-export const resolveUpgradeSprite = (sprite: string | undefined): string => {
-    if (sprite && sprite !== '-' && sprite !== '-.png') return `${ASSET_BASE_URL}assets/upgrades/${sprite}`;
-    return `${ASSET_BASE_URL}assets/upgrades/000.png`;
-};
 
 const UPGRADE_DESC_SYMBOL_TIP_W = 280;
 const UPGRADE_DESC_SYMBOL_COMPARE_TIP_W = 300;

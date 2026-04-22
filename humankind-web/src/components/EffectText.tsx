@@ -33,7 +33,7 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
         }
 
         const [
-            fullMatch,
+            _fullMatch,
             condition,
             enNum, enStat,
             koStat, koNum,

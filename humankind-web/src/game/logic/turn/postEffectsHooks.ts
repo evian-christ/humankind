@@ -68,7 +68,6 @@ export function runPostEffectsHooks(args: {
         relicStoreApi,
     } = args;
 
-    const hasRelic = (id: number) => relics.some((r) => r.definition.id === id);
     const getRelicInst = (id: number) => relics.find((r) => r.definition.id === id) ?? null;
 
     let destroyedCount = 0;

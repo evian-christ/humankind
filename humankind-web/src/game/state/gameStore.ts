@@ -5,7 +5,7 @@ import {
     getStageStartingRelicCounts,
     TOTAL_STAGE_COUNT,
 } from '../data/stages';
-import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, TAX_SYMBOL_ID, EDICT_SYMBOL_ID, S, Sym } from '../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition, RELIGION_DOCTRINE_IDS, EDICT_SYMBOL_ID, S, Sym } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from './settingsStore';
 import { RELIC_LIST, RELICS, type RelicDefinition } from '../data/relicDefinitions';
@@ -14,7 +14,6 @@ import { RELIC_ID } from '../logic/relics/relicIds';
 import { runPostEffectsHooks } from '../logic/turn/postEffectsHooks';
 import { applyFixedDamageToEnemy, buildCombatEvents, pickRandomLivingEnemy, resolveCombatTarget } from '../logic/combat/combatEngine';
 import {
-    buildFlatPool as buildFlatPoolSelection,
     generateChoices as generateChoicesSelection,
     generateTerrainOnlyChoices as generateTerrainOnlyChoicesSelection,
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
@@ -112,17 +111,17 @@ const PHASE2_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
 };
 
 /** 작물 심볼 ID 목록 (카르멜 산 화덕 재 효과용) */
-const CROP_SYMBOL_IDS = [S.wheat, S.rice, S.banana, S.fish]; // Wheat, Rice, Banana, Fish
+const _CROP_SYMBOL_IDS = [S.wheat, S.rice, S.banana, S.fish]; // Wheat, Rice, Banana, Fish
 
 // 시대별 심볼 등장 확률 테이블 (종교 미해금)
-const ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
+const _ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
     1: { 1: 75, 2: 0, 3: 0, 4: 25 },
     2: { 1: 40, 2: 45, 3: 0, 4: 15 },
     3: { 1: 20, 2: 35, 3: 35, 4: 10 },
 };
 
 // 시대별 심볼 등장 확률 테이블 (특수 0 해금 후)
-const ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
+const _ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
     1: { 0: 0, 1: 75, 2: 0, 3: 0, 4: 25 },
     2: { 0: 10, 1: 35, 2: 40, 3: 0, 4: 15 },
     3: { 0: 10, 1: 20, 2: 30, 3: 30, 4: 10 },
@@ -464,7 +463,7 @@ export const getBronzeWorkingHpBonus = (def: SymbolDefinition): number => {
 };
 
 const createInstance = (def: SymbolDefinition, unlockedUpgrades: number[] = []): PlayerSymbolInstance => {
-    let finalDef = def;
+    const finalDef = def;
     // Relic ID 8 (십계명 석판): Unlocks Stone Tablet in the symbol selection pool.
 
     const baseHp = finalDef.base_hp;
@@ -683,7 +682,6 @@ import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
 
@@ -806,14 +804,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         const ts = entry.ts ?? Date.now();
         const id = entry.id ?? `${ts}-${Math.random().toString(16).slice(2)}`;
         set((s) => {
-            const next = [...s.eventLog, { ...(entry as any), id, ts } as GameEventLogEntry];
+            const base = entry as Omit<GameEventLogEntry, 'id' | 'ts'> & Partial<Pick<GameEventLogEntry, 'id' | 'ts'>>;
+            const next = [...s.eventLog, { ...base, id, ts } as GameEventLogEntry];
             return { eventLog: next.length > MAX ? next.slice(next.length - MAX) : next };
         });
     },
     clearEventLog: () => set({ eventLog: [] }),
 
     spinBoard: () => {
-        let state = get();
+        const state = get();
         if ((state.levelUpResearchPoints ?? 0) > 0) return;
         if (state.phase !== 'idle') return;
 
@@ -1381,7 +1380,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
             const currentBoard = get().board;
             const relics = useRelicStore.getState().relics;
-            const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
             const getRelicInst = (id: number) => relics.find(r => r.definition.id === id);
             const post = runPostEffectsHooks({
                 board: currentBoard,
@@ -1397,11 +1395,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                 relicStoreApi: useRelicStore.getState(),
             });
 
-            const destroyedCount = post.destroyedCount;
-            const destroyedSymbols = post.destroyedSymbols;
-            let bonusFood = post.bonusFood;
+            const bonusFood = post.bonusFood;
             let bonusGold = post.bonusGold;
-            let bonusKnowledge = post.bonusKnowledge;
+            const bonusKnowledge = post.bonusKnowledge;
             const relicOwnEffectFloats = post.relicOwnEffectFloats;
             const knowledgeOwnEffectFloats = post.knowledgeOwnEffectFloats;
 
@@ -1441,7 +1437,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             const eraBeforeKnowledgeFinish = get().era;
-            const upgradesForQinEra = get().unlockedKnowledgeUpgrades || [];
 
             set((prev) => {
                 const finishUpgrades = prev.unlockedKnowledgeUpgrades || [];
@@ -1962,8 +1957,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const nextResearchPts = Math.max(0, pts - 1);
 
-        const upgrade = KNOWLEDGE_UPGRADES[uid];
-
         if (uid === TERRITORIAL_REORG_UPGRADE_ID) {
             set({
                 unlockedKnowledgeUpgrades: [...unlockedNorm, uid],
@@ -1993,7 +1986,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         let bonusXpDelta = 0;
         if (uid === 1) bonusXpDelta = 2; // Writing System: +2 base Knowledge
 
-        let newBoard = [...state.board.map((row) => [...row])];
+        const newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];
 
         // 16 Education: Library → University

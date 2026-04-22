@@ -86,18 +86,6 @@ const countOnBoard = (boardGrid: (PlayerSymbolInstance | null)[][], targetId: nu
     return count;
 };
 
-/** 보드 전체에서 주어진 ID Set에 속하는 심볼 개수 */
-const countOnBoardBySet = (boardGrid: (PlayerSymbolInstance | null)[][], ids: Set<number>): number => {
-    let count = 0;
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
-            const s = boardGrid[bx][by];
-            if (s && ids.has(s.definition.id)) count++;
-        }
-    }
-    return count;
-};
-
 /** 무작위 일반(NORMAL) 심볼 1개 — 기본 풀 기준(조건부 해금 심볼 제외) */
 const randomBaseNormalSymbolId = (): number => {
     const pool = Object.values(SYMBOLS).filter((s) => s.type === SymbolType.NORMAL && !EXCLUDED_FROM_BASE_POOL.has(s.id));

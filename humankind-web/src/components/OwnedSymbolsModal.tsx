@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
     useGameStore,
     BOARD_CELL_WIDTH_PX,
@@ -62,6 +62,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     const language = useSettingsStore((s) => s.language);
     const panelRef = useRef<HTMLDivElement | null>(null);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredOwnedSymbol>(null);
+    const [panelSize, setPanelSize] = useState({ w: 0, h: 0 });
 
     const metrics = useMemo(
         () => computeBoardMetrics(resolutionWidth, resolutionHeight),
@@ -78,6 +79,21 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     }, [open, onClose]);
 
     useRegisterBoardTooltipBlock('owned-symbols-modal', open);
+
+    useLayoutEffect(() => {
+        if (!open) return;
+        const el = panelRef.current;
+        if (!el) return;
+
+        const measure = () => {
+            setPanelSize({ w: el.clientWidth, h: el.clientHeight });
+        };
+        measure();
+
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => measure()) : null;
+        ro?.observe(el);
+        return () => ro?.disconnect();
+    }, [open]);
 
     const updateHoveredSymbol = useCallback((symbolId: number, symbolType: number, e: React.MouseEvent<HTMLDivElement>) => {
         const panel = panelRef.current;
@@ -96,12 +112,12 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     }, []);
 
     const getTooltipStyle = (hoveredItem: HoveredOwnedSymbol): React.CSSProperties => {
-        if (!hoveredItem || !panelRef.current) return { display: 'none' };
+        if (!hoveredItem || panelSize.w <= 0 || panelSize.h <= 0) return { display: 'none' };
 
         let left = hoveredItem.x + TOOLTIP_MARGIN;
         let top = hoveredItem.y;
-        const panelWidth = panelRef.current.clientWidth;
-        const panelHeight = panelRef.current.clientHeight;
+        const panelWidth = panelSize.w;
+        const panelHeight = panelSize.h;
 
         if (left + TOOLTIP_W > panelWidth) left = hoveredItem.x - TOOLTIP_W - TOOLTIP_MARGIN;
         if (top + TOOLTIP_H > panelHeight) top = panelHeight - TOOLTIP_H - TOOLTIP_MARGIN;

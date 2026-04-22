@@ -1,9 +1,7 @@
 import * as PIXI from 'pixi.js';
 import {
-    calculateFoodCost,
     BOARD_WIDTH,
     BOARD_HEIGHT,
-    BOARD_BG_SPRITE_PADDING_PX,
     useGameStore,
 } from '../../game/state/gameStore';
 import { computeBoardPixelLayout } from '../../game/layout/boardPixelLayout';
@@ -17,14 +15,7 @@ import { useRelicStore } from '../../game/state/relicStore';
 import type { RelicInstance } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
 import type { PlayerSymbolInstance } from '../../game/types';
-import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
 import { loadGameAssets } from './AssetLoader';
-import {
-    FOOD_RESOURCE_ICON_URL,
-    GOLD_RESOURCE_ICON_URL,
-    KNOWLEDGE_RESOURCE_ICON_URL,
-    RELIC_PANEL_TITLE_ICON_URL,
-} from '../../uiAssetUrls';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -56,14 +47,6 @@ const THREAT_FLOAT_UP = 85;
 
 /** 클릭으로 발동하는 유물 (gameStore.activateClickableRelic) */
 const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19]);
-
-const ERA_NAME_KEYS: Record<number, string> = {
-    [SymbolType.RELIGION]: 'era.special',
-    [SymbolType.NORMAL]: 'era.ancient',
-    [SymbolType.MEDIEVAL]: 'era.medieval',
-    [SymbolType.MODERN]: 'era.modern',
-    [SymbolType.TERRAIN]: 'era.terrain',
-};
 
 export class PixiGameApp {
     public app: PIXI.Application;
@@ -140,13 +123,14 @@ export class PixiGameApp {
 
         // blur 강도는 반경에 비례 (너무 강하면 뿌옇게만 보임)
         const blur = Math.max(6, Math.min(22, baseR * 0.22));
-        const BlurFilterCtor = (PIXI as any).BlurFilter;
+        type BlurFilterCtor = new (strength: number) => PIXI.Filter;
+        const BlurFilterCtor = (PIXI as unknown as { BlurFilter?: BlurFilterCtor }).BlurFilter;
         if (BlurFilterCtor) {
             // filter는 Graphics 단위로 적용
             g.filters = [new BlurFilterCtor(blur)];
         }
         // add(더하기) 블렌딩: 빛 번짐 느낌의 핵심
-        g.blendMode = 'add' as any;
+        g.blendMode = PIXI.BLEND_MODES.ADD;
 
         // outer soft blob
         g.circle(cx, cy, blobR);
@@ -180,7 +164,7 @@ export class PixiGameApp {
         // Tauri 프로토콜 환경에서는 XHR/Fetch에 CORS 헤더가 없을 수 있어서,
         // Pixi가 이미지 로드 시 crossOrigin 속성을 강제로 붙이지 않도록 합니다.
         // (React <img>는 표시 자체가 되지만, Pixi 로더는 실패해서 보드 스프라이트가 안 보이는 케이스가 있습니다.)
-        (PIXI.TextureSource.defaultOptions as any).crossOrigin = null;
+        (PIXI.TextureSource.defaultOptions as unknown as { crossOrigin?: string | null }).crossOrigin = null;
         await this.app.init({
             background: '#1a1a1a',
             antialias: false,
@@ -190,7 +174,7 @@ export class PixiGameApp {
 
         if (this.destroyed) {
             try {
-                if (this.app.resizeTo) (this.app as any).resizeTo = null;
+                if (this.app.resizeTo) (this.app as unknown as { resizeTo?: unknown }).resizeTo = null;
                 this.app.destroy(true);
             } catch (e) {
                 console.warn("PIXI destroy error:", e);
@@ -221,7 +205,7 @@ export class PixiGameApp {
         if (this.app) {
             try {
                 if (this.pixiInitComplete && this.app.renderer) {
-                    if (this.app.resizeTo) (this.app as any).resizeTo = null;
+                    if (this.app.resizeTo) (this.app as unknown as { resizeTo?: unknown }).resizeTo = null;
                     this.app.destroy(true);
                 }
             } catch (e) {
@@ -230,7 +214,9 @@ export class PixiGameApp {
 
             try {
                 if (this.canvas) this.canvas.innerHTML = '';
-            } catch (e) { }
+            } catch {
+                // ignore
+            }
         }
         this.pixiInitComplete = false;
     }
