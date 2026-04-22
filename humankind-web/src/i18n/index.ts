@@ -2,6 +2,8 @@ import type { Language } from '../game/state/settingsStore';
 import {
     AGRICULTURE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     MINING_UPGRADE_ID,
@@ -210,7 +212,6 @@ const translations: Record<Language, Record<string, string>> = {
         // Data Browser
         'dataBrowser.title': 'DATA BROWSER',
         'dataBrowser.symbols': 'Symbols',
-        'dataBrowser.symbolCandidates': 'Symbol Candidates',
         'dataBrowser.relics': 'Relics',
         'dataBrowser.searchPlaceholder': 'Search (name, desc, ID)...',
         'dataBrowser.allEras': 'All Types',
@@ -230,7 +231,6 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.colIcon': 'Icon',
         'dataBrowser.colColor': 'Color',
         'dataBrowser.knowledgeUpgrades': 'Knowledge Upgrades',
-        'dataBrowser.knowledgeUpgradeCandidates': 'Knowledge Upgrade Candidates',
         'dataBrowser.intensity': 'Intensity',
         'dataBrowser.enemies': 'Enemies',
         'dataBrowser.effectType.food_loss': 'Food Loss',
@@ -292,6 +292,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.flood.name': 'Flood',
         'symbol.earthquake.name': 'Earthquake',
         'symbol.drought.name': 'Drought',
+        'symbol.fur.name': 'Fur',
         'symbol.wool.name': 'Wool',
 
         // 47-49: Candidates promoted to actual symbols
@@ -350,16 +351,17 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.omen.desc': '50% chance for +3 Food.',
         'symbol.campfire.desc': '+1 Food; after 10 turns: destroyed; on destroy: copy the effect of the adjacent symbol with the highest Food produced this turn.',
         'symbol.pottery.desc': '+3 Food stored per turn; on destroy: gain Food equal to stored Counter.',
-        'symbol.tribal_village.desc': 'Destroyed; on destroy: adds 2 random Ancient symbols.',
+        'symbol.tribal_village.desc': 'Destroyed; on destroy: adds 1 random Normal symbol.',
         'symbol.merchant.desc': 'Not in corner: stores Gold equal to highest adjacent Food; in corner: gains stored Gold.',
         'symbol.horse.desc': '+1 Food, +1 Gold; when adjacent to Plains: +2 additional Food.',
         'symbol.crab.desc': 'When adjacent to Sea or Harbor: +1 Food, +2 Gold.',
         'symbol.library.desc': '+7 Knowledge.',
         'symbol.pearl.desc': 'When adjacent to Sea: +3 Gold.',
         'symbol.desert.desc': 'When adjacent: destroys 1 random Normal or era symbol.',
-        'symbol.forest.desc': 'Per adjacent Forest: +1 Food.',
-        'symbol.deer.desc': '+1 Food; if 2 or more adjacent Forests: +2 Food.',
-        'symbol.date.desc': '+1 Food; when destroyed by Desert: +2 Food and adds Date to collection.',
+        'symbol.forest.desc': 'If 4 or more Forests are placed on the board: +2 Food.',
+        'symbol.deer.desc': 'If 2 or more Forests are placed on the board: +2 Food.',
+        'symbol.fur.desc': 'Per 2 Forests placed on the board: +1 Gold, +1 Knowledge.',
+        'symbol.date.desc': '+1 Food; on destroy: +5 Food and 50% chance to add Date.',
         'symbol.christianity.desc': '+Food equal to highest adjacent Food; adjacent to Religion: -50 Food.',
         'symbol.islam.desc': '+2 Gold per adjacent symbol that produces Knowledge; adjacent to Religion: -50 Food.',
         'symbol.buddhism.desc': 'Per empty slot: +2 Food; adjacent to Religion: -50 Food.',
@@ -379,9 +381,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.wool.desc': 'Destroyed after 3 turns; on destroy: +5 Gold.',
 
         'symbol.salt.desc': '+1 Food per adjacent terrain symbol.',
-        'symbol.honey.desc': 'After 5 turns: destroyed; on destruction: +5 Food.',
+        'symbol.honey.desc': 'After 6 turns: destroyed; on destruction: +10 Food.',
         'symbol.corn.desc': '+2 Food.',
-        'symbol.wild_berries.desc': 'When adjacent to Forest: +1 Food. When adjacent to Rainforest: +1 Food.',
+        'symbol.wild_berries.desc': '+1 Food; when adjacent to Forest or Rainforest: +2 Food; when adjacent to Mountain: +2 Knowledge.',
         'symbol.hay.desc': 'When adjacent to Plains: counter +1. On destroy: gain Food equal to Counter.',
         'symbol.spices.desc': '+1 Food per different terrain type placed.',
         'symbol.tax.desc': '+Gold equal to a random adjacent symbol\'s Food produced this turn; -Food equal to that amount.',
@@ -393,7 +395,7 @@ const translations: Record<Language, Record<string, string>> = {
             '+1 Food; 10% chance to produce Wool. When adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold.',
         'symbol.sheep.descBoard.pastoral':
             '+1 Food; 10% chance to produce Sheep; 10% chance to produce Wool. When adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold.',
-        'symbol.wild_boar.desc': '+2 Food; if 3 or more adjacent Forests: +4 additional Food.',
+        'symbol.wild_boar.desc': 'If 4 or more Forests are placed on the board: +4 Food.',
         'symbol.sawmill.desc': 'Per Forest in the same column: +5 Food. Per Mountain in the same column: +5 Knowledge and +5 Gold.',
         'symbol.gold_vein.desc': '+5 Gold.',
         'symbol.knight.desc': 'Medieval melee unit (+3 Attack / +3 HP vs Warrior).',
@@ -446,47 +448,6 @@ const translations: Record<Language, Record<string, string>> = {
         'relic.19.name': 'Ancient Tribal Joining',
         'relic.19.desc': 'One terrain pick: all three choices are random terrain symbols. Click to use.',
 
-        // ── Natural Disaster Candidates (101-110) ──
-        'symbolCandidate.102.name': 'Volcano',
-        'symbolCandidate.102.desc': 'Destroys 2 random adjacent symbols; on destroy: permanently adds Mountain to collection.',
-        'symbolCandidate.104.name': 'Locust Swarm',
-        'symbolCandidate.104.desc': 'Every turn: adjacent crop symbols produce -50% Food. 5 turns: destroyed.',
-        'symbolCandidate.106.name': 'Blizzard',
-        'symbolCandidate.106.desc': 'Every spin: -2 Food. Adjacent symbols produce half. 4 turns: destroyed.',
-        'symbolCandidate.107.name': 'Wildfire',
-        'symbolCandidate.107.desc': 'Every turn: destroys 1 random adjacent Forest or Rainforest; on empty: destroyed.',
-        'symbolCandidate.108.name': 'Tsunami',
-        'symbolCandidate.108.desc': 'Instantly destroys all adjacent symbols. On destroy: adds 1 Sea symbol.',
-        'symbolCandidate.109.name': 'Famine',
-        'symbolCandidate.109.desc': 'Every spin: -3 Food. Each adjacent symbol loses -0.5 Food production permanently. 6 turns: destroyed.',
-        'symbolCandidate.110.name': 'Meteor Strike',
-        'symbolCandidate.110.desc': 'Instantly destroys all 8 adjacent symbols. On destroy: adds Crater terrain (produces +5 Knowledge).',
-        'symbolCandidate.1001.name': 'Merchant (Ancient Rework)',
-        'symbolCandidate.1001.desc': '+1 Gold; if an adjacent symbol produced 3 or more Food this turn: +2 additional Gold.',
-        'symbolCandidate.1002.name': 'Spices (Ancient Rework)',
-        'symbolCandidate.1002.desc': '+1 Food; per adjacent Rainforest or Oasis: +1 Food; if adjacent to both: +2 Gold.',
-        'symbolCandidate.1003.name': 'Library (Ancient Rework)',
-        'symbolCandidate.1003.desc': '+2 Knowledge; per adjacent Ancient symbol: +2 Knowledge; if adjacent to Monument, Totem, or Oral Tradition: +2 Knowledge.',
-        // ── Knowledge Upgrade Candidates ──
-        'knowledgeUpgradeCandidate.201.name': 'Hunting',
-        'knowledgeUpgradeCandidate.201.desc': 'Destroys 1 \'Banana\' for +10 Gold. \'Banana\' no longer appears in shop.',
-        'knowledgeUpgradeCandidate.202.name': 'Metallurgy',
-        'knowledgeUpgradeCandidate.202.desc': '(Placeholder - effect removed)',
-        'knowledgeUpgradeCandidate.203.name': 'Spearcraft',
-        'knowledgeUpgradeCandidate.203.desc': '\'Warrior\' no longer appears in shop.',
-        'knowledgeUpgradeCandidate.204.name': 'Shipbuilding',
-        'knowledgeUpgradeCandidate.204.desc': 'Instantly transforms all \'Oasis\' into \'Sea\'.',
-        'knowledgeUpgradeCandidate.205.name': 'Shamanism',
-        'knowledgeUpgradeCandidate.205.desc': 'Destroys 1 \'Omen\' to instantly gain +50 Knowledge.',
-        'knowledgeUpgradeCandidate.206.name': 'Weaving',
-        'knowledgeUpgradeCandidate.206.desc': 'If you have \'Plains\' or \'Grassland\', +10 Gold every spin.',
-        'knowledgeUpgradeCandidate.207.name': 'Jewelry',
-        'knowledgeUpgradeCandidate.207.desc': '\'Stone\' produces -0.5 Food but +1.5 Gold.',
-        'knowledgeUpgradeCandidate.208.name': 'Epic Tales',
-        'knowledgeUpgradeCandidate.208.desc': '\'Oral Tradition\' Knowledge production x2.',
-        'knowledgeUpgradeCandidate.209.name': 'Trade',
-        'knowledgeUpgradeCandidate.209.desc': '(Placeholder - effect removed)',
-
         // ── Knowledge Upgrades ──
         'knowledgeUpgrade.1.name': 'Writing System',
         'knowledgeUpgrade.1.desc': 'Permanently increases base Knowledge generation by +2. Unlocks Library symbol.',
@@ -513,6 +474,17 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.29.desc': 'Upgrades Pearl and Sea.',
         'knowledgeUpgrade.30.name': 'Mining',
         'knowledgeUpgrade.30.desc': 'Upgrades Rainforest and Stone.',
+        'knowledgeUpgrade.31.name': 'Hunting',
+        'knowledgeUpgrade.31.desc': 'Unlocks Wild Boar and Fur for selection.',
+        'knowledgeUpgrade.32.name': 'Law Code',
+        'knowledgeUpgrade.32.desc': 'Base Knowledge production +2.',
+        'knowledgeUpgrade.33.name': 'Foreign Trade',
+        'knowledgeUpgrade.33.desc': 'Upgrades Desert.',
+        'knowledgeUpgrade.symbolDescAfter.33.desert': '+2 Gold; destroys 1 random adjacent Normal or era symbol.',
+        'knowledgeUpgrade.34.name': 'Chiefdom',
+        'knowledgeUpgrade.34.desc': 'Base Food production +2. Upgrades Wild Berries.',
+        'knowledgeUpgrade.symbolDescAfter.34.wild_berries':
+            '+1 Food; when adjacent to Forest or Rainforest: +4 Food; when adjacent to Mountain: +5 Knowledge.',
         'knowledgeUpgrade.10.name': 'Mathematics',
         'knowledgeUpgrade.10.desc': 'Base Food production +5, Base Gold production +2, Base Knowledge production +2.',
         'knowledgeUpgrade.25.name': 'Ancient Era',
@@ -761,7 +733,6 @@ const translations: Record<Language, Record<string, string>> = {
         // Data Browser
         'dataBrowser.title': '데이터 브라우저',
         'dataBrowser.symbols': '심볼',
-        'dataBrowser.symbolCandidates': '심볼 후보',
         'dataBrowser.relics': '유물',
         'dataBrowser.searchPlaceholder': '검색 (이름, 설명, ID)...',
         'dataBrowser.allEras': '모든 타입',
@@ -781,7 +752,6 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.colIcon': '아이콘',
         'dataBrowser.colColor': '색상',
         'dataBrowser.knowledgeUpgrades': '지식 업그레이드',
-        'dataBrowser.knowledgeUpgradeCandidates': '지식 업그레이드 후보',
         'dataBrowser.intensity': '강도',
         'dataBrowser.enemies': '적 유닛',
         'dataBrowser.effectType.food_loss': '식량 감소',
@@ -842,6 +812,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.flood.name': '홍수',
         'symbol.earthquake.name': '지진',
         'symbol.drought.name': '가뭄',
+        'symbol.fur.name': '모피',
         'symbol.wool.name': '양모',
 
         // 47-52: 후보 -> 실제 심볼
@@ -900,16 +871,17 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.omen.desc': '50% 확률로 식량 +3.',
         'symbol.campfire.desc': '식량 +1; 10턴 후: 파괴; 파괴 시: 이번 턴 식량 생산이 가장 높은 인접 심볼의 효과를 복사.',
         'symbol.pottery.desc': '매 턴 저장 식량 +3; 파괴 시: 저장량만큼 식량 획득.',
-        'symbol.tribal_village.desc': '파괴; 파괴 시: 무작위 고대 심볼 2개 추가.',
+        'symbol.tribal_village.desc': '파괴; 파괴 시: 무작위 일반 심볼 추가.',
         'symbol.merchant.desc': '구석 아닐 시: 인접 심볼 중 최고 식량 생산만큼 골드 저장; 구석 배치 시: 저장된 골드 획득.',
         'symbol.horse.desc': '식량 +1, 골드 +1; 평원에 인접 시: 식량 +2 추가 생산.',
         'symbol.crab.desc': '바다 인접 시: 식량 +1, 골드 +2.',
         'symbol.library.desc': '지식 +7.',
         'symbol.pearl.desc': '바다 인접 시: 골드 +3.',
         'symbol.desert.desc': '무작위 인접한 일반·시대 심볼 1개 파괴.',
-        'symbol.forest.desc': '인접 숲 1개당: 식량 +1.',
-        'symbol.deer.desc': '식량 +1; 인접한 숲이 2개 이상일 경우: 식량 +2.',
-        'symbol.date.desc': '식량 +1; 사막에 의해 파괴될 시: 식량 +2 및 대추 추가.',
+        'symbol.forest.desc': '보드에 배치된 숲이 4개 이상이면: 식량 +2.',
+        'symbol.deer.desc': '보드에 배치된 숲이 2개 이상이면: 식량 +2.',
+        'symbol.fur.desc': '보드에 배치된 숲 2개마다: 골드 +1, 지식 +1.',
+        'symbol.date.desc': '식량 +1; 파괴 시: 식량 +5 및 50% 확률로 대추 추가.',
         'symbol.christianity.desc': '인접 심볼 중 최고 식량 생산량만큼 식량 생산; 종교 심볼 인접 시: 식량 -50.',
         'symbol.islam.desc': '지식을 생산하는 인접 심볼 1개당 골드 +2; 종교 심볼 인접 시: 식량 -50.',
         'symbol.buddhism.desc': '빈 슬롯 1개당: 식량 +2; 종교 심볼 인접 시: 식량 -50.',
@@ -929,9 +901,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.wool.desc': '3턴 후 파괴; 파괴 시: 골드 +5.',
 
         'symbol.salt.desc': '인접 지형 심볼 1개당: 식량 +1.',
-        'symbol.honey.desc': '5턴 후: 파괴. 파괴 시: 식량 +5.',
+        'symbol.honey.desc': '6턴 후: 파괴; 파괴 시: 식량 +10.',
         'symbol.corn.desc': '식량 +2.',
-        'symbol.wild_berries.desc': '숲 인접 시: 식량 +1. 열대우림 인접 시: 식량 +1.',
+        'symbol.wild_berries.desc': '식량 +1; 숲 혹은 열대우림 인접 시: 식량 +2; 산 인접 시: 지식 +2.',
         'symbol.hay.desc': '평원 인접 시: 카운터 +1. 파괴 시: 카운터 만큼 식량 생산.',
         'symbol.spices.desc': '배치 된 다른 지형 유형 하나당: 식량 +1.',
         'symbol.tax.desc': '무작위 인접 심볼이 이번 턴 생산한 식량만큼 골드를 생산하고, 그만큼 식량을 차감합니다.',
@@ -943,7 +915,7 @@ const translations: Record<Language, Record<string, string>> = {
             '식량 +1; 10% 확률로 양모 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +5.',
         'symbol.sheep.descBoard.pastoral':
             '식량 +1; 10% 확률로 양 생산; 10% 확률로 양모 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +5.',
-        'symbol.wild_boar.desc': '식량 +2. 인접 숲이 3개 이상이면: 식량 +4 추가.',
+        'symbol.wild_boar.desc': '보드에 배치된 숲이 4개 이상이면: 식량 +4.',
         'symbol.sawmill.desc': '같은 열의 숲 하나당 식량 +5. 같은 열의 산 하나당 지식 +5·골드 +5.',
         'symbol.gold_vein.desc': '골드 +5.',
         'symbol.knight.desc': '중세 근접 유닛(전사 대비 공격 +3, 체력 +3).',
@@ -996,47 +968,6 @@ const translations: Record<Language, Record<string, string>> = {
         'relic.19.name': '고대 부족 합류',
         'relic.19.desc': '지형 선택을 1회 합니다. 클릭하여 사용.',
 
-        // ── Natural Disaster Candidates (101-110) ──
-        'symbolCandidate.102.name': '화산',
-        'symbolCandidate.102.desc': '무작위 인접 심볼 2개 파괴; 파괴 시: 산을 컬렉션에 영구 추가.',
-        'symbolCandidate.104.name': '메뚜기 떼',
-        'symbolCandidate.104.desc': '매 턴: 인접 작물 심볼 식량 생산 -50%. 5턴 후: 파괴.',
-        'symbolCandidate.106.name': '눈보라',
-        'symbolCandidate.106.desc': '매 턴: 식량 -2. 인접 심볼 생산 절반. 4턴 후: 파괴.',
-        'symbolCandidate.107.name': '들불',
-        'symbolCandidate.107.desc': '매 턴: 인접한 숲 또는 열대우림 1개 무작위 파괴; 모두 없어지면 파괴.',
-        'symbolCandidate.108.name': '쓰나미',
-        'symbolCandidate.108.desc': '인접한 모든 심볼을 즉시 파괴합니다. 파괴 시: 바다 심볼 1개 추가.',
-        'symbolCandidate.109.name': '기근',
-        'symbolCandidate.109.desc': '매 턴: 식량 -3. 인접 심볼들의 식량 생산이 각 -0.5 영구 감소. 6턴 후: 파괴.',
-        'symbolCandidate.110.name': '운석 충돌',
-        'symbolCandidate.110.desc': '인접한 8칸의 모든 심볼을 즉시 파괴합니다. 파괴 시: 크레이터 지형 추가(지식 +5 생산).',
-        'symbolCandidate.1001.name': '상인 (고대 개편안)',
-        'symbolCandidate.1001.desc': '골드 +1; 인접한 심볼이 이번 턴 식량 3 이상 생산 시: 골드 +2 추가 생산.',
-        'symbolCandidate.1002.name': '향신료 (고대 개편안)',
-        'symbolCandidate.1002.desc': '식량 +1; 인접한 열대우림 또는 오아시스 1개마다: 식량 +1; 둘 모두에 인접 시: 골드 +2.',
-        'symbolCandidate.1003.name': '도서관 (고대 개편안)',
-        'symbolCandidate.1003.desc': '지식 +2; 인접한 고대 심볼 1개마다: 지식 +2; 기념비, 토템, 구전 전통 중 하나에 인접 시: 지식 +2.',
-        // ── Knowledge Upgrade Candidates ──
-        'knowledgeUpgradeCandidate.201.name': '사냥',
-        'knowledgeUpgradeCandidate.201.desc': "보드의 '바나나' 1개를 파괴하고 골드 +10을 얻습니다. 상점에서 더 이상 '바나나'가 등장하지 않습니다.",
-        'knowledgeUpgradeCandidate.202.name': '야금술',
-        'knowledgeUpgradeCandidate.202.desc': '(플레이스홀더 - 효과 제거됨)',
-        'knowledgeUpgradeCandidate.203.name': '창술',
-        'knowledgeUpgradeCandidate.203.desc': "상점에서 더 이상 '전사'가 등장하지 않습니다.",
-        'knowledgeUpgradeCandidate.204.name': '조선술',
-        'knowledgeUpgradeCandidate.204.desc': "보드의 모든 '오아시스'를 즉시 '바다'로 변환합니다.",
-        'knowledgeUpgradeCandidate.205.name': '샤머니즘',
-        'knowledgeUpgradeCandidate.205.desc': "보드의 '징조' 1개를 파괴하고 즉시 지식 50을 얻습니다.",
-        'knowledgeUpgradeCandidate.206.name': '직조술',
-        'knowledgeUpgradeCandidate.206.desc': "보드에 '평원' 혹은 '초원'이 있다면 매 턴 골드 +10을 추가 생산합니다.",
-        'knowledgeUpgradeCandidate.207.name': '세공술',
-        'knowledgeUpgradeCandidate.207.desc': "'돌'이 매 턴 식량 -0.5, 골드 +1.5를 생산합니다.",
-        'knowledgeUpgradeCandidate.208.name': '서사시',
-        'knowledgeUpgradeCandidate.208.desc': "'구전 전승'의 지식 생산량이 2배 증가합니다.",
-        'knowledgeUpgradeCandidate.209.name': '교역',
-        'knowledgeUpgradeCandidate.209.desc': '(플레이스홀더 - 효과 제거됨)',
-
         // ── Knowledge Upgrades ──
         'knowledgeUpgrade.1.name': '문자',
         'knowledgeUpgrade.1.desc': '기본 지식 생산량이 +2 증가합니다. 도서관 심볼을 심볼 풀에 추가합니다.',
@@ -1062,6 +993,16 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.29.desc': '진주와 바다를 업그레이드합니다.',
         'knowledgeUpgrade.30.name': '채광',
         'knowledgeUpgrade.30.desc': '열대우림과 돌을 업그레이드합니다.',
+        'knowledgeUpgrade.31.name': '수렵',
+        'knowledgeUpgrade.31.desc': '멧돼지와 모피를 해금합니다.',
+        'knowledgeUpgrade.32.name': '법전',
+        'knowledgeUpgrade.32.desc': '기본 지식 생산 +2.',
+        'knowledgeUpgrade.33.name': '외국 무역',
+        'knowledgeUpgrade.33.desc': '사막을 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.33.desert': '골드 +2; 무작위 인접 일반·시대 심볼 1개 파괴.',
+        'knowledgeUpgrade.34.name': '족장제',
+        'knowledgeUpgrade.34.desc': '기본 식량 생산 +2. 야생열매를 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.34.wild_berries': '식량 +1; 숲 혹은 열대우림 인접 시: 식량 +4; 산 인접 시: 지식 +5.',
         'knowledgeUpgrade.10.name': '수학',
         'knowledgeUpgrade.10.desc': '기본 식량 생산 +5, 기본 골드 생산 +2, 기본 지식 생산 +2.',
         'knowledgeUpgrade.25.name': '고대 시대',
@@ -1197,6 +1138,18 @@ export function getBoardSymbolTooltipDesc(
         return have.has(MINING_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.30.rainforest', lang)
             : t('symbol.rainforest.desc', lang);
+    }
+    if (symbolKey === 'desert') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(FOREIGN_TRADE_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.33.desert', lang)
+            : t('symbol.desert.desc', lang);
+    }
+    if (symbolKey === 'wild_berries') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(CHIEFDOM_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.34.wild_berries', lang)
+            : t('symbol.wild_berries.desc', lang);
     }
     if (symbolKey !== 'wheat' && symbolKey !== 'rice') {
         return t(`symbol.${symbolKey}.desc`, lang);
