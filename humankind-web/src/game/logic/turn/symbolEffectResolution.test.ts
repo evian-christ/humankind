@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
+import {
+    AGRICULTURE_UPGRADE_ID,
+    THREE_FIELD_SYSTEM_UPGRADE_ID,
+} from '../../data/knowledgeUpgrades';
 import type { PlayerSymbolInstance } from '../../types';
+import { processSingleSymbolEffects } from '../symbolEffects';
 import {
     applyMerchantStoredGold,
     buildFoodBySlotKey,
@@ -103,5 +108,46 @@ describe('symbolEffectResolution', () => {
         expect(foodBySlotKey.get(slotKey(2, 1))).toBe(7);
         expect(merchant.stored_gold).toBe(8);
         expect(merchant.merchant_store_pending).toBe(false);
+    });
+
+    it('adds board grassland count to wheat payout with Three-field System', () => {
+        const board = createEmptyBoard();
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        wheat.effect_counter = 9;
+        board[0][0] = wheat;
+        board[2][3] = createInstance(Sym.grassland, 'grassland_1');
+        board[3][3] = createInstance(Sym.grassland, 'grassland_2');
+        board[4][3] = createInstance(Sym.grassland, 'grassland_3');
+
+        const result = processSingleSymbolEffects(
+            wheat,
+            board,
+            0,
+            0,
+            { upgrades: [THREE_FIELD_SYSTEM_UPGRADE_ID] },
+        );
+
+        expect(result.food).toBe(13);
+        expect(wheat.effect_counter).toBe(0);
+    });
+
+    it('adds board grassland count on top of upgraded crop payout', () => {
+        const board = createEmptyBoard();
+        const rice = createInstance(Sym.rice, 'rice');
+        rice.effect_counter = 19;
+        board[0][0] = rice;
+        board[2][3] = createInstance(Sym.grassland, 'grassland_1');
+        board[3][3] = createInstance(Sym.grassland, 'grassland_2');
+
+        const result = processSingleSymbolEffects(
+            rice,
+            board,
+            0,
+            0,
+            { upgrades: [AGRICULTURE_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID] },
+        );
+
+        expect(result.food).toBe(32);
+        expect(rice.effect_counter).toBe(0);
     });
 });

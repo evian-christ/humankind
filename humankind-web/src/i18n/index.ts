@@ -10,6 +10,7 @@ import {
     PASTORALISM_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     STIRRUP_UPGRADE_ID,
+    THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../game/data/knowledgeUpgrades';
 
 const translations: Record<Language, Record<string, string>> = {
@@ -74,6 +75,8 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.requiresPastoralismShort': 'Needs Pastoralism',
         'knowledgeUpgrade.requiresFisheriesShort': 'Needs Fisheries',
         'knowledgeUpgrade.requiresSeafaringShort': 'Needs Navigation',
+        'knowledgeUpgrade.requiresAncientShort': 'Needs Ancient Era',
+        'knowledgeUpgrade.requiresIrrigationShort': 'Needs Irrigation',
         'knowledgeUpgrade.symbolDescAfter.2.warrior': 'Ancient melee unit (20 max HP in combat with Bronze Working).',
         'knowledgeUpgrade.symbolDescAfter.2.archer': 'Ancient ranged unit (8 max HP in combat with Bronze Working).',
         'knowledgeUpgrade.symbolDescAfter.3.wheat':
@@ -514,6 +517,8 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.23.desc': 'Barbarian invasion and Barbarian Camp threat growth per turn is halved.',
         'knowledgeUpgrade.24.name': 'Printing Press',
         'knowledgeUpgrade.24.desc': 'Base Food +10, Base Gold +5, Base Knowledge +5.',
+        'knowledgeUpgrade.35.name': 'Three-field System',
+        'knowledgeUpgrade.35.desc': 'Upgrades Wheat and Rice.',
         'destroySelection.riteTitle': 'Sacrificial Rite — choose symbols to destroy',
         'destroySelection.riteDesc': 'Destroy up to 3 owned symbols. Confirm to gain +10 Gold per destroyed symbol.',
         'destroySelection.territoryTitle': 'Territorial Reorganization — choose symbols to remove',
@@ -601,6 +606,8 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.requiresPastoralismShort': '목축업 필요',
         'knowledgeUpgrade.requiresFisheriesShort': '어업 필요',
         'knowledgeUpgrade.requiresSeafaringShort': '항해술 필요',
+        'knowledgeUpgrade.requiresAncientShort': '고대 시대 필요',
+        'knowledgeUpgrade.requiresIrrigationShort': '관개 필요',
         'knowledgeUpgrade.symbolDescAfter.2.warrior': '고대 근접 유닛(청동 기술 보유 시 전투 체력 상한 20).',
         'knowledgeUpgrade.symbolDescAfter.2.archer': '고대 원거리 유닛(청동 기술 보유 시 전투 체력 상한 8).',
         'knowledgeUpgrade.symbolDescAfter.3.wheat': '밀: 10턴마다: 식량10. 인접한 초원마다: 턴 +1.',
@@ -1032,6 +1039,8 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.23.desc': '야만인 침공·야만인 주둔지 위협이 매 턴 오르는 양이 절반으로 줄어듭니다.',
         'knowledgeUpgrade.24.name': '인쇄술',
         'knowledgeUpgrade.24.desc': '기본 식량 생산 +10, 기본 골드 생산 +5, 기본 지식 생산 +5.',
+        'knowledgeUpgrade.35.name': '삼포제',
+        'knowledgeUpgrade.35.desc': '밀과 쌀을 업그레이드합니다.',
         'destroySelection.riteTitle': '희생 제의 (파괴할 심볼 선택)',
         'destroySelection.riteDesc': '보유 중인 심볼을 최대 3개까지 파괴할 수 있습니다. 선택 후 확정하면 파괴한 심볼 하나당 골드 +10을 획득합니다.',
         'destroySelection.territoryTitle': '영토 정비 (제거할 심볼 선택)',
@@ -1068,6 +1077,20 @@ export function unlocksExcluding(unlocked: readonly number[] | undefined, omitId
 /** 지식 카드 ‘적용 후’: 해당 업그레이드 ID를 포함한 보유 연구 기준 */
 export function unlocksIncluding(unlocked: readonly number[] | undefined, addId: number): number[] {
     return [...new Set([...(unlocked ?? []).map(Number), Number(addId)])];
+}
+
+function cropThreeFieldDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgriculture: boolean): string {
+    const food = symbolKey === 'wheat'
+        ? hasAgriculture ? 15 : 10
+        : hasAgriculture ? 30 : 25;
+    if (lang === 'ko') {
+        return symbolKey === 'wheat'
+            ? `밀: 10턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +1.`
+            : `쌀: 20턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +1.`;
+    }
+    return symbolKey === 'wheat'
+        ? `Wheat: every 10 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +1/turn.`
+        : `Rice: every 20 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +1/turn.`;
 }
 
 /** 보드·선택 UI: 밀/쌀·초원·평원·소·양 등 연구 상태에 따라 툴팁 문구가 바뀜 */
@@ -1155,15 +1178,18 @@ export function getBoardSymbolTooltipDesc(
         return t(`symbol.${symbolKey}.desc`, lang);
     }
     const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+    const hasThreeField = have.has(THREE_FIELD_SYSTEM_UPGRADE_ID);
     const hasIrr = have.has(IRRIGATION_UPGRADE_ID);
     const hasAg = have.has(AGRICULTURE_UPGRADE_ID);
 
     if (symbolKey === 'wheat') {
+        if (hasThreeField) return cropThreeFieldDesc('wheat', lang, hasAg);
         if (hasIrr && hasAg) return t('symbol.wheat.descBoard.both', lang);
         if (hasAg) return t('knowledgeUpgrade.symbolDescAfter.27.wheat', lang);
         if (hasIrr) return t('knowledgeUpgrade.symbolDescAfter.3.wheat', lang);
         return t('symbol.wheat.desc', lang);
     }
+    if (hasThreeField) return cropThreeFieldDesc('rice', lang, hasAg);
     if (hasIrr && hasAg) return t('symbol.rice.descBoard.both', lang);
     if (hasAg) return t('knowledgeUpgrade.symbolDescAfter.27.rice', lang);
     if (hasIrr) return t('knowledgeUpgrade.symbolDescAfter.3.rice', lang);

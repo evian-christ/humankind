@@ -8,6 +8,7 @@ import {
     PASTORALISM_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     STIRRUP_UPGRADE_ID,
+    THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
 import {
     BOARD_HEIGHT,
@@ -33,7 +34,10 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             if (irrigated) symbolInstance.effect_counter += grassCount;
             else if (grassCount > 0) symbolInstance.effect_counter += 1;
             if (symbolInstance.effect_counter >= 10) {
-                state.food += upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 15 : 10;
+                const baseFood = upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 15 : 10;
+                state.food += upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
+                    ? baseFood + countOnBoard(boardGrid, S.grassland)
+                    : baseFood;
                 symbolInstance.effect_counter -= 10;
             }
             return true;
@@ -48,7 +52,10 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             if (irrigated) symbolInstance.effect_counter += grassCount;
             else if (grassCount > 0) symbolInstance.effect_counter += 1;
             if (symbolInstance.effect_counter >= 20) {
-                state.food += upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 30 : 25;
+                const baseFood = upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 30 : 25;
+                state.food += upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
+                    ? baseFood + countOnBoard(boardGrid, S.grassland)
+                    : baseFood;
                 symbolInstance.effect_counter -= 20;
             }
             return true;

@@ -80,6 +80,8 @@ export const LAW_CODE_UPGRADE_ID = 32;
 export const FOREIGN_TRADE_UPGRADE_ID = 33;
 /** 족장제 — 기본 식량 +2, 야생열매 업그레이드 */
 export const CHIEFDOM_UPGRADE_ID = 34;
+/** 삼포제 — 관개 선행, 밀·쌀 주기 식량이 보드 위 초원 수를 참조 */
+export const THREE_FIELD_SYSTEM_UPGRADE_ID = 35;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -384,6 +386,17 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Base Food +10, Base Gold +5, Base Knowledge +5.',
         sprite: '-',
     },
+    [THREE_FIELD_SYSTEM_UPGRADE_ID]: {
+        id: THREE_FIELD_SYSTEM_UPGRADE_ID,
+        name: 'Three-field System',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Wheat and Rice.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'wheat', relation: 'effect_modify' },
+            { symbolKey: 'rice', relation: 'effect_modify' },
+        ],
+    },
 
 
 };
@@ -392,15 +405,25 @@ export const FEUDALISM_UPGRADE_ID = 15;
 export const SACRIFICIAL_RITE_UPGRADE_ID = 8;
 export const TERRITORIAL_REORG_UPGRADE_ID = 22;
 
-/** 초기 지식 트리(고대 시대 25 없이도 연구 가능) — `KnowledgeUpgradesOverlay`와 동기 유지 필요 */
-export const KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS: readonly number[] = [
-    HUNTING_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    AGRICULTURE_UPGRADE_ID,
-    5,
-    MINING_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
-    // Lv3로 이동했지만 초기 트리 카드이므로 고대 시대(25) 없이도 연구 가능하게 유지
-    SACRIFICIAL_RITE_UPGRADE_ID,
-];
+const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
+    2: [5],
+    [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
+    [HORSEMANSHIP_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
+    [SEAFARING_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
+    [CELESTIAL_NAVIGATION_UPGRADE_ID]: [SEAFARING_UPGRADE_ID],
+    [FEUDALISM_UPGRADE_ID]: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+    [THREE_FIELD_SYSTEM_UPGRADE_ID]: [IRRIGATION_UPGRADE_ID],
+};
+
+export function getKnowledgeUpgradePrerequisiteClosure(upgradeId: number): number[] {
+    const result = new Set<number>();
+    const visit = (id: number) => {
+        for (const prereqId of KNOWLEDGE_UPGRADE_PREREQUISITES[id] ?? []) {
+            if (result.has(prereqId)) continue;
+            result.add(prereqId);
+            visit(prereqId);
+        }
+    };
+    visit(Number(upgradeId));
+    return [...result];
+}

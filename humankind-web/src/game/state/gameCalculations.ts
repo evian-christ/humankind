@@ -6,10 +6,10 @@ import {
     FISHERIES_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
-    KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS,
     KNOWLEDGE_UPGRADES,
     PASTORALISM_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
+    THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { getStageFoodPaymentBase, getStagePassiveBonus } from '../data/stages';
 import { S, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
@@ -107,18 +107,13 @@ export function isUpgradeLegalForKnowledgePick(
 
     const currentEra = getEraFromLevel(level);
     const medievalUnlocked = have.has(FEUDALISM_UPGRADE_ID) || currentEra >= 2;
-    if (uid === FEUDALISM_UPGRADE_ID) return level >= 10;
+    if (uid === FEUDALISM_UPGRADE_ID) {
+        return level >= 10 && have.has(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
+    }
+    if (uid === THREE_FIELD_SYSTEM_UPGRADE_ID && !have.has(IRRIGATION_UPGRADE_ID)) return false;
     if (upgrade.type === SymbolType.MEDIEVAL) return medievalUnlocked;
 
-    if (
-        upgrade.type === SymbolType.ANCIENT &&
-        uid !== ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID &&
-        !KNOWLEDGE_TIER_LEVEL_2_UPGRADE_IDS.includes(uid) &&
-        !have.has(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)
-    ) {
-        return false;
-    }
-
+    if (uid === 2 && !have.has(5)) return false;
     if (uid === IRRIGATION_UPGRADE_ID && !have.has(AGRICULTURE_UPGRADE_ID)) return false;
     if (uid === HORSEMANSHIP_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
     if (uid === SEAFARING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;

@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SYMBOLS_BY_KEY, SymbolType, type SymbolDefinition, type SymbolKey } from '../game/data/symbolDefinitions';
-import type {
-    KnowledgeUpgradeDescSymbol,
-    KnowledgeUpgradeDescSymbolKey,
-    KnowledgeUpgradeSymbolRelation,
+import {
+    getKnowledgeUpgradePrerequisiteClosure,
+    type KnowledgeUpgradeDescSymbol,
+    type KnowledgeUpgradeDescSymbolKey,
+    type KnowledgeUpgradeSymbolRelation,
 } from '../game/data/knowledgeUpgrades';
 import { useGameStore } from '../game/state/gameStore';
-import { getBoardSymbolTooltipDesc, unlocksExcluding, unlocksIncluding, t } from '../i18n';
+import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
 
 const RELATION_BADGE: Record<KnowledgeUpgradeSymbolRelation, string> = {
@@ -36,6 +37,23 @@ const UPGRADE_DESC_SYMBOL_COMPARE_TIP_W = 300;
 
 function normalizeDescForCompare(s: string): string {
     return s.replace(/\s+/g, ' ').trim();
+}
+
+function escapeRegExp(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripSymbolNamePrefix(desc: string, symbolName: string): string {
+    const prefix = new RegExp(`^\\s*${escapeRegExp(symbolName)}\\s*:\\s*`, 'i');
+    return desc
+        .split('\n')
+        .map((line) => line.replace(prefix, ''))
+        .join('\n');
+}
+
+function upgradeCompareUnlocks(upgradeId: number, includeUpgrade: boolean): number[] {
+    const prereqs = getKnowledgeUpgradePrerequisiteClosure(upgradeId);
+    return includeUpgrade ? [...new Set([...prereqs, upgradeId])] : prereqs;
 }
 
 /** 풀에서 제거된 심볼 — 업그레이드 칩·툴팁만 (i18n symbol.* 유지) */
@@ -90,21 +108,28 @@ export const UpgradeCardDescSymbols = ({
     const tooltipContent = hover && (() => {
         const def = resolveUpgradeDescSymbolVisual(hover.symbolKey);
         if (!def) return null;
+        const symbolName = t(`symbol.${def.key}.name`, language);
         const eraColor = getSymbolColorHex(def.type);
         const eraName = t(ERA_NAME_KEYS[def.type] ?? 'era.ancient', language);
         const isModify = hover.relation === 'effect_modify';
         const beforeCanonical = isModify
-            ? getBoardSymbolTooltipDesc(
-                hover.symbolKey,
-                language,
-                unlocksExcluding(unlockedKnowledgeUpgrades, upgradeId),
+            ? stripSymbolNamePrefix(
+                getBoardSymbolTooltipDesc(
+                    hover.symbolKey,
+                    language,
+                    upgradeCompareUnlocks(upgradeId, false),
+                ),
+                symbolName,
             )
             : '';
         const afterResolved = isModify
-            ? getBoardSymbolTooltipDesc(
-                hover.symbolKey,
-                language,
-                unlocksIncluding(unlockedKnowledgeUpgrades, upgradeId),
+            ? stripSymbolNamePrefix(
+                getBoardSymbolTooltipDesc(
+                    hover.symbolKey,
+                    language,
+                    upgradeCompareUnlocks(upgradeId, true),
+                ),
+                symbolName,
             )
             : null;
         const hasCompare =
@@ -129,7 +154,7 @@ export const UpgradeCardDescSymbols = ({
                 }}
                 role="tooltip"
             >
-                <div className="symbol-tooltip-name">{t(`symbol.${def.key}.name`, language)}</div>
+                <div className="symbol-tooltip-name">{symbolName}</div>
                 <div
                     className="symbol-tooltip-rarity"
                     style={{
@@ -172,7 +197,9 @@ export const UpgradeCardDescSymbols = ({
                     </div>
                 ) : (
                     <div className="symbol-tooltip-desc" style={{ marginTop: '8px' }}>
-                        {getBoardSymbolTooltipDesc(hover.symbolKey, language, unlockedKnowledgeUpgrades)
+                        {(isModify && afterResolved
+                            ? afterResolved
+                            : getBoardSymbolTooltipDesc(hover.symbolKey, language, unlockedKnowledgeUpgrades))
                             .split('\n')
                             .map((line, i) => (
                                 <div key={i} className="symbol-tooltip-desc-line">
