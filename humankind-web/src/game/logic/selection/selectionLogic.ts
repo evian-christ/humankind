@@ -44,7 +44,7 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         // 1. 제외 목록에 있고, 어떤 유물의 대체물도 아니라면 건너뜀
         const isReplacementTarget = Array.from(activeReplacements.values()).includes(sym.id);
 
-        if (feudal && (sym.type === SymbolType.ANCIENT || sym.id === S.warrior || sym.id === S.archer)) continue;
+        if (feudal && sym.type === SymbolType.ANCIENT) continue;
 
         // 업그레이드로 해금되는 심볼들 예외 처리
         let isUnlocked = !EXCLUDED_FROM_BASE_POOL.has(sym.id);
@@ -186,4 +186,3 @@ export function getSymbolPoolProbabilities(ctx: Pick<SelectionContext, 'era' | '
         .map((sym) => ({ id: sym.id, name: sym.name, symbolType: sym.type, probability: prob }))
         .sort((a, b) => a.symbolType - b.symbolType || a.id - b.id);
 }
-
