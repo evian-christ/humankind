@@ -458,7 +458,7 @@ const aggregateCollectionDestroyEffects = (
                 out.food += 5;
                 break;
             case S.wool:
-                out.gold += 5;
+                out.gold += useGameStore.getState().unlockedKnowledgeUpgrades.includes(NOMADIC_TRADITION_UPGRADE_ID) ? 10 : 5;
                 break;
             case S.pioneer:
                 out.forceTerrainInNextChoices = true;
@@ -572,6 +572,8 @@ import {
     TERRITORIAL_REORG_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
+    NOMADIC_TRADITION_UPGRADE_ID,
+    PASTURE_MANAGEMENT_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
 
@@ -2124,16 +2126,21 @@ export const useGameStore = create<GameState>((set, get) => ({
         const sym = prev.board[x]?.[y];
         const sid = sym?.definition.id;
         if (!sym || sym.is_marked_for_destruction || (sid !== S.cattle && sid !== S.sheep)) return;
-        const plainsNear = getAdjacentCoords(x, y).some(
+        const adjacentPlains = getAdjacentCoords(x, y).filter(
             (p) => prev.board[p.x][p.y]?.definition.id === S.plains,
         );
-        if (!plainsNear) return;
+        if (adjacentPlains.length === 0) return;
 
         const removed = [sym];
         const symAgg = aggregateCollectionDestroyEffects(removed, false);
         const shBonus = scarabAndHinduismBonusForOwnedRemoves(prev.board, removed.length);
-        const butcherFood = sid === S.cattle ? 10 : 5;
-        const butcherGoldFlat = sid === S.sheep ? 5 : 0;
+        const hasNomadicTradition = (prev.unlockedKnowledgeUpgrades || []).includes(NOMADIC_TRADITION_UPGRADE_ID);
+        const butcherFood = sid === S.cattle
+            ? hasNomadicTradition ? 15 : 10
+            : 5;
+        const butcherGoldFlat = sid === S.sheep
+            ? hasNomadicTradition ? 10 : 5
+            : 0;
         const dFood = butcherFood + symAgg.food + shBonus.food;
         const dGold = butcherGoldFlat + symAgg.gold + shBonus.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;
@@ -2141,6 +2148,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         const instanceIds = [sym.instanceId];
         const newBoard = prev.board.map((col) => [...col]);
         newBoard[x][y] = null;
+        if ((prev.unlockedKnowledgeUpgrades || []).includes(PASTURE_MANAGEMENT_UPGRADE_ID)) {
+            adjacentPlains.forEach((p) => {
+                const plains = newBoard[p.x][p.y];
+                if (plains?.definition.id === S.plains) {
+                    plains.effect_counter = (plains.effect_counter || 0) + 1;
+                }
+            });
+        }
         const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
         const newSymbols = appendSymbolDefIdsToPlayer(
             baseFiltered,

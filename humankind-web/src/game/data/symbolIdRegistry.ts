@@ -3,7 +3,7 @@
  * ID를 바꿀 때는 이 파일의 값만 수정하면 되며,
  * 게임 로직에서는 `SYMBOL_NUMERIC_ID`(숫자 비교) 또는 `definition.key`(문자 식별)를 사용합니다.
  *
- * 배치 규칙: 지형(1–8) → 일반(9–39) → 고대(40–48, 43 미사용) → 중세(49–56) → 종교(57–60) → 유닛(61–64) → 적(65–66) → 재해(67–69)
+ * 배치 규칙: 지형(1–8) → 일반(9–39, 70+) → 고대(40–48, 43 미사용) → 중세(49–56) → 종교(57–60) → 유닛(61–64) → 적(65–66) → 재해(67–69)
  */
 export const SYMBOL_NUMERIC_ID = {
     // ── Terrain (1–8): 초원→평원→바다→숲→열대우림→사막→오아시스→산 ──
@@ -24,19 +24,17 @@ export const SYMBOL_NUMERIC_ID = {
     wool: 13,
     horse: 14,
     corn: 15,
-    wild_boar: 16,
+    mushroom: 16,
     deer: 17,
     wild_berries: 18,
     banana: 19,
-    sawmill: 20,
+    fur: 20,
     fish: 21,
     crab: 22,
     pearl: 23,
-    harbor: 24,
     date: 25,
     stone: 26,
     copper: 27,
-    gold_vein: 28,
     merchant: 29,
     salt: 30,
     library: 31,
@@ -53,8 +51,6 @@ export const SYMBOL_NUMERIC_ID = {
     monument: 40,
     oral_tradition: 41,
     totem: 42,
-    /** 모피(신규): Normal 심볼이지만 43(미사용 슬롯) 사용 */
-    fur: 43,
     omen: 44,
     campfire: 45,
     pottery: 46,
@@ -80,8 +76,6 @@ export const SYMBOL_NUMERIC_ID = {
     // ── Unit (61–64) ──
     warrior: 61,
     archer: 62,
-    knight: 63,
-    caravel: 64,
 
     // ── Enemy (65–66) ──
     barbarian_camp: 65,
@@ -91,6 +85,10 @@ export const SYMBOL_NUMERIC_ID = {
     flood: 67,
     earthquake: 68,
     drought: 69,
+
+    // ── Extra Normal (70+) ──
+    compass: 70,
+    expedition: 71,
 } as const;
 
 export type SymbolKey = keyof typeof SYMBOL_NUMERIC_ID;

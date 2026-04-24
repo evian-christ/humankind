@@ -6,7 +6,6 @@ export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 
 export const SEA_TERRAIN_ID = S.sea;
-export const HARBOR_ID = S.harbor;
 
 export interface EffectState {
     food: number;

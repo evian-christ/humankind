@@ -1,14 +1,32 @@
 import {
     AGRICULTURE_UPGRADE_ID,
+    AGRICULTURAL_SURPLUS_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    COMPASS_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
+    FORESTRY_UPGRADE_ID,
+    FISHERY_GUILD_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
+    HUNTING_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
+    JUNGLE_EXPEDITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    MINING_UPGRADE_ID,
+    MODERN_AGRICULTURE_UPGRADE_ID,
+    MARITIME_TRADE_UPGRADE_ID,
+    NOMADIC_TRADITION_UPGRADE_ID,
+    OCEANIC_ROUTES_UPGRADE_ID,
+    PASTURE_MANAGEMENT_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
+    PLANTATION_UPGRADE_ID,
+    PRESERVATION_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
+    SHIPBUILDING_UPGRADE_ID,
+    TANNING_UPGRADE_ID,
+    TRACKING_UPGRADE_ID,
+    TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { getStageFoodPaymentBase, getStagePassiveBonus } from '../data/stages';
@@ -77,7 +95,7 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
 
 export const getBronzeWorkingHpBonus = (def: SymbolDefinition): number => {
     if (def.type !== SymbolType.UNIT) return 0;
-    if (def.id === S.warrior || def.id === S.knight || def.id === S.caravel) return 10;
+    if (def.id === S.warrior) return 10;
     if (def.id === S.archer) return 3;
     return 0;
 };
@@ -111,12 +129,28 @@ export function isUpgradeLegalForKnowledgePick(
         return level >= 10 && have.has(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
     }
     if (uid === THREE_FIELD_SYSTEM_UPGRADE_ID && !have.has(IRRIGATION_UPGRADE_ID)) return false;
-    if (upgrade.type === SymbolType.MEDIEVAL) return medievalUnlocked;
-
+    if (uid === AGRICULTURAL_SURPLUS_UPGRADE_ID && !have.has(THREE_FIELD_SYSTEM_UPGRADE_ID)) return false;
+    if (uid === MODERN_AGRICULTURE_UPGRADE_ID && !have.has(AGRICULTURAL_SURPLUS_UPGRADE_ID)) return false;
+    if (uid === NOMADIC_TRADITION_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
+    if (uid === PASTURE_MANAGEMENT_UPGRADE_ID && !have.has(NOMADIC_TRADITION_UPGRADE_ID)) return false;
     if (uid === 2 && !have.has(5)) return false;
     if (uid === IRRIGATION_UPGRADE_ID && !have.has(AGRICULTURE_UPGRADE_ID)) return false;
     if (uid === HORSEMANSHIP_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
     if (uid === SEAFARING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
-    if (uid === CELESTIAL_NAVIGATION_UPGRADE_ID && !have.has(SEAFARING_UPGRADE_ID)) return false;
+    if (uid === CELESTIAL_NAVIGATION_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
+    if (uid === COMPASS_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
+    if (uid === SHIPBUILDING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
+    if (uid === FISHERY_GUILD_UPGRADE_ID && !have.has(SEAFARING_UPGRADE_ID)) return false;
+    if (uid === MARITIME_TRADE_UPGRADE_ID && !have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)) return false;
+    if (uid === TRACKING_UPGRADE_ID && !have.has(HUNTING_UPGRADE_ID)) return false;
+    if (uid === TANNING_UPGRADE_ID && !have.has(TRACKING_UPGRADE_ID)) return false;
+    if (uid === FORESTRY_UPGRADE_ID && !have.has(TANNING_UPGRADE_ID)) return false;
+    if (uid === PRESERVATION_UPGRADE_ID && !have.has(FORESTRY_UPGRADE_ID)) return false;
+    if (uid === PLANTATION_UPGRADE_ID && !have.has(MINING_UPGRADE_ID)) return false;
+    if (uid === JUNGLE_EXPEDITION_UPGRADE_ID && !have.has(PLANTATION_UPGRADE_ID)) return false;
+    if (uid === TROPICAL_DEVELOPMENT_UPGRADE_ID && !have.has(JUNGLE_EXPEDITION_UPGRADE_ID)) return false;
+    if (uid === OCEANIC_ROUTES_UPGRADE_ID && !have.has(MARITIME_TRADE_UPGRADE_ID)) return false;
+    if (uid === OCEANIC_ROUTES_UPGRADE_ID && !have.has(FISHERY_GUILD_UPGRADE_ID)) return false;
+    if (upgrade.type === SymbolType.MEDIEVAL) return medievalUnlocked;
     return upgradeEra <= currentEra;
 }

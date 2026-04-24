@@ -1,7 +1,11 @@
 import type { LeaderId } from '../../data/leaders';
 import type { PlayerSymbolInstance } from '../../types';
 import { SymbolType, S, TAX_SYMBOL_ID } from '../../data/symbolDefinitions';
-import { IRRIGATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import {
+    HORSEMANSHIP_UPGRADE_ID,
+    IRRIGATION_UPGRADE_ID,
+    THREE_FIELD_SYSTEM_UPGRADE_ID,
+} from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];
@@ -389,7 +393,9 @@ export function runPostEffectsHooks(args: {
     if (urWheelRelicForPlan && urWheelRelicForPlan.effect_counter > 0) {
         const upgrades = (unlockedKnowledgeUpgrades ?? []).map(Number);
         // 기존 gameStore 로직과 동일하게 최소 baseFood를 찾는다.
-        const urWheelGrasslandFood = upgrades.includes(IRRIGATION_UPGRADE_ID) ? 2 : 1;
+        const urWheelGrasslandFood = upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
+            ? 5
+            : upgrades.includes(IRRIGATION_UPGRADE_ID) ? 2 : 1;
         let target: { x: number; y: number } | null = null;
         let minFood = Infinity;
         for (let ux = 0; ux < boardWidth; ux++) {
@@ -417,7 +423,9 @@ export function runPostEffectsHooks(args: {
                         case S.rainforest:
                             return 1;
                         case S.plains:
-                            return 1;
+                            return 1 +
+                                (upgrades.includes(HORSEMANSHIP_UPGRADE_ID) ? 1 : 0) +
+                                (s.effect_counter || 0);
                         case S.campfire:
                             return 1;
                         case S.merchant:
@@ -450,4 +458,3 @@ export function runPostEffectsHooks(args: {
         urWheelPlan,
     };
 }
-

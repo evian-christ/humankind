@@ -1,15 +1,29 @@
 import type { Language } from '../game/state/settingsStore';
 import {
     AGRICULTURE_UPGRADE_ID,
+    AGRICULTURAL_SURPLUS_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
+    COMPASS_UPGRADE_ID,
+    FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
+    MARITIME_TRADE_UPGRADE_ID,
+    MODERN_AGRICULTURE_UPGRADE_ID,
     MINING_UPGRADE_ID,
+    NOMADIC_TRADITION_UPGRADE_ID,
+    OCEANIC_ROUTES_UPGRADE_ID,
+    PASTURE_MANAGEMENT_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
+    PLANTATION_UPGRADE_ID,
+    PRESERVATION_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
-    STIRRUP_UPGRADE_ID,
+    FISHERY_GUILD_UPGRADE_ID,
+    SHIPBUILDING_UPGRADE_ID,
+    TANNING_UPGRADE_ID,
+    TRACKING_UPGRADE_ID,
+    TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../game/data/knowledgeUpgrades';
 
@@ -75,8 +89,21 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.requiresPastoralismShort': 'Needs Pastoralism',
         'knowledgeUpgrade.requiresFisheriesShort': 'Needs Fisheries',
         'knowledgeUpgrade.requiresSeafaringShort': 'Needs Navigation',
+        'knowledgeUpgrade.requiresCelestialNavigationShort': 'Needs Celestial Navigation',
+        'knowledgeUpgrade.requiresHuntingShort': 'Needs Hunting',
+        'knowledgeUpgrade.requiresTrackingShort': 'Needs Tracking',
+        'knowledgeUpgrade.requiresTanningShort': 'Needs Tanning',
+        'knowledgeUpgrade.requiresForestryShort': 'Needs Forestry',
+        'knowledgeUpgrade.requiresMiningShort': 'Needs Mining',
+        'knowledgeUpgrade.requiresPlantationShort': 'Needs Plantation',
+        'knowledgeUpgrade.requiresJungleExpeditionShort': 'Needs Jungle Expedition',
+        'knowledgeUpgrade.requiresMaritimeTradeShort': 'Needs Maritime Trade',
+        'knowledgeUpgrade.requiresFisheryGuildShort': 'Needs Fishery Guild',
         'knowledgeUpgrade.requiresAncientShort': 'Needs Ancient Era',
         'knowledgeUpgrade.requiresIrrigationShort': 'Needs Irrigation',
+        'knowledgeUpgrade.requiresThreeFieldShort': 'Needs Three-field System',
+        'knowledgeUpgrade.requiresAgriculturalSurplusShort': 'Needs Agricultural Surplus',
+        'knowledgeUpgrade.requiresNomadicTraditionShort': 'Needs Nomadic Tradition',
         'knowledgeUpgrade.symbolDescAfter.2.warrior': 'Ancient melee unit (20 max HP in combat with Bronze Working).',
         'knowledgeUpgrade.symbolDescAfter.2.archer': 'Ancient ranged unit (8 max HP in combat with Bronze Working).',
         'knowledgeUpgrade.symbolDescAfter.3.wheat':
@@ -88,24 +115,41 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.symbolDescAfter.27.rice':
             'Rice: every 20 turns: 30 Food. Adjacent to Grassland: +1/turn.',
         'knowledgeUpgrade.symbolDescAfter.7.plains': '+2 Food.',
-        'knowledgeUpgrade.symbolDescAfter.28.fish': 'When adjacent to Sea: +3 Food.',
-        'knowledgeUpgrade.symbolDescAfter.28.crab': 'When adjacent to Sea or Harbor: +2 Food, +2 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.28.fish': 'With 1 Sea: +2 Food; 2 Seas: +3 Food; 3+ Seas: +5 Food.',
+        'knowledgeUpgrade.symbolDescAfter.28.crab': 'With 1 Sea: +2 Food, +1 Gold; 2 Seas: +3 Food, +2 Gold; 3+ Seas: +3 Food, +2 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.42.fish': 'With 1 Sea: +3 Food; 2 Seas: +5 Food; 3+ Seas: +10 Food.',
+        'knowledgeUpgrade.symbolDescAfter.42.crab': 'With 1 Sea: +3 Food, +3 Gold; 2 Seas: +5 Food, +5 Gold; 3+ Seas: +5 Food, +5 Gold.',
         'knowledgeUpgrade.symbolDescAfter.29.sea': '+1 Gold per 2 adjacent symbols.',
-        'knowledgeUpgrade.symbolDescAfter.29.pearl': 'When adjacent to Sea: +5 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.41.sea': '+1 Gold per 3 adjacent symbols. Counts as 2 Seas while placed on the board.',
+        'knowledgeUpgrade.symbolDescAfter.41.seaWithCelestial': '+1 Gold per 2 adjacent symbols. Counts as 2 Seas while placed on the board.',
+        'knowledgeUpgrade.symbolDescAfter.29.pearl': 'With 1 Sea: +4 Gold; 2 Seas: +5 Gold; 3+ Seas: +7 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.43.sea': '+2 Gold per 2 adjacent symbols.',
+        'knowledgeUpgrade.symbolDescAfter.43.seaWithShipbuilding': '+2 Gold per 2 adjacent symbols. Counts as 2 Seas while placed on the board.',
+        'knowledgeUpgrade.symbolDescAfter.43.pearl': 'With 1 Sea: +5 Gold; 2 Seas: +7 Gold; 3+ Seas: +10 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.44.fish': 'With 1 Sea: +5 Food; 2 Seas: +8 Food; 3+ Seas: +15 Food.',
+        'knowledgeUpgrade.symbolDescAfter.44.crab': 'With 1 Sea: +5 Food, +5 Gold; 2 Seas: +8 Food, +8 Gold; 3+ Seas: +8 Food, +8 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.44.pearl': 'With 1 Sea: +10 Gold; 2 Seas: +20 Gold; 3+ Seas: +30 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.44.sea': '+2 Gold per adjacent symbol.',
+        'knowledgeUpgrade.symbolDescAfter.44.seaWithShipbuilding': '+2 Gold per adjacent symbol. Counts as 2 Seas while placed on the board.',
         'knowledgeUpgrade.symbolDescAfter.30.rainforest': '+3 Food.',
         'knowledgeUpgrade.symbolDescAfter.30.stone':
             '+1 Gold; when a Mountain is in the same column: +5 additional Gold.',
+        'knowledgeUpgrade.symbolDescAfter.45.banana': '+1 Food; every 7 times adjacent to Rainforest: +1 additional Food production.',
+        'knowledgeUpgrade.symbolDescAfter.45.rainforest': '+3 Food, +3 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.48.forest': 'If 3 or more Forests are placed on the board: +3 Food; 5 or more: +3 Gold; if Forest is the only terrain on the board: +3 Food.',
+        'knowledgeUpgrade.symbolDescAfter.48.mushroom': '+4 Food, +4 Knowledge; if not adjacent to Forest: destroy.',
+        'knowledgeUpgrade.symbolDescAfter.49.fur': '+1 Gold per Forest placed on the board.',
+        'knowledgeUpgrade.symbolDescAfter.49.deer': '+2 Food per adjacent Forest.',
+        'knowledgeUpgrade.symbolDescAfter.50.forest': 'If 3 or more Forests are placed on the board: +5 Food; 5 or more: +5 Gold; 7 or more: +3 Knowledge; if Forest is the only terrain on the board: production x2.',
+        'knowledgeUpgrade.symbolDescAfter.51.deer': '+3 Food per adjacent Forest.',
+        'knowledgeUpgrade.symbolDescAfter.51.mushroom': '+9 Food, +9 Knowledge; if not adjacent to Forest: destroy.',
+        'knowledgeUpgrade.symbolDescAfter.47.rainforest': '+5 Food, +5 Gold, +5 Knowledge.',
+        'knowledgeUpgrade.symbolDescAfter.47.expedition': 'When adjacent to Rainforest: +1-10 Food, +1-10 Gold, and +1-10 Knowledge.',
         'knowledgeUpgrade.symbolDescAfter.15.mountain': '+2 Food; when adjacent to enemy units: they lose 3 HP each spin.',
-        'knowledgeUpgrade.symbolDescAfter.19.warrior': 'Ancient melee unit; when adjacent to Horse: becomes Knight (Horse removed).',
-        'knowledgeUpgrade.symbolDescAfter.19.horse': '+1 Food, +1 Gold; when adjacent to Plains: +2 additional Food; removed when enabling adjacent Warrior→Knight.',
         'knowledgeUpgrade.symbolDescAfter.26.sheep':
             '+1 Food; 10% chance to produce Sheep; 10% chance to produce Wool. Butcher when adjacent to Plains: +5 Food, +5 Gold.',
         'knowledgeUpgrade.symbolDescAfter.26.cattle':
             '+1 Food; 10% chance to produce Cattle. Butcher when adjacent to Plains: +10 Food.',
-        'knowledgeUpgrade.symbolDescAfter.19.cattle': '+3 Food per turn. Butcher when adjacent to Plains: +10 Food.',
-        'knowledgeUpgrade.symbolDescAfter.21.warrior': 'Ancient melee unit; when adjacent to Sea: becomes Caravel.',
-        'knowledgeUpgrade.symbolDescAfter.21.spices': '+1 Food per different terrain type placed; when adjacent to Rainforest: +2 Food and +3 Gold.',
-        'knowledgeUpgrade.symbolDescAfter.23.barbarian_camp': 'Every 8 turns: adds 1 random current era enemy combat unit; Destroyed; on destroy: adds Loot; with Castle upgrade: barbarian invasion and camp threat gain half as much per turn.',
         'game.reroll': 'Reroll',
         'game.rerollKnowledgeUpgrade': 'Replace this card with another upgrade (once per choice)',
         'game.skip': 'Skip',
@@ -273,6 +317,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.crab.name': 'Crab',
         'symbol.library.name': 'Library',
         'symbol.pearl.name': 'Pearl',
+        'symbol.compass.name': 'Compass',
         'symbol.desert.name': 'Desert',
         'symbol.forest.name': 'Forest',
         'symbol.deer.name': 'Deer',
@@ -307,15 +352,10 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.spices.name': 'Spices',
         'symbol.tax.name': 'Tax',
         'symbol.university.name': 'University',
-        'symbol.harbor.name': 'Harbor',
         'symbol.aqueduct.name': 'Aqueduct',
         'symbol.rye.name': 'Rye',
         'symbol.sheep.name': 'Sheep',
-        'symbol.wild_boar.name': 'Wild Boar',
-        'symbol.sawmill.name': 'Sawmill',
-        'symbol.gold_vein.name': 'Gold Vein',
-        'symbol.knight.name': 'Knight',
-        'symbol.caravel.name': 'Caravel',
+        'symbol.mushroom.name': 'Mushroom',
         'symbol.scholar.name': 'Scholar',
         'symbol.holy_relic.name': 'Holy Relic',
         'symbol.telescope.name': 'Telescope',
@@ -325,6 +365,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.wild_seeds.name': 'Wild Seeds',
         'symbol.wild_seeds.desc': '+1 Food. Destroyed after 5 turns.',
         'symbol.embassy.name': 'Embassy',
+        'symbol.expedition.name': 'Expedition',
 
         // ── Symbol Descriptions ──
         'symbol.wheat.desc': 'Wheat: every 10 turns: 10 Food. Adjacent to Grassland: +1/turn.',
@@ -344,6 +385,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.copper.desc': '+1 Gold; if exactly 3 Copper on board: x3 Gold production.',
         'symbol.grassland.desc': '+1 Food.',
         'symbol.grassland.descWithIrrigation': '+2 Food.',
+        'symbol.grassland.descWithThreeField': '+5 Food.',
         'symbol.monument.desc': '+5 Knowledge.',
         'symbol.oasis.desc': '+1 Food per 2 adjacent empty slots.',
         'symbol.oral_tradition.desc': 'After 10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.',
@@ -360,10 +402,11 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.crab.desc': 'When adjacent to Sea or Harbor: +1 Food, +2 Gold.',
         'symbol.library.desc': '+7 Knowledge.',
         'symbol.pearl.desc': 'When adjacent to Sea: +3 Gold.',
+        'symbol.compass.desc': 'With 1 Sea: +5 Knowledge; 2 Seas: +10 Knowledge; 3+ Seas: +15 Knowledge.',
         'symbol.desert.desc': 'When adjacent: destroys 1 random Normal or era symbol.',
-        'symbol.forest.desc': 'If 4 or more Forests are placed on the board: +2 Food.',
-        'symbol.deer.desc': 'If 2 or more Forests are placed on the board: +2 Food.',
-        'symbol.fur.desc': 'Per 2 Forests placed on the board: +1 Gold, +1 Knowledge.',
+        'symbol.forest.desc': 'If 3 or more Forests are placed on the board: +2 Food; 5 or more: +2 Gold; if Forest is the only terrain on the board: +2 Food.',
+        'symbol.deer.desc': '+1 Food per adjacent Forest.',
+        'symbol.fur.desc': '+2 Gold per 2 Forests placed on the board.',
         'symbol.date.desc': '+1 Food; on destroy: +5 Food and 50% chance to add Date.',
         'symbol.christianity.desc': '+Food equal to highest adjacent Food; adjacent to Religion: -50 Food.',
         'symbol.islam.desc': '+2 Gold per adjacent symbol that produces Knowledge; adjacent to Religion: -50 Food.',
@@ -382,27 +425,23 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.earthquake.desc': 'Destroyed. On destroy: destroy 1 random adjacent symbol.',
         'symbol.drought.desc': 'When counter reaches 0: Destroy.',
         'symbol.wool.desc': 'Destroyed after 3 turns; on destroy: +5 Gold.',
+        'symbol.wool.descWithNomadicTradition': 'Destroyed after 3 turns; on destroy: +10 Gold.',
 
         'symbol.salt.desc': '+1 Food per adjacent terrain symbol.',
-        'symbol.honey.desc': 'After 6 turns: destroyed; on destruction: +10 Food.',
+        'symbol.honey.desc': 'If 5 or more of the same terrain are placed on the board: +5 Food.',
         'symbol.corn.desc': '+2 Food.',
         'symbol.wild_berries.desc': '+1 Food; when adjacent to Forest or Rainforest: +2 Food; when adjacent to Mountain: +2 Knowledge.',
         'symbol.hay.desc': 'When adjacent to Plains: counter +1. On destroy: gain Food equal to Counter.',
         'symbol.spices.desc': '+1 Food per different terrain type placed.',
         'symbol.tax.desc': '+Gold equal to a random adjacent symbol\'s Food produced this turn; -Food equal to that amount.',
         'symbol.university.desc': '+1 Knowledge per symbol placed on the board.',
-        'symbol.harbor.desc': '+2 Food. Symbols adjacent to Harbor count as adjacent to Sea. +1 Gold per adjacent symbol.',
         'symbol.aqueduct.desc': 'Adjacent Wheat, Rice, and Rye produce double Food this turn.',
         'symbol.rye.desc': '+2 Food; when adjacent to Plains: +2 additional Food.',
         'symbol.sheep.desc':
             '+1 Food; 10% chance to produce Wool. When adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold.',
         'symbol.sheep.descBoard.pastoral':
             '+1 Food; 10% chance to produce Sheep; 10% chance to produce Wool. When adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold.',
-        'symbol.wild_boar.desc': 'If 4 or more Forests are placed on the board: +4 Food.',
-        'symbol.sawmill.desc': 'Per Forest in the same column: +5 Food. Per Mountain in the same column: +5 Knowledge and +5 Gold.',
-        'symbol.gold_vein.desc': '+5 Gold.',
-        'symbol.knight.desc': 'Medieval melee unit (+3 Attack / +3 HP vs Warrior).',
-        'symbol.caravel.desc': 'Medieval naval unit (+7 HP vs Warrior).',
+        'symbol.mushroom.desc': '+2 Food, +2 Knowledge; if not adjacent to Forest: destroy.',
         'symbol.scholar.desc': 'Destroys adjacent Ancient symbols. +10 Knowledge per Ancient symbol destroyed.',
         'symbol.holy_relic.desc': '+5 Knowledge. Each turn adjacent to a Religion doctrine: +1 toward a counter; at 10: permanently +5 Knowledge per turn and reset counter.',
         'symbol.telescope.desc': '+Knowledge equal to this slot number (1–20, top-left first).',
@@ -410,6 +449,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.pioneer.desc': 'Destroyed; on destroy: next symbol selection includes at least one Terrain symbol.',
         'symbol.edict.desc': 'Destroyed; on destroy: choose 1 owned symbol to remove (destroy effects do not trigger).',
         'symbol.embassy.desc': 'Destroyed; on destroy: the next symbol-selection reroll costs 0 Gold.',
+        'symbol.expedition.desc': 'When adjacent to Rainforest: produces a random 1-10 Food, Gold, or Knowledge.',
 
         // ── Relics ──
         'relic.1.name': 'Clovis Spear Point',
@@ -478,7 +518,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.30.name': 'Mining',
         'knowledgeUpgrade.30.desc': 'Upgrades Rainforest and Stone.',
         'knowledgeUpgrade.31.name': 'Hunting',
-        'knowledgeUpgrade.31.desc': 'Unlocks Wild Boar and Fur for selection.',
+        'knowledgeUpgrade.31.desc': 'Unlocks Mushroom and Fur for selection.',
         'knowledgeUpgrade.32.name': 'Law Code',
         'knowledgeUpgrade.32.desc': 'Base Knowledge production +2.',
         'knowledgeUpgrade.33.name': 'Foreign Trade',
@@ -500,25 +540,42 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.15.desc': 'Medieval age: Ancient symbols leave the shop pool; Medieval symbols are added. Terrain symbol odds x0.2. Mountains +1 Food. Adjacent enemy units lose 3 HP each turn from Mountains.',
         'knowledgeUpgrade.16.name': 'Education',
         'knowledgeUpgrade.16.desc': 'Libraries are replaced with Universities. Base Knowledge production +2.',
-        'knowledgeUpgrade.17.name': 'Cartography',
-        'knowledgeUpgrade.17.desc': 'Unlocks Harbor symbol.',
-        'knowledgeUpgrade.18.name': 'Engineering',
-        'knowledgeUpgrade.18.desc': 'Unlocks Aqueduct and Rye symbols.',
-        'knowledgeUpgrade.19.name': 'Stirrup',
-        'knowledgeUpgrade.19.desc':
-            'Warrior adjacent to Horse becomes Knight (+3 Attack, +3 HP); Horse is removed. Cattle: +3 Food per turn; butcher when adjacent to Plains: +10 Food.',
-        'knowledgeUpgrade.20.name': 'Architecture',
-        'knowledgeUpgrade.20.desc': 'Unlocks Sawmill and Wild Boar symbols.',
-        'knowledgeUpgrade.21.name': 'Caravel',
-        'knowledgeUpgrade.21.desc': 'Warrior adjacent to Sea becomes Caravel (+7 HP). Unlocks Gold Vein. Spices: +1 Food per terrain type; when adjacent to Rainforest: +2 Food and +3 Gold.',
-        'knowledgeUpgrade.22.name': 'Territorial Reorganization',
-        'knowledgeUpgrade.22.desc': 'Destroy up to 3 owned symbols (on-destroy effects do not trigger); +10 Gold each. Then: 1 terrain pick and 3 symbol picks.',
-        'knowledgeUpgrade.23.name': 'Castle',
-        'knowledgeUpgrade.23.desc': 'Barbarian invasion and Barbarian Camp threat growth per turn is halved.',
         'knowledgeUpgrade.24.name': 'Printing Press',
         'knowledgeUpgrade.24.desc': 'Base Food +10, Base Gold +5, Base Knowledge +5.',
         'knowledgeUpgrade.35.name': 'Three-field System',
-        'knowledgeUpgrade.35.desc': 'Upgrades Wheat and Rice.',
+        'knowledgeUpgrade.35.desc': 'Upgrades Wheat, Rice, and Grassland.',
+        'knowledgeUpgrade.36.name': 'Agricultural Surplus',
+        'knowledgeUpgrade.36.desc': 'Upgrades Wheat and Rice.',
+        'knowledgeUpgrade.37.name': 'Modern Agriculture',
+        'knowledgeUpgrade.37.desc': 'Upgrades Wheat and Rice.',
+        'knowledgeUpgrade.38.name': 'Pasture Management',
+        'knowledgeUpgrade.38.desc': 'Upgrades Plains.',
+        'knowledgeUpgrade.39.name': 'Nomadic Tradition',
+        'knowledgeUpgrade.39.desc': 'Upgrades Cattle, Sheep, and Wool.',
+        'knowledgeUpgrade.40.name': 'Compass',
+        'knowledgeUpgrade.40.desc': 'Compass is added to the symbol selection pool.',
+        'knowledgeUpgrade.41.name': 'Shipbuilding',
+        'knowledgeUpgrade.41.desc': 'Upgrades Sea.',
+        'knowledgeUpgrade.42.name': 'Fishery Guild',
+        'knowledgeUpgrade.42.desc': 'Upgrades Fish and Crab.',
+        'knowledgeUpgrade.43.name': 'Maritime Trade',
+        'knowledgeUpgrade.43.desc': 'Upgrades Pearl and Sea.',
+        'knowledgeUpgrade.44.name': 'Oceanic Routes',
+        'knowledgeUpgrade.44.desc': 'Upgrades Fish, Crab, Pearl, and Sea.',
+        'knowledgeUpgrade.45.name': 'Plantation',
+        'knowledgeUpgrade.45.desc': 'Upgrades Banana and Rainforest.',
+        'knowledgeUpgrade.48.name': 'Tracking',
+        'knowledgeUpgrade.48.desc': 'Upgrades Forest and Mushroom.',
+        'knowledgeUpgrade.49.name': 'Tanning',
+        'knowledgeUpgrade.49.desc': 'Upgrades Fur and Deer.',
+        'knowledgeUpgrade.50.name': 'Forestry',
+        'knowledgeUpgrade.50.desc': 'Upgrades Forest.',
+        'knowledgeUpgrade.51.name': 'Preservation',
+        'knowledgeUpgrade.51.desc': 'Upgrades Deer and Mushroom.',
+        'knowledgeUpgrade.46.name': 'Jungle Expedition',
+        'knowledgeUpgrade.46.desc': 'Expedition is added to the symbol selection pool.',
+        'knowledgeUpgrade.47.name': 'Tropical Development',
+        'knowledgeUpgrade.47.desc': 'Upgrades Rainforest and Expedition.',
         'destroySelection.riteTitle': 'Sacrificial Rite — choose symbols to destroy',
         'destroySelection.riteDesc': 'Destroy up to 3 owned symbols. Confirm to gain +10 Gold per destroyed symbol.',
         'destroySelection.territoryTitle': 'Territorial Reorganization — choose symbols to remove',
@@ -535,7 +592,7 @@ const translations: Record<Language, Record<string, string>> = {
         'oblivionBoard.remove': 'Remove',
         'oblivionBoard.cancel': 'Cancel',
         'cattleButcher.button': 'Butcher',
-        'cattleButcher.aria': 'Butcher for bonus resources (+10 Food on cattle, +5 Food and +5 Gold on sheep)',
+        'cattleButcher.aria': 'Butcher for bonus resources',
         'knowledgeUpgrade.11.name': 'Golden Trade',
         'knowledgeUpgrade.11.desc': 'Whenever the Relic Shop restocks, one random relic in stock is 50% off.',
         'knowledgeUpgrade.12.name': 'Relic Vault',
@@ -606,8 +663,21 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.requiresPastoralismShort': '목축업 필요',
         'knowledgeUpgrade.requiresFisheriesShort': '어업 필요',
         'knowledgeUpgrade.requiresSeafaringShort': '항해술 필요',
+        'knowledgeUpgrade.requiresCelestialNavigationShort': '천문항법 필요',
+        'knowledgeUpgrade.requiresHuntingShort': '수렵 필요',
+        'knowledgeUpgrade.requiresTrackingShort': '추적술 필요',
+        'knowledgeUpgrade.requiresTanningShort': '무두질 필요',
+        'knowledgeUpgrade.requiresForestryShort': '임업 필요',
+        'knowledgeUpgrade.requiresMiningShort': '채광 필요',
+        'knowledgeUpgrade.requiresPlantationShort': '플랜테이션 필요',
+        'knowledgeUpgrade.requiresJungleExpeditionShort': '정글탐사 필요',
+        'knowledgeUpgrade.requiresMaritimeTradeShort': '해상 무역 필요',
+        'knowledgeUpgrade.requiresFisheryGuildShort': '어업 조합 필요',
         'knowledgeUpgrade.requiresAncientShort': '고대 시대 필요',
         'knowledgeUpgrade.requiresIrrigationShort': '관개 필요',
+        'knowledgeUpgrade.requiresThreeFieldShort': '삼포제 필요',
+        'knowledgeUpgrade.requiresAgriculturalSurplusShort': '농업 잉여 필요',
+        'knowledgeUpgrade.requiresNomadicTraditionShort': '유목 전통 필요',
         'knowledgeUpgrade.symbolDescAfter.2.warrior': '고대 근접 유닛(청동 기술 보유 시 전투 체력 상한 20).',
         'knowledgeUpgrade.symbolDescAfter.2.archer': '고대 원거리 유닛(청동 기술 보유 시 전투 체력 상한 8).',
         'knowledgeUpgrade.symbolDescAfter.3.wheat': '밀: 10턴마다: 식량10. 인접한 초원마다: 턴 +1.',
@@ -615,23 +685,40 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.symbolDescAfter.27.wheat': '밀: 10턴마다: 식량15. 초원에 인접 시: 턴 +1.',
         'knowledgeUpgrade.symbolDescAfter.27.rice': '쌀: 20턴마다: 식량30. 초원에 인접 시: 턴 +1.',
         'knowledgeUpgrade.symbolDescAfter.7.plains': '식량 +2.',
-        'knowledgeUpgrade.symbolDescAfter.28.fish': '바다 인접 시: 식량 +3.',
-        'knowledgeUpgrade.symbolDescAfter.28.crab': '바다 인접 시: 식량 +2, 골드 +2.',
+        'knowledgeUpgrade.symbolDescAfter.28.fish': '보드에 배치된 바다가 1개: 식량 +2; 2개: 식량 +3; 3개 이상: 식량 +5.',
+        'knowledgeUpgrade.symbolDescAfter.28.crab': '보드에 배치된 바다가 1개: 식량 +2, 골드 +1; 2개: 식량 +3, 골드 +2; 3개 이상: 식량 +3, 골드 +2.',
+        'knowledgeUpgrade.symbolDescAfter.42.fish': '보드에 배치된 바다가 1개: 식량 +3; 2개: 식량 +5; 3개 이상: 식량 +10.',
+        'knowledgeUpgrade.symbolDescAfter.42.crab': '보드에 배치된 바다가 1개: 식량 +3, 골드 +3; 2개: 식량 +5, 골드 +5; 3개 이상: 식량 +5, 골드 +5.',
         'knowledgeUpgrade.symbolDescAfter.29.sea': '인접한 심볼 2개당: 골드 +1.',
-        'knowledgeUpgrade.symbolDescAfter.29.pearl': '바다 인접 시: 골드 +5.',
+        'knowledgeUpgrade.symbolDescAfter.41.sea': '인접한 심볼 3개당: 골드 +1. 보드 위 배치 시, 2개 배치된 것으로 간주합니다.',
+        'knowledgeUpgrade.symbolDescAfter.41.seaWithCelestial': '인접한 심볼 2개당: 골드 +1. 보드 위 배치 시, 2개 배치된 것으로 간주합니다.',
+        'knowledgeUpgrade.symbolDescAfter.29.pearl': '보드에 배치된 바다가 1개: 골드 +4; 2개: 골드 +5; 3개 이상: 골드 +7.',
+        'knowledgeUpgrade.symbolDescAfter.43.sea': '인접한 심볼 2개당: 골드 +2.',
+        'knowledgeUpgrade.symbolDescAfter.43.seaWithShipbuilding': '인접한 심볼 2개당: 골드 +2. 보드 위 배치 시, 2개 배치된 것으로 간주합니다.',
+        'knowledgeUpgrade.symbolDescAfter.43.pearl': '보드에 배치된 바다가 1개: 골드 +5; 2개: 골드 +7; 3개 이상: 골드 +10.',
+        'knowledgeUpgrade.symbolDescAfter.44.fish': '보드에 배치된 바다가 1개: 식량 +5; 2개: 식량 +8; 3개 이상: 식량 +15.',
+        'knowledgeUpgrade.symbolDescAfter.44.crab': '보드에 배치된 바다가 1개: 식량 +5, 골드 +5; 2개: 식량 +8, 골드 +8; 3개 이상: 식량 +8, 골드 +8.',
+        'knowledgeUpgrade.symbolDescAfter.44.pearl': '보드에 배치된 바다가 1개: 골드 +10; 2개: 골드 +20; 3개 이상: 골드 +30.',
+        'knowledgeUpgrade.symbolDescAfter.44.sea': '인접한 심볼 1개당: 골드 +2.',
+        'knowledgeUpgrade.symbolDescAfter.44.seaWithShipbuilding': '인접한 심볼 1개당: 골드 +2. 보드 위 배치 시, 2개 배치된 것으로 간주합니다.',
         'knowledgeUpgrade.symbolDescAfter.30.rainforest': '식량 +3.',
         'knowledgeUpgrade.symbolDescAfter.30.stone': '골드 +1; 같은 열에 산이 있으면: 골드 +5 추가.',
+        'knowledgeUpgrade.symbolDescAfter.45.banana': '식량 +1; 열대우림에 7회 인접마다: 추가 식량 생산 +1.',
+        'knowledgeUpgrade.symbolDescAfter.45.rainforest': '식량 +3, 골드 +3.',
+        'knowledgeUpgrade.symbolDescAfter.48.forest': '보드에 배치된 숲이 3개 이상: 식량 +3; 5개 이상: 골드 +3; 보드에 유일한 지형이 숲이면: 식량 +3.',
+        'knowledgeUpgrade.symbolDescAfter.48.mushroom': '식량 +4, 지식 +4; 숲이 인접하지 않으면: 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.49.fur': '보드에 배치된 숲마다: 골드 +1.',
+        'knowledgeUpgrade.symbolDescAfter.49.deer': '인접한 숲마다: 식량 +2.',
+        'knowledgeUpgrade.symbolDescAfter.50.forest': '보드에 배치된 숲이 3개 이상: 식량 +5; 5개 이상: 골드 +5; 7개 이상: 지식 +3; 보드에 유일한 지형이 숲이면: 생산 x2.',
+        'knowledgeUpgrade.symbolDescAfter.51.deer': '인접한 숲마다: 식량 +3.',
+        'knowledgeUpgrade.symbolDescAfter.51.mushroom': '식량 +9, 지식 +9; 숲이 인접하지 않으면: 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.47.rainforest': '식량 +5, 골드 +5, 지식 +5.',
+        'knowledgeUpgrade.symbolDescAfter.47.expedition': '열대우림 인접 시: 식량, 골드, 지식을 각각 1~10씩 생산합니다.',
         'knowledgeUpgrade.symbolDescAfter.15.mountain': '식량 +2; 적 유닛 인접 시: 매 스핀 체력 3 감소.',
-        'knowledgeUpgrade.symbolDescAfter.19.warrior': '고대 근접 유닛; 말 인접 시: 기사로 변신(말 제거).',
-        'knowledgeUpgrade.symbolDescAfter.19.horse': '식량 +1, 골드 +1; 평원에 인접 시: 식량 +2 추가 생산; 인접 전사→기사 변신에 쓰이면: 제거.',
         'knowledgeUpgrade.symbolDescAfter.26.sheep':
             '식량 +1; 10% 확률로 양 생산; 10% 확률로 양모 생산. 평원 인접 시 도축 시 식량 +5, 골드 +5.',
         'knowledgeUpgrade.symbolDescAfter.26.cattle':
             '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 시 식량 +10.',
-        'knowledgeUpgrade.symbolDescAfter.19.cattle': '턴당 식량 +3. 평원 인접 시 도축 시 식량 +10.',
-        'knowledgeUpgrade.symbolDescAfter.21.warrior': '고대 근접 유닛; 바다에 인접 시: 캐러벨로 변신.',
-        'knowledgeUpgrade.symbolDescAfter.21.spices': '배치 된 다른 지형 유형 하나당: 식량 +1; 열대우림 인접 시: 식량 +2, 골드 +3.',
-        'knowledgeUpgrade.symbolDescAfter.23.barbarian_camp': '8턴마다: 무작위 현재 시대 적 전투 유닛 1개 추가; 파괴; 파괴 시: 전리품 추가; 성(지식 업그레이드) 보유 시: 야만인 침공·주둔지 위협이 매 턴 절반만큼만 쌓임.',
         'game.reroll': '리롤',
         'game.rerollKnowledgeUpgrade': '이 카드를 다른 업그레이드로 바꾸기 (이번 선택에 한 번만)',
         'game.skip': '건너뛰기',
@@ -798,6 +885,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.crab.name': '게',
         'symbol.library.name': '도서관',
         'symbol.pearl.name': '진주',
+        'symbol.compass.name': '나침반',
         'symbol.desert.name': '사막',
         'symbol.forest.name': '숲',
         'symbol.deer.name': '사슴',
@@ -831,15 +919,10 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.spices.name': '향신료',
         'symbol.tax.name': '세금',
         'symbol.university.name': '대학',
-        'symbol.harbor.name': '항구',
         'symbol.aqueduct.name': '송수로',
         'symbol.rye.name': '귀리',
         'symbol.sheep.name': '양',
-        'symbol.wild_boar.name': '멧돼지',
-        'symbol.sawmill.name': '제재소',
-        'symbol.gold_vein.name': '황금 광맥',
-        'symbol.knight.name': '기사',
-        'symbol.caravel.name': '캐러벨',
+        'symbol.mushroom.name': '버섯',
         'symbol.scholar.name': '학자',
         'symbol.holy_relic.name': '성유물',
         'symbol.telescope.name': '망원경',
@@ -849,6 +932,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.wild_seeds.name': '야생 씨앗',
         'symbol.wild_seeds.desc': '식량 +1. 5턴 후 파괴.',
         'symbol.embassy.name': '사절단',
+        'symbol.expedition.name': '탐사대',
 
         // ── Symbol Descriptions ──
         'symbol.wheat.desc': '밀: 10턴마다: 식량10. 초원에 인접 시: 턴 +1.',
@@ -862,12 +946,13 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.cattle.descBoard.stirrupPastoral':
             '턴당 식량 +3; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +10.',
         'symbol.banana.desc': '식량 +1; 열대우림에 10회 인접마다: 추가 식량 생산 +1.',
-        'symbol.fish.desc': '바다 인접 시: 식량 +2.',
+        'symbol.fish.desc': '보드에 배치된 바다가 1개: 식량 +1; 2개: 식량 +2; 3개 이상: 식량 +4.',
         'symbol.sea.desc': '인접한 심볼 3개당: 골드 +1.',
         'symbol.stone.desc': '골드 +1; 같은 열에 산이 있으면: 골드 +2 추가.',
         'symbol.copper.desc': '골드 +1; 보드에 구리 3개인 경우: 골드 생산 x3.',
         'symbol.grassland.desc': '식량 +1.',
         'symbol.grassland.descWithIrrigation': '식량 +2.',
+        'symbol.grassland.descWithThreeField': '식량 +5.',
         'symbol.monument.desc': '지식 +5.',
         'symbol.oasis.desc': '인접 빈 슬롯 2개당: 식량 +1.',
         'symbol.oral_tradition.desc': '10턴 후: 파괴; 파괴 시: 인접 심볼 1개당 지식 +10.',
@@ -881,13 +966,14 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.tribal_village.desc': '파괴; 파괴 시: 무작위 일반 심볼 추가.',
         'symbol.merchant.desc': '구석 아닐 시: 인접 심볼 중 최고 식량 생산만큼 골드 저장; 구석 배치 시: 저장된 골드 획득.',
         'symbol.horse.desc': '식량 +1, 골드 +1; 평원에 인접 시: 식량 +2 추가 생산.',
-        'symbol.crab.desc': '바다 인접 시: 식량 +1, 골드 +2.',
+        'symbol.crab.desc': '보드에 배치된 바다가 1개: 식량 +1, 골드 +1; 2개: 식량 +2, 골드 +2; 3개 이상: 식량 +2, 골드 +2.',
         'symbol.library.desc': '지식 +7.',
-        'symbol.pearl.desc': '바다 인접 시: 골드 +3.',
+        'symbol.pearl.desc': '보드에 배치된 바다가 1개: 골드 +2; 2개: 골드 +3; 3개 이상: 골드 +5.',
+        'symbol.compass.desc': '보드에 배치된 바다가 1개: 지식 +5; 2개: 지식 +10; 3개 이상: 지식 +15.',
         'symbol.desert.desc': '무작위 인접한 일반·시대 심볼 1개 파괴.',
-        'symbol.forest.desc': '보드에 배치된 숲이 4개 이상이면: 식량 +2.',
-        'symbol.deer.desc': '보드에 배치된 숲이 2개 이상이면: 식량 +2.',
-        'symbol.fur.desc': '보드에 배치된 숲 2개마다: 골드 +1, 지식 +1.',
+        'symbol.forest.desc': '보드에 배치된 숲이 3개 이상: 식량 +2; 5개 이상: 골드 +2; 보드에 유일한 지형이 숲이면: 식량 +2.',
+        'symbol.deer.desc': '인접한 숲마다: 식량 +1.',
+        'symbol.fur.desc': '보드에 배치된 숲 2개마다: 골드 +2.',
         'symbol.date.desc': '식량 +1; 파괴 시: 식량 +5 및 50% 확률로 대추 추가.',
         'symbol.christianity.desc': '인접 심볼 중 최고 식량 생산량만큼 식량 생산; 종교 심볼 인접 시: 식량 -50.',
         'symbol.islam.desc': '지식을 생산하는 인접 심볼 1개당 골드 +2; 종교 심볼 인접 시: 식량 -50.',
@@ -906,27 +992,23 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.earthquake.desc': '파괴. 파괴 시: 무작위 인접 심볼 한 개 파괴.',
         'symbol.drought.desc': '카운터 0 도달 시: 파괴.',
         'symbol.wool.desc': '3턴 후 파괴; 파괴 시: 골드 +5.',
+        'symbol.wool.descWithNomadicTradition': '3턴 후 파괴; 파괴 시: 골드 +10.',
 
         'symbol.salt.desc': '인접 지형 심볼 1개당: 식량 +1.',
-        'symbol.honey.desc': '6턴 후: 파괴; 파괴 시: 식량 +10.',
+        'symbol.honey.desc': '같은 지형이 5개 이상 배치 시: 식량 +5.',
         'symbol.corn.desc': '식량 +2.',
         'symbol.wild_berries.desc': '식량 +1; 숲 혹은 열대우림 인접 시: 식량 +2; 산 인접 시: 지식 +2.',
         'symbol.hay.desc': '평원 인접 시: 카운터 +1. 파괴 시: 카운터 만큼 식량 생산.',
         'symbol.spices.desc': '배치 된 다른 지형 유형 하나당: 식량 +1.',
         'symbol.tax.desc': '무작위 인접 심볼이 이번 턴 생산한 식량만큼 골드를 생산하고, 그만큼 식량을 차감합니다.',
         'symbol.university.desc': '배치된 심볼 하나당 지식 +1.',
-        'symbol.harbor.desc': '식량 +2. 항구와 인접한 심볼은 바다와 인접한 것으로 간주됩니다. 인접 심볼 하나당 골드 +1.',
         'symbol.aqueduct.desc': '인접한 밀·쌀·귀리의 이번 턴 식량 생산이 2배가 됩니다.',
         'symbol.rye.desc': '식량 +2. 평원 인접 시: 식량 +2 추가.',
         'symbol.sheep.desc':
             '식량 +1; 10% 확률로 양모 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +5.',
         'symbol.sheep.descBoard.pastoral':
             '식량 +1; 10% 확률로 양 생산; 10% 확률로 양모 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +5.',
-        'symbol.wild_boar.desc': '보드에 배치된 숲이 4개 이상이면: 식량 +4.',
-        'symbol.sawmill.desc': '같은 열의 숲 하나당 식량 +5. 같은 열의 산 하나당 지식 +5·골드 +5.',
-        'symbol.gold_vein.desc': '골드 +5.',
-        'symbol.knight.desc': '중세 근접 유닛(전사 대비 공격 +3, 체력 +3).',
-        'symbol.caravel.desc': '중세 해상 유닛(전사 대비 체력 +7).',
+        'symbol.mushroom.desc': '식량 +2, 지식 +2; 숲이 인접하지 않으면: 파괴.',
         'symbol.scholar.desc': '인접한 고대 심볼을 파괴합니다. 파괴한 고대 심볼 하나당 지식 +10.',
         'symbol.holy_relic.desc': '지식 +5. 매 턴 종교 교리 심볼과 인접하면 카운터 +1; 10이 되면 턴당 지식 생산 영구 +5 후 카운터 초기화.',
         'symbol.telescope.desc': '슬롯 번호(1–20, 좌상단부터)만큼 지식을 생산합니다.',
@@ -934,6 +1016,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.pioneer.desc': '파괴. 파괴 시: 다음 심볼 선택지에 지형 심볼이 최소 1개 포함됩니다.',
         'symbol.edict.desc': '파괴. 파괴 시: 보유 심볼 1개를 제거합니다(파괴 효과는 발동하지 않음).',
         'symbol.embassy.desc': '파괴. 파괴 시: 다음 심볼 선택 단계에서 첫 리롤이 골드 0입니다.',
+        'symbol.expedition.desc': '열대우림 인접 시: 식량, 골드, 지식 중 무작위로 1~10만큼 생산합니다.',
 
         // ── Relics ──
         'relic.1.name': '클로비스 투창촉',
@@ -1001,7 +1084,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.30.name': '채광',
         'knowledgeUpgrade.30.desc': '열대우림과 돌을 업그레이드합니다.',
         'knowledgeUpgrade.31.name': '수렵',
-        'knowledgeUpgrade.31.desc': '멧돼지와 모피를 해금합니다.',
+        'knowledgeUpgrade.31.desc': '버섯과 모피를 해금합니다.',
         'knowledgeUpgrade.32.name': '법전',
         'knowledgeUpgrade.32.desc': '기본 지식 생산 +2.',
         'knowledgeUpgrade.33.name': '외국 무역',
@@ -1022,25 +1105,42 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.15.desc': '중세: 고대 심볼이 상점 풀에서 제외되고 중세 심볼이 추가됩니다. 지형 심볼 등장 확률이 약 0.2배로 감소합니다. 산: 식량 +1. 산에 인접한 적 유닛은 매 턴 체력 3을 잃습니다.',
         'knowledgeUpgrade.16.name': '교육',
         'knowledgeUpgrade.16.desc': '도서관이 대학으로 대체됩니다. 기본 지식 생산 +2.',
-        'knowledgeUpgrade.17.name': '지도제작',
-        'knowledgeUpgrade.17.desc': '항구 심볼을 해금합니다.',
-        'knowledgeUpgrade.18.name': '공학',
-        'knowledgeUpgrade.18.desc': '송수로와 귀리 심볼을 해금합니다.',
-        'knowledgeUpgrade.19.name': '등자',
-        'knowledgeUpgrade.19.desc':
-            '전사가 말과 인접하면 기사로 변하고 말은 제거됩니다(+3 공격, +3 체력). 소: 턴당 식량 +3; 평원 인접 시 도축 시 식량 +10.',
-        'knowledgeUpgrade.20.name': '건축',
-        'knowledgeUpgrade.20.desc': '제재소와 멧돼지 심볼을 해금합니다.',
-        'knowledgeUpgrade.21.name': '조선',
-        'knowledgeUpgrade.21.desc': '전사가 바다와 인접하면 캐러벨로 변합니다(+7 체력). 황금 광맥을 해금합니다. 향신료: 지형 유형당 식량 +1, 열대우림 인접 시 식량 +2·골드 +3.',
-        'knowledgeUpgrade.22.name': '영토 정비',
-        'knowledgeUpgrade.22.desc': '보유 심볼 최대 3개까지 제거합니다(파괴 효과 없음). 제거한 심볼마다 골드 +10. 이후 지형 선택 1회와 심볼 선택 3회가 이어집니다.',
-        'knowledgeUpgrade.23.name': '성',
-        'knowledgeUpgrade.23.desc': '야만인 침공·야만인 주둔지 위협이 매 턴 오르는 양이 절반으로 줄어듭니다.',
         'knowledgeUpgrade.24.name': '인쇄술',
         'knowledgeUpgrade.24.desc': '기본 식량 생산 +10, 기본 골드 생산 +5, 기본 지식 생산 +5.',
         'knowledgeUpgrade.35.name': '삼포제',
-        'knowledgeUpgrade.35.desc': '밀과 쌀을 업그레이드합니다.',
+        'knowledgeUpgrade.35.desc': '밀, 쌀, 초원을 업그레이드합니다.',
+        'knowledgeUpgrade.36.name': '농업 잉여',
+        'knowledgeUpgrade.36.desc': '밀과 쌀을 업그레이드합니다.',
+        'knowledgeUpgrade.37.name': '현대 농업',
+        'knowledgeUpgrade.37.desc': '밀과 쌀을 업그레이드합니다.',
+        'knowledgeUpgrade.38.name': '목장제',
+        'knowledgeUpgrade.38.desc': '평원을 업그레이드합니다.',
+        'knowledgeUpgrade.39.name': '유목 전통',
+        'knowledgeUpgrade.39.desc': '소, 양, 양모를 업그레이드합니다.',
+        'knowledgeUpgrade.40.name': '나침반',
+        'knowledgeUpgrade.40.desc': '나침반이 심볼 선택 풀에 추가됩니다.',
+        'knowledgeUpgrade.41.name': '조선',
+        'knowledgeUpgrade.41.desc': '바다를 업그레이드합니다.',
+        'knowledgeUpgrade.42.name': '어업 조합',
+        'knowledgeUpgrade.42.desc': '물고기, 게를 업그레이드합니다.',
+        'knowledgeUpgrade.43.name': '해상 무역',
+        'knowledgeUpgrade.43.desc': '진주와 바다를 업그레이드합니다.',
+        'knowledgeUpgrade.44.name': '원양 항로',
+        'knowledgeUpgrade.44.desc': '물고기, 게, 진주 및 바다를 업그레이드합니다.',
+        'knowledgeUpgrade.45.name': '플랜테이션',
+        'knowledgeUpgrade.45.desc': '바나나와 열대우림을 업그레이드합니다.',
+        'knowledgeUpgrade.48.name': '추적술',
+        'knowledgeUpgrade.48.desc': '숲과 버섯을 업그레이드합니다.',
+        'knowledgeUpgrade.49.name': '무두질',
+        'knowledgeUpgrade.49.desc': '모피와 사슴을 업그레이드합니다.',
+        'knowledgeUpgrade.50.name': '임업',
+        'knowledgeUpgrade.50.desc': '숲을 업그레이드 합니다.',
+        'knowledgeUpgrade.51.name': '보존',
+        'knowledgeUpgrade.51.desc': '사슴과 버섯을 업그레이드 합니다.',
+        'knowledgeUpgrade.46.name': '정글탐사',
+        'knowledgeUpgrade.46.desc': '탐사대가 선택 풀에 추가됩니다.',
+        'knowledgeUpgrade.47.name': '열대 개발',
+        'knowledgeUpgrade.47.desc': '열대우림과 탐사대를 업그레이드합니다.',
         'destroySelection.riteTitle': '희생 제의 (파괴할 심볼 선택)',
         'destroySelection.riteDesc': '보유 중인 심볼을 최대 3개까지 파괴할 수 있습니다. 선택 후 확정하면 파괴한 심볼 하나당 골드 +10을 획득합니다.',
         'destroySelection.territoryTitle': '영토 정비 (제거할 심볼 선택)',
@@ -1057,7 +1157,7 @@ const translations: Record<Language, Record<string, string>> = {
         'oblivionBoard.remove': '제거',
         'oblivionBoard.cancel': '취소',
         'cattleButcher.button': '도축',
-        'cattleButcher.aria': '도축 시 보너스(소: 식량 +10, 양: 식량 +5·골드 +5)',
+        'cattleButcher.aria': '도축 시 보너스 획득',
         'knowledgeUpgrade.11.name': '황금의 거래',
         'knowledgeUpgrade.11.desc': '새로운 유물 입고 시 무작위 유물의 가격이 50% 할인됩니다.',
         'knowledgeUpgrade.12.name': '유물 보관소',
@@ -1093,6 +1193,34 @@ function cropThreeFieldDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgri
         : `Rice: every 20 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +1/turn.`;
 }
 
+function cropAgriculturalSurplusDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgriculture: boolean): string {
+    const food = symbolKey === 'wheat'
+        ? hasAgriculture ? 15 : 10
+        : hasAgriculture ? 30 : 25;
+    if (lang === 'ko') {
+        return symbolKey === 'wheat'
+            ? `밀: 10턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +2.`
+            : `쌀: 20턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +2.`;
+    }
+    return symbolKey === 'wheat'
+        ? `Wheat: every 10 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +2/turn.`
+        : `Rice: every 20 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +2/turn.`;
+}
+
+function cropModernAgricultureDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgriculture: boolean): string {
+    const food = symbolKey === 'wheat'
+        ? hasAgriculture ? 15 : 10
+        : hasAgriculture ? 30 : 25;
+    if (lang === 'ko') {
+        return symbolKey === 'wheat'
+            ? `밀: 10턴마다: 식량 +${food}+보드 위 초원 수. 보드 위 초원 1개당: 턴 +1.`
+            : `쌀: 20턴마다: 식량 +${food}+보드 위 초원 수. 보드 위 초원 1개당: 턴 +1.`;
+    }
+    return symbolKey === 'wheat'
+        ? `Wheat: every 10 turns: ${food} Food + number of Grasslands on the board. Per Grassland on the board: +1/turn.`
+        : `Rice: every 20 turns: ${food} Food + number of Grasslands on the board. Per Grassland on the board: +1/turn.`;
+}
+
 /** 보드·선택 UI: 밀/쌀·초원·평원·소·양 등 연구 상태에 따라 툴팁 문구가 바뀜 */
 export function getBoardSymbolTooltipDesc(
     symbolKey: string,
@@ -1101,6 +1229,9 @@ export function getBoardSymbolTooltipDesc(
 ): string {
     if (symbolKey === 'grassland') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        if (have.has(THREE_FIELD_SYSTEM_UPGRADE_ID)) {
+            return t('symbol.grassland.descWithThreeField', lang);
+        }
         return have.has(IRRIGATION_UPGRADE_ID)
             ? t('symbol.grassland.descWithIrrigation', lang)
             : t('symbol.grassland.desc', lang);
@@ -1108,45 +1239,104 @@ export function getBoardSymbolTooltipDesc(
     if (symbolKey === 'cattle') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         const hasPast = have.has(PASTORALISM_UPGRADE_ID);
-        const hasStirrup = have.has(STIRRUP_UPGRADE_ID);
-        if (hasStirrup && hasPast) return t('symbol.cattle.descBoard.stirrupPastoral', lang);
-        if (hasStirrup) return t('symbol.cattle.descBoard.stirrup', lang);
+        const hasNomadicTradition = have.has(NOMADIC_TRADITION_UPGRADE_ID);
+        if (hasNomadicTradition && hasPast) {
+            return lang === 'ko'
+                ? '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +15.'
+                : '+1 Food; 10% chance to produce Cattle. When adjacent to Plains, can butcher; on butcher: +15 Food.';
+        }
+        if (hasNomadicTradition) {
+            return lang === 'ko'
+                ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +15.'
+                : '+1 Food. When adjacent to Plains, can butcher; on butcher: +15 Food.';
+        }
         if (hasPast) return t('symbol.cattle.descBoard.pastoral', lang);
         return t('symbol.cattle.desc', lang);
     }
     if (symbolKey === 'sheep') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        if (have.has(NOMADIC_TRADITION_UPGRADE_ID)) {
+            return have.has(PASTORALISM_UPGRADE_ID)
+                ? lang === 'ko'
+                    ? '식량 +1; 10% 확률로 양 생산; 10% 확률로 양모 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +10.'
+                    : '+1 Food; 10% chance to produce Sheep; 10% chance to produce Wool. When adjacent to Plains, can butcher; on butcher: +5 Food, +10 Gold.'
+                : lang === 'ko'
+                    ? '식량 +1; 10% 확률로 양모 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +10.'
+                    : '+1 Food; 10% chance to produce Wool. When adjacent to Plains, can butcher; on butcher: +5 Food, +10 Gold.';
+        }
         return have.has(PASTORALISM_UPGRADE_ID)
             ? t('symbol.sheep.descBoard.pastoral', lang)
             : t('symbol.sheep.desc', lang);
     }
+    if (symbolKey === 'wool') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(NOMADIC_TRADITION_UPGRADE_ID)
+            ? t('symbol.wool.descWithNomadicTradition', lang)
+            : t('symbol.wool.desc', lang);
+    }
     if (symbolKey === 'plains') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        if (have.has(PASTURE_MANAGEMENT_UPGRADE_ID)) {
+            const base = have.has(HORSEMANSHIP_UPGRADE_ID) ? 2 : 1;
+            return lang === 'ko'
+                ? `식량 +${base}+카운터. 인접한 소 또는 양이 도축될 때: 카운터 +1.`
+                : `+${base} Food + Counter. When adjacent Cattle or Sheep is butchered: +1 Counter.`;
+        }
         return have.has(HORSEMANSHIP_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.7.plains', lang)
             : t('symbol.plains.desc', lang);
     }
     if (symbolKey === 'fish') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(SEAFARING_UPGRADE_ID)
+        return have.has(OCEANIC_ROUTES_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.44.fish', lang)
+            : have.has(FISHERY_GUILD_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.42.fish', lang)
+            : have.has(SEAFARING_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.28.fish', lang)
             : t('symbol.fish.desc', lang);
     }
     if (symbolKey === 'crab') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(SEAFARING_UPGRADE_ID)
+        return have.has(OCEANIC_ROUTES_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.44.crab', lang)
+            : have.has(FISHERY_GUILD_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.42.crab', lang)
+            : have.has(SEAFARING_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.28.crab', lang)
             : t('symbol.crab.desc', lang);
     }
     if (symbolKey === 'sea') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        if (have.has(SHIPBUILDING_UPGRADE_ID) && have.has(OCEANIC_ROUTES_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.44.seaWithShipbuilding', lang);
+        }
+        if (have.has(OCEANIC_ROUTES_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.44.sea', lang);
+        }
+        if (have.has(SHIPBUILDING_UPGRADE_ID) && have.has(MARITIME_TRADE_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.43.seaWithShipbuilding', lang);
+        }
+        if (have.has(MARITIME_TRADE_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.43.sea', lang);
+        }
+        if (have.has(SHIPBUILDING_UPGRADE_ID) && have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.41.seaWithCelestial', lang);
+        }
+        if (have.has(SHIPBUILDING_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.41.sea', lang);
+        }
         return have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.29.sea', lang)
             : t('symbol.sea.desc', lang);
     }
     if (symbolKey === 'pearl') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)
+        return have.has(OCEANIC_ROUTES_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.44.pearl', lang)
+            : have.has(MARITIME_TRADE_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.43.pearl', lang)
+            : have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.29.pearl', lang)
             : t('symbol.pearl.desc', lang);
     }
@@ -1158,9 +1348,55 @@ export function getBoardSymbolTooltipDesc(
     }
     if (symbolKey === 'rainforest') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(MINING_UPGRADE_ID)
+        return have.has(TROPICAL_DEVELOPMENT_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.47.rainforest', lang)
+            : have.has(PLANTATION_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.45.rainforest', lang)
+            : have.has(MINING_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.30.rainforest', lang)
             : t('symbol.rainforest.desc', lang);
+    }
+    if (symbolKey === 'forest') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(FORESTRY_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.50.forest', lang)
+            : have.has(TRACKING_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.48.forest', lang)
+            : t('symbol.forest.desc', lang);
+    }
+    if (symbolKey === 'banana') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(PLANTATION_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.45.banana', lang)
+            : t('symbol.banana.desc', lang);
+    }
+    if (symbolKey === 'mushroom') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(PRESERVATION_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.51.mushroom', lang)
+            : have.has(TRACKING_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.48.mushroom', lang)
+            : t('symbol.mushroom.desc', lang);
+    }
+    if (symbolKey === 'fur') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(TANNING_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.49.fur', lang)
+            : t('symbol.fur.desc', lang);
+    }
+    if (symbolKey === 'deer') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(PRESERVATION_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.51.deer', lang)
+            : have.has(TANNING_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.49.deer', lang)
+            : t('symbol.deer.desc', lang);
+    }
+    if (symbolKey === 'expedition') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(TROPICAL_DEVELOPMENT_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.47.expedition', lang)
+            : t('symbol.expedition.desc', lang);
     }
     if (symbolKey === 'desert') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
@@ -1178,17 +1414,23 @@ export function getBoardSymbolTooltipDesc(
         return t(`symbol.${symbolKey}.desc`, lang);
     }
     const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+    const hasModernAgriculture = have.has(MODERN_AGRICULTURE_UPGRADE_ID);
+    const hasAgriculturalSurplus = have.has(AGRICULTURAL_SURPLUS_UPGRADE_ID);
     const hasThreeField = have.has(THREE_FIELD_SYSTEM_UPGRADE_ID);
     const hasIrr = have.has(IRRIGATION_UPGRADE_ID);
     const hasAg = have.has(AGRICULTURE_UPGRADE_ID);
 
     if (symbolKey === 'wheat') {
+        if (hasModernAgriculture) return cropModernAgricultureDesc('wheat', lang, hasAg);
+        if (hasAgriculturalSurplus) return cropAgriculturalSurplusDesc('wheat', lang, hasAg);
         if (hasThreeField) return cropThreeFieldDesc('wheat', lang, hasAg);
         if (hasIrr && hasAg) return t('symbol.wheat.descBoard.both', lang);
         if (hasAg) return t('knowledgeUpgrade.symbolDescAfter.27.wheat', lang);
         if (hasIrr) return t('knowledgeUpgrade.symbolDescAfter.3.wheat', lang);
         return t('symbol.wheat.desc', lang);
     }
+    if (hasModernAgriculture) return cropModernAgricultureDesc('rice', lang, hasAg);
+    if (hasAgriculturalSurplus) return cropAgriculturalSurplusDesc('rice', lang, hasAg);
     if (hasThreeField) return cropThreeFieldDesc('rice', lang, hasAg);
     if (hasIrr && hasAg) return t('symbol.rice.descBoard.both', lang);
     if (hasAg) return t('knowledgeUpgrade.symbolDescAfter.27.rice', lang);

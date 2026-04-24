@@ -1,6 +1,4 @@
-import { STIRRUP_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import { S, SYMBOLS, SymbolType, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
-import { getBronzeWorkingHpBonus } from '../../state/gameCalculations';
+import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
 import type { BoardGrid, BoardCoord, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
 
 const createEmptyBoard = (width: number, height: number): BoardGrid => {
@@ -61,67 +59,6 @@ const placeOralTraditionAtBoardCenter = (
     return { board: b, playerSymbols: symList };
 };
 
-const applyWarriorEliteTransforms = (
-    board: BoardGrid,
-    playerSymbols: TurnPreparationInput['playerSymbols'],
-    unlockedKnowledgeUpgrades: readonly number[],
-    width: number,
-    height: number,
-): { board: BoardGrid; playerSymbols: TurnPreparationInput['playerSymbols'] } => {
-    const upgrades = unlockedKnowledgeUpgrades || [];
-    const b = board.map((col) => [...col]);
-    const symList = [...playerSymbols];
-
-    const removeFromList = (instanceId: string) => {
-        const idx = symList.findIndex((s) => s.instanceId === instanceId);
-        if (idx >= 0) symList.splice(idx, 1);
-    };
-
-    const makeElite = (base: TurnPreparationInput['playerSymbols'][number], def: SymbolDefinition) => {
-        const baseHp = def.base_hp ?? 0;
-        const enemyHp = baseHp + (upgrades.includes(2) ? getBronzeWorkingHpBonus(def) : 0);
-        return {
-            ...base,
-            definition: def,
-            enemy_hp: enemyHp,
-            remaining_attacks: def.base_attack ? 3 : 0,
-        };
-    };
-
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-            const cell = b[x][y];
-            if (!cell || cell.definition.id !== S.warrior) continue;
-
-            if (upgrades.includes(STIRRUP_UPGRADE_ID)) {
-                const horsePos = getAdjacentCoords(x, y, width, height).find((p) => b[p.x][p.y]?.definition.id === S.horse);
-                if (horsePos) {
-                    const horseInst = b[horsePos.x][horsePos.y]!;
-                    b[horsePos.x][horsePos.y] = null;
-                    removeFromList(horseInst.instanceId);
-                    const knight = makeElite(cell, Sym.knight);
-                    b[x][y] = knight;
-                    const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
-                    if (wi >= 0) symList[wi] = knight;
-                    continue;
-                }
-            }
-
-            if (upgrades.includes(21)) {
-                const seaAdj = getAdjacentCoords(x, y, width, height).some((p) => b[p.x][p.y]?.definition.id === S.sea);
-                if (seaAdj) {
-                    const caravel = makeElite(cell, Sym.caravel);
-                    b[x][y] = caravel;
-                    const wi = symList.findIndex((s) => s.instanceId === cell.instanceId);
-                    if (wi >= 0) symList[wi] = caravel;
-                }
-            }
-        }
-    }
-
-    return { board: b, playerSymbols: symList };
-};
-
 export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput {
     const {
         board,
@@ -148,9 +85,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     const newThreats: { instanceId: string; label: string }[] = [];
 
     if (era === 1) {
-        const castleSlow = spinUpgrades.includes(23);
-
-        barbarianSymbolThreat += castleSlow ? 0.5 : 1;
+        barbarianSymbolThreat += 1;
         if (rng.next() * 100 < barbarianSymbolThreat) {
             barbarianSymbolThreat = 0;
             const enemyDef = Sym.enemy_warrior;
@@ -161,7 +96,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
             }
         }
 
-        barbarianCampThreat += castleSlow ? 0.1 : 0.2;
+        barbarianCampThreat += 0.2;
         if (rng.next() * 100 < barbarianCampThreat) {
             barbarianCampThreat = 0;
             const campDef = Sym.barbarian_camp;
@@ -231,18 +166,10 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         if (pos) newBoard[pos.x][pos.y] = instance;
     });
 
-    const { board: placedBoard, playerSymbols: placedSymbols } = applyWarriorEliteTransforms(
-        newBoard,
-        newPlayerSymbols,
-        spinUpgrades,
-        boardWidth,
-        boardHeight,
-    );
-
     const anchored =
         turn === 0
-            ? placeOralTraditionAtBoardCenter(placedBoard, placedSymbols)
-            : { board: placedBoard, playerSymbols: placedSymbols };
+            ? placeOralTraditionAtBoardCenter(newBoard, newPlayerSymbols)
+            : { board: newBoard, playerSymbols: newPlayerSymbols };
     const anchoredBoard = anchored.board;
     const anchoredSymbols = anchored.playerSymbols;
 

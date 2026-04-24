@@ -56,10 +56,36 @@ export type KnowledgeUpgradeType = SymbolType;
 export const ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID = 25;
 /** 목축업 — 소·양 효과 업그레이드(상세는 심볼 툴팁) */
 export const PASTORALISM_UPGRADE_ID = 26;
+/** 유목 전통 — 목축업 선행, 소·양·양모 보상 강화 */
+export const NOMADIC_TRADITION_UPGRADE_ID = 39;
+/** 나침반 — 나침반 심볼을 선택 풀에 추가 */
+export const COMPASS_UPGRADE_ID = 40;
+/** 조선 — 바다가 보드 위에서 2개로 간주됨 */
+export const SHIPBUILDING_UPGRADE_ID = 41;
+/** 어업 조합 — 물고기·게를 상위 단계로 업그레이드 */
+export const FISHERY_GUILD_UPGRADE_ID = 42;
+/** 해상 무역 — 진주와 바다를 강화 */
+export const MARITIME_TRADE_UPGRADE_ID = 43;
+/** 원양 항로 — 물고기·게·진주·바다의 최종 해상 업그레이드 */
+export const OCEANIC_ROUTES_UPGRADE_ID = 44;
+/** 플랜테이션 — 바나나·열대우림 업그레이드 */
+export const PLANTATION_UPGRADE_ID = 45;
+/** 정글탐사 — 탐사대 심볼 해금 */
+export const JUNGLE_EXPEDITION_UPGRADE_ID = 46;
+/** 열대 개발 — 열대우림·탐사대 최종 업그레이드 */
+export const TROPICAL_DEVELOPMENT_UPGRADE_ID = 47;
+/** 추적술 — 숲·버섯 업그레이드 */
+export const TRACKING_UPGRADE_ID = 48;
+/** 무두질 — 모피·사슴 업그레이드 */
+export const TANNING_UPGRADE_ID = 49;
+/** 임업 — 숲 상위 업그레이드 */
+export const FORESTRY_UPGRADE_ID = 50;
+/** 보존 — 사슴·버섯 상위 업그레이드 */
+export const PRESERVATION_UPGRADE_ID = 51;
+/** 목장제 — 유목 전통 선행, 도축 시 인접 평원 카운터 누적 */
+export const PASTURE_MANAGEMENT_UPGRADE_ID = 38;
 /** 기마술 — 말 풀 추가·평원 업그레이드(목축업 선행) */
 export const HORSEMANSHIP_UPGRADE_ID = 7;
-/** 등자 — 소 식량 +3 등 */
-export const STIRRUP_UPGRADE_ID = 19;
 /** 농업 — 밀·쌀 주기 식량 보정 */
 export const AGRICULTURE_UPGRADE_ID = 27;
 /** 관개 — 농업(27) 선행 */
@@ -80,8 +106,12 @@ export const LAW_CODE_UPGRADE_ID = 32;
 export const FOREIGN_TRADE_UPGRADE_ID = 33;
 /** 족장제 — 기본 식량 +2, 야생열매 업그레이드 */
 export const CHIEFDOM_UPGRADE_ID = 34;
-/** 삼포제 — 관개 선행, 밀·쌀 주기 식량이 보드 위 초원 수를 참조 */
+/** 삼포제 — 관개 선행, 밀·쌀 주기 식량이 보드 위 초원 수를 참조하고 초원을 강화 */
 export const THREE_FIELD_SYSTEM_UPGRADE_ID = 35;
+/** 농업 잉여 — 삼포제 선행, 밀·쌀의 인접 초원 카운터 가속 강화 */
+export const AGRICULTURAL_SURPLUS_UPGRADE_ID = 36;
+/** 현대 농업 — 농업 잉여 선행, 밀·쌀이 보드 위 초원 수로 카운터 가속 */
+export const MODERN_AGRICULTURE_UPGRADE_ID = 37;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -183,11 +213,54 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: HUNTING_UPGRADE_ID,
         name: 'Hunting',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Wild Boar and Fur for the symbol selection pool.',
+        description: 'Unlocks Mushroom and Fur for the symbol selection pool.',
         sprite: '-',
         descSymbols: [
-            { symbolKey: 'wild_boar', relation: 'pool_add' },
+            { symbolKey: 'mushroom', relation: 'pool_add' },
             { symbolKey: 'fur', relation: 'pool_add' },
+        ],
+    },
+    [TRACKING_UPGRADE_ID]: {
+        id: TRACKING_UPGRADE_ID,
+        name: 'Tracking',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Forest and Mushroom.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'forest', relation: 'effect_modify' },
+            { symbolKey: 'mushroom', relation: 'effect_modify' },
+        ],
+    },
+    [TANNING_UPGRADE_ID]: {
+        id: TANNING_UPGRADE_ID,
+        name: 'Tanning',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Fur and Deer.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'fur', relation: 'effect_modify' },
+            { symbolKey: 'deer', relation: 'effect_modify' },
+        ],
+    },
+    [FORESTRY_UPGRADE_ID]: {
+        id: FORESTRY_UPGRADE_ID,
+        name: 'Forestry',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Forest.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'forest', relation: 'effect_modify' },
+        ],
+    },
+    [PRESERVATION_UPGRADE_ID]: {
+        id: PRESERVATION_UPGRADE_ID,
+        name: 'Preservation',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Deer and Mushroom.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'deer', relation: 'effect_modify' },
+            { symbolKey: 'mushroom', relation: 'effect_modify' },
         ],
     },
     [LAW_CODE_UPGRADE_ID]: {
@@ -302,83 +375,6 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'university', relation: 'pool_add' },
         ],
     },
-    17: {
-        id: 17,
-        name: 'Cartography',
-        type: SymbolType.MEDIEVAL,
-        description: 'Unlocks Harbor symbol.',
-        sprite: '-',
-        descSymbols: [{ symbolKey: 'harbor', relation: 'pool_add' }],
-    },
-    18: {
-        id: 18,
-        name: 'Engineering',
-        type: SymbolType.MEDIEVAL,
-        description: 'Unlocks Aqueduct and Rye symbols.',
-        sprite: '-',
-        descSymbols: [
-            { symbolKey: 'aqueduct', relation: 'pool_add' },
-            { symbolKey: 'rye', relation: 'pool_add' },
-        ],
-    },
-    19: {
-        id: 19,
-        name: 'Stirrup',
-        type: SymbolType.MEDIEVAL,
-        description:
-            'Warrior adjacent to Horse becomes Knight (+3 Attack, +3 HP); Horse is removed. Cattle: +3 Food per turn; butcher when adjacent to Plains: +10 Food.',
-        sprite: '-',
-        descSymbols: [
-            { symbolKey: 'warrior', relation: 'effect_modify' },
-            { symbolKey: 'horse', relation: 'effect_modify' },
-            { symbolKey: 'knight', relation: 'pool_add' },
-            { symbolKey: 'wool', relation: 'effect_modify' },
-            { symbolKey: 'cattle', relation: 'effect_modify' },
-        ],
-    },
-    20: {
-        id: 20,
-        name: 'Architecture',
-        type: SymbolType.MEDIEVAL,
-        description: 'Unlocks Sawmill and Wild Boar symbols.',
-        sprite: '-',
-        descSymbols: [
-            { symbolKey: 'sawmill', relation: 'pool_add' },
-            { symbolKey: 'wild_boar', relation: 'pool_add' },
-        ],
-    },
-    21: {
-        id: 21,
-        name: 'Caravel',
-        type: SymbolType.MEDIEVAL,
-        description:
-            'Warrior adjacent to Sea becomes Caravel (+7 HP). Unlocks Gold Vein. Spices: +1 Food per terrain type; when adjacent to Rainforest: +2 Food and +3 Gold.',
-        sprite: '-',
-        descSymbols: [
-            { symbolKey: 'warrior', relation: 'effect_modify' },
-            { symbolKey: 'sea', relation: 'effect_modify' },
-            { symbolKey: 'caravel', relation: 'pool_add' },
-            { symbolKey: 'gold_vein', relation: 'pool_add' },
-            { symbolKey: 'spices', relation: 'effect_modify' },
-            { symbolKey: 'rainforest', relation: 'effect_modify' },
-        ],
-    },
-    22: {
-        id: 22,
-        name: 'Territorial Reorganization',
-        type: SymbolType.MEDIEVAL,
-        description:
-            'Destroy up to 3 owned symbols (on-destroy effects do not trigger); +10 Gold each. Then: 1 terrain pick and 3 symbol picks.',
-        sprite: '-',
-    },
-    23: {
-        id: 23,
-        name: 'Castle',
-        type: SymbolType.MEDIEVAL,
-        description: 'Barbarian invasion and Barbarian Camp threat growth per turn is halved.',
-        sprite: '-',
-        descSymbols: [{ symbolKey: 'barbarian_camp', relation: 'effect_modify' }],
-    },
     24: {
         id: 24,
         name: 'Printing Press',
@@ -386,15 +382,139 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Base Food +10, Base Gold +5, Base Knowledge +5.',
         sprite: '-',
     },
+    [COMPASS_UPGRADE_ID]: {
+        id: COMPASS_UPGRADE_ID,
+        name: 'Compass',
+        type: SymbolType.ANCIENT,
+        description: 'Compass is added to the symbol selection pool.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'compass', relation: 'pool_add' }],
+    },
+    [SHIPBUILDING_UPGRADE_ID]: {
+        id: SHIPBUILDING_UPGRADE_ID,
+        name: 'Shipbuilding',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Sea.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'sea', relation: 'effect_modify' }],
+    },
+    [FISHERY_GUILD_UPGRADE_ID]: {
+        id: FISHERY_GUILD_UPGRADE_ID,
+        name: 'Fishery Guild',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Fish and Crab.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'fish', relation: 'effect_modify' },
+            { symbolKey: 'crab', relation: 'effect_modify' },
+        ],
+    },
+    [MARITIME_TRADE_UPGRADE_ID]: {
+        id: MARITIME_TRADE_UPGRADE_ID,
+        name: 'Maritime Trade',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Pearl and Sea.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'pearl', relation: 'effect_modify' },
+            { symbolKey: 'sea', relation: 'effect_modify' },
+        ],
+    },
+    [OCEANIC_ROUTES_UPGRADE_ID]: {
+        id: OCEANIC_ROUTES_UPGRADE_ID,
+        name: 'Oceanic Routes',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Fish, Crab, Pearl, and Sea.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'fish', relation: 'effect_modify' },
+            { symbolKey: 'crab', relation: 'effect_modify' },
+            { symbolKey: 'pearl', relation: 'effect_modify' },
+            { symbolKey: 'sea', relation: 'effect_modify' },
+        ],
+    },
+    [PLANTATION_UPGRADE_ID]: {
+        id: PLANTATION_UPGRADE_ID,
+        name: 'Plantation',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Banana and Rainforest.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'banana', relation: 'effect_modify' },
+            { symbolKey: 'rainforest', relation: 'effect_modify' },
+        ],
+    },
+    [JUNGLE_EXPEDITION_UPGRADE_ID]: {
+        id: JUNGLE_EXPEDITION_UPGRADE_ID,
+        name: 'Jungle Expedition',
+        type: SymbolType.MEDIEVAL,
+        description: 'Expedition is added to the symbol selection pool.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'expedition', relation: 'pool_add' }],
+    },
+    [TROPICAL_DEVELOPMENT_UPGRADE_ID]: {
+        id: TROPICAL_DEVELOPMENT_UPGRADE_ID,
+        name: 'Tropical Development',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Rainforest and Expedition.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'rainforest', relation: 'effect_modify' },
+            { symbolKey: 'expedition', relation: 'effect_modify' },
+        ],
+    },
     [THREE_FIELD_SYSTEM_UPGRADE_ID]: {
         id: THREE_FIELD_SYSTEM_UPGRADE_ID,
         name: 'Three-field System',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Wheat, Rice, and Grassland.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'wheat', relation: 'effect_modify' },
+            { symbolKey: 'rice', relation: 'effect_modify' },
+            { symbolKey: 'grassland', relation: 'effect_modify' },
+        ],
+    },
+    [AGRICULTURAL_SURPLUS_UPGRADE_ID]: {
+        id: AGRICULTURAL_SURPLUS_UPGRADE_ID,
+        name: 'Agricultural Surplus',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Wheat and Rice.',
         sprite: '-',
         descSymbols: [
             { symbolKey: 'wheat', relation: 'effect_modify' },
             { symbolKey: 'rice', relation: 'effect_modify' },
+        ],
+    },
+    [MODERN_AGRICULTURE_UPGRADE_ID]: {
+        id: MODERN_AGRICULTURE_UPGRADE_ID,
+        name: 'Modern Agriculture',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Wheat and Rice.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'wheat', relation: 'effect_modify' },
+            { symbolKey: 'rice', relation: 'effect_modify' },
+        ],
+    },
+    [PASTURE_MANAGEMENT_UPGRADE_ID]: {
+        id: PASTURE_MANAGEMENT_UPGRADE_ID,
+        name: 'Pasture Management',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Plains.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'plains', relation: 'effect_modify' }],
+    },
+    [NOMADIC_TRADITION_UPGRADE_ID]: {
+        id: NOMADIC_TRADITION_UPGRADE_ID,
+        name: 'Nomadic Tradition',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Cattle, Sheep, and Wool.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'cattle', relation: 'effect_modify' },
+            { symbolKey: 'sheep', relation: 'effect_modify' },
+            { symbolKey: 'wool', relation: 'effect_modify' },
         ],
     },
 
@@ -409,10 +529,26 @@ const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
     2: [5],
     [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
     [HORSEMANSHIP_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
+    [NOMADIC_TRADITION_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
+    [PASTURE_MANAGEMENT_UPGRADE_ID]: [NOMADIC_TRADITION_UPGRADE_ID],
     [SEAFARING_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
-    [CELESTIAL_NAVIGATION_UPGRADE_ID]: [SEAFARING_UPGRADE_ID],
+    [CELESTIAL_NAVIGATION_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
+    [COMPASS_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
     [FEUDALISM_UPGRADE_ID]: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+    [SHIPBUILDING_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
+    [FISHERY_GUILD_UPGRADE_ID]: [SEAFARING_UPGRADE_ID],
+    [MARITIME_TRADE_UPGRADE_ID]: [CELESTIAL_NAVIGATION_UPGRADE_ID],
+    [OCEANIC_ROUTES_UPGRADE_ID]: [MARITIME_TRADE_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID],
+    [TRACKING_UPGRADE_ID]: [HUNTING_UPGRADE_ID],
+    [TANNING_UPGRADE_ID]: [TRACKING_UPGRADE_ID],
+    [FORESTRY_UPGRADE_ID]: [TANNING_UPGRADE_ID],
+    [PRESERVATION_UPGRADE_ID]: [FORESTRY_UPGRADE_ID],
+    [PLANTATION_UPGRADE_ID]: [MINING_UPGRADE_ID],
+    [JUNGLE_EXPEDITION_UPGRADE_ID]: [PLANTATION_UPGRADE_ID],
+    [TROPICAL_DEVELOPMENT_UPGRADE_ID]: [JUNGLE_EXPEDITION_UPGRADE_ID],
     [THREE_FIELD_SYSTEM_UPGRADE_ID]: [IRRIGATION_UPGRADE_ID],
+    [AGRICULTURAL_SURPLUS_UPGRADE_ID]: [THREE_FIELD_SYSTEM_UPGRADE_ID],
+    [MODERN_AGRICULTURE_UPGRADE_ID]: [AGRICULTURAL_SURPLUS_UPGRADE_ID],
 };
 
 export function getKnowledgeUpgradePrerequisiteClosure(upgradeId: number): number[] {

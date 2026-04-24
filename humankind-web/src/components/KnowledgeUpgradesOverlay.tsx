@@ -15,18 +15,34 @@ import {
     KNOWLEDGE_UPGRADES,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     AGRICULTURE_UPGRADE_ID,
+    AGRICULTURAL_SURPLUS_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
+    COMPASS_UPGRADE_ID,
+    FORESTRY_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
+    FISHERY_GUILD_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     LAW_CODE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
+    JUNGLE_EXPEDITION_UPGRADE_ID,
+    NOMADIC_TRADITION_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
+    SHIPBUILDING_UPGRADE_ID,
+    TANNING_UPGRADE_ID,
+    TRACKING_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     MINING_UPGRADE_ID,
+    MODERN_AGRICULTURE_UPGRADE_ID,
+    MARITIME_TRADE_UPGRADE_ID,
+    OCEANIC_ROUTES_UPGRADE_ID,
+    PASTURE_MANAGEMENT_UPGRADE_ID,
+    PLANTATION_UPGRADE_ID,
+    PRESERVATION_UPGRADE_ID,
+    TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../game/data/knowledgeUpgrades';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
@@ -73,19 +89,28 @@ const TIERS: { level: number; ids: (number | null)[] }[] = [
     { level: 2,  ids: [HUNTING_UPGRADE_ID, 26,   9,    27,   5,    MINING_UPGRADE_ID, FOREIGN_TRADE_UPGRADE_ID] },
     /** col5: 법전(32); col6: 희생 제의(8) */
     { level: 3,  ids: [CHIEFDOM_UPGRADE_ID, null, null, null, null, LAW_CODE_UPGRADE_ID, 8] },
-    /** col2: Lv2 어업(9)과 같은 열 — 항해술(28), 천문항법(29) */
-    { level: 4,  ids: [null, null, SEAFARING_UPGRADE_ID, null, null, null, null] },
-    /** col1: 목축업(26)과 같은 열 — 기마술(7) */
-    /** col2: 항해술(28) 선행 — 천문항법(29) */
+    /** col0: 족장제(34) 아래 — 기마술(7); col1: 기마술 오른쪽 — 천문항법(29); col2: Lv2 어업(9)과 같은 열 — 항해술(28) */
+    { level: 4,  ids: [HORSEMANSHIP_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID, SEAFARING_UPGRADE_ID, null, null, null, null] },
     /** col3: Lv2 농업(27)과 같은 열 — 관개(3); col4: Lv2 궁술(5)과 같은 열 — 청동(2) */
     /** col6: 문자(1) */
-    { level: 5,  ids: [null, 7,    CELESTIAL_NAVIGATION_UPGRADE_ID, IRRIGATION_UPGRADE_ID, 2,    null, 1] },
+    { level: 5,  ids: [null, null, null, IRRIGATION_UPGRADE_ID, 2,    null, 1] },
+    { level: 6,  ids: [TRACKING_UPGRADE_ID, null, null, null, null, null, null] },
     /** col5: 신학(4) */
     { level: 7,  ids: [null, 6,    null, null, null, 4,    null] },
-    /** col2: 수학(10) */
-    { level: 9,  ids: [null, null, 10,   null, null, null, null] },
+    /** col1: 목축업(26) 아래 — 유목 전통(39); col3: 중세시대(15) 바로 위 — 나침반(40); col5: 신학(4) 아래 — 수학(10) */
+    { level: 9,  ids: [null, NOMADIC_TRADITION_UPGRADE_ID, null, COMPASS_UPGRADE_ID, null, 10, null] },
     { level: 10, ids: [null, null, null, 15,   null, null, null] },
-    { level: 11, ids: [null, null, null, null, THREE_FIELD_SYSTEM_UPGRADE_ID, null, null] },
+    { level: 11, ids: [null, null, FISHERY_GUILD_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID, null, PLANTATION_UPGRADE_ID, null] },
+    { level: 12, ids: [TANNING_UPGRADE_ID, null, null, null, null, null, null] },
+    { level: 13, ids: [null, MARITIME_TRADE_UPGRADE_ID, null, null, null, null, null] },
+    { level: 15, ids: [null, null, null, SHIPBUILDING_UPGRADE_ID, null, null, null] },
+    { level: 16, ids: [null, null, null, null, null, JUNGLE_EXPEDITION_UPGRADE_ID, null] },
+    { level: 17, ids: [null, null, null, AGRICULTURAL_SURPLUS_UPGRADE_ID, null, null, null] },
+    { level: 18, ids: [FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, null, null, null, null, null] },
+    { level: 21, ids: [null, null, OCEANIC_ROUTES_UPGRADE_ID, null, null, null, null] },
+    { level: 23, ids: [null, null, null, MODERN_AGRICULTURE_UPGRADE_ID, null, null, null] },
+    { level: 24, ids: [PRESERVATION_UPGRADE_ID, null, null, null, null, null, null] },
+    { level: 25, ids: [null, null, null, null, null, TROPICAL_DEVELOPMENT_UPGRADE_ID, null] },
 ];
 
 const KNOWLEDGE_TREE_CHIP = 110;
@@ -225,14 +250,48 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         selectedId === IRRIGATION_UPGRADE_ID && !unlockedUpgrades.includes(AGRICULTURE_UPGRADE_ID);
     const horsemanshipBlocksPastoralism =
         selectedId === HORSEMANSHIP_UPGRADE_ID && !unlockedUpgrades.includes(PASTORALISM_UPGRADE_ID);
+    const pastureManagementBlocksPastoralism =
+        selectedId === PASTURE_MANAGEMENT_UPGRADE_ID && !unlockedUpgrades.includes(NOMADIC_TRADITION_UPGRADE_ID);
+    const nomadicTraditionBlocksPastoralism =
+        selectedId === NOMADIC_TRADITION_UPGRADE_ID && !unlockedUpgrades.includes(PASTORALISM_UPGRADE_ID);
     const seafaringBlocksFisheries =
         selectedId === SEAFARING_UPGRADE_ID && !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID);
-    const celestialBlocksSeafaring =
-        selectedId === CELESTIAL_NAVIGATION_UPGRADE_ID && !unlockedUpgrades.includes(SEAFARING_UPGRADE_ID);
+    const compassBlocksFisheries =
+        selectedId === COMPASS_UPGRADE_ID && !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID);
+    const celestialBlocksFisheries =
+        selectedId === CELESTIAL_NAVIGATION_UPGRADE_ID && !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID);
+    const shipbuildingBlocksFisheries =
+        selectedId === SHIPBUILDING_UPGRADE_ID && !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID);
+    const fisheryGuildBlocksSeafaring =
+        selectedId === FISHERY_GUILD_UPGRADE_ID && !unlockedUpgrades.includes(SEAFARING_UPGRADE_ID);
+    const maritimeTradeBlocksCelestial =
+        selectedId === MARITIME_TRADE_UPGRADE_ID && !unlockedUpgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID);
+    const trackingBlocksHunting =
+        selectedId === TRACKING_UPGRADE_ID && !unlockedUpgrades.includes(HUNTING_UPGRADE_ID);
+    const tanningBlocksTracking =
+        selectedId === TANNING_UPGRADE_ID && !unlockedUpgrades.includes(TRACKING_UPGRADE_ID);
+    const forestryBlocksTanning =
+        selectedId === FORESTRY_UPGRADE_ID && !unlockedUpgrades.includes(TANNING_UPGRADE_ID);
+    const preservationBlocksForestry =
+        selectedId === PRESERVATION_UPGRADE_ID && !unlockedUpgrades.includes(FORESTRY_UPGRADE_ID);
+    const plantationBlocksMining =
+        selectedId === PLANTATION_UPGRADE_ID && !unlockedUpgrades.includes(MINING_UPGRADE_ID);
+    const jungleExpeditionBlocksPlantation =
+        selectedId === JUNGLE_EXPEDITION_UPGRADE_ID && !unlockedUpgrades.includes(PLANTATION_UPGRADE_ID);
+    const tropicalDevelopmentBlocksJungleExpedition =
+        selectedId === TROPICAL_DEVELOPMENT_UPGRADE_ID && !unlockedUpgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID);
+    const oceanicRoutesBlocksMaritimeTrade =
+        selectedId === OCEANIC_ROUTES_UPGRADE_ID && !unlockedUpgrades.includes(MARITIME_TRADE_UPGRADE_ID);
+    const oceanicRoutesBlocksFisheryGuild =
+        selectedId === OCEANIC_ROUTES_UPGRADE_ID && !unlockedUpgrades.includes(FISHERY_GUILD_UPGRADE_ID);
     const medievalBlocksAncient =
         selectedId === FEUDALISM_UPGRADE_ID && !unlockedUpgrades.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
     const threeFieldBlocksIrrigation =
         selectedId === THREE_FIELD_SYSTEM_UPGRADE_ID && !unlockedUpgrades.includes(IRRIGATION_UPGRADE_ID);
+    const agriculturalSurplusBlocksThreeField =
+        selectedId === AGRICULTURAL_SURPLUS_UPGRADE_ID && !unlockedUpgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID);
+    const modernAgricultureBlocksSurplus =
+        selectedId === MODERN_AGRICULTURE_UPGRADE_ID && !unlockedUpgrades.includes(AGRICULTURAL_SURPLUS_UPGRADE_ID);
     const hasResearchPoints = levelUpResearchPoints > 0;
     const canResearchWithCurrentPick =
         currentLevel >= selectedTierLevel &&
@@ -244,10 +303,27 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         !archeryBlocksBronze &&
         !irrigationBlocksAgriculture &&
         !horsemanshipBlocksPastoralism &&
+        !pastureManagementBlocksPastoralism &&
+        !nomadicTraditionBlocksPastoralism &&
         !seafaringBlocksFisheries &&
-        !celestialBlocksSeafaring &&
+        !compassBlocksFisheries &&
+        !celestialBlocksFisheries &&
+        !shipbuildingBlocksFisheries &&
+        !fisheryGuildBlocksSeafaring &&
+        !maritimeTradeBlocksCelestial &&
+        !trackingBlocksHunting &&
+        !tanningBlocksTracking &&
+        !forestryBlocksTanning &&
+        !preservationBlocksForestry &&
+        !plantationBlocksMining &&
+        !jungleExpeditionBlocksPlantation &&
+        !tropicalDevelopmentBlocksJungleExpedition &&
+        !oceanicRoutesBlocksMaritimeTrade &&
+        !oceanicRoutesBlocksFisheryGuild &&
         !medievalBlocksAncient &&
         !threeFieldBlocksIrrigation &&
+        !agriculturalSurplusBlocksThreeField &&
+        !modernAgricultureBlocksSurplus &&
         canResearchWithCurrentPick;
     const needsHigherLevel = selectedId != null && currentLevel < selectedTierLevel;
     const researchButtonDisabled =
@@ -255,10 +331,27 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         archeryBlocksBronze ||
         irrigationBlocksAgriculture ||
         horsemanshipBlocksPastoralism ||
+        pastureManagementBlocksPastoralism ||
+        nomadicTraditionBlocksPastoralism ||
         seafaringBlocksFisheries ||
-        celestialBlocksSeafaring ||
+        compassBlocksFisheries ||
+        celestialBlocksFisheries ||
+        shipbuildingBlocksFisheries ||
+        fisheryGuildBlocksSeafaring ||
+        maritimeTradeBlocksCelestial ||
+        trackingBlocksHunting ||
+        tanningBlocksTracking ||
+        forestryBlocksTanning ||
+        preservationBlocksForestry ||
+        plantationBlocksMining ||
+        jungleExpeditionBlocksPlantation ||
+        tropicalDevelopmentBlocksJungleExpedition ||
+        oceanicRoutesBlocksMaritimeTrade ||
+        oceanicRoutesBlocksFisheryGuild ||
         medievalBlocksAncient ||
         threeFieldBlocksIrrigation ||
+        agriculturalSurplusBlocksThreeField ||
+        modernAgricultureBlocksSurplus ||
         needsHigherLevel ||
         (hasResearchPoints && !canResearchWithCurrentPick);
 
@@ -337,7 +430,32 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             });
         }
 
+        const agriculturalSurplusPos = findTierGridSlot(AGRICULTURAL_SURPLUS_UPGRADE_ID);
+        if (threeFieldPos && agriculturalSurplusPos) {
+            next.push({
+                from: THREE_FIELD_SYSTEM_UPGRADE_ID,
+                to: AGRICULTURAL_SURPLUS_UPGRADE_ID,
+                x1: xForCol(threeFieldPos.colIdx),
+                y1: bottomAnchorY(threeFieldPos.rowIdx, selectedId === THREE_FIELD_SYSTEM_UPGRADE_ID),
+                x2: xForCol(agriculturalSurplusPos.colIdx),
+                y2: topAnchorY(agriculturalSurplusPos.rowIdx, selectedId === AGRICULTURAL_SURPLUS_UPGRADE_ID),
+            });
+        }
+
+        const modernAgriculturePos = findTierGridSlot(MODERN_AGRICULTURE_UPGRADE_ID);
+        if (agriculturalSurplusPos && modernAgriculturePos) {
+            next.push({
+                from: AGRICULTURAL_SURPLUS_UPGRADE_ID,
+                to: MODERN_AGRICULTURE_UPGRADE_ID,
+                x1: xForCol(agriculturalSurplusPos.colIdx),
+                y1: bottomAnchorY(agriculturalSurplusPos.rowIdx, selectedId === AGRICULTURAL_SURPLUS_UPGRADE_ID),
+                x2: xForCol(modernAgriculturePos.colIdx),
+                y2: topAnchorY(modernAgriculturePos.rowIdx, selectedId === MODERN_AGRICULTURE_UPGRADE_ID),
+            });
+        }
+
         const pastPos = findTierGridSlot(PASTORALISM_UPGRADE_ID);
+        const nomadicTraditionPos = findTierGridSlot(NOMADIC_TRADITION_UPGRADE_ID);
         const horsePos = findTierGridSlot(HORSEMANSHIP_UPGRADE_ID);
         if (pastPos && horsePos) {
             next.push({
@@ -347,6 +465,29 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 y1: bottomAnchorY(pastPos.rowIdx, selectedId === PASTORALISM_UPGRADE_ID),
                 x2: xForCol(horsePos.colIdx),
                 y2: topAnchorY(horsePos.rowIdx, selectedId === HORSEMANSHIP_UPGRADE_ID),
+            });
+        }
+
+        const pastureManagementPos = findTierGridSlot(PASTURE_MANAGEMENT_UPGRADE_ID);
+        if (pastPos && nomadicTraditionPos) {
+            next.push({
+                from: PASTORALISM_UPGRADE_ID,
+                to: NOMADIC_TRADITION_UPGRADE_ID,
+                x1: xForCol(pastPos.colIdx),
+                y1: bottomAnchorY(pastPos.rowIdx, selectedId === PASTORALISM_UPGRADE_ID),
+                x2: xForCol(nomadicTraditionPos.colIdx),
+                y2: topAnchorY(nomadicTraditionPos.rowIdx, selectedId === NOMADIC_TRADITION_UPGRADE_ID),
+            });
+        }
+
+        if (nomadicTraditionPos && pastureManagementPos) {
+            next.push({
+                from: NOMADIC_TRADITION_UPGRADE_ID,
+                to: PASTURE_MANAGEMENT_UPGRADE_ID,
+                x1: xForCol(nomadicTraditionPos.colIdx),
+                y1: bottomAnchorY(nomadicTraditionPos.rowIdx, selectedId === NOMADIC_TRADITION_UPGRADE_ID),
+                x2: xForCol(pastureManagementPos.colIdx),
+                y2: topAnchorY(pastureManagementPos.rowIdx, selectedId === PASTURE_MANAGEMENT_UPGRADE_ID),
             });
         }
 
@@ -364,14 +505,170 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         }
 
         const celestialPos = findTierGridSlot(CELESTIAL_NAVIGATION_UPGRADE_ID);
-        if (seafaringPos && celestialPos) {
+        if (fisheriesPos && celestialPos) {
             next.push({
-                from: SEAFARING_UPGRADE_ID,
+                from: FISHERIES_UPGRADE_ID,
                 to: CELESTIAL_NAVIGATION_UPGRADE_ID,
-                x1: xForCol(seafaringPos.colIdx),
-                y1: bottomAnchorY(seafaringPos.rowIdx, selectedId === SEAFARING_UPGRADE_ID),
+                x1: xForCol(fisheriesPos.colIdx),
+                y1: bottomAnchorY(fisheriesPos.rowIdx, selectedId === FISHERIES_UPGRADE_ID),
                 x2: xForCol(celestialPos.colIdx),
                 y2: topAnchorY(celestialPos.rowIdx, selectedId === CELESTIAL_NAVIGATION_UPGRADE_ID),
+            });
+        }
+
+        const shipbuildingPos = findTierGridSlot(SHIPBUILDING_UPGRADE_ID);
+        if (fisheriesPos && shipbuildingPos) {
+            next.push({
+                from: FISHERIES_UPGRADE_ID,
+                to: SHIPBUILDING_UPGRADE_ID,
+                x1: xForCol(fisheriesPos.colIdx),
+                y1: bottomAnchorY(fisheriesPos.rowIdx, selectedId === FISHERIES_UPGRADE_ID),
+                x2: xForCol(shipbuildingPos.colIdx),
+                y2: topAnchorY(shipbuildingPos.rowIdx, selectedId === SHIPBUILDING_UPGRADE_ID),
+            });
+        }
+
+        const maritimeTradePos = findTierGridSlot(MARITIME_TRADE_UPGRADE_ID);
+        if (celestialPos && maritimeTradePos) {
+            next.push({
+                from: CELESTIAL_NAVIGATION_UPGRADE_ID,
+                to: MARITIME_TRADE_UPGRADE_ID,
+                x1: xForCol(celestialPos.colIdx),
+                y1: bottomAnchorY(celestialPos.rowIdx, selectedId === CELESTIAL_NAVIGATION_UPGRADE_ID),
+                x2: xForCol(maritimeTradePos.colIdx),
+                y2: topAnchorY(maritimeTradePos.rowIdx, selectedId === MARITIME_TRADE_UPGRADE_ID),
+            });
+        }
+
+        const huntingPos = findTierGridSlot(HUNTING_UPGRADE_ID);
+        const trackingPos = findTierGridSlot(TRACKING_UPGRADE_ID);
+        if (huntingPos && trackingPos) {
+            next.push({
+                from: HUNTING_UPGRADE_ID,
+                to: TRACKING_UPGRADE_ID,
+                x1: xForCol(huntingPos.colIdx),
+                y1: bottomAnchorY(huntingPos.rowIdx, selectedId === HUNTING_UPGRADE_ID),
+                x2: xForCol(trackingPos.colIdx),
+                y2: topAnchorY(trackingPos.rowIdx, selectedId === TRACKING_UPGRADE_ID),
+            });
+        }
+
+        const tanningPos = findTierGridSlot(TANNING_UPGRADE_ID);
+        if (trackingPos && tanningPos) {
+            next.push({
+                from: TRACKING_UPGRADE_ID,
+                to: TANNING_UPGRADE_ID,
+                x1: xForCol(trackingPos.colIdx),
+                y1: bottomAnchorY(trackingPos.rowIdx, selectedId === TRACKING_UPGRADE_ID),
+                x2: xForCol(tanningPos.colIdx),
+                y2: topAnchorY(tanningPos.rowIdx, selectedId === TANNING_UPGRADE_ID),
+            });
+        }
+
+        const forestryPos = findTierGridSlot(FORESTRY_UPGRADE_ID);
+        if (tanningPos && forestryPos) {
+            next.push({
+                from: TANNING_UPGRADE_ID,
+                to: FORESTRY_UPGRADE_ID,
+                x1: xForCol(tanningPos.colIdx),
+                y1: bottomAnchorY(tanningPos.rowIdx, selectedId === TANNING_UPGRADE_ID),
+                x2: xForCol(forestryPos.colIdx),
+                y2: topAnchorY(forestryPos.rowIdx, selectedId === FORESTRY_UPGRADE_ID),
+            });
+        }
+
+        const preservationPos = findTierGridSlot(PRESERVATION_UPGRADE_ID);
+        if (forestryPos && preservationPos) {
+            next.push({
+                from: FORESTRY_UPGRADE_ID,
+                to: PRESERVATION_UPGRADE_ID,
+                x1: xForCol(forestryPos.colIdx),
+                y1: bottomAnchorY(forestryPos.rowIdx, selectedId === FORESTRY_UPGRADE_ID),
+                x2: xForCol(preservationPos.colIdx),
+                y2: topAnchorY(preservationPos.rowIdx, selectedId === PRESERVATION_UPGRADE_ID),
+            });
+        }
+
+        const miningPos = findTierGridSlot(MINING_UPGRADE_ID);
+        const plantationPos = findTierGridSlot(PLANTATION_UPGRADE_ID);
+        if (miningPos && plantationPos) {
+            next.push({
+                from: MINING_UPGRADE_ID,
+                to: PLANTATION_UPGRADE_ID,
+                x1: xForCol(miningPos.colIdx),
+                y1: bottomAnchorY(miningPos.rowIdx, selectedId === MINING_UPGRADE_ID),
+                x2: xForCol(plantationPos.colIdx),
+                y2: topAnchorY(plantationPos.rowIdx, selectedId === PLANTATION_UPGRADE_ID),
+            });
+        }
+
+        const jungleExpeditionPos = findTierGridSlot(JUNGLE_EXPEDITION_UPGRADE_ID);
+        if (plantationPos && jungleExpeditionPos) {
+            next.push({
+                from: PLANTATION_UPGRADE_ID,
+                to: JUNGLE_EXPEDITION_UPGRADE_ID,
+                x1: xForCol(plantationPos.colIdx),
+                y1: bottomAnchorY(plantationPos.rowIdx, selectedId === PLANTATION_UPGRADE_ID),
+                x2: xForCol(jungleExpeditionPos.colIdx),
+                y2: topAnchorY(jungleExpeditionPos.rowIdx, selectedId === JUNGLE_EXPEDITION_UPGRADE_ID),
+            });
+        }
+
+        const tropicalDevelopmentPos = findTierGridSlot(TROPICAL_DEVELOPMENT_UPGRADE_ID);
+        if (jungleExpeditionPos && tropicalDevelopmentPos) {
+            next.push({
+                from: JUNGLE_EXPEDITION_UPGRADE_ID,
+                to: TROPICAL_DEVELOPMENT_UPGRADE_ID,
+                x1: xForCol(jungleExpeditionPos.colIdx),
+                y1: bottomAnchorY(jungleExpeditionPos.rowIdx, selectedId === JUNGLE_EXPEDITION_UPGRADE_ID),
+                x2: xForCol(tropicalDevelopmentPos.colIdx),
+                y2: topAnchorY(tropicalDevelopmentPos.rowIdx, selectedId === TROPICAL_DEVELOPMENT_UPGRADE_ID),
+            });
+        }
+
+        const compassPos = findTierGridSlot(COMPASS_UPGRADE_ID);
+        if (fisheriesPos && compassPos) {
+            next.push({
+                from: FISHERIES_UPGRADE_ID,
+                to: COMPASS_UPGRADE_ID,
+                x1: xForCol(fisheriesPos.colIdx),
+                y1: bottomAnchorY(fisheriesPos.rowIdx, selectedId === FISHERIES_UPGRADE_ID),
+                x2: xForCol(compassPos.colIdx),
+                y2: topAnchorY(compassPos.rowIdx, selectedId === COMPASS_UPGRADE_ID),
+            });
+        }
+
+        const fisheryGuildPos = findTierGridSlot(FISHERY_GUILD_UPGRADE_ID);
+        if (seafaringPos && fisheryGuildPos) {
+            next.push({
+                from: SEAFARING_UPGRADE_ID,
+                to: FISHERY_GUILD_UPGRADE_ID,
+                x1: xForCol(seafaringPos.colIdx),
+                y1: bottomAnchorY(seafaringPos.rowIdx, selectedId === SEAFARING_UPGRADE_ID),
+                x2: xForCol(fisheryGuildPos.colIdx),
+                y2: topAnchorY(fisheryGuildPos.rowIdx, selectedId === FISHERY_GUILD_UPGRADE_ID),
+            });
+        }
+
+        const oceanicRoutesPos = findTierGridSlot(OCEANIC_ROUTES_UPGRADE_ID);
+        if (maritimeTradePos && oceanicRoutesPos) {
+            next.push({
+                from: MARITIME_TRADE_UPGRADE_ID,
+                to: OCEANIC_ROUTES_UPGRADE_ID,
+                x1: xForCol(maritimeTradePos.colIdx),
+                y1: bottomAnchorY(maritimeTradePos.rowIdx, selectedId === MARITIME_TRADE_UPGRADE_ID),
+                x2: xForCol(oceanicRoutesPos.colIdx),
+                y2: topAnchorY(oceanicRoutesPos.rowIdx, selectedId === OCEANIC_ROUTES_UPGRADE_ID),
+            });
+        }
+        if (fisheryGuildPos && oceanicRoutesPos) {
+            next.push({
+                from: FISHERY_GUILD_UPGRADE_ID,
+                to: OCEANIC_ROUTES_UPGRADE_ID,
+                x1: xForCol(fisheryGuildPos.colIdx),
+                y1: bottomAnchorY(fisheryGuildPos.rowIdx, selectedId === FISHERY_GUILD_UPGRADE_ID),
+                x2: xForCol(oceanicRoutesPos.colIdx),
+                y2: topAnchorY(oceanicRoutesPos.rowIdx, selectedId === OCEANIC_ROUTES_UPGRADE_ID),
             });
         }
 
@@ -458,8 +755,16 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             archeryBlocksBronze ||
             irrigationBlocksAgriculture ||
             horsemanshipBlocksPastoralism ||
+            pastureManagementBlocksPastoralism ||
+            nomadicTraditionBlocksPastoralism ||
             seafaringBlocksFisheries ||
-            celestialBlocksSeafaring ||
+            compassBlocksFisheries ||
+            celestialBlocksFisheries ||
+            shipbuildingBlocksFisheries ||
+            fisheryGuildBlocksSeafaring ||
+            maritimeTradeBlocksCelestial ||
+            oceanicRoutesBlocksMaritimeTrade ||
+            oceanicRoutesBlocksFisheryGuild ||
             medievalBlocksAncient ||
             threeFieldBlocksIrrigation
         )
@@ -868,14 +1173,48 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                             ? t('knowledgeUpgrade.requiresAgricultureShort', language)
                                         : horsemanshipBlocksPastoralism
                                             ? t('knowledgeUpgrade.requiresPastoralismShort', language)
+                                        : pastureManagementBlocksPastoralism
+                                            ? t('knowledgeUpgrade.requiresNomadicTraditionShort', language)
+                                        : nomadicTraditionBlocksPastoralism
+                                            ? t('knowledgeUpgrade.requiresPastoralismShort', language)
                                         : seafaringBlocksFisheries
                                             ? t('knowledgeUpgrade.requiresFisheriesShort', language)
-                                        : celestialBlocksSeafaring
+                                        : compassBlocksFisheries
+                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                        : celestialBlocksFisheries
+                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                        : shipbuildingBlocksFisheries
+                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                        : fisheryGuildBlocksSeafaring
                                             ? t('knowledgeUpgrade.requiresSeafaringShort', language)
+                                        : maritimeTradeBlocksCelestial
+                                            ? t('knowledgeUpgrade.requiresCelestialNavigationShort', language)
+                                        : trackingBlocksHunting
+                                            ? t('knowledgeUpgrade.requiresHuntingShort', language)
+                                        : tanningBlocksTracking
+                                            ? t('knowledgeUpgrade.requiresTrackingShort', language)
+                                        : forestryBlocksTanning
+                                            ? t('knowledgeUpgrade.requiresTanningShort', language)
+                                        : preservationBlocksForestry
+                                            ? t('knowledgeUpgrade.requiresForestryShort', language)
+                                        : plantationBlocksMining
+                                            ? t('knowledgeUpgrade.requiresMiningShort', language)
+                                        : jungleExpeditionBlocksPlantation
+                                            ? t('knowledgeUpgrade.requiresPlantationShort', language)
+                                        : tropicalDevelopmentBlocksJungleExpedition
+                                            ? t('knowledgeUpgrade.requiresJungleExpeditionShort', language)
+                                        : oceanicRoutesBlocksMaritimeTrade
+                                            ? t('knowledgeUpgrade.requiresMaritimeTradeShort', language)
+                                        : oceanicRoutesBlocksFisheryGuild
+                                            ? t('knowledgeUpgrade.requiresFisheryGuildShort', language)
                                         : medievalBlocksAncient
                                             ? t('knowledgeUpgrade.requiresAncientShort', language)
                                         : threeFieldBlocksIrrigation
                                             ? t('knowledgeUpgrade.requiresIrrigationShort', language)
+                                        : agriculturalSurplusBlocksThreeField
+                                            ? t('knowledgeUpgrade.requiresThreeFieldShort', language)
+                                        : modernAgricultureBlocksSurplus
+                                            ? t('knowledgeUpgrade.requiresAgriculturalSurplusShort', language)
                                         : needsHigherLevel
                                             ? `Lv.${selectedTierLevel} 필요`
                                             : hasResearchPoints &&

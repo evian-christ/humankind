@@ -2,10 +2,12 @@ import type { SymbolDefinition } from '../../data/symbolDefinitions';
 import { SYMBOLS, SymbolType, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, S, Sym } from '../../data/symbolDefinitions';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    COMPASS_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
+    JUNGLE_EXPEDITION_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
 export interface SelectionContext {
@@ -58,12 +60,11 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.merchant && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
         if ((sym.id === S.crab || sym.id === S.pearl) && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Crab, Pearl
+        if (sym.id === S.compass && upgrades.includes(COMPASS_UPGRADE_ID)) isUnlocked = true; // Compass -> Compass
+        if (sym.id === S.expedition && upgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID)) isUnlocked = true; // Jungle Expedition -> Expedition
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
-        if (sym.id === S.harbor && upgrades.includes(17)) isUnlocked = true;
-        if ((sym.id === S.wild_boar || sym.id === S.sawmill) && upgrades.includes(20)) isUnlocked = true;
-        if ((sym.id === S.wild_boar || sym.id === S.fur) && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
-        if (sym.id === S.gold_vein && upgrades.includes(21)) isUnlocked = true;
+        if ((sym.id === S.mushroom || sym.id === S.fur) && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
 
         if (!isUnlocked && !isReplacementTarget) continue;
 
