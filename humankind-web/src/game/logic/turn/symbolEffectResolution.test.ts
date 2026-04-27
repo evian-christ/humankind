@@ -4,6 +4,7 @@ import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    DESERT_STORAGE_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
@@ -11,6 +12,7 @@ import {
     MODERN_AGRICULTURE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
+    OASIS_RECOVERY_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
     PRESERVATION_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
@@ -222,6 +224,99 @@ describe('symbolEffectResolution', () => {
         expect(result.food).toBe(4);
     });
 
+    it('upgrades Oasis to produce food per adjacent empty slot with Dry Storage', () => {
+        const board = createEmptyBoard();
+        const oasis = createInstance(Sym.oasis, 'oasis');
+        board[1][1] = oasis;
+        board[0][1] = createInstance(Sym.wheat, 'occupied_1');
+        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+
+        const result = processSingleSymbolEffects(
+            oasis,
+            board,
+            1,
+            1,
+            { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
+        );
+
+        expect(result.food).toBe(6);
+    });
+
+    it('upgrades Oasis to produce triple food per adjacent empty slot with Oasis Recovery Network', () => {
+        const board = createEmptyBoard();
+        const oasis = createInstance(Sym.oasis, 'oasis');
+        board[1][1] = oasis;
+        board[0][1] = createInstance(Sym.wheat, 'occupied_1');
+        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+
+        const result = processSingleSymbolEffects(
+            oasis,
+            board,
+            1,
+            1,
+            { upgrades: [OASIS_RECOVERY_UPGRADE_ID] },
+        );
+
+        expect(result.food).toBe(18);
+    });
+
+    it('upgrades Desert to destroy all adjacent normal and era symbols with Dry Storage', () => {
+        const board = createEmptyBoard();
+        const desert = createInstance(Sym.desert, 'desert');
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        const library = createInstance(Sym.library, 'library');
+        const papyrus = createInstance(Sym.papyrus, 'papyrus');
+        const flood = createInstance(Sym.flood, 'flood');
+        board[1][1] = desert;
+        board[0][1] = wheat;
+        board[1][0] = papyrus;
+        board[2][1] = library;
+        board[2][2] = flood;
+
+        const result = processSingleSymbolEffects(
+            desert,
+            board,
+            1,
+            1,
+            { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
+        );
+
+        expect(result.gold).toBe(5);
+        expect(wheat.is_marked_for_destruction).toBe(true);
+        expect(papyrus.is_marked_for_destruction).toBe(true);
+        expect(library.is_marked_for_destruction).toBe(true);
+        expect(flood.is_marked_for_destruction).toBe(false);
+    });
+
+    it('upgrades Desert to destroy all board normal and era symbols with Oasis Recovery Network', () => {
+        const board = createEmptyBoard();
+        const desert = createInstance(Sym.desert, 'desert');
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        const library = createInstance(Sym.library, 'library');
+        const papyrus = createInstance(Sym.papyrus, 'papyrus');
+        const flood = createInstance(Sym.flood, 'flood');
+        board[1][1] = desert;
+        board[0][0] = wheat;
+        board[4][3] = papyrus;
+        board[3][1] = library;
+        board[2][2] = flood;
+
+        const result = processSingleSymbolEffects(
+            desert,
+            board,
+            1,
+            1,
+            { upgrades: [OASIS_RECOVERY_UPGRADE_ID] },
+        );
+
+        expect(result.food).toBe(10);
+        expect(result.gold).toBe(10);
+        expect(wheat.is_marked_for_destruction).toBe(true);
+        expect(papyrus.is_marked_for_destruction).toBe(true);
+        expect(library.is_marked_for_destruction).toBe(true);
+        expect(flood.is_marked_for_destruction).toBe(false);
+    });
+
     it('upgrades wool destroy gold with Nomadic Tradition', () => {
         const board = createEmptyBoard();
         const wool = createInstance(Sym.wool, 'wool');
@@ -238,6 +333,20 @@ describe('symbolEffectResolution', () => {
 
         expect(result.gold).toBe(10);
         expect(wool.is_marked_for_destruction).toBe(true);
+    });
+
+    it('produces base gold and knowledge for Dye and Papyrus', () => {
+        const board = createEmptyBoard();
+        const dye = createInstance(Sym.dye, 'dye');
+        const papyrus = createInstance(Sym.papyrus, 'papyrus');
+        board[0][0] = dye;
+        board[1][0] = papyrus;
+
+        const dyeResult = processSingleSymbolEffects(dye, board, 0, 0, { upgrades: [] });
+        const papyrusResult = processSingleSymbolEffects(papyrus, board, 1, 0, { upgrades: [] });
+
+        expect(dyeResult.gold).toBe(1);
+        expect(papyrusResult.knowledge).toBe(1);
     });
 
     it('applies tiered fish and pearl effects from board-wide sea counts', () => {

@@ -6,12 +6,14 @@ import {
 import type { SymbolEffectHandler } from '../core';
 import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    DESERT_STORAGE_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     MINING_UPGRADE_ID,
+    OASIS_RECOVERY_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
@@ -45,7 +47,11 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
 
         case S.oasis: {
             const emptyAdjCount = adj.filter(pos => !boardGrid[pos.x][pos.y]).length;
-            state.food += Math.floor(emptyAdjCount / 2);
+            state.food += upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)
+                ? emptyAdjCount * 3
+                : upgrades.includes(DESERT_STORAGE_UPGRADE_ID)
+                ? emptyAdjCount
+                : Math.floor(emptyAdjCount / 2);
             return true;
         }
 
@@ -97,8 +103,20 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.desert: {
-            if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.gold += 2;
-            const validTargets = adj.filter(pos => {
+            const allValidTargets = [];
+            for (let bx = 0; bx < boardGrid.length; bx++) {
+                for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+                    const target = boardGrid[bx][by];
+                    if (
+                        target &&
+                        !target.is_marked_for_destruction &&
+                        DESERT_DESTRUCTIBLE_TYPES.has(target.definition.type)
+                    ) {
+                        allValidTargets.push({ x: bx, y: by });
+                    }
+                }
+            }
+            const adjacentValidTargets = adj.filter(pos => {
                 const target = boardGrid[pos.x][pos.y];
                 return (
                     target &&
@@ -106,8 +124,35 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                     DESERT_DESTRUCTIBLE_TYPES.has(target.definition.type)
                 );
             });
-            if (validTargets.length > 0) {
-                const randomTarget = validTargets[Math.floor(Math.random() * validTargets.length)];
+
+            if (upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)) {
+                state.food += 10;
+                state.gold += 10;
+                allValidTargets.forEach((pos) => {
+                    const target = boardGrid[pos.x][pos.y];
+                    if (target) {
+                        target.is_marked_for_destruction = true;
+                        state.contributors.push(pos);
+                    }
+                });
+                return true;
+            }
+
+            if (upgrades.includes(DESERT_STORAGE_UPGRADE_ID)) {
+                state.gold += 5;
+                adjacentValidTargets.forEach((pos) => {
+                    const target = boardGrid[pos.x][pos.y];
+                    if (target) {
+                        target.is_marked_for_destruction = true;
+                        state.contributors.push(pos);
+                    }
+                });
+                return true;
+            }
+
+            if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.gold += 2;
+            if (adjacentValidTargets.length > 0) {
+                const randomTarget = adjacentValidTargets[Math.floor(Math.random() * adjacentValidTargets.length)];
                 const targetInstance = boardGrid[randomTarget.x][randomTarget.y];
                 if (targetInstance) {
                     targetInstance.is_marked_for_destruction = true;

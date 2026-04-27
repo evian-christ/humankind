@@ -1,7 +1,9 @@
 import type { LeaderId } from '../../data/leaders';
 import type { PlayerSymbolInstance } from '../../types';
-import { SymbolType, S, TAX_SYMBOL_ID } from '../../data/symbolDefinitions';
+import { FOOD_PRODUCING_IDS, GOLD_PRODUCING_IDS, KNOWLEDGE_PRODUCING_IDS, SymbolType, S, TAX_SYMBOL_ID } from '../../data/symbolDefinitions';
 import {
+    CARAVANSERAI_UPGRADE_ID,
+    DESERT_STORAGE_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
@@ -126,13 +128,26 @@ export function runPostEffectsHooks(args: {
         }
     }
 
-    // ── Date (30): 파괴 시 +5 Food, 50% 확률로 Date 1개 추가 ──
+    // ── Date (30): 파괴 시 +10 Food / 건조 저장술 후 +20 Food ──
     for (let x = 0; x < boardWidth; x++) {
         for (let y = 0; y < boardHeight; y++) {
             const s = board[x][y];
             if (!s || s.definition.id !== S.date || !s.is_marked_for_destruction) continue;
-            bonusFood += 5;
-            if (Math.random() < 0.5) toAdd.push(S.date);
+            bonusFood += unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10;
+        }
+    }
+
+    // ── Dye / Papyrus: 파괴 시 자원 보너스 ──
+    for (let x = 0; x < boardWidth; x++) {
+        for (let y = 0; y < boardHeight; y++) {
+            const s = board[x][y];
+            if (!s || !s.is_marked_for_destruction) continue;
+            if (s.definition.id === S.dye) {
+                bonusGold += unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
+            }
+            if (s.definition.id === S.papyrus) {
+                bonusKnowledge += unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
+            }
         }
     }
 
@@ -142,9 +157,9 @@ export function runPostEffectsHooks(args: {
         relicStoreApi.incrementRelicBonus(jomonRelicInst.instanceId, 1);
     }
 
-    // ── Campfire (19): 파괴 시 인접 심볼 중 "이번 턴 식량 생산"이 가장 높은 심볼의 효과 복사 ──
-    {
-        const effectBySlot = new Map<string, { food: number; gold: number; knowledge: number }>();
+    const effectBySlot = new Map<string, { food: number; gold: number; knowledge: number }>();
+    const rebuildEffectBySlot = () => {
+        effectBySlot.clear();
         for (const e of effects) {
             const k = `${e.x},${e.y}`;
             const prev = effectBySlot.get(k) ?? { food: 0, gold: 0, knowledge: 0 };
@@ -154,6 +169,11 @@ export function runPostEffectsHooks(args: {
                 knowledge: prev.knowledge + (e.knowledge ?? 0),
             });
         }
+    };
+
+    // ── Campfire (19): 파괴 시 인접 심볼 중 "이번 턴 식량 생산"이 가장 높은 심볼의 효과 복사 ──
+    {
+        rebuildEffectBySlot();
 
         for (let cx = 0; cx < boardWidth; cx++) {
             for (let cy = 0; cy < boardHeight; cy++) {
@@ -229,6 +249,51 @@ export function runPostEffectsHooks(args: {
                 bonusFood += delta;
                 bonusKnowledge += delta;
                 effects.push({ x: hx, y: hy, food: delta, gold: 0, knowledge: delta });
+            }
+        }
+    }
+
+    // ── Caravanserai (74): 파괴된 심볼당 같은 생산 종류로 +10 ──
+    if (finalDestroyedCount > 0) {
+        rebuildEffectBySlot();
+        for (let cx = 0; cx < boardWidth; cx++) {
+            for (let cy = 0; cy < boardHeight; cy++) {
+                const cs = board[cx][cy];
+                if (!cs || cs.definition.id !== S.caravanserai || cs.is_marked_for_destruction) continue;
+
+                let deltaFood = 0;
+                let deltaGold = 0;
+                let deltaKnowledge = 0;
+
+                for (let dx = 0; dx < boardWidth; dx++) {
+                    for (let dy = 0; dy < boardHeight; dy++) {
+                        const destroyed = board[dx][dy];
+                        if (!destroyed?.is_marked_for_destruction) continue;
+                        if (destroyed.instanceId === cs.instanceId) continue;
+
+                        const produced = effectBySlot.get(`${dx},${dy}`);
+                        const hasPositiveEffect =
+                            (produced?.food ?? 0) > 0 ||
+                            (produced?.gold ?? 0) > 0 ||
+                            (produced?.knowledge ?? 0) > 0;
+
+                        if ((produced?.food ?? 0) > 0 || (!hasPositiveEffect && FOOD_PRODUCING_IDS.has(destroyed.definition.id))) {
+                            deltaFood += 10;
+                        }
+                        if ((produced?.gold ?? 0) > 0 || (!hasPositiveEffect && GOLD_PRODUCING_IDS.has(destroyed.definition.id))) {
+                            deltaGold += 10;
+                        }
+                        if ((produced?.knowledge ?? 0) > 0 || (!hasPositiveEffect && KNOWLEDGE_PRODUCING_IDS.has(destroyed.definition.id))) {
+                            deltaKnowledge += 10;
+                        }
+                    }
+                }
+
+                if (deltaFood === 0 && deltaGold === 0 && deltaKnowledge === 0) continue;
+                bonusFood += deltaFood;
+                bonusGold += deltaGold;
+                bonusKnowledge += deltaKnowledge;
+                effects.push({ x: cx, y: cy, food: deltaFood, gold: deltaGold, knowledge: deltaKnowledge });
             }
         }
     }

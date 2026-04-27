@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMPASS_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { CARAVANSERAI_UPGRADE_ID, COMPASS_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S } from '../../data/symbolDefinitions';
 import { buildFlatPool } from './selectionLogic';
 
@@ -35,5 +35,28 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.id === S.expedition)).toBe(true);
+    });
+
+    it('includes Dye and Papyrus in the pool once Dry Storage is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [DRY_STORAGE_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.dye)).toBe(true);
+        expect(pool.some((sym) => sym.id === S.papyrus)).toBe(true);
+    });
+
+    it('includes Caravanserai in the pool once the upgrade is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [CARAVANSERAI_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.caravanserai)).toBe(true);
     });
 });

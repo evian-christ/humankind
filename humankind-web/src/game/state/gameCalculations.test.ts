@@ -3,10 +3,13 @@ import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    CARAVANSERAI_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
+    DESERT_STORAGE_UPGRADE_ID,
+    DRY_STORAGE_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
@@ -16,6 +19,7 @@ import {
     MODERN_AGRICULTURE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
+    OASIS_RECOVERY_UPGRADE_ID,
     MINING_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
@@ -27,6 +31,7 @@ import {
     TRACKING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { isUpgradeLegalForKnowledgePick } from './gameCalculations';
 
@@ -287,6 +292,58 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             SHIPBUILDING_UPGRADE_ID,
             [FISHERIES_UPGRADE_ID],
             15,
+        )).toBe(true);
+    });
+
+    it('requires Foreign Trade for Dry Storage', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            DRY_STORAGE_UPGRADE_ID,
+            [],
+            6,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            DRY_STORAGE_UPGRADE_ID,
+            [FOREIGN_TRADE_UPGRADE_ID],
+            6,
+        )).toBe(true);
+    });
+
+    it('requires Trade Goods Exchange for Dry Storage at level 12', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            DESERT_STORAGE_UPGRADE_ID,
+            [],
+            12,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            DESERT_STORAGE_UPGRADE_ID,
+            [DRY_STORAGE_UPGRADE_ID],
+            12,
+        )).toBe(true);
+    });
+
+    it('requires Dry Storage for Caravanserai at level 17', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            CARAVANSERAI_UPGRADE_ID,
+            [DRY_STORAGE_UPGRADE_ID],
+            17,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            CARAVANSERAI_UPGRADE_ID,
+            [DESERT_STORAGE_UPGRADE_ID],
+            17,
+        )).toBe(true);
+    });
+
+    it('requires Caravanserai for Oasis Recovery Network at level 22', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            OASIS_RECOVERY_UPGRADE_ID,
+            [DESERT_STORAGE_UPGRADE_ID],
+            22,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            OASIS_RECOVERY_UPGRADE_ID,
+            [CARAVANSERAI_UPGRADE_ID],
+            22,
         )).toBe(true);
     });
 });

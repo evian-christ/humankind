@@ -17,8 +17,11 @@ import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    CARAVANSERAI_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
+    DESERT_STORAGE_UPGRADE_ID,
+    DRY_STORAGE_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
@@ -28,6 +31,7 @@ import {
     IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
+    OASIS_RECOVERY_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
@@ -94,23 +98,33 @@ const TIERS: { level: number; ids: (number | null)[] }[] = [
     /** col3: Lv2 농업(27)과 같은 열 — 관개(3); col4: Lv2 궁술(5)과 같은 열 — 청동(2) */
     /** col6: 문자(1) */
     { level: 5,  ids: [null, null, null, IRRIGATION_UPGRADE_ID, 2,    null, 1] },
-    { level: 6,  ids: [TRACKING_UPGRADE_ID, null, null, null, null, null, null] },
+    { level: 6,  ids: [TRACKING_UPGRADE_ID, null, null, null, null, null, DRY_STORAGE_UPGRADE_ID] },
     /** col5: 신학(4) */
     { level: 7,  ids: [null, 6,    null, null, null, 4,    null] },
+    { level: 8,  ids: [null, null, null, null, null, null, null] },
     /** col1: 목축업(26) 아래 — 유목 전통(39); col3: 중세시대(15) 바로 위 — 나침반(40); col5: 신학(4) 아래 — 수학(10) */
     { level: 9,  ids: [null, NOMADIC_TRADITION_UPGRADE_ID, null, COMPASS_UPGRADE_ID, null, 10, null] },
     { level: 10, ids: [null, null, null, 15,   null, null, null] },
     { level: 11, ids: [null, null, FISHERY_GUILD_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID, null, PLANTATION_UPGRADE_ID, null] },
-    { level: 12, ids: [TANNING_UPGRADE_ID, null, null, null, null, null, null] },
+    { level: 12, ids: [TANNING_UPGRADE_ID, null, null, null, null, null, DESERT_STORAGE_UPGRADE_ID] },
     { level: 13, ids: [null, MARITIME_TRADE_UPGRADE_ID, null, null, null, null, null] },
+    { level: 14, ids: [null, null, null, null, null, null, null] },
     { level: 15, ids: [null, null, null, SHIPBUILDING_UPGRADE_ID, null, null, null] },
     { level: 16, ids: [null, null, null, null, null, JUNGLE_EXPEDITION_UPGRADE_ID, null] },
-    { level: 17, ids: [null, null, null, AGRICULTURAL_SURPLUS_UPGRADE_ID, null, null, null] },
+    { level: 17, ids: [null, null, null, AGRICULTURAL_SURPLUS_UPGRADE_ID, null, null, CARAVANSERAI_UPGRADE_ID] },
     { level: 18, ids: [FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, null, null, null, null, null] },
+    { level: 19, ids: [null, null, null, null, null, null, null] },
+    { level: 20, ids: [null, null, null, null, null, null, null] },
     { level: 21, ids: [null, null, OCEANIC_ROUTES_UPGRADE_ID, null, null, null, null] },
+    { level: 22, ids: [null, null, null, null, null, null, OASIS_RECOVERY_UPGRADE_ID] },
     { level: 23, ids: [null, null, null, MODERN_AGRICULTURE_UPGRADE_ID, null, null, null] },
     { level: 24, ids: [PRESERVATION_UPGRADE_ID, null, null, null, null, null, null] },
     { level: 25, ids: [null, null, null, null, null, TROPICAL_DEVELOPMENT_UPGRADE_ID, null] },
+    { level: 26, ids: [null, null, null, null, null, null, null] },
+    { level: 27, ids: [null, null, null, null, null, null, null] },
+    { level: 28, ids: [null, null, null, null, null, null, null] },
+    { level: 29, ids: [null, null, null, null, null, null, null] },
+    { level: 30, ids: [null, null, null, null, null, null, null] },
 ];
 
 const KNOWLEDGE_TREE_CHIP = 110;
@@ -143,8 +157,8 @@ function knowledgeTreeChipFrameShadow(pressed: boolean, researched: boolean): st
     const inset = researched ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
     const pillar = researched ? KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED : KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT;
     return pressed
-        ? `inset 0 0 0 4px ${inset}, 0 1px 0 0 ${pillar}, 0 1px 6px rgba(0,0,0,0.4)`
-        : `inset 0 0 0 4px ${inset}, 0 8px 0 0 ${pillar}, 0 8px 12px rgba(0,0,0,0.4)`;
+        ? `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 6px rgba(0,0,0,0.4)`
+        : `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 12px rgba(0,0,0,0.4)`;
 }
 
 /** Idle chip fill — same before/after research (border differentiates researched) */
@@ -262,6 +276,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         selectedId === CELESTIAL_NAVIGATION_UPGRADE_ID && !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID);
     const shipbuildingBlocksFisheries =
         selectedId === SHIPBUILDING_UPGRADE_ID && !unlockedUpgrades.includes(FISHERIES_UPGRADE_ID);
+    const dryStorageBlocksForeignTrade =
+        selectedId === DRY_STORAGE_UPGRADE_ID && !unlockedUpgrades.includes(FOREIGN_TRADE_UPGRADE_ID);
+    const desertStorageBlocksTradeGoods =
+        selectedId === DESERT_STORAGE_UPGRADE_ID && !unlockedUpgrades.includes(DRY_STORAGE_UPGRADE_ID);
+    const caravanseraiBlocksDryStorage =
+        selectedId === CARAVANSERAI_UPGRADE_ID && !unlockedUpgrades.includes(DESERT_STORAGE_UPGRADE_ID);
+    const oasisRecoveryBlocksCaravanserai =
+        selectedId === OASIS_RECOVERY_UPGRADE_ID && !unlockedUpgrades.includes(CARAVANSERAI_UPGRADE_ID);
     const fisheryGuildBlocksSeafaring =
         selectedId === FISHERY_GUILD_UPGRADE_ID && !unlockedUpgrades.includes(SEAFARING_UPGRADE_ID);
     const maritimeTradeBlocksCelestial =
@@ -309,6 +331,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         !compassBlocksFisheries &&
         !celestialBlocksFisheries &&
         !shipbuildingBlocksFisheries &&
+        !dryStorageBlocksForeignTrade &&
+        !desertStorageBlocksTradeGoods &&
+        !caravanseraiBlocksDryStorage &&
+        !oasisRecoveryBlocksCaravanserai &&
         !fisheryGuildBlocksSeafaring &&
         !maritimeTradeBlocksCelestial &&
         !trackingBlocksHunting &&
@@ -337,6 +363,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         compassBlocksFisheries ||
         celestialBlocksFisheries ||
         shipbuildingBlocksFisheries ||
+        dryStorageBlocksForeignTrade ||
+        desertStorageBlocksTradeGoods ||
+        caravanseraiBlocksDryStorage ||
+        oasisRecoveryBlocksCaravanserai ||
         fisheryGuildBlocksSeafaring ||
         maritimeTradeBlocksCelestial ||
         trackingBlocksHunting ||
@@ -528,6 +558,55 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             });
         }
 
+        const foreignTradePos = findTierGridSlot(FOREIGN_TRADE_UPGRADE_ID);
+        const dryStoragePos = findTierGridSlot(DRY_STORAGE_UPGRADE_ID);
+        if (foreignTradePos && dryStoragePos) {
+            next.push({
+                from: FOREIGN_TRADE_UPGRADE_ID,
+                to: DRY_STORAGE_UPGRADE_ID,
+                x1: xForCol(foreignTradePos.colIdx),
+                y1: bottomAnchorY(foreignTradePos.rowIdx, selectedId === FOREIGN_TRADE_UPGRADE_ID),
+                x2: xForCol(dryStoragePos.colIdx),
+                y2: topAnchorY(dryStoragePos.rowIdx, selectedId === DRY_STORAGE_UPGRADE_ID),
+            });
+        }
+
+        const desertStoragePos = findTierGridSlot(DESERT_STORAGE_UPGRADE_ID);
+        if (dryStoragePos && desertStoragePos) {
+            next.push({
+                from: DRY_STORAGE_UPGRADE_ID,
+                to: DESERT_STORAGE_UPGRADE_ID,
+                x1: xForCol(dryStoragePos.colIdx),
+                y1: bottomAnchorY(dryStoragePos.rowIdx, selectedId === DRY_STORAGE_UPGRADE_ID),
+                x2: xForCol(desertStoragePos.colIdx),
+                y2: topAnchorY(desertStoragePos.rowIdx, selectedId === DESERT_STORAGE_UPGRADE_ID),
+            });
+        }
+
+        const caravanseraiPos = findTierGridSlot(CARAVANSERAI_UPGRADE_ID);
+        if (desertStoragePos && caravanseraiPos) {
+            next.push({
+                from: DESERT_STORAGE_UPGRADE_ID,
+                to: CARAVANSERAI_UPGRADE_ID,
+                x1: xForCol(desertStoragePos.colIdx),
+                y1: bottomAnchorY(desertStoragePos.rowIdx, selectedId === DESERT_STORAGE_UPGRADE_ID),
+                x2: xForCol(caravanseraiPos.colIdx),
+                y2: topAnchorY(caravanseraiPos.rowIdx, selectedId === CARAVANSERAI_UPGRADE_ID),
+            });
+        }
+
+        const oasisRecoveryPos = findTierGridSlot(OASIS_RECOVERY_UPGRADE_ID);
+        if (caravanseraiPos && oasisRecoveryPos) {
+            next.push({
+                from: CARAVANSERAI_UPGRADE_ID,
+                to: OASIS_RECOVERY_UPGRADE_ID,
+                x1: xForCol(caravanseraiPos.colIdx),
+                y1: bottomAnchorY(caravanseraiPos.rowIdx, selectedId === CARAVANSERAI_UPGRADE_ID),
+                x2: xForCol(oasisRecoveryPos.colIdx),
+                y2: topAnchorY(oasisRecoveryPos.rowIdx, selectedId === OASIS_RECOVERY_UPGRADE_ID),
+            });
+        }
+
         const maritimeTradePos = findTierGridSlot(MARITIME_TRADE_UPGRADE_ID);
         if (celestialPos && maritimeTradePos) {
             next.push({
@@ -673,7 +752,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         }
 
         setConnectorLines(next);
-    }, [selectedId, unlockedUpgrades]);
+    }, [selectedId]);
 
     useLayoutEffect(() => {
         if (!isOpen) return;
@@ -761,6 +840,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             compassBlocksFisheries ||
             celestialBlocksFisheries ||
             shipbuildingBlocksFisheries ||
+            dryStorageBlocksForeignTrade ||
+            desertStorageBlocksTradeGoods ||
+            caravanseraiBlocksDryStorage ||
+            oasisRecoveryBlocksCaravanserai ||
             fisheryGuildBlocksSeafaring ||
             maritimeTradeBlocksCelestial ||
             oceanicRoutesBlocksMaritimeTrade ||
@@ -1185,6 +1268,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                             ? t('knowledgeUpgrade.requiresFisheriesShort', language)
                                         : shipbuildingBlocksFisheries
                                             ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                        : dryStorageBlocksForeignTrade
+                                            ? t('knowledgeUpgrade.requiresForeignTradeShort', language)
+                                        : desertStorageBlocksTradeGoods
+                                            ? t('knowledgeUpgrade.requiresTradeGoodsExchangeShort', language)
+                                        : caravanseraiBlocksDryStorage
+                                            ? t('knowledgeUpgrade.requiresDryStorageShort', language)
+                                        : oasisRecoveryBlocksCaravanserai
+                                            ? t('knowledgeUpgrade.requiresCaravanseraiShort', language)
                                         : fisheryGuildBlocksSeafaring
                                             ? t('knowledgeUpgrade.requiresSeafaringShort', language)
                                         : maritimeTradeBlocksCelestial

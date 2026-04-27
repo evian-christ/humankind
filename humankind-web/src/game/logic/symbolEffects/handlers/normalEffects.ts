@@ -290,6 +290,14 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             state.food += 1;
             return true;
 
+        case S.dye:
+            state.gold += 1;
+            return true;
+
+        case S.papyrus:
+            state.knowledge += 1;
+            return true;
+
         case S.expedition: {
             const rainforestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.rainforest);
             if (rainforestAdj.length === 0) return true;

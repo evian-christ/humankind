@@ -2,9 +2,10 @@ import type { Language } from '../game/state/settingsStore';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
+    CARAVANSERAI_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
-    COMPASS_UPGRADE_ID,
+    DESERT_STORAGE_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
@@ -14,6 +15,7 @@ import {
     MINING_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
+    OASIS_RECOVERY_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -88,6 +90,10 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.requiresAgricultureShort': 'Needs Agriculture',
         'knowledgeUpgrade.requiresPastoralismShort': 'Needs Pastoralism',
         'knowledgeUpgrade.requiresFisheriesShort': 'Needs Fisheries',
+        'knowledgeUpgrade.requiresForeignTradeShort': 'Needs Foreign Trade',
+        'knowledgeUpgrade.requiresTradeGoodsExchangeShort': 'Needs Trade Goods Exchange',
+        'knowledgeUpgrade.requiresDryStorageShort': 'Needs Dry Storage',
+        'knowledgeUpgrade.requiresCaravanseraiShort': 'Needs Caravanserai',
         'knowledgeUpgrade.requiresSeafaringShort': 'Needs Navigation',
         'knowledgeUpgrade.requiresCelestialNavigationShort': 'Needs Celestial Navigation',
         'knowledgeUpgrade.requiresHuntingShort': 'Needs Hunting',
@@ -366,6 +372,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.wild_seeds.desc': '+1 Food. Destroyed after 5 turns.',
         'symbol.embassy.name': 'Embassy',
         'symbol.expedition.name': 'Expedition',
+        'symbol.dye.name': 'Dye',
+        'symbol.papyrus.name': 'Papyrus',
+        'symbol.caravanserai.name': 'Caravanserai',
 
         // ── Symbol Descriptions ──
         'symbol.wheat.desc': 'Wheat: every 10 turns: 10 Food. Adjacent to Grassland: +1/turn.',
@@ -407,7 +416,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.forest.desc': 'If 3 or more Forests are placed on the board: +2 Food; 5 or more: +2 Gold; if Forest is the only terrain on the board: +2 Food.',
         'symbol.deer.desc': '+1 Food per adjacent Forest.',
         'symbol.fur.desc': '+2 Gold per 2 Forests placed on the board.',
-        'symbol.date.desc': '+1 Food; on destroy: +5 Food and 50% chance to add Date.',
+        'symbol.date.desc': '+1 Food; on destroy: +10 Food.',
         'symbol.christianity.desc': '+Food equal to highest adjacent Food; adjacent to Religion: -50 Food.',
         'symbol.islam.desc': '+2 Gold per adjacent symbol that produces Knowledge; adjacent to Religion: -50 Food.',
         'symbol.buddhism.desc': 'Per empty slot: +2 Food; adjacent to Religion: -50 Food.',
@@ -450,6 +459,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.edict.desc': 'Destroyed; on destroy: choose 1 owned symbol to remove (destroy effects do not trigger).',
         'symbol.embassy.desc': 'Destroyed; on destroy: the next symbol-selection reroll costs 0 Gold.',
         'symbol.expedition.desc': 'When adjacent to Rainforest: produces a random 1-10 Food, Gold, or Knowledge.',
+        'symbol.dye.desc': '+1 Gold; on destroy: +10 Gold.',
+        'symbol.papyrus.desc': '+1 Knowledge; on destroy: +10 Knowledge.',
+        'symbol.caravanserai.desc': '+10 per symbol destroyed this turn; matches the destroyed symbol\'s production type.',
 
         // ── Relics ──
         'relic.1.name': 'Clovis Spear Point',
@@ -524,6 +536,22 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.33.name': 'Foreign Trade',
         'knowledgeUpgrade.33.desc': 'Upgrades Desert.',
         'knowledgeUpgrade.symbolDescAfter.33.desert': '+2 Gold; destroys 1 random adjacent Normal or era symbol.',
+        'knowledgeUpgrade.52.name': 'Trade Goods Exchange',
+        'knowledgeUpgrade.52.desc': 'Dye and Papyrus are added to the symbol selection pool.',
+        'knowledgeUpgrade.53.name': 'Dry Storage',
+        'knowledgeUpgrade.53.desc': 'Upgrades Desert, Oasis, and Date.',
+        'knowledgeUpgrade.symbolDescAfter.53.desert': '+5 Gold. Destroys all adjacent Normal and era symbols.',
+        'knowledgeUpgrade.symbolDescAfter.53.oasis': '+1 Food per adjacent empty slot.',
+        'knowledgeUpgrade.symbolDescAfter.53.date': '+1 Food; on destroy: +20 Food.',
+        'knowledgeUpgrade.54.name': 'Caravanserai',
+        'knowledgeUpgrade.54.desc': 'Unlocks Caravanserai. Upgrades Dye and Papyrus.',
+        'knowledgeUpgrade.symbolDescAfter.54.dye': '+1 Gold; on destroy: +20 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.54.papyrus': '+1 Knowledge; on destroy: +20 Knowledge.',
+        'knowledgeUpgrade.55.name': 'Oasis Recovery Network',
+        'knowledgeUpgrade.55.desc': 'Upgrades Desert and Oasis.',
+        'knowledgeUpgrade.symbolDescAfter.55.desert':
+            '+10 Food and +10 Gold. Destroys all Normal and era symbols on the board.',
+        'knowledgeUpgrade.symbolDescAfter.55.oasis': '+3 Food per adjacent empty slot.',
         'knowledgeUpgrade.34.name': 'Chiefdom',
         'knowledgeUpgrade.34.desc': 'Base Food production +2. Upgrades Wild Berries.',
         'knowledgeUpgrade.symbolDescAfter.34.wild_berries':
@@ -662,6 +690,10 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.requiresAgricultureShort': '농업 필요',
         'knowledgeUpgrade.requiresPastoralismShort': '목축업 필요',
         'knowledgeUpgrade.requiresFisheriesShort': '어업 필요',
+        'knowledgeUpgrade.requiresForeignTradeShort': '외국 무역 필요',
+        'knowledgeUpgrade.requiresTradeGoodsExchangeShort': '대상품 교역 필요',
+        'knowledgeUpgrade.requiresDryStorageShort': '건조 저장술 필요',
+        'knowledgeUpgrade.requiresCaravanseraiShort': '카라밴세라이 필요',
         'knowledgeUpgrade.requiresSeafaringShort': '항해술 필요',
         'knowledgeUpgrade.requiresCelestialNavigationShort': '천문항법 필요',
         'knowledgeUpgrade.requiresHuntingShort': '수렵 필요',
@@ -933,6 +965,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.wild_seeds.desc': '식량 +1. 5턴 후 파괴.',
         'symbol.embassy.name': '사절단',
         'symbol.expedition.name': '탐사대',
+        'symbol.dye.name': '염료',
+        'symbol.papyrus.name': '파피루스',
+        'symbol.caravanserai.name': '카라밴세라이',
 
         // ── Symbol Descriptions ──
         'symbol.wheat.desc': '밀: 10턴마다: 식량10. 초원에 인접 시: 턴 +1.',
@@ -974,7 +1009,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.forest.desc': '보드에 배치된 숲이 3개 이상: 식량 +2; 5개 이상: 골드 +2; 보드에 유일한 지형이 숲이면: 식량 +2.',
         'symbol.deer.desc': '인접한 숲마다: 식량 +1.',
         'symbol.fur.desc': '보드에 배치된 숲 2개마다: 골드 +2.',
-        'symbol.date.desc': '식량 +1; 파괴 시: 식량 +5 및 50% 확률로 대추 추가.',
+        'symbol.date.desc': '식량 +1; 파괴 시: 식량 +10.',
         'symbol.christianity.desc': '인접 심볼 중 최고 식량 생산량만큼 식량 생산; 종교 심볼 인접 시: 식량 -50.',
         'symbol.islam.desc': '지식을 생산하는 인접 심볼 1개당 골드 +2; 종교 심볼 인접 시: 식량 -50.',
         'symbol.buddhism.desc': '빈 슬롯 1개당: 식량 +2; 종교 심볼 인접 시: 식량 -50.',
@@ -1017,6 +1052,9 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.edict.desc': '파괴. 파괴 시: 보유 심볼 1개를 제거합니다(파괴 효과는 발동하지 않음).',
         'symbol.embassy.desc': '파괴. 파괴 시: 다음 심볼 선택 단계에서 첫 리롤이 골드 0입니다.',
         'symbol.expedition.desc': '열대우림 인접 시: 식량, 골드, 지식 중 무작위로 1~10만큼 생산합니다.',
+        'symbol.dye.desc': '골드 +1; 파괴 시: 골드 +10.',
+        'symbol.papyrus.desc': '지식 +1; 파괴 시: 지식 +10.',
+        'symbol.caravanserai.desc': '이번 턴 파괴된 심볼 1개당 생산 +10. 생산 종류는 파괴된 심볼과 같습니다.',
 
         // ── Relics ──
         'relic.1.name': '클로비스 투창촉',
@@ -1060,23 +1098,23 @@ const translations: Record<Language, Record<string, string>> = {
 
         // ── Knowledge Upgrades ──
         'knowledgeUpgrade.1.name': '문자',
-        'knowledgeUpgrade.1.desc': '기본 지식 생산량이 +2 증가합니다. 도서관 심볼을 심볼 풀에 추가합니다.',
+        'knowledgeUpgrade.1.desc': '기본 지식 생산량이 +2 증가합니다. 도서관 심볼을 해금합니다.',
         'knowledgeUpgrade.2.name': '청동 기술',
         'knowledgeUpgrade.2.desc': '전사의 체력 +10, 궁수의 체력 +3.',
         'knowledgeUpgrade.3.name': '관개',
         'knowledgeUpgrade.3.desc': '밀, 쌀, 초원을 업그레이드합니다.',
         'knowledgeUpgrade.4.name': '신학',
-        'knowledgeUpgrade.4.desc': '종교 심볼들이 선택 풀에 추가됩니다.',
+        'knowledgeUpgrade.4.desc': '종교 심볼들을 해금합니다.',
         'knowledgeUpgrade.5.name': '궁술',
-        'knowledgeUpgrade.5.desc': '궁수 심볼이 선택 풀에 추가됩니다.',
+        'knowledgeUpgrade.5.desc': '궁수 심볼을 해금합니다.',
         'knowledgeUpgrade.6.name': '화폐',
-        'knowledgeUpgrade.6.desc': '기본 골드 생산량이 +2 증가합니다. 상인 심볼을 심볼 풀에 추가합니다.',
+        'knowledgeUpgrade.6.desc': '기본 골드 생산량이 +2 증가합니다. 상인 심볼을 해금합니다.',
         'knowledgeUpgrade.7.name': '기마술',
-        'knowledgeUpgrade.7.desc': '말이 선택 풀에 추가됩니다. 평원을 업그레이드합니다.',
+        'knowledgeUpgrade.7.desc': '말을 해금합니다. 평원을 업그레이드합니다.',
         'knowledgeUpgrade.8.name': '희생 제의',
         'knowledgeUpgrade.8.desc': '망각의 화로 3개. 소모하여 보드 위에 있는 심볼 1개씩 파괴.',
         'knowledgeUpgrade.9.name': '어업',
-        'knowledgeUpgrade.9.desc': '게와 진주가 심볼 선택 풀에 추가됩니다.',
+        'knowledgeUpgrade.9.desc': '게와 진주를 해금합니다.',
         'knowledgeUpgrade.28.name': '항해술',
         'knowledgeUpgrade.28.desc': '물고기와 게를 업그레이드합니다.',
         'knowledgeUpgrade.29.name': '천문항법',
@@ -1090,6 +1128,21 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.33.name': '외국 무역',
         'knowledgeUpgrade.33.desc': '사막을 업그레이드합니다.',
         'knowledgeUpgrade.symbolDescAfter.33.desert': '골드 +2; 무작위 인접 일반·시대 심볼 1개 파괴.',
+        'knowledgeUpgrade.52.name': '대상품 교역',
+        'knowledgeUpgrade.52.desc': '염료와 파피루스를 해금합니다.',
+        'knowledgeUpgrade.53.name': '건조 저장술',
+        'knowledgeUpgrade.53.desc': '사막과 오아시스, 대추를 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.53.desert': '골드 +5. 인접한 일반 및 시대 심볼 모두 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.53.oasis': '인접 빈 슬롯 당: 식량 +1.',
+        'knowledgeUpgrade.symbolDescAfter.53.date': '식량 +1; 파괴 시: 식량 +20.',
+        'knowledgeUpgrade.54.name': '카라밴세라이',
+        'knowledgeUpgrade.54.desc': '카라밴세라이를 해금합니다. 염료와 파피루스를 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.54.dye': '골드 +1; 파괴 시: 골드 +20.',
+        'knowledgeUpgrade.symbolDescAfter.54.papyrus': '지식 +1; 파괴 시: 지식 +20.',
+        'knowledgeUpgrade.55.name': '오아시스 회수망',
+        'knowledgeUpgrade.55.desc': '사막과 오아시스를 업그레이드 합니다.',
+        'knowledgeUpgrade.symbolDescAfter.55.desert': '식량 +10 및 골드 +10. 보드 위 모든 일반 및 시대 심볼 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.55.oasis': '인접한 빈 슬롯 당: 식량 +3.',
         'knowledgeUpgrade.34.name': '족장제',
         'knowledgeUpgrade.34.desc': '기본 식량 생산 +2. 야생열매를 업그레이드합니다.',
         'knowledgeUpgrade.symbolDescAfter.34.wild_berries': '식량 +1; 숲 혹은 열대우림 인접 시: 식량 +4; 산 인접 시: 지식 +5.',
@@ -1102,7 +1155,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.27.name': '농업',
         'knowledgeUpgrade.27.desc': '밀과 쌀을 업그레이드합니다.',
         'knowledgeUpgrade.15.name': '중세시대',
-        'knowledgeUpgrade.15.desc': '중세: 고대 심볼이 상점 풀에서 제외되고 중세 심볼이 추가됩니다. 지형 심볼 등장 확률이 약 0.2배로 감소합니다. 산: 식량 +1. 산에 인접한 적 유닛은 매 턴 체력 3을 잃습니다.',
+        'knowledgeUpgrade.15.desc': '중세: 고대 심볼이 상점 풀에서 제외되며, 중세 심볼을 해금합니다. 지형 심볼 등장 확률이 약 0.2배로 감소합니다. 산: 식량 +1. 산에 인접한 적 유닛은 매 턴 체력 3을 잃습니다.',
         'knowledgeUpgrade.16.name': '교육',
         'knowledgeUpgrade.16.desc': '도서관이 대학으로 대체됩니다. 기본 지식 생산 +2.',
         'knowledgeUpgrade.24.name': '인쇄술',
@@ -1118,7 +1171,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.39.name': '유목 전통',
         'knowledgeUpgrade.39.desc': '소, 양, 양모를 업그레이드합니다.',
         'knowledgeUpgrade.40.name': '나침반',
-        'knowledgeUpgrade.40.desc': '나침반이 심볼 선택 풀에 추가됩니다.',
+        'knowledgeUpgrade.40.desc': '나침반을 해금합니다.',
         'knowledgeUpgrade.41.name': '조선',
         'knowledgeUpgrade.41.desc': '바다를 업그레이드합니다.',
         'knowledgeUpgrade.42.name': '어업 조합',
@@ -1138,7 +1191,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.51.name': '보존',
         'knowledgeUpgrade.51.desc': '사슴과 버섯을 업그레이드 합니다.',
         'knowledgeUpgrade.46.name': '정글탐사',
-        'knowledgeUpgrade.46.desc': '탐사대가 선택 풀에 추가됩니다.',
+        'knowledgeUpgrade.46.desc': '탐사대를 해금합니다.',
         'knowledgeUpgrade.47.name': '열대 개발',
         'knowledgeUpgrade.47.desc': '열대우림과 탐사대를 업그레이드합니다.',
         'destroySelection.riteTitle': '희생 제의 (파괴할 심볼 선택)',
@@ -1400,9 +1453,42 @@ export function getBoardSymbolTooltipDesc(
     }
     if (symbolKey === 'desert') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        if (have.has(OASIS_RECOVERY_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.55.desert', lang);
+        }
+        if (have.has(DESERT_STORAGE_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.53.desert', lang);
+        }
         return have.has(FOREIGN_TRADE_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.33.desert', lang)
             : t('symbol.desert.desc', lang);
+    }
+    if (symbolKey === 'oasis') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        if (have.has(OASIS_RECOVERY_UPGRADE_ID)) {
+            return t('knowledgeUpgrade.symbolDescAfter.55.oasis', lang);
+        }
+        return have.has(DESERT_STORAGE_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.53.oasis', lang)
+            : t('symbol.oasis.desc', lang);
+    }
+    if (symbolKey === 'date') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(DESERT_STORAGE_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.53.date', lang)
+            : t('symbol.date.desc', lang);
+    }
+    if (symbolKey === 'dye') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(CARAVANSERAI_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.54.dye', lang)
+            : t('symbol.dye.desc', lang);
+    }
+    if (symbolKey === 'papyrus') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(CARAVANSERAI_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.54.papyrus', lang)
+            : t('symbol.papyrus.desc', lang);
     }
     if (symbolKey === 'wild_berries') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));

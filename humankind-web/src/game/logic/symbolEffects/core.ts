@@ -87,7 +87,7 @@ export const getAdjacentCoords = (x: number, y: number): { x: number; y: number 
 export const hasSeaOrHarborAdjacent = (boardGrid: BoardGrid, x: number, y: number): boolean =>
     getAdjacentCoords(x, y).some((p) => {
         const nid = boardGrid[p.x][p.y]?.definition.id;
-        return nid === SEA_TERRAIN_ID || nid === HARBOR_ID;
+        return nid === SEA_TERRAIN_ID;
     });
 
 export const findMountainSameColumn = (
