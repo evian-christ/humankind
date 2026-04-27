@@ -1,46 +1,26 @@
 import { create } from 'zustand';
-import {
-    getStageStartingRelicCounts,
-    TOTAL_STAGE_COUNT,
-} from '../data/stages';
 import { SYMBOLS, type SymbolDefinition, EDICT_SYMBOL_ID, S } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
-import { useSettingsStore } from './settingsStore';
-import { RELIC_LIST, RELICS, type RelicDefinition } from '../data/relicDefinitions';
+import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
 import { RELIC_ID } from '../logic/relics/relicIds';
 import {
     generateChoices as generateChoicesSelection,
-    generateTerrainOnlyChoices as generateTerrainOnlyChoicesSelection,
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
 } from '../logic/selection/selectionLogic';
 import type { PlayerSymbolInstance } from '../types';
+import { getEraFromLevel } from './gameCalculations';
 import {
-    getEraFromLevel,
-    getRerollCost,
-} from './gameCalculations';
-import {
-    KNOWLEDGE_UPGRADES,
-    SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
-    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
-    NOMADIC_TRADITION_UPGRADE_ID,
-    PASTURE_MANAGEMENT_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
-import { getLeaderStartingRelics, isLeaderPlayable, LEADERS } from '../data/leaders';
 import {
     BOARD_HEIGHT,
     BOARD_WIDTH,
-    appendSymbolDefIdsToPlayer,
-    aggregateCollectionDestroyEffects,
     createEmptyBoard,
     createInstance,
     createStartingBoard,
-    ensureOralTraditionOwned,
     phaseAfterTurnFlowComplete,
-    placeOralTraditionAtBoardCenter,
-    scarabAndHinduismBonusForOwnedRemoves,
 } from './gameStoreHelpers';
 import { createSelectionFlowActions } from './actions/selectionFlow';
 import { createRelicActivationActions } from './actions/relicActivation';
@@ -65,21 +45,6 @@ export const BOARD_COL_GAP_PX       = 12;     // 1920 기준 열 간격
 export const BOARD_BG_SPRITE_PADDING_PX = 8;
 
 
-
-/** 1→2 단계: 본체만 보여줌(들어올림) 후, activate 보여주기 전 대기(ms) */
-const PHASE1_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
-    '1x': 220,
-    '2x': 150,
-    '4x': 90,
-    'instant': 0,
-};
-/** 2→3 단계: activate(contributors) 보여준 후, 생산량 표시 전 대기(ms) */
-const PHASE2_DELAY: Record<import('./settingsStore').EffectSpeed, number> = {
-    '1x': 360,
-    '2x': 280,
-    '4x': 180,
-    'instant': 0,
-};
 
 /** 작물 심볼 ID 목록 (카르멜 산 화덕 재 효과용) */
 const _CROP_SYMBOL_IDS = [S.wheat, S.rice, S.banana, S.fish]; // Wheat, Rice, Banana, Fish
