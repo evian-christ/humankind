@@ -65,7 +65,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol.", sprite: "027.png" }),
     def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +2 Gold; if Forest is the only terrain on the board: +2 Food.", sprite: "028.png" }),
     def('deer', { name: "Deer", type: SymbolType.NORMAL, description: "+1 Food per adjacent Forest.", sprite: "029.png" }),
-    def('date', { name: "Date", type: SymbolType.NORMAL, description: "+1 Food; on destroy: +5 Food and 50% chance to add Date.", sprite: "030.png" }),
+    def('date', { name: "Date", type: SymbolType.NORMAL, description: "+1 Food; on destroy: +10 Food.", sprite: "030.png" }),
     def('fur', { name: "Fur", type: SymbolType.NORMAL, description: "+2 Gold per 2 Forests placed on the board.", sprite: "-" }),
 
     def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Ancient era melee unit.", base_attack: 5, base_hp: 10, sprite: "035.png" }),
@@ -164,6 +164,24 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         description: "When adjacent to Rainforest: produces a random 1-10 Food, Gold, or Knowledge.",
         sprite: "-",
     }),
+    def('dye', {
+        name: "Dye",
+        type: SymbolType.NORMAL,
+        description: "+1 Gold; on destroy: +10 Gold.",
+        sprite: "-",
+    }),
+    def('papyrus', {
+        name: "Papyrus",
+        type: SymbolType.NORMAL,
+        description: "+1 Knowledge; on destroy: +10 Knowledge.",
+        sprite: "-",
+    }),
+    def('caravanserai', {
+        name: "Caravanserai",
+        type: SymbolType.MEDIEVAL,
+        description: "+10 per symbol destroyed this turn; matches the destroyed symbol's production type.",
+        sprite: "-",
+    }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.NORMAL, description: "+1 Food. Destroyed after 5 turns.", sprite: "071.png" }),
 ];
 
@@ -201,7 +219,7 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'christianity', 'islam', 'buddhism', 'hinduism',
     'archer', 'stone_tablet', 'loot', 'glowing_amber', 'enemy_warrior',
     'flood', 'earthquake', 'drought',
-    'university', 'wool', 'mushroom', 'fur', 'expedition',
+    'university', 'wool', 'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
 ];
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
@@ -214,9 +232,18 @@ export const isBasePool = (s: SymbolDefinition) => {
         !RELIGION_DOCTRINE_IDS.has(s.id);
 };
 
+const FOOD_PRODUCING_KEYS: SymbolKey[] = [
+    'wheat', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
+    'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey', 'corn', 'wild_berries',
+    'sheep', 'mushroom', 'forest', 'horse', 'crab', 'campfire', 'wild_seeds', 'expedition',
+];
+
+/** Food를 생산하는 심볼 ID 목록 */
+export const FOOD_PRODUCING_IDS = new Set<number>(FOOD_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
+
 const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
     'monument', 'totem', 'library', 'pearl', 'stargazer', 'stone_tablet',
-    'compass',
+    'compass', 'papyrus', 'expedition',
     'university', 'scholar', 'holy_relic', 'telescope', 'scales',
 ];
 
@@ -224,7 +251,7 @@ const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
 export const KNOWLEDGE_PRODUCING_IDS = new Set<number>(KNOWLEDGE_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
 const GOLD_PRODUCING_KEYS: SymbolKey[] = [
-    'sea', 'stone', 'copper', 'mountain', 'merchant', 'fur',
+    'sea', 'stone', 'copper', 'mountain', 'merchant', 'fur', 'dye',
 ];
 
 /** Gold를 생산하는 심볼 ID 목록 */

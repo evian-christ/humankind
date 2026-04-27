@@ -1,21 +1,8 @@
-import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
+import { S, Sym, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
 import type { BoardGrid, BoardCoord, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
 
 const createEmptyBoard = (width: number, height: number): BoardGrid => {
     return Array(width).fill(null).map(() => Array(height).fill(null));
-};
-
-const getAdjacentCoords = (x: number, y: number, width: number, height: number): BoardCoord[] => {
-    const adj: BoardCoord[] = [];
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) adj.push({ x: nx, y: ny });
-        }
-    }
-    return adj;
 };
 
 const placeOralTraditionAtBoardCenter = (

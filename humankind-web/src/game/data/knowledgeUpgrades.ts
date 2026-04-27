@@ -104,6 +104,14 @@ export const HUNTING_UPGRADE_ID = 31;
 export const LAW_CODE_UPGRADE_ID = 32;
 /** 외국 무역 — 사막 업그레이드 */
 export const FOREIGN_TRADE_UPGRADE_ID = 33;
+/** 대상품 교역 — 염료·파피루스 심볼 풀 해금(외국 무역 선행) */
+export const DRY_STORAGE_UPGRADE_ID = 52;
+/** 건조 저장술 — 오아시스·대추 업그레이드(대상품 교역 선행) */
+export const DESERT_STORAGE_UPGRADE_ID = 53;
+/** 카라밴세라이 — 카라밴세라이 해금 및 염료·파피루스 업그레이드(건조 저장술 선행) */
+export const CARAVANSERAI_UPGRADE_ID = 54;
+/** 오아시스 회수망 — 사막·오아시스 최종 업그레이드(카라밴세라이 선행) */
+export const OASIS_RECOVERY_UPGRADE_ID = 55;
 /** 족장제 — 기본 식량 +2, 야생열매 업그레이드 */
 export const CHIEFDOM_UPGRADE_ID = 34;
 /** 삼포제 — 관개 선행, 밀·쌀 주기 식량이 보드 위 초원 수를 참조하고 초원을 강화 */
@@ -277,6 +285,52 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Upgrades Desert.',
         sprite: '-',
         descSymbols: [{ symbolKey: 'desert', relation: 'effect_modify' }],
+    },
+    [DRY_STORAGE_UPGRADE_ID]: {
+        id: DRY_STORAGE_UPGRADE_ID,
+        name: 'Trade Goods Exchange',
+        type: SymbolType.ANCIENT,
+        description: 'Dye and Papyrus are added to the symbol selection pool.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'dye', relation: 'pool_add' },
+            { symbolKey: 'papyrus', relation: 'pool_add' },
+        ],
+    },
+    [DESERT_STORAGE_UPGRADE_ID]: {
+        id: DESERT_STORAGE_UPGRADE_ID,
+        name: 'Dry Storage',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Desert, Oasis, and Date.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'desert', relation: 'effect_modify' },
+            { symbolKey: 'oasis', relation: 'effect_modify' },
+            { symbolKey: 'date', relation: 'effect_modify' },
+        ],
+    },
+    [CARAVANSERAI_UPGRADE_ID]: {
+        id: CARAVANSERAI_UPGRADE_ID,
+        name: 'Caravanserai',
+        type: SymbolType.MEDIEVAL,
+        description: 'Unlocks Caravanserai. Upgrades Dye and Papyrus.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'caravanserai', relation: 'pool_add' },
+            { symbolKey: 'dye', relation: 'effect_modify' },
+            { symbolKey: 'papyrus', relation: 'effect_modify' },
+        ],
+    },
+    [OASIS_RECOVERY_UPGRADE_ID]: {
+        id: OASIS_RECOVERY_UPGRADE_ID,
+        name: 'Oasis Recovery Network',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Desert and Oasis.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'desert', relation: 'effect_modify' },
+            { symbolKey: 'oasis', relation: 'effect_modify' },
+        ],
     },
     [CHIEFDOM_UPGRADE_ID]: {
         id: CHIEFDOM_UPGRADE_ID,
@@ -549,6 +603,10 @@ const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
     [THREE_FIELD_SYSTEM_UPGRADE_ID]: [IRRIGATION_UPGRADE_ID],
     [AGRICULTURAL_SURPLUS_UPGRADE_ID]: [THREE_FIELD_SYSTEM_UPGRADE_ID],
     [MODERN_AGRICULTURE_UPGRADE_ID]: [AGRICULTURAL_SURPLUS_UPGRADE_ID],
+    [DRY_STORAGE_UPGRADE_ID]: [FOREIGN_TRADE_UPGRADE_ID],
+    [DESERT_STORAGE_UPGRADE_ID]: [DRY_STORAGE_UPGRADE_ID],
+    [CARAVANSERAI_UPGRADE_ID]: [DESERT_STORAGE_UPGRADE_ID],
+    [OASIS_RECOVERY_UPGRADE_ID]: [CARAVANSERAI_UPGRADE_ID],
 };
 
 export function getKnowledgeUpgradePrerequisiteClosure(upgradeId: number): number[] {

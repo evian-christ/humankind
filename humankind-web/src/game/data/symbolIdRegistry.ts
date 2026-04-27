@@ -89,6 +89,9 @@ export const SYMBOL_NUMERIC_ID = {
     // ── Extra Normal (70+) ──
     compass: 70,
     expedition: 71,
+    dye: 72,
+    papyrus: 73,
+    caravanserai: 74,
 } as const;
 
 export type SymbolKey = keyof typeof SYMBOL_NUMERIC_ID;
