@@ -2,6 +2,7 @@ import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    BALLISTICS_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
@@ -12,11 +13,15 @@ import {
     FISHERY_GUILD_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
+    GUNPOWDER_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
+    INTERCHANGEABLE_PARTS_UPGRADE_ID,
+    IRON_WORKING_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    MECHANICS_UPGRADE_ID,
     MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
@@ -35,7 +40,7 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { getStageFoodPaymentBase, getStagePassiveBonus } from '../data/stages';
-import { S, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
+import { SymbolType } from '../data/symbolDefinitions';
 
 const KNOWLEDGE_LEVELUP_BASE = 50;
 const KNOWLEDGE_LEVELUP_STEP = 5;
@@ -98,13 +103,6 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
     };
 }
 
-export const getBronzeWorkingHpBonus = (def: SymbolDefinition): number => {
-    if (def.type !== SymbolType.UNIT) return 0;
-    if (def.id === S.warrior) return 10;
-    if (def.id === S.archer) return 3;
-    return 0;
-};
-
 const upgradeEraBySymbolType = (type: number): number | null => {
     switch (type) {
         case SymbolType.ANCIENT: return 1;
@@ -138,7 +136,7 @@ export function isUpgradeLegalForKnowledgePick(
     if (uid === MODERN_AGRICULTURE_UPGRADE_ID && !have.has(AGRICULTURAL_SURPLUS_UPGRADE_ID)) return false;
     if (uid === NOMADIC_TRADITION_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
     if (uid === PASTURE_MANAGEMENT_UPGRADE_ID && !have.has(NOMADIC_TRADITION_UPGRADE_ID)) return false;
-    if (uid === 2 && !have.has(5)) return false;
+    if (uid === IRON_WORKING_UPGRADE_ID && !have.has(5)) return false;
     if (uid === IRRIGATION_UPGRADE_ID && !have.has(AGRICULTURE_UPGRADE_ID)) return false;
     if (uid === HORSEMANSHIP_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
     if (uid === SEAFARING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
@@ -160,6 +158,10 @@ export function isUpgradeLegalForKnowledgePick(
     if (uid === TROPICAL_DEVELOPMENT_UPGRADE_ID && !have.has(JUNGLE_EXPEDITION_UPGRADE_ID)) return false;
     if (uid === OCEANIC_ROUTES_UPGRADE_ID && !have.has(MARITIME_TRADE_UPGRADE_ID)) return false;
     if (uid === OCEANIC_ROUTES_UPGRADE_ID && !have.has(FISHERY_GUILD_UPGRADE_ID)) return false;
+    if (uid === MECHANICS_UPGRADE_ID && !have.has(IRON_WORKING_UPGRADE_ID)) return false;
+    if (uid === GUNPOWDER_UPGRADE_ID && !have.has(MECHANICS_UPGRADE_ID)) return false;
+    if (uid === BALLISTICS_UPGRADE_ID && !have.has(GUNPOWDER_UPGRADE_ID)) return false;
+    if (uid === INTERCHANGEABLE_PARTS_UPGRADE_ID && !have.has(BALLISTICS_UPGRADE_ID)) return false;
     if (upgrade.type === SymbolType.MEDIEVAL) return medievalUnlocked;
     return upgradeEra <= currentEra;
 }

@@ -2658,24 +2658,45 @@ button.pregame-card.leader-select-play {
   animation: knowledge-research-mouse-hint-anim 0.5s ease-out forwards;
 }
 
-/* Knowledge upgrades overlay: right detail panel — same box/typography as .symbol-tooltip, interactive */
-.knowledge-upgrade-detail-panel {
-  flex: 0 0 33.333%;
-  min-width: 260px;
-  align-self: stretch;
-  min-height: 0;
+/* Knowledge upgrades overlay: large interactive tooltip next to selected chip */
+.knowledge-upgrade-tooltip {
+  position: fixed;
+  z-index: 20;
+  width: min(520px, calc(100vw - 40px));
+  max-height: min(640px, calc(100vh - 120px));
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
-  background: rgba(15, 15, 15, 0.95);
+  background: rgba(15, 15, 15, 0.97);
   border: 2px solid #555;
-  padding: 22px 26px;
+  padding: 26px 30px;
   pointer-events: auto;
   font-family: 'Mulmaru', sans-serif;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-.knowledge-upgrade-detail-panel-scroll {
+.knowledge-upgrade-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 54px;
+  width: 18px;
+  height: 18px;
+  background: rgba(15, 15, 15, 0.97);
+  border-top: 2px solid #555;
+  border-right: 2px solid #555;
+  transform: rotate(45deg);
+}
+
+.knowledge-upgrade-tooltip--right::before {
+  left: -11px;
+}
+
+.knowledge-upgrade-tooltip--left::before {
+  right: -11px;
+}
+
+.knowledge-upgrade-tooltip-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -2685,28 +2706,28 @@ button.pregame-card.leader-select-play {
   gap: 8px;
 }
 
-.knowledge-upgrade-detail-panel-actions {
+.knowledge-upgrade-tooltip-actions {
   flex-shrink: 0;
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid #444;
 }
 
-.knowledge-upgrade-detail-panel .symbol-tooltip-name {
-  font-size: 32px;
+.knowledge-upgrade-tooltip .symbol-tooltip-name {
+  font-size: 36px;
 }
 
-.knowledge-upgrade-detail-panel .symbol-tooltip-rarity {
-  font-size: 19px;
+.knowledge-upgrade-tooltip .symbol-tooltip-rarity {
+  font-size: 22px;
 }
 
-.knowledge-upgrade-detail-panel .symbol-tooltip-desc {
-  gap: 4px;
+.knowledge-upgrade-tooltip .symbol-tooltip-desc {
+  gap: 6px;
 }
 
-.knowledge-upgrade-detail-panel .symbol-tooltip-desc-line {
-  font-size: 20px;
-  line-height: 1.45;
+.knowledge-upgrade-tooltip .symbol-tooltip-desc-line {
+  font-size: 22px;
+  line-height: 1.5;
 }
 
 .knowledge-upgrade-detail-tier {
@@ -2718,32 +2739,32 @@ button.pregame-card.leader-select-play {
   font-family: 'Mulmaru', sans-serif;
 }
 
-.knowledge-upgrade-detail-panel-actions .bottom-right-btn {
-  font-size: 23px;
-  min-height: 58px;
+.knowledge-upgrade-tooltip-actions .bottom-right-btn {
+  font-size: 25px;
+  min-height: 62px;
 }
 
-/* Slightly larger symbol chips when desc block is in the overlay panel */
-.knowledge-upgrade-detail-panel .upgrade-card-desc-symbol-chips {
+/* Slightly larger symbol chips when desc block is in the overlay tooltip */
+.knowledge-upgrade-tooltip .upgrade-card-desc-symbol-chips {
   gap: 10px;
 }
 
-.knowledge-upgrade-detail-panel .upgrade-card-desc-symbol-chip {
+.knowledge-upgrade-tooltip .upgrade-card-desc-symbol-chip {
   padding: 5px;
 }
 
-.knowledge-upgrade-detail-panel .upgrade-card-desc-symbol-img {
+.knowledge-upgrade-tooltip .upgrade-card-desc-symbol-img {
   width: 44px;
   height: 44px;
 }
 
-.knowledge-upgrade-detail-panel .upgrade-card-desc-symbol-fallback {
+.knowledge-upgrade-tooltip .upgrade-card-desc-symbol-fallback {
   min-width: 44px;
   min-height: 44px;
   font-size: 15px;
 }
 
-.knowledge-upgrade-detail-panel .upgrade-card-desc-symbol-badge {
+.knowledge-upgrade-tooltip .upgrade-card-desc-symbol-badge {
   min-width: 19px;
   height: 19px;
   font-size: 12px;

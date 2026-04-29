@@ -16,6 +16,7 @@ import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
+    BALLISTICS_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
@@ -26,10 +27,14 @@ import {
     FISHERIES_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
+    GUNPOWDER_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
+    INTERCHANGEABLE_PARTS_UPGRADE_ID,
+    IRON_WORKING_UPGRADE_ID,
     LAW_CODE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
+    MECHANICS_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
@@ -82,47 +87,76 @@ type KnowledgeConnectorLine = {
     y2: number;
 };
 type KnowledgeConnectorRenderLine = KnowledgeConnectorLine & { active: boolean; dimmed: boolean };
+type KnowledgeUpgradeTooltipPosition = {
+    left: number;
+    top: number;
+    placement: 'left' | 'right';
+};
 
-/** 칩 열 수 — 7열 */
-const KNOWLEDGE_TREE_GRID_COLS = 7;
+/** 칩 열 수 — 개발용 확장 13열 */
+const KNOWLEDGE_TREE_GRID_COLS = 13;
+/**
+ * 개발용 열 오버라이드.
+ * 사용자가 보는 열 번호(1~13)를 0-based 인덱스로 옮겨 적는다.
+ */
+const KNOWLEDGE_TREE_COL_OVERRIDES: Partial<Record<number, number>> = {
+    [HORSEMANSHIP_UPGRADE_ID]: 1, // 2열
+    [CELESTIAL_NAVIGATION_UPGRADE_ID]: 3, // 4열
+    [SEAFARING_UPGRADE_ID]: 4, // 5열
+    [AGRICULTURE_UPGRADE_ID]: 7, // 8열
+    [IRRIGATION_UPGRADE_ID]: 7, // 8열
+    [THREE_FIELD_SYSTEM_UPGRADE_ID]: 7, // 8열
+    [AGRICULTURAL_SURPLUS_UPGRADE_ID]: 7, // 8열
+    [MODERN_AGRICULTURE_UPGRADE_ID]: 7, // 8열
+    [COMPASS_UPGRADE_ID]: 5, // 6열
+    [SHIPBUILDING_UPGRADE_ID]: 5, // 6열
+    [MARITIME_TRADE_UPGRADE_ID]: 3, // 4열
+    [CHIEFDOM_UPGRADE_ID]: 1, // 2열
+    [10]: 1, // 2열, 수학
+    [LAW_CODE_UPGRADE_ID]: 9, // 10열
+    [1]: 9, // 10열, 문자
+    [8]: 11, // 12열, 희생 제의
+    [4]: 11, // 12열, 신학
+};
 
 const TIERS: { level: number; ids: (number | null)[] }[] = [
     //           col0–6 (7열)
     { level: 1,  ids: [null, null, null, 25,   null, null, null] },
-    /** col0 수렵(31)–col4 궁술(5)–col5 채광(30)–col6 외국 무역(33) */
-    { level: 2,  ids: [HUNTING_UPGRADE_ID, 26,   9,    27,   5,    MINING_UPGRADE_ID, FOREIGN_TRADE_UPGRADE_ID] },
-    /** col5: 법전(32); col6: 희생 제의(8) */
-    { level: 3,  ids: [CHIEFDOM_UPGRADE_ID, null, null, null, null, LAW_CODE_UPGRADE_ID, 8] },
+    /** col0 수렵(31)–col5 채광(30)–col6 외국 무역(33) */
+    { level: 2,  ids: [HUNTING_UPGRADE_ID, 26,   9,    27,   null, MINING_UPGRADE_ID, FOREIGN_TRADE_UPGRADE_ID] },
+    /** col4: 궁술(5); col5: 법전(32); col6: 희생 제의(8) */
+    { level: 3,  ids: [CHIEFDOM_UPGRADE_ID, null, null, null, 5,    LAW_CODE_UPGRADE_ID, 8] },
     /** col0: 족장제(34) 아래 — 기마술(7); col1: 기마술 오른쪽 — 천문항법(29); col2: Lv2 어업(9)과 같은 열 — 항해술(28) */
     { level: 4,  ids: [HORSEMANSHIP_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID, SEAFARING_UPGRADE_ID, null, null, null, null] },
-    /** col3: Lv2 농업(27)과 같은 열 — 관개(3); col4: Lv2 궁술(5)과 같은 열 — 청동(2) */
+    /** col3: Lv2 농업(27)과 같은 열 — 관개(3) */
     /** col6: 문자(1) */
-    { level: 5,  ids: [null, null, null, IRRIGATION_UPGRADE_ID, 2,    null, 1] },
-    { level: 6,  ids: [TRACKING_UPGRADE_ID, null, null, null, null, null, DRY_STORAGE_UPGRADE_ID] },
+    { level: 5,  ids: [null, null, null, IRRIGATION_UPGRADE_ID, null, null, 1] },
+    { level: 6,  ids: [null, null, null, null, null, null, DRY_STORAGE_UPGRADE_ID] },
     /** col5: 신학(4) */
-    { level: 7,  ids: [null, 6,    null, null, null, 4,    null] },
-    { level: 8,  ids: [null, null, null, null, null, null, null] },
+    { level: 7,  ids: [TRACKING_UPGRADE_ID, 6,    null, null, null, 4,    null] },
+    /** col4: 철제 기술(2) */
+    { level: 8,  ids: [null, null, null, null, IRON_WORKING_UPGRADE_ID, null, null] },
     /** col1: 목축업(26) 아래 — 유목 전통(39); col3: 중세시대(15) 바로 위 — 나침반(40); col5: 신학(4) 아래 — 수학(10) */
     { level: 9,  ids: [null, NOMADIC_TRADITION_UPGRADE_ID, null, COMPASS_UPGRADE_ID, null, 10, null] },
     { level: 10, ids: [null, null, null, 15,   null, null, null] },
     { level: 11, ids: [null, null, FISHERY_GUILD_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID, null, PLANTATION_UPGRADE_ID, null] },
     { level: 12, ids: [TANNING_UPGRADE_ID, null, null, null, null, null, DESERT_STORAGE_UPGRADE_ID] },
-    { level: 13, ids: [null, MARITIME_TRADE_UPGRADE_ID, null, null, null, null, null] },
+    { level: 13, ids: [null, MARITIME_TRADE_UPGRADE_ID, null, null, MECHANICS_UPGRADE_ID, null, null] },
     { level: 14, ids: [null, null, null, null, null, null, null] },
     { level: 15, ids: [null, null, null, SHIPBUILDING_UPGRADE_ID, null, null, null] },
     { level: 16, ids: [null, null, null, null, null, JUNGLE_EXPEDITION_UPGRADE_ID, null] },
     { level: 17, ids: [null, null, null, AGRICULTURAL_SURPLUS_UPGRADE_ID, null, null, CARAVANSERAI_UPGRADE_ID] },
-    { level: 18, ids: [FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, null, null, null, null, null] },
+    { level: 18, ids: [FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, null, null, GUNPOWDER_UPGRADE_ID, null, null] },
     { level: 19, ids: [null, null, null, null, null, null, null] },
     { level: 20, ids: [null, null, null, null, null, null, null] },
     { level: 21, ids: [null, null, OCEANIC_ROUTES_UPGRADE_ID, null, null, null, null] },
     { level: 22, ids: [null, null, null, null, null, null, OASIS_RECOVERY_UPGRADE_ID] },
-    { level: 23, ids: [null, null, null, MODERN_AGRICULTURE_UPGRADE_ID, null, null, null] },
+    { level: 23, ids: [null, null, null, MODERN_AGRICULTURE_UPGRADE_ID, BALLISTICS_UPGRADE_ID, null, null] },
     { level: 24, ids: [PRESERVATION_UPGRADE_ID, null, null, null, null, null, null] },
     { level: 25, ids: [null, null, null, null, null, TROPICAL_DEVELOPMENT_UPGRADE_ID, null] },
     { level: 26, ids: [null, null, null, null, null, null, null] },
     { level: 27, ids: [null, null, null, null, null, null, null] },
-    { level: 28, ids: [null, null, null, null, null, null, null] },
+    { level: 28, ids: [null, null, null, null, INTERCHANGEABLE_PARTS_UPGRADE_ID, null, null] },
     { level: 29, ids: [null, null, null, null, null, null, null] },
     { level: 30, ids: [null, null, null, null, null, null, null] },
 ];
@@ -142,8 +176,6 @@ const ARCHERY_BRONZE_LINE_WIDTH = 3;
 const KNOWLEDGE_CONNECTOR_PORT_W = 28;
 const KNOWLEDGE_CONNECTOR_PORT_H = 4;
 const KNOWLEDGE_CONNECTOR_PORT_SHADOW = '#24262b';
-const KNOWLEDGE_MAIN_ROW_GAP_PX = 24;
-
 /** Inset rim + bottom pillar; default #555/#444; researched = subdued green (clear hue, not neon; pillar darker). */
 const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#555';
 const KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT = '#444';
@@ -180,9 +212,28 @@ function _knowledgeTreeFullGridWidthPx(): number {
     return KNOWLEDGE_TREE_LABEL_BAND_PX + KNOWLEDGE_TREE_GAP + knowledgeTreeGridWidthPx();
 }
 
+function normalizeTierIdsToGrid(ids: (number | null)[]): (number | null)[] {
+    if (ids.length === KNOWLEDGE_TREE_GRID_COLS) return ids;
+    const normalized = Array.from({ length: KNOWLEDGE_TREE_GRID_COLS }, () => null as number | null);
+    ids.forEach((id, legacyIdx) => {
+        if (id == null) return;
+        const defaultColIdx = legacyIdx * 2;
+        normalized[defaultColIdx] = id;
+    });
+    ids.forEach((id) => {
+        if (id == null) return;
+        const overrideColIdx = KNOWLEDGE_TREE_COL_OVERRIDES[id];
+        if (overrideColIdx == null) return;
+        const currentColIdx = normalized.indexOf(id);
+        if (currentColIdx >= 0) normalized[currentColIdx] = null;
+        normalized[overrideColIdx] = id;
+    });
+    return normalized;
+}
+
 function findTierGridSlot(upgradeId: number): { rowIdx: number; colIdx: number } | null {
     for (let rowIdx = 0; rowIdx < TIERS.length; rowIdx += 1) {
-        const colIdx = TIERS[rowIdx]!.ids.indexOf(upgradeId);
+        const colIdx = normalizeTierIdsToGrid(TIERS[rowIdx]!.ids).indexOf(upgradeId);
         if (colIdx >= 0) return { rowIdx, colIdx };
     }
     return null;
@@ -250,16 +301,27 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [researchPointsMouseHints, setResearchPointsMouseHints] = useState<ResearchPointsMouseHint[]>([]);
     const researchHintIdRef = useRef(0);
+    const overlayRef = useRef<HTMLDivElement>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
     const treeScrollRef = useRef<HTMLDivElement>(null);
     const treeContentRef = useRef<HTMLDivElement>(null);
     const [connectorLines, setConnectorLines] = useState<KnowledgeConnectorLine[]>([]);
+    const [tooltipPosition, setTooltipPosition] = useState<KnowledgeUpgradeTooltipPosition | null>(null);
 
     const selectedUpgrade = selectedId != null ? KNOWLEDGE_UPGRADES[selectedId] : null;
     const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
     const selectedTierLevel = selectedId != null
         ? (TIERS.find(tier => tier.ids.includes(selectedId!))?.level ?? 1)
         : 1;
-    const archeryBlocksBronze = selectedId === 2 && !unlockedUpgrades.includes(5);
+    const archeryBlocksIronWorking = selectedId === IRON_WORKING_UPGRADE_ID && !unlockedUpgrades.includes(5);
+    const mechanicsBlocksIronWorking =
+        selectedId === MECHANICS_UPGRADE_ID && !unlockedUpgrades.includes(IRON_WORKING_UPGRADE_ID);
+    const gunpowderBlocksMechanics =
+        selectedId === GUNPOWDER_UPGRADE_ID && !unlockedUpgrades.includes(MECHANICS_UPGRADE_ID);
+    const ballisticsBlocksGunpowder =
+        selectedId === BALLISTICS_UPGRADE_ID && !unlockedUpgrades.includes(GUNPOWDER_UPGRADE_ID);
+    const interchangeablePartsBlocksBallistics =
+        selectedId === INTERCHANGEABLE_PARTS_UPGRADE_ID && !unlockedUpgrades.includes(BALLISTICS_UPGRADE_ID);
     const irrigationBlocksAgriculture =
         selectedId === IRRIGATION_UPGRADE_ID && !unlockedUpgrades.includes(AGRICULTURE_UPGRADE_ID);
     const horsemanshipBlocksPastoralism =
@@ -322,7 +384,11 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const canResearchSelected =
         hasResearchPoints &&
         !selectedUnlocked &&
-        !archeryBlocksBronze &&
+        !archeryBlocksIronWorking &&
+        !mechanicsBlocksIronWorking &&
+        !gunpowderBlocksMechanics &&
+        !ballisticsBlocksGunpowder &&
+        !interchangeablePartsBlocksBallistics &&
         !irrigationBlocksAgriculture &&
         !horsemanshipBlocksPastoralism &&
         !pastureManagementBlocksPastoralism &&
@@ -354,7 +420,11 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const needsHigherLevel = selectedId != null && currentLevel < selectedTierLevel;
     const researchButtonDisabled =
         selectedUnlocked ||
-        archeryBlocksBronze ||
+        archeryBlocksIronWorking ||
+        mechanicsBlocksIronWorking ||
+        gunpowderBlocksMechanics ||
+        ballisticsBlocksGunpowder ||
+        interchangeablePartsBlocksBallistics ||
         irrigationBlocksAgriculture ||
         horsemanshipBlocksPastoralism ||
         pastureManagementBlocksPastoralism ||
@@ -432,6 +502,54 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 y1: bottomAnchorY(archPos.rowIdx, selectedId === 5),
                 x2: xForCol(bronzePos.colIdx),
                 y2: topAnchorY(bronzePos.rowIdx, selectedId === 2),
+            });
+        }
+
+        const mechanicsPos = findTierGridSlot(MECHANICS_UPGRADE_ID);
+        if (bronzePos && mechanicsPos) {
+            next.push({
+                from: IRON_WORKING_UPGRADE_ID,
+                to: MECHANICS_UPGRADE_ID,
+                x1: xForCol(bronzePos.colIdx),
+                y1: bottomAnchorY(bronzePos.rowIdx, selectedId === IRON_WORKING_UPGRADE_ID),
+                x2: xForCol(mechanicsPos.colIdx),
+                y2: topAnchorY(mechanicsPos.rowIdx, selectedId === MECHANICS_UPGRADE_ID),
+            });
+        }
+
+        const gunpowderPos = findTierGridSlot(GUNPOWDER_UPGRADE_ID);
+        if (mechanicsPos && gunpowderPos) {
+            next.push({
+                from: MECHANICS_UPGRADE_ID,
+                to: GUNPOWDER_UPGRADE_ID,
+                x1: xForCol(mechanicsPos.colIdx),
+                y1: bottomAnchorY(mechanicsPos.rowIdx, selectedId === MECHANICS_UPGRADE_ID),
+                x2: xForCol(gunpowderPos.colIdx),
+                y2: topAnchorY(gunpowderPos.rowIdx, selectedId === GUNPOWDER_UPGRADE_ID),
+            });
+        }
+
+        const ballisticsPos = findTierGridSlot(BALLISTICS_UPGRADE_ID);
+        if (gunpowderPos && ballisticsPos) {
+            next.push({
+                from: GUNPOWDER_UPGRADE_ID,
+                to: BALLISTICS_UPGRADE_ID,
+                x1: xForCol(gunpowderPos.colIdx),
+                y1: bottomAnchorY(gunpowderPos.rowIdx, selectedId === GUNPOWDER_UPGRADE_ID),
+                x2: xForCol(ballisticsPos.colIdx),
+                y2: topAnchorY(ballisticsPos.rowIdx, selectedId === BALLISTICS_UPGRADE_ID),
+            });
+        }
+
+        const interchangeablePartsPos = findTierGridSlot(INTERCHANGEABLE_PARTS_UPGRADE_ID);
+        if (ballisticsPos && interchangeablePartsPos) {
+            next.push({
+                from: BALLISTICS_UPGRADE_ID,
+                to: INTERCHANGEABLE_PARTS_UPGRADE_ID,
+                x1: xForCol(ballisticsPos.colIdx),
+                y1: bottomAnchorY(ballisticsPos.rowIdx, selectedId === BALLISTICS_UPGRADE_ID),
+                x2: xForCol(interchangeablePartsPos.colIdx),
+                y2: topAnchorY(interchangeablePartsPos.rowIdx, selectedId === INTERCHANGEABLE_PARTS_UPGRADE_ID),
             });
         }
 
@@ -754,23 +872,89 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         setConnectorLines(next);
     }, [selectedId]);
 
+    const updateSelectedTooltipPosition = useCallback(() => {
+        if (selectedId == null) {
+            setTooltipPosition(null);
+            return;
+        }
+
+        const overlayEl = overlayRef.current;
+        if (!overlayEl) return;
+
+        const anchorEl = overlayEl.querySelector<HTMLElement>(
+            `[data-knowledge-upgrade-id="${selectedId}"]`,
+        );
+        if (!anchorEl) {
+            setTooltipPosition(null);
+            return;
+        }
+
+        const rootEl = document.getElementById('root');
+        if (!rootEl) return;
+
+        const anchorRect = anchorEl.getBoundingClientRect();
+        const rootRect = rootEl.getBoundingClientRect();
+        const scaleX = rootRect.width / rootEl.clientWidth;
+        const scaleY = rootRect.height / rootEl.clientHeight;
+        const anchorLeft = (anchorRect.left - rootRect.left) / scaleX;
+        const anchorRight = (anchorRect.right - rootRect.left) / scaleX;
+        const anchorTop = (anchorRect.top - rootRect.top) / scaleY;
+        const tooltipEl = tooltipRef.current;
+        const tooltipWidth = tooltipEl?.offsetWidth ?? 520;
+        const tooltipHeight = tooltipEl?.offsetHeight ?? 640;
+        const margin = 12;
+        const minInset = 20;
+        const viewportWidth = rootEl.clientWidth;
+        const viewportHeight = rootEl.clientHeight;
+        const preferredLeft = anchorRight + margin;
+        const canPlaceRight = preferredLeft + tooltipWidth <= viewportWidth - minInset;
+        const placement: 'left' | 'right' = canPlaceRight ? 'right' : 'left';
+        const unclampedLeft = placement === 'right'
+            ? preferredLeft
+            : anchorLeft - tooltipWidth - margin;
+        const left = Math.min(
+            Math.max(minInset, unclampedLeft),
+            Math.max(minInset, viewportWidth - tooltipWidth - minInset),
+        );
+        const top = Math.min(
+            Math.max(minInset, anchorTop),
+            Math.max(minInset, viewportHeight - tooltipHeight - minInset),
+        );
+
+        setTooltipPosition({ left, top, placement });
+    }, [selectedId]);
+
     useLayoutEffect(() => {
         if (!isOpen) return;
-        const raf = requestAnimationFrame(() => updateKnowledgeTreeConnectors());
+        const raf = requestAnimationFrame(() => {
+            updateKnowledgeTreeConnectors();
+            updateSelectedTooltipPosition();
+        });
         const contentEl = treeContentRef.current;
+        const tooltipEl = tooltipRef.current;
         const scrollEl = treeScrollRef.current;
         if (!contentEl) return () => cancelAnimationFrame(raf);
-        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateKnowledgeTreeConnectors()) : null;
+        const ro = typeof ResizeObserver !== 'undefined'
+            ? new ResizeObserver(() => {
+                updateKnowledgeTreeConnectors();
+                updateSelectedTooltipPosition();
+            })
+            : null;
         ro?.observe(contentEl);
+        if (tooltipEl) ro?.observe(tooltipEl);
         scrollEl?.addEventListener('scroll', updateKnowledgeTreeConnectors, { passive: true });
+        scrollEl?.addEventListener('scroll', updateSelectedTooltipPosition, { passive: true });
         window.addEventListener('resize', updateKnowledgeTreeConnectors);
+        window.addEventListener('resize', updateSelectedTooltipPosition);
         return () => {
             cancelAnimationFrame(raf);
             ro?.disconnect();
             scrollEl?.removeEventListener('scroll', updateKnowledgeTreeConnectors);
+            scrollEl?.removeEventListener('scroll', updateSelectedTooltipPosition);
             window.removeEventListener('resize', updateKnowledgeTreeConnectors);
+            window.removeEventListener('resize', updateSelectedTooltipPosition);
         };
-    }, [isOpen, updateKnowledgeTreeConnectors, language, selectedId]);
+    }, [isOpen, updateKnowledgeTreeConnectors, updateSelectedTooltipPosition, language, selectedId]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -789,6 +973,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         if (!isOpen) {
             queueMicrotask(() => {
                 setSelectedId(null);
+                setTooltipPosition(null);
                 setResearchPointsMouseHints([]);
             });
         }
@@ -831,7 +1016,11 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         if (
             !selectedId ||
             selectedUnlocked ||
-            archeryBlocksBronze ||
+            archeryBlocksIronWorking ||
+            mechanicsBlocksIronWorking ||
+            gunpowderBlocksMechanics ||
+            ballisticsBlocksGunpowder ||
+            interchangeablePartsBlocksBallistics ||
             irrigationBlocksAgriculture ||
             horsemanshipBlocksPastoralism ||
             pastureManagementBlocksPastoralism ||
@@ -876,6 +1065,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
 
     return (
         <div
+            ref={overlayRef}
             style={{
                 position: 'fixed',
                 inset: 0,
@@ -969,211 +1159,255 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             <div
                 style={{
                     flex: 1,
-                    display: 'flex',
-                    flexDirection: 'row',
                     minHeight: 0,
-                    padding: `10px ${KNOWLEDGE_MAIN_ROW_GAP_PX + 4}px 28px 32px`,
-                    gap: KNOWLEDGE_MAIN_ROW_GAP_PX,
+                    padding: '10px 32px 28px',
                     boxSizing: 'border-box',
-                }}
-            >
-            <div
-                ref={treeScrollRef}
-                style={{
-                    flex: 1,
-                    minWidth: 0,
-                    overflowY: 'auto',
-                    paddingBottom: 8,
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
                 }}
             >
                 <div
-                    ref={treeContentRef}
+                    aria-hidden
                     style={{
-                        position: 'relative',
+                        flexShrink: 0,
+                        paddingBottom: 14,
+                        paddingLeft: KNOWLEDGE_TREE_LABEL_BAND_PX,
                         display: 'flex',
-                        flexDirection: 'column',
-                        gap: TIER_STACK_GAP,
+                        justifyContent: 'center',
                     }}
                 >
-                    {TIERS.map((tier) => {
-                        const tierUnlockable = currentLevel >= tier.level;
-                        const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
-                        const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
-
-                        return (
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
+                            gap: `${KNOWLEDGE_TREE_GAP}px`,
+                            flexShrink: 0,
+                        }}
+                    >
+                        {Array.from({ length: KNOWLEDGE_TREE_GRID_COLS }, (_, idx) => (
                             <div
-                                key={tier.level}
+                                key={`knowledge-col-${idx + 1}`}
                                 style={{
-                                    position: 'relative',
-                                    flex: '0 0 auto',
-                                    minHeight: `${TIER_ROW_MIN_H}px`,
+                                    height: '28px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontFamily: 'Mulmaru, sans-serif',
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                    letterSpacing: '0.08em',
+                                    color: '#64748b',
                                 }}
                             >
-                                {/* 점선 — 화면 전체 너비 */}
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        right: 0,
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        borderTop: `2px dashed ${dashColor}`,
-                                        pointerEvents: 'none',
-                                        zIndex: 0,
-                                    }}
-                                />
+                                {idx + 1}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div
+                    ref={treeScrollRef}
+                    style={{
+                        flex: 1,
+                        width: '100%',
+                        minHeight: 0,
+                        overflowY: 'auto',
+                        paddingBottom: 8,
+                    }}
+                >
+                    <div
+                        ref={treeContentRef}
+                        style={{
+                            position: 'relative',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: TIER_STACK_GAP,
+                        }}
+                    >
+                        {TIERS.map((tier) => {
+                            const normalizedTierIds = normalizeTierIdsToGrid(tier.ids);
+                            const tierUnlockable = currentLevel >= tier.level;
+                            const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
+                            const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
 
-                                {/* Lv 라벨 — 맨 왼쪽 고정 */}
+                            return (
                                 <div
-                                    style={{
-                                        position: 'absolute',
-                                        left: `${TIER_ROW_PAD_X}px`,
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        zIndex: 2,
-                                        width: `${TIER_LABEL_W}px`,
-                                        fontFamily: 'Mulmaru, sans-serif',
-                                        fontSize: '20px',
-                                        letterSpacing: '0.12em',
-                                        color: labelColor,
-                                        fontWeight: 'bold',
-                                        background: '#070a0f',
-                                        paddingRight: '14px',
-                                    }}
-                                >
-                                    Lv.{tier.level}
-                                </div>
-
-                                {/* 칩 그리드 — 라벨 영역 이후 중앙 정렬 */}
-                                <div
+                                    key={tier.level}
                                     style={{
                                         position: 'relative',
-                                        zIndex: 4,
-                                        width: '100%',
-                                        boxSizing: 'border-box',
-                                        paddingLeft: KNOWLEDGE_TREE_LABEL_BAND_PX,
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
+                                        flex: '0 0 auto',
                                         minHeight: `${TIER_ROW_MIN_H}px`,
                                     }}
                                 >
                                     <div
                                         style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
-                                            gap: `${KNOWLEDGE_TREE_GAP}px`,
-                                            flexShrink: 0,
+                                            position: 'absolute',
+                                            left: 0,
+                                            right: 0,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            borderTop: `2px dashed ${dashColor}`,
+                                            pointerEvents: 'none',
+                                            zIndex: 0,
+                                        }}
+                                    />
+
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${TIER_ROW_PAD_X}px`,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            zIndex: 2,
+                                            width: `${TIER_LABEL_W}px`,
+                                            fontFamily: 'Mulmaru, sans-serif',
+                                            fontSize: '20px',
+                                            letterSpacing: '0.12em',
+                                            color: labelColor,
+                                            fontWeight: 'bold',
+                                            background: '#070a0f',
+                                            paddingRight: '14px',
                                         }}
                                     >
-                                        {tier.ids.map((id, slotIdx) => {
-                                            if (id === null) {
+                                        Lv.{tier.level}
+                                    </div>
+
+                                    <div
+                                        style={{
+                                            position: 'relative',
+                                            zIndex: 4,
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            paddingLeft: KNOWLEDGE_TREE_LABEL_BAND_PX,
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            minHeight: `${TIER_ROW_MIN_H}px`,
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
+                                                gap: `${KNOWLEDGE_TREE_GAP}px`,
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            {normalizedTierIds.map((id, slotIdx) => {
+                                                if (id === null) {
+                                                    return (
+                                                        <div
+                                                            key={`empty-${tier.level}-${slotIdx}`}
+                                                            style={{
+                                                                width: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                                height: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                            }}
+                                                        />
+                                                    );
+                                                }
+                                                const upgrade = KNOWLEDGE_UPGRADES[id];
+                                                if (!upgrade) return null;
+                                                const unlocked = unlockedUpgrades.includes(id);
+                                                const isSelected = selectedId === id;
+                                                const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
+                                                const isSelectionRelated =
+                                                    selectedId == null ||
+                                                    selectedRelatedUpgradeIds.has(id);
+                                                const chipFilter = selectedId != null && !isSelectionRelated
+                                                    ? 'brightness(0.25)'
+                                                    : 'none';
                                                 return (
-                                                    <div
-                                                        key={`empty-${tier.level}-${slotIdx}`}
+                                                    <button
+                                                        key={id}
+                                                        type="button"
+                                                        className="knowledge-upgrade-chip"
+                                                        title={name}
+                                                        data-knowledge-upgrade-id={id}
+                                                        onClick={() => setSelectedId(isSelected ? null : id)}
                                                         style={{
                                                             width: `${KNOWLEDGE_TREE_CHIP}px`,
                                                             height: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                            padding: 0,
+                                                            display: 'block',
+                                                            position: 'relative',
+                                                            overflow: 'hidden',
+                                                            borderRadius: 0,
+                                                            filter: chipFilter,
+                                                            boxShadow: knowledgeTreeChipFrameShadow(isSelected, unlocked),
+                                                            background: isSelected
+                                                                ? KNOWLEDGE_TREE_CHIP_SELECTED_BG
+                                                                : KNOWLEDGE_TREE_CHIP_IDLE_BG,
+                                                            color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
+                                                            cursor: 'pointer',
+                                                            transform: isSelected ? 'translateY(5px)' : 'none',
+                                                            transition:
+                                                                'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
                                                         }}
-                                                    />
+                                                    >
+                                                        <img
+                                                            src={resolveUpgradeSprite(upgrade.sprite)}
+                                                            alt={name}
+                                                            title={name}
+                                                            draggable={false}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                left: '50%',
+                                                                top: '50%',
+                                                                width: '82%',
+                                                                height: '82%',
+                                                                transform: 'translate(-50%, -50%)',
+                                                                objectFit: 'contain',
+                                                                imageRendering: 'pixelated',
+                                                                pointerEvents: 'none',
+                                                            }}
+                                                        />
+                                                    </button>
                                                 );
-                                            }
-                                            const upgrade = KNOWLEDGE_UPGRADES[id];
-                                            if (!upgrade) return null;
-                                            const unlocked = unlockedUpgrades.includes(id);
-                                            const isSelected = selectedId === id;
-                                            const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
-                                            const isSelectionRelated =
-                                                selectedId == null ||
-                                                selectedRelatedUpgradeIds.has(id);
-                                            const chipFilter = selectedId != null && !isSelectionRelated
-                                                ? 'brightness(0.25)'
-                                                : 'none';
-                                            return (
-                                                <button
-                                                    key={id}
-                                                    type="button"
-                                                    className="knowledge-upgrade-chip"
-                                                    title={name}
-                                                    onClick={() => setSelectedId(isSelected ? null : id)}
-                                                    style={{
-                                                        width: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                        height: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                        padding: 0,
-                                                        display: 'block',
-                                                        position: 'relative',
-                                                        overflow: 'hidden',
-                                                        borderRadius: 0,
-                                                        filter: chipFilter,
-                                                        boxShadow: knowledgeTreeChipFrameShadow(isSelected, unlocked),
-                                                        background: isSelected
-                                                            ? KNOWLEDGE_TREE_CHIP_SELECTED_BG
-                                                            : KNOWLEDGE_TREE_CHIP_IDLE_BG,
-                                                        color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
-                                                        cursor: 'pointer',
-                                                        transform: isSelected ? 'translateY(5px)' : 'none',
-                                                        transition:
-                                                            'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
-                                                    }}
-                                                >
-                                                    <img
-                                                        src={resolveUpgradeSprite(upgrade.sprite)}
-                                                        alt={name}
-                                                        title={name}
-                                                        draggable={false}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            left: '50%',
-                                                            top: '50%',
-                                                            width: '82%',
-                                                            height: '82%',
-                                                            transform: 'translate(-50%, -50%)',
-                                                            objectFit: 'contain',
-                                                            imageRendering: 'pixelated',
-                                                            pointerEvents: 'none',
-                                                        }}
-                                                    />
-                                                </button>
-                                            );
-                                        })}
+                                            })}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                    {connectorLines.length > 0 && (
-                        <svg
-                            aria-hidden
-                            style={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                width: '100%',
-                                height: '100%',
-                                overflow: 'visible',
-                                pointerEvents: 'none',
-                                zIndex: 3,
-                            }}
-                        >
-                            {connectorRenderLines
-                                .filter((seg) => !seg.active)
-                                .map((seg, i) => (
-                                    <KnowledgeConnectorSegment key={`inactive-${i}`} seg={seg} />
-                                ))}
-                            {connectorRenderLines
-                                .filter((seg) => seg.active)
-                                .map((seg, i) => (
-                                    <KnowledgeConnectorSegment key={`active-${i}`} seg={seg} />
-                                ))}
-                        </svg>
-                    )}
+                            );
+                        })}
+                        {connectorLines.length > 0 && (
+                            <svg
+                                aria-hidden
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    overflow: 'visible',
+                                    pointerEvents: 'none',
+                                    zIndex: 3,
+                                }}
+                            >
+                                {connectorRenderLines
+                                    .filter((seg) => !seg.active)
+                                    .map((seg, i) => (
+                                        <KnowledgeConnectorSegment key={`inactive-${i}`} seg={seg} />
+                                    ))}
+                                {connectorRenderLines
+                                    .filter((seg) => seg.active)
+                                    .map((seg, i) => (
+                                        <KnowledgeConnectorSegment key={`active-${i}`} seg={seg} />
+                                    ))}
+                            </svg>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            <div className="knowledge-upgrade-detail-panel">
-                {selectedUpgrade ? (
-                    <>
-                        <div className="knowledge-upgrade-detail-panel-scroll">
+                {selectedUpgrade && tooltipPosition && (
+                    <div
+                        ref={tooltipRef}
+                        className={`knowledge-upgrade-tooltip knowledge-upgrade-tooltip--${tooltipPosition.placement}`}
+                        style={{
+                            left: tooltipPosition.left,
+                            top: tooltipPosition.top,
+                        }}
+                    >
+                        <div className="knowledge-upgrade-tooltip-scroll">
                             <div className="symbol-tooltip-name">
                                 {selectedUnlocked && (
                                     <span style={{ marginRight: 6, color: '#86efac' }} aria-hidden>
@@ -1223,7 +1457,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             )}
                         </div>
 
-                        <div className="knowledge-upgrade-detail-panel-actions" style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div className="knowledge-upgrade-tooltip-actions" style={{ display: 'flex', justifyContent: 'center' }}>
                             <button
                                 className="bottom-right-btn"
                                 onClick={handleUnlock}
@@ -1250,89 +1484,85 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             >
                                 {selectedUnlocked
                                     ? '이미 연구됨'
-                                    : archeryBlocksBronze
+                                    : archeryBlocksIronWorking
                                         ? t('knowledgeUpgrade.requiresArcheryShort', language)
+                                        : mechanicsBlocksIronWorking
+                                            ? t('knowledgeUpgrade.requiresIronWorkingShort', language)
+                                            : gunpowderBlocksMechanics
+                                                ? t('knowledgeUpgrade.requiresMechanicsShort', language)
+                                                : ballisticsBlocksGunpowder
+                                                    ? t('knowledgeUpgrade.requiresGunpowderShort', language)
+                                                    : interchangeablePartsBlocksBallistics
+                                                        ? t('knowledgeUpgrade.requiresBallisticsShort', language)
                                         : irrigationBlocksAgriculture
                                             ? t('knowledgeUpgrade.requiresAgricultureShort', language)
-                                        : horsemanshipBlocksPastoralism
-                                            ? t('knowledgeUpgrade.requiresPastoralismShort', language)
-                                        : pastureManagementBlocksPastoralism
-                                            ? t('knowledgeUpgrade.requiresNomadicTraditionShort', language)
-                                        : nomadicTraditionBlocksPastoralism
-                                            ? t('knowledgeUpgrade.requiresPastoralismShort', language)
-                                        : seafaringBlocksFisheries
-                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
-                                        : compassBlocksFisheries
-                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
-                                        : celestialBlocksFisheries
-                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
-                                        : shipbuildingBlocksFisheries
-                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
-                                        : dryStorageBlocksForeignTrade
-                                            ? t('knowledgeUpgrade.requiresForeignTradeShort', language)
-                                        : desertStorageBlocksTradeGoods
-                                            ? t('knowledgeUpgrade.requiresTradeGoodsExchangeShort', language)
-                                        : caravanseraiBlocksDryStorage
-                                            ? t('knowledgeUpgrade.requiresDryStorageShort', language)
-                                        : oasisRecoveryBlocksCaravanserai
-                                            ? t('knowledgeUpgrade.requiresCaravanseraiShort', language)
-                                        : fisheryGuildBlocksSeafaring
-                                            ? t('knowledgeUpgrade.requiresSeafaringShort', language)
-                                        : maritimeTradeBlocksCelestial
-                                            ? t('knowledgeUpgrade.requiresCelestialNavigationShort', language)
-                                        : trackingBlocksHunting
-                                            ? t('knowledgeUpgrade.requiresHuntingShort', language)
-                                        : tanningBlocksTracking
-                                            ? t('knowledgeUpgrade.requiresTrackingShort', language)
-                                        : forestryBlocksTanning
-                                            ? t('knowledgeUpgrade.requiresTanningShort', language)
-                                        : preservationBlocksForestry
-                                            ? t('knowledgeUpgrade.requiresForestryShort', language)
-                                        : plantationBlocksMining
-                                            ? t('knowledgeUpgrade.requiresMiningShort', language)
-                                        : jungleExpeditionBlocksPlantation
-                                            ? t('knowledgeUpgrade.requiresPlantationShort', language)
-                                        : tropicalDevelopmentBlocksJungleExpedition
-                                            ? t('knowledgeUpgrade.requiresJungleExpeditionShort', language)
-                                        : oceanicRoutesBlocksMaritimeTrade
-                                            ? t('knowledgeUpgrade.requiresMaritimeTradeShort', language)
-                                        : oceanicRoutesBlocksFisheryGuild
-                                            ? t('knowledgeUpgrade.requiresFisheryGuildShort', language)
-                                        : medievalBlocksAncient
-                                            ? t('knowledgeUpgrade.requiresAncientShort', language)
-                                        : threeFieldBlocksIrrigation
-                                            ? t('knowledgeUpgrade.requiresIrrigationShort', language)
-                                        : agriculturalSurplusBlocksThreeField
-                                            ? t('knowledgeUpgrade.requiresThreeFieldShort', language)
-                                        : modernAgricultureBlocksSurplus
-                                            ? t('knowledgeUpgrade.requiresAgriculturalSurplusShort', language)
-                                        : needsHigherLevel
-                                            ? `Lv.${selectedTierLevel} 필요`
-                                            : hasResearchPoints &&
-                                                selectedId != null &&
-                                                !isUpgradeLegalForKnowledgePick(
-                                                    selectedId,
-                                                    unlockedUpgrades,
-                                                    currentLevel,
-                                                )
-                                              ? '이번 연구로 선택 불가'
-                                              : '연구하기'}
+                                            : horsemanshipBlocksPastoralism
+                                                ? t('knowledgeUpgrade.requiresPastoralismShort', language)
+                                                : pastureManagementBlocksPastoralism
+                                                    ? t('knowledgeUpgrade.requiresNomadicTraditionShort', language)
+                                                    : nomadicTraditionBlocksPastoralism
+                                                        ? t('knowledgeUpgrade.requiresPastoralismShort', language)
+                                                        : seafaringBlocksFisheries
+                                                            ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                                            : compassBlocksFisheries
+                                                                ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                                                : celestialBlocksFisheries
+                                                                    ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                                                    : shipbuildingBlocksFisheries
+                                                                        ? t('knowledgeUpgrade.requiresFisheriesShort', language)
+                                                                        : dryStorageBlocksForeignTrade
+                                                                            ? t('knowledgeUpgrade.requiresForeignTradeShort', language)
+                                                                            : desertStorageBlocksTradeGoods
+                                                                                ? t('knowledgeUpgrade.requiresTradeGoodsExchangeShort', language)
+                                                                                : caravanseraiBlocksDryStorage
+                                                                                    ? t('knowledgeUpgrade.requiresDryStorageShort', language)
+                                                                                    : oasisRecoveryBlocksCaravanserai
+                                                                                        ? t('knowledgeUpgrade.requiresCaravanseraiShort', language)
+                                                                                        : fisheryGuildBlocksSeafaring
+                                                                                            ? t('knowledgeUpgrade.requiresSeafaringShort', language)
+                                                                                            : maritimeTradeBlocksCelestial
+                                                                                                ? t('knowledgeUpgrade.requiresCelestialNavigationShort', language)
+                                                                                                : trackingBlocksHunting
+                                                                                                    ? t('knowledgeUpgrade.requiresHuntingShort', language)
+                                                                                                    : tanningBlocksTracking
+                                                                                                        ? t('knowledgeUpgrade.requiresTrackingShort', language)
+                                                                                                        : forestryBlocksTanning
+                                                                                                            ? t('knowledgeUpgrade.requiresTanningShort', language)
+                                                                                                            : preservationBlocksForestry
+                                                                                                                ? t('knowledgeUpgrade.requiresForestryShort', language)
+                                                                                                                : plantationBlocksMining
+                                                                                                                    ? t('knowledgeUpgrade.requiresMiningShort', language)
+                                                                                                                    : jungleExpeditionBlocksPlantation
+                                                                                                                        ? t('knowledgeUpgrade.requiresPlantationShort', language)
+                                                                                                                        : tropicalDevelopmentBlocksJungleExpedition
+                                                                                                                            ? t('knowledgeUpgrade.requiresJungleExpeditionShort', language)
+                                                                                                                            : oceanicRoutesBlocksMaritimeTrade
+                                                                                                                                ? t('knowledgeUpgrade.requiresMaritimeTradeShort', language)
+                                                                                                                                : oceanicRoutesBlocksFisheryGuild
+                                                                                                                                    ? t('knowledgeUpgrade.requiresFisheryGuildShort', language)
+                                                                                                                                    : medievalBlocksAncient
+                                                                                                                                        ? t('knowledgeUpgrade.requiresAncientShort', language)
+                                                                                                                                        : threeFieldBlocksIrrigation
+                                                                                                                                            ? t('knowledgeUpgrade.requiresIrrigationShort', language)
+                                                                                                                                            : agriculturalSurplusBlocksThreeField
+                                                                                                                                                ? t('knowledgeUpgrade.requiresThreeFieldShort', language)
+                                                                                                                                                : modernAgricultureBlocksSurplus
+                                                                                                                                                    ? t('knowledgeUpgrade.requiresAgriculturalSurplusShort', language)
+                                                                                                                                                    : needsHigherLevel
+                                                                                                                                                        ? `Lv.${selectedTierLevel} 필요`
+                                                                                                                                                        : hasResearchPoints &&
+                                                                                                                                                            selectedId != null &&
+                                                                                                                                                            !isUpgradeLegalForKnowledgePick(
+                                                                                                                                                                selectedId,
+                                                                                                                                                                unlockedUpgrades,
+                                                                                                                                                                currentLevel,
+                                                                                                                                                            )
+                                                                                                                                                          ? '이번 연구로 선택 불가'
+                                                                                                                                                          : '연구하기'}
                             </button>
                         </div>
-                    </>
-                ) : (
-                    <div
-                        className="knowledge-upgrade-detail-panel-scroll"
-                        style={{ justifyContent: 'center', textAlign: 'center' }}
-                    >
-                        <p className="symbol-tooltip-desc-line" style={{ margin: 0, color: '#94a3b8', lineHeight: 1.65 }}>
-                            트리에서 업그레이드를 선택하세요.
-                            <br />
-                            상세 정보와 연구하기가 여기에 표시됩니다.
-                        </p>
                     </div>
                 )}
-            </div>
             </div>
 
             {typeof document !== 'undefined' &&

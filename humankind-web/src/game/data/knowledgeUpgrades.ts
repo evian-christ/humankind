@@ -74,7 +74,7 @@ export const PLANTATION_UPGRADE_ID = 45;
 export const JUNGLE_EXPEDITION_UPGRADE_ID = 46;
 /** 열대 개발 — 열대우림·탐사대 최종 업그레이드 */
 export const TROPICAL_DEVELOPMENT_UPGRADE_ID = 47;
-/** 추적술 — 숲·버섯 업그레이드 */
+/** 추적술 — 숲·버섯·사슴 업그레이드 */
 export const TRACKING_UPGRADE_ID = 48;
 /** 무두질 — 모피·사슴 업그레이드 */
 export const TANNING_UPGRADE_ID = 49;
@@ -120,6 +120,16 @@ export const THREE_FIELD_SYSTEM_UPGRADE_ID = 35;
 export const AGRICULTURAL_SURPLUS_UPGRADE_ID = 36;
 /** 현대 농업 — 농업 잉여 선행, 밀·쌀이 보드 위 초원 수로 카운터 가속 */
 export const MODERN_AGRICULTURE_UPGRADE_ID = 37;
+/** 철제 기술 — 전사를 검사로 업그레이드 */
+export const IRON_WORKING_UPGRADE_ID = 2;
+/** 기계장치 — 궁수를 석궁병으로 업그레이드 */
+export const MECHANICS_UPGRADE_ID = 56;
+/** 화약 — 검사를 머스킷병으로 업그레이드 */
+export const GUNPOWDER_UPGRADE_ID = 57;
+/** 탄도학 — 석궁병을 대포로 업그레이드 */
+export const BALLISTICS_UPGRADE_ID = 58;
+/** 교체식 부품 — 머스킷병을 보병으로 업그레이드 */
+export const INTERCHANGEABLE_PARTS_UPGRADE_ID = 59;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -150,15 +160,15 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         sprite: '001.png',
         descSymbols: [{ symbolKey: 'library', relation: 'pool_add' }],
     },
-    2: {
-        id: 2,
-        name: 'Bronze Working',
+    [IRON_WORKING_UPGRADE_ID]: {
+        id: IRON_WORKING_UPGRADE_ID,
+        name: 'Iron Working',
         type: SymbolType.ANCIENT,
-        description: 'Warrior HP +10, Archer HP +3.',
+        description: 'Upgrades Warrior into Knight.',
         sprite: '002.png',
         descSymbols: [
             { symbolKey: 'warrior', relation: 'effect_modify' },
-            { symbolKey: 'archer', relation: 'effect_modify' },
+            { symbolKey: 'knight', relation: 'pool_add' },
         ],
     },
     [IRRIGATION_UPGRADE_ID]: {
@@ -232,11 +242,12 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: TRACKING_UPGRADE_ID,
         name: 'Tracking',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Forest and Mushroom.',
+        description: 'Upgrades Forest, Mushroom, and Deer.',
         sprite: '-',
         descSymbols: [
             { symbolKey: 'forest', relation: 'effect_modify' },
             { symbolKey: 'mushroom', relation: 'effect_modify' },
+            { symbolKey: 'deer', relation: 'effect_modify' },
         ],
     },
     [TANNING_UPGRADE_ID]: {
@@ -339,6 +350,50 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Base Food production +2. Upgrades Wild Berries.',
         sprite: '-',
         descSymbols: [{ symbolKey: 'wild_berries', relation: 'effect_modify' }],
+    },
+    [MECHANICS_UPGRADE_ID]: {
+        id: MECHANICS_UPGRADE_ID,
+        name: 'Mechanics',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Archer into Crossbowman.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'archer', relation: 'effect_modify' },
+            { symbolKey: 'crossbowman', relation: 'pool_add' },
+        ],
+    },
+    [GUNPOWDER_UPGRADE_ID]: {
+        id: GUNPOWDER_UPGRADE_ID,
+        name: 'Gunpowder',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Knight into Musketman.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'knight', relation: 'effect_modify' },
+            { symbolKey: 'musketman', relation: 'pool_add' },
+        ],
+    },
+    [BALLISTICS_UPGRADE_ID]: {
+        id: BALLISTICS_UPGRADE_ID,
+        name: 'Ballistics',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Crossbowman into Cannon.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'crossbowman', relation: 'effect_modify' },
+            { symbolKey: 'cannon', relation: 'pool_add' },
+        ],
+    },
+    [INTERCHANGEABLE_PARTS_UPGRADE_ID]: {
+        id: INTERCHANGEABLE_PARTS_UPGRADE_ID,
+        name: 'Interchangeable Parts',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Musketman into Infantry.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'musketman', relation: 'effect_modify' },
+            { symbolKey: 'infantry', relation: 'pool_add' },
+        ],
     },
     4: {
         id: 4,
@@ -580,7 +635,7 @@ export const SACRIFICIAL_RITE_UPGRADE_ID = 8;
 export const TERRITORIAL_REORG_UPGRADE_ID = 22;
 
 const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
-    2: [5],
+    [IRON_WORKING_UPGRADE_ID]: [5],
     [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
     [HORSEMANSHIP_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
     [NOMADIC_TRADITION_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
@@ -603,6 +658,10 @@ const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
     [THREE_FIELD_SYSTEM_UPGRADE_ID]: [IRRIGATION_UPGRADE_ID],
     [AGRICULTURAL_SURPLUS_UPGRADE_ID]: [THREE_FIELD_SYSTEM_UPGRADE_ID],
     [MODERN_AGRICULTURE_UPGRADE_ID]: [AGRICULTURAL_SURPLUS_UPGRADE_ID],
+    [MECHANICS_UPGRADE_ID]: [IRON_WORKING_UPGRADE_ID],
+    [GUNPOWDER_UPGRADE_ID]: [MECHANICS_UPGRADE_ID],
+    [BALLISTICS_UPGRADE_ID]: [GUNPOWDER_UPGRADE_ID],
+    [INTERCHANGEABLE_PARTS_UPGRADE_ID]: [BALLISTICS_UPGRADE_ID],
     [DRY_STORAGE_UPGRADE_ID]: [FOREIGN_TRADE_UPGRADE_ID],
     [DESERT_STORAGE_UPGRADE_ID]: [DRY_STORAGE_UPGRADE_ID],
     [CARAVANSERAI_UPGRADE_ID]: [DESERT_STORAGE_UPGRADE_ID],
