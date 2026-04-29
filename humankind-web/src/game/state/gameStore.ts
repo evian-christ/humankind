@@ -180,9 +180,6 @@ export interface GameState {
     naturalDisasterThreat: number;
     /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
     pendingNewThreatFloats: { x: number; y: number; label: string }[];
-    /** 전투로 보드에서 제거된 야만인 주둔지마다 전리품 심볼 — 효과 페이즈 종료 시 toAdd에 합침 */
-    pendingCombatLootAdds: number[];
-
     /** destroy_selection 진입 시 출처 (22 영토 정비 / 69 칙령) */
     pendingDestroySource: typeof TERRITORIAL_REORG_UPGRADE_ID | typeof EDICT_SYMBOL_ID | null;
     /** 망각의 화로 발동 시 제거할 유물 instanceId */
@@ -233,6 +230,12 @@ export interface GameState {
     activateClickableRelic: (instanceId: string) => void;
     /** 소·양: 평원 인접·idle 시 도축(보드 제거; 소 +10 Food, 양 +5 Food/+5 Gold; 파괴 보상은 집계 반영) */
     butcherPastureAnimalAt: (x: number, y: number) => void;
+    /** 말: 근접 유닛 인접·idle 시 소모하여 해당 유닛을 기마병으로 훈련 */
+    trainHorseUnitAt: (x: number, y: number) => void;
+    /** 사슴: 추적술 연구 후 원거리 유닛 인접·idle 시 소모하여 해당 유닛을 추적궁병으로 훈련 */
+    trainDeerUnitAt: (x: number, y: number) => void;
+    /** 전리품: idle 시 개봉하여 보상 획득 */
+    openLootAt: (x: number, y: number) => void;
 
     /** F12 로그 오버레이용 */
     appendEventLog: (entry: Omit<GameEventLogEntry, 'id' | 'ts'> & { ts?: number; id?: string }) => void;
@@ -361,7 +364,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
     pendingNewThreatFloats: [],
-    pendingCombatLootAdds: [],
     pendingDestroySource: null,
     pendingOblivionFurnaceRelicId: null,
     bonusSelectionQueue: [],

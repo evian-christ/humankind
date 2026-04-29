@@ -1,4 +1,4 @@
-import { S, SymbolType } from '../../../data/symbolDefinitions';
+import { S, SYMBOLS, SymbolType } from '../../../data/symbolDefinitions';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
@@ -286,6 +286,37 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
         }
 
+        case S.tracker_archer: {
+            const forestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.forest);
+            if (forestAdj.length > 0) {
+                state.food += 1;
+                state.contributors.push(forestAdj[0]!);
+            }
+            return true;
+        }
+
+        case S.loot: {
+            const adjacentLoot = adj.find((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.loot && !boardGrid[pos.x][pos.y]?.is_marked_for_destruction);
+            if (adjacentLoot) {
+                const absorbed = boardGrid[adjacentLoot.x][adjacentLoot.y];
+                if (absorbed) absorbed.is_marked_for_destruction = true;
+                symbolInstance.definition = SYMBOLS[S.greater_loot]!;
+                state.contributors.push(adjacentLoot);
+            }
+            return true;
+        }
+
+        case S.greater_loot: {
+            const adjacentGreaterLoot = adj.find((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.greater_loot && !boardGrid[pos.x][pos.y]?.is_marked_for_destruction);
+            if (adjacentGreaterLoot) {
+                const absorbed = boardGrid[adjacentGreaterLoot.x][adjacentGreaterLoot.y];
+                if (absorbed) absorbed.is_marked_for_destruction = true;
+                symbolInstance.definition = SYMBOLS[S.radiant_loot]!;
+                state.contributors.push(adjacentGreaterLoot);
+            }
+            return true;
+        }
+
         case S.date:
             state.food += 1;
             return true;
@@ -442,19 +473,6 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             }
             return true;
         }
-
-        case S.loot:
-            symbolInstance.is_marked_for_destruction = true;
-            state.food += Math.floor(Math.random() * 10) + 1;
-            state.gold += Math.floor(Math.random() * 10) + 1;
-            state.knowledge += Math.floor(Math.random() * 30) + 1;
-            if (Math.random() < 0.01) state.addSymbolIds.push(S.glowing_amber);
-            return true;
-
-        case S.glowing_amber:
-            symbolInstance.is_marked_for_destruction = true;
-            state.triggerRelicSelection = true;
-            return true;
 
         default:
             return false;

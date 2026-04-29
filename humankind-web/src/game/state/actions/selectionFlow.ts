@@ -1,9 +1,15 @@
 import { SYMBOLS, EDICT_SYMBOL_ID, S, SymbolType } from '../../data/symbolDefinitions';
 import {
+    BALLISTICS_UPGRADE_ID,
+    GUNPOWDER_UPGRADE_ID,
+    INTERCHANGEABLE_PARTS_UPGRADE_ID,
+    IRON_WORKING_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    MECHANICS_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
+import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import {
@@ -17,7 +23,6 @@ import {
     scarabAndHinduismBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import {
-    getBronzeWorkingHpBonus,
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
 } from '../gameCalculations';
@@ -39,6 +44,14 @@ interface SelectionFlowDeps {
     phaseAfterTurnFlowComplete: (level: number, demoVictoryLevel: number) => GamePhase;
     demoVictoryLevel: number;
 }
+
+const UNIT_TRANSFORM_UPGRADE_IDS = new Set<number>([
+    IRON_WORKING_UPGRADE_ID,
+    MECHANICS_UPGRADE_ID,
+    GUNPOWDER_UPGRADE_ID,
+    BALLISTICS_UPGRADE_ID,
+    INTERCHANGEABLE_PARTS_UPGRADE_ID,
+]);
 
 const resolveStandardChoices = (state: GameState): ChoiceResolution => {
     const res = generateChoicesSelection({
@@ -229,18 +242,23 @@ export const createSelectionFlowActions = ({
             );
         }
 
-        if (uid === 2) {
-            const migrateBronzeHp = (s: PlayerSymbolInstance): PlayerSymbolInstance => {
+        if (UNIT_TRANSFORM_UPGRADE_IDS.has(uid)) {
+            const migrateUnitDefinition = (s: PlayerSymbolInstance): PlayerSymbolInstance => {
                 if (s.definition.type !== SymbolType.UNIT) return s;
-                const bonus = getBronzeWorkingHpBonus(s.definition);
-                if (bonus === 0) return s;
-                const base = s.definition.base_hp ?? 0;
-                const newMax = base + bonus;
-                const cur = s.enemy_hp ?? base;
-                const migrated = Math.min(newMax, cur + bonus);
-                return { ...s, enemy_hp: migrated };
+                const nextDef = resolveUpgradedUnitDefinition(s.definition, newUnlocked);
+                if (nextDef.id === s.definition.id) return s;
+                const prevMax = s.definition.base_hp ?? 0;
+                const nextMax = nextDef.base_hp ?? 0;
+                const currentHp = s.enemy_hp ?? prevMax;
+                const damageTaken = Math.max(0, prevMax - currentHp);
+                return {
+                    ...s,
+                    definition: nextDef,
+                    remaining_attacks: nextDef.base_attack ? 3 : 0,
+                    enemy_hp: Math.max(1, nextMax - damageTaken),
+                };
             };
-            newPlayerSymbols = newPlayerSymbols.map(migrateBronzeHp);
+            newPlayerSymbols = newPlayerSymbols.map(migrateUnitDefinition);
         }
 
         for (let y = 0; y < state.board.length; y++) {

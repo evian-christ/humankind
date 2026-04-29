@@ -55,7 +55,6 @@ export function runPostEffectsHooks(args: {
     leaderId: LeaderId | null;
     bonusXpPerTurn: number;
     unlockedKnowledgeUpgrades: number[];
-    toAdd: number[];
     getAdjacentCoords: (x: number, y: number) => { x: number; y: number }[];
     relics: RelicInstanceLike[];
     relicStoreApi: RelicStoreApiLike;
@@ -68,7 +67,6 @@ export function runPostEffectsHooks(args: {
         leaderId,
         bonusXpPerTurn,
         unlockedKnowledgeUpgrades,
-        toAdd,
         getAdjacentCoords,
         relics,
         relicStoreApi,
@@ -114,16 +112,6 @@ export function runPostEffectsHooks(args: {
             const s = board[x][y];
             if (s && s.definition.id === S.pottery && s.is_marked_for_destruction) {
                 bonusFood += s.effect_counter || 0;
-            }
-        }
-    }
-
-    // ── Barbarian Camp 파괴 시 전리품 추가 (효과 페이즈 등으로 보드에 남아 파괴 표시된 경우)
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (s && s.definition.id === S.barbarian_camp && s.is_marked_for_destruction) {
-                toAdd.push(S.loot);
             }
         }
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
-import { getBronzeWorkingHpBonus, getRerollCost } from '../game/state/gameCalculations';
+import { getRerollCost } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
@@ -25,12 +25,10 @@ const RELIC_ANCIENT_TRIBE_JOIN = 19;
 
 const SymbolCard = ({
     symbol,
-    hasBronzeWorking,
     unlockedKnowledgeUpgrades,
     onClick,
 }: {
     symbol: SymbolDefinition;
-    hasBronzeWorking: boolean;
     unlockedKnowledgeUpgrades: number[];
     onClick: () => void;
 }) => {
@@ -39,10 +37,7 @@ const SymbolCard = ({
     const eraName = t(ERA_NAME_KEYS[symbol.type] ?? 'era.ancient', language);
     const symName = t(`symbol.${symbol.key}.name`, language);
     const symDesc = getBoardSymbolTooltipDesc(symbol.key, language, unlockedKnowledgeUpgrades);
-    const displayHp =
-        symbol.base_hp !== undefined
-            ? symbol.base_hp + (hasBronzeWorking ? getBronzeWorkingHpBonus(symbol) : 0)
-            : undefined;
+    const displayHp = symbol.base_hp;
 
     return (
         <button
@@ -111,7 +106,6 @@ const SymbolSelection = () => {
     const language = useSettingsStore((s) => s.language);
     const relics = useRelicStore((s) => s.relics);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
-    const hasBronzeWorking = unlockedKnowledgeUpgrades.includes(2);
     const [isPeeked, setIsPeeked] = useState(false);
 
     /** 선택 패널이 보드를 가릴 때만 툴팁 억제; 본게임 ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
@@ -166,7 +160,6 @@ const SymbolSelection = () => {
                             <SymbolCard
                                 key={`${sym.id}-${i}`}
                                 symbol={sym}
-                                hasBronzeWorking={hasBronzeWorking}
                                 unlockedKnowledgeUpgrades={unlockedKnowledgeUpgrades}
                                 onClick={() => handleCardClick(sym.id)}
                             />

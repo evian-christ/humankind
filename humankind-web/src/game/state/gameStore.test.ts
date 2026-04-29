@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
     NOMADIC_TRADITION_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
+    TRACKING_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { Sym, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
+import { useRelicStore } from './relicStore';
 
 const BOARD_WIDTH = 5;
 const BOARD_HEIGHT = 4;
@@ -38,6 +40,34 @@ describe('gameStore pasture butchering', () => {
             documentElement: { style: { setProperty: vi.fn() } },
         });
     };
+
+    it('opens loot for its base reward and removes it from the board', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const loot = createInstance(Sym.loot, 'loot');
+        board[1][1] = loot;
+        vi.spyOn(Math, 'random').mockReturnValueOnce(0.1);
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [loot],
+            phase: 'idle',
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+        });
+
+        useGameStore.getState().openLootAt(1, 1);
+
+        const next = useGameStore.getState();
+        expect(next.board[1][1]).toBeNull();
+        expect(next.food).toBe(15);
+        expect(next.gold).toBe(5);
+        expect(next.knowledge).toBe(0);
+        vi.restoreAllMocks();
+    });
 
     it('increments adjacent plains counters when Pasture Management is researched', async () => {
         ensureDomGlobals();
@@ -97,5 +127,90 @@ describe('gameStore pasture butchering', () => {
         const next = useGameStore.getState();
         expect(next.food).toBe(20);
         expect(next.gold).toBe(10);
+    });
+
+    it('consumes horse and trains an adjacent melee unit into cavalry', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const horse = createInstance(Sym.horse, 'horse');
+        const warrior = createInstance(Sym.warrior, 'warrior');
+        warrior.enemy_hp = 7;
+        board[1][1] = horse;
+        board[2][1] = warrior;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [horse, warrior],
+            phase: 'idle',
+            lastEffects: [],
+        });
+
+        useGameStore.getState().trainHorseUnitAt(1, 1);
+
+        const next = useGameStore.getState();
+        expect(next.board[1][1]).toBeNull();
+        expect(next.board[2][1]?.definition.id).toBe(Sym.cavalry.id);
+        expect(next.board[2][1]?.enemy_hp).toBe(12);
+        expect(next.playerSymbols.some((sym) => sym.instanceId === 'horse')).toBe(false);
+        expect(next.playerSymbols.find((sym) => sym.instanceId === 'warrior')?.definition.id).toBe(Sym.cavalry.id);
+    });
+
+    it('consumes deer and trains an adjacent ranged unit into tracker archer after Tracking', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const deer = createInstance(Sym.deer, 'deer');
+        const archer = createInstance(Sym.archer, 'archer');
+        archer.enemy_hp = 3;
+        board[1][1] = deer;
+        board[2][1] = archer;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [deer, archer],
+            phase: 'idle',
+            unlockedKnowledgeUpgrades: [TRACKING_UPGRADE_ID],
+            lastEffects: [],
+        });
+
+        useGameStore.getState().trainDeerUnitAt(1, 1);
+
+        const next = useGameStore.getState();
+        expect(next.board[1][1]).toBeNull();
+        expect(next.board[2][1]?.definition.id).toBe(Sym.tracker_archer.id);
+        expect(next.board[2][1]?.enemy_hp).toBe(7);
+        expect(next.playerSymbols.some((sym) => sym.instanceId === 'deer')).toBe(false);
+        expect(next.playerSymbols.find((sym) => sym.instanceId === 'archer')?.definition.id).toBe(Sym.tracker_archer.id);
+    });
+
+    it('opens radiant loot and can grant a relic', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        useRelicStore.getState().resetRelics();
+        const board = createEmptyBoard();
+        const loot = createInstance(Sym.radiant_loot, 'radiant_loot');
+        board[1][1] = loot;
+        vi.spyOn(Math, 'random')
+            .mockReturnValueOnce(0.95)
+            .mockReturnValueOnce(0);
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [loot],
+            phase: 'idle',
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+        });
+
+        useGameStore.getState().openLootAt(1, 1);
+
+        const next = useGameStore.getState();
+        expect(next.food).toBe(50);
+        expect(next.gold).toBe(20);
+        expect(useRelicStore.getState().relics).toHaveLength(1);
+        vi.restoreAllMocks();
     });
 });

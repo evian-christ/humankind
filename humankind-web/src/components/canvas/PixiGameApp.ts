@@ -15,6 +15,8 @@ import { useRelicStore } from '../../game/state/relicStore';
 import type { RelicInstance } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
 import type { PlayerSymbolInstance } from '../../game/types';
+import { isMeleeUnit, isRangedUnit } from '../../game/data/unitUpgrades';
+import { TRACKING_UPGRADE_ID } from '../../game/data/knowledgeUpgrades';
 import { loadGameAssets } from './AssetLoader';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -30,6 +32,42 @@ function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][], x: num
         }
     }
     return false;
+}
+
+function boardHasTrainableAdjacentMelee(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+            const candidate = board[nx][ny];
+            if (candidate && !candidate.is_marked_for_destruction && isMeleeUnit(candidate.definition) && candidate.definition.id !== S.cavalry) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function boardHasTrainableAdjacentRanged(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+            const candidate = board[nx][ny];
+            if (candidate && !candidate.is_marked_for_destruction && isRangedUnit(candidate.definition) && candidate.definition.id !== S.tracker_archer) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function isOpenableLoot(symbolId: number): boolean {
+    return symbolId === S.loot || symbolId === S.greater_loot || symbolId === S.radiant_loot;
 }
 
 /** index.css 커스텀 커서와 동일 (캔버스 위 호버) */
@@ -646,6 +684,21 @@ export class PixiGameApp {
                     (symDef.id === S.cattle || symDef.id === S.sheep) &&
                     !symbol.is_marked_for_destruction &&
                     boardHasAdjacentPlains(state.board, x, y);
+                const canTrainHorse =
+                    state.phase === 'idle' &&
+                    symDef.id === S.horse &&
+                    !symbol.is_marked_for_destruction &&
+                    boardHasTrainableAdjacentMelee(state.board, x, y);
+                const canTrainTrackerArcher =
+                    state.phase === 'idle' &&
+                    symDef.id === S.deer &&
+                    !symbol.is_marked_for_destruction &&
+                    state.unlockedKnowledgeUpgrades.includes(TRACKING_UPGRADE_ID) &&
+                    boardHasTrainableAdjacentRanged(state.board, x, y);
+                const canOpenLoot =
+                    state.phase === 'idle' &&
+                    !symbol.is_marked_for_destruction &&
+                    isOpenableLoot(symDef.id);
 
                 const showSymbolHover = () => {
                     this.symbolHoverCell = { x, y };
@@ -656,7 +709,7 @@ export class PixiGameApp {
                     this.onHoverSymbol(null);
                 };
 
-                if (canButcherPasture) {
+                if (canButcherPasture || canTrainHorse || canTrainTrackerArcher || canOpenLoot) {
                     const cellRoot = new PIXI.Container();
                     cellRoot.x = cellX;
                     cellRoot.y = cellY;
@@ -669,7 +722,11 @@ export class PixiGameApp {
                     const btnFs = Math.max(15, 18 * scale);
                     const btnPadY = Math.max(8, 10 * scale);
                     const btnPadX = Math.max(18, 22 * scale);
-                    const btnLabel = t('cattleButcher.button', lang);
+                    const btnLabel = canButcherPasture
+                        ? t('cattleButcher.button', lang)
+                        : canOpenLoot
+                          ? t('lootOpen.button', lang)
+                          : t('horseTrain.button', lang);
                     const lbl = new PIXI.Text({
                         text: btnLabel,
                         style: new PIXI.TextStyle({
@@ -687,14 +744,14 @@ export class PixiGameApp {
                     btnBg.fill({ color: 0xb91c1c, alpha: 1 });
                     btnBg.stroke({ width: 3, color: 0xfca5a5, alpha: 1 });
 
-                    const butcherBtn = new PIXI.Container();
-                    butcherBtn.addChild(btnBg);
-                    butcherBtn.addChild(lbl);
-                    butcherBtn.x = cellWidth / 2;
-                    butcherBtn.y = cellHeight / 2;
-                    butcherBtn.visible = false;
-                    butcherBtn.eventMode = 'none';
-                    cellRoot.addChild(butcherBtn);
+                    const actionBtn = new PIXI.Container();
+                    actionBtn.addChild(btnBg);
+                    actionBtn.addChild(lbl);
+                    actionBtn.x = cellWidth / 2;
+                    actionBtn.y = cellHeight / 2;
+                    actionBtn.visible = false;
+                    actionBtn.eventMode = 'none';
+                    cellRoot.addChild(actionBtn);
 
                     // 버튼 로컬 히트 영역 (cellRoot 좌표계)
                     const btnX1 = cellWidth / 2 - bw / 2;
@@ -704,18 +761,26 @@ export class PixiGameApp {
 
                     cellRoot.on('pointerover', () => {
                         showSymbolHover();
-                        butcherBtn.visible = true;
+                        actionBtn.visible = true;
                     });
                     cellRoot.on('pointerleave', () => {
                         clearSymbolHover();
-                        butcherBtn.visible = false;
+                        actionBtn.visible = false;
                     });
                     cellRoot.on('pointertap', (e: PIXI.FederatedPointerEvent) => {
-                        if (!butcherBtn.visible) return;
+                        if (!actionBtn.visible) return;
                         const local = e.getLocalPosition(cellRoot);
                         if (local.x >= btnX1 && local.x <= btnX2 && local.y >= btnY1 && local.y <= btnY2) {
-                            useGameStore.getState().butcherPastureAnimalAt(x, y);
-                            butcherBtn.visible = false;
+                            if (canButcherPasture) {
+                                useGameStore.getState().butcherPastureAnimalAt(x, y);
+                            } else if (canTrainHorse) {
+                                useGameStore.getState().trainHorseUnitAt(x, y);
+                            } else if (canTrainTrackerArcher) {
+                                useGameStore.getState().trainDeerUnitAt(x, y);
+                            } else {
+                                useGameStore.getState().openLootAt(x, y);
+                            }
+                            actionBtn.visible = false;
                             clearSymbolHover();
                         }
                     });

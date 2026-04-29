@@ -824,6 +824,63 @@ describe('symbolEffectResolution', () => {
         expect(mushroom.is_marked_for_destruction).toBe(false);
     });
 
+    it('gives Tracker Archer +1 Food when adjacent to Forest', () => {
+        const board = createEmptyBoard();
+        const trackerArcher = createInstance(Sym.tracker_archer, 'tracker_archer');
+        board[1][1] = trackerArcher;
+        board[1][2] = createInstance(Sym.forest, 'forest_1');
+
+        const result = processSingleSymbolEffects(
+            trackerArcher,
+            board,
+            1,
+            1,
+            { upgrades: [] },
+        );
+
+        expect(result.food).toBe(1);
+        expect(result.gold).toBe(0);
+        expect(result.knowledge).toBe(0);
+    });
+
+    it('upgrades Loot into Greater Loot when adjacent to another Loot', () => {
+        const board = createEmptyBoard();
+        const lootA = createInstance(Sym.loot, 'loot_a');
+        const lootB = createInstance(Sym.loot, 'loot_b');
+        board[1][1] = lootA;
+        board[2][1] = lootB;
+
+        processSingleSymbolEffects(
+            lootA,
+            board,
+            1,
+            1,
+            { upgrades: [] },
+        );
+
+        expect(lootA.definition.id).toBe(Sym.greater_loot.id);
+        expect(lootB.is_marked_for_destruction).toBe(true);
+    });
+
+    it('upgrades Greater Loot into Radiant Loot when adjacent to another Greater Loot', () => {
+        const board = createEmptyBoard();
+        const lootA = createInstance(Sym.greater_loot, 'greater_loot_a');
+        const lootB = createInstance(Sym.greater_loot, 'greater_loot_b');
+        board[1][1] = lootA;
+        board[2][1] = lootB;
+
+        processSingleSymbolEffects(
+            lootA,
+            board,
+            1,
+            1,
+            { upgrades: [] },
+        );
+
+        expect(lootA.definition.id).toBe(Sym.radiant_loot.id);
+        expect(lootB.is_marked_for_destruction).toBe(true);
+    });
+
     it('lets Honey pay out when five of the same terrain are on the board', () => {
         const board = createEmptyBoard();
         const honey = createInstance(Sym.honey, 'honey');

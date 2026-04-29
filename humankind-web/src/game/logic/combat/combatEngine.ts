@@ -1,5 +1,6 @@
 import type { PlayerSymbolInstance } from '../../types';
-import { SymbolType, S } from '../../data/symbolDefinitions';
+import { SymbolType } from '../../data/symbolDefinitions';
+import { isBoardWideRangedUnit } from '../../data/unitUpgrades';
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];
 
@@ -60,8 +61,8 @@ export function resolveCombatTarget(args: {
 
     const targetType = isUnit ? SymbolType.ENEMY : SymbolType.UNIT;
 
-    // 궁수: 보드 전체 대상 중 슬롯 최소
-    if (sym.definition.id === S.archer) {
+    // 원거리 유닛: 보드 전체 대상 중 슬롯 최소
+    if (isBoardWideRangedUnit(sym.definition)) {
         let picked: { tx: number; ty: number; si: number } | null = null;
         for (let ty = 0; ty < height; ty++) {
             for (let tx = 0; tx < width; tx++) {
@@ -99,4 +100,3 @@ export function buildCombatEvents(board: BoardGrid, width: number, height: numbe
     }
     return events;
 }
-

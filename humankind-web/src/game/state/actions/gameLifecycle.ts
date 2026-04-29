@@ -55,7 +55,6 @@ const createCommonResetPatch = () => ({
     barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
     pendingNewThreatFloats: [],
-    pendingCombatLootAdds: [],
     pendingDestroySource: null,
     pendingOblivionFurnaceRelicId: null,
     bonusSelectionQueue: [],

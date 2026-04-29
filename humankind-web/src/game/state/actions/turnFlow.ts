@@ -14,7 +14,6 @@ import {
     applyClovisPreDamage,
     collectCombatDestroyedSymbols,
     collectCombatEvents,
-    collectLootFromDestroyedCamps,
     pickClovisPreDamageTarget,
     resolveCombatStep,
 } from '../../logic/turn/combatResolution';
@@ -36,7 +35,6 @@ import {
 import type { PlayerSymbolInstance } from '../../types';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import {
-    getBronzeWorkingHpBonus,
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
     getKnowledgeRequiredForLevel,
@@ -195,11 +193,6 @@ export const createTurnFlowActions = ({
                 kind: 'processing_end',
                 meta: { totals: { food: tFood, gold: tGold, knowledge: tKnowledge } },
             });
-            const combatLootQueue = get().pendingCombatLootAdds ?? [];
-            if (combatLootQueue.length > 0) {
-                toAdd.push(...combatLootQueue);
-                set({ pendingCombatLootAdds: [] });
-            }
             const currentBoard = get().board;
             const relics = useRelicStore.getState().relics;
             const getRelicInst = (id: number) => relics.find((r) => r.definition.id === id);
@@ -211,7 +204,6 @@ export const createTurnFlowActions = ({
                 leaderId: stateAtFinish.leaderId,
                 bonusXpPerTurn: stateAtFinish.bonusXpPerTurn ?? 0,
                 unlockedKnowledgeUpgrades: stateAtFinish.unlockedKnowledgeUpgrades || [],
-                toAdd,
                 getAdjacentCoords,
                 relics,
                 relicStoreApi: useRelicStore.getState(),
@@ -554,10 +546,7 @@ export const createTurnFlowActions = ({
         const combatBoard = get().board;
         const hasClovis = useRelicStore.getState().relics.some((r) => r.definition.id === RELIC_ID.CLOVIS_SPEAR);
         const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => {
-            const upgrades = get().unlockedKnowledgeUpgrades || [];
-            let hp = sym.definition.base_hp ?? 0;
-            if (upgrades.includes(2)) hp += getBronzeWorkingHpBonus(sym.definition);
-            return hp;
+            return sym.definition.base_hp ?? 0;
         };
 
         const applyClovisDamage = (pos: { x: number; y: number }) => {
@@ -578,20 +567,10 @@ export const createTurnFlowActions = ({
             const doRemoveAndStart = () => {
                 if (combatDestroyedIds.size > 0) {
                     set((prev) => {
-                        const lootFromCamps = collectLootFromDestroyedCamps(
-                            prev.board,
-                            boardWidth,
-                            boardHeight,
-                            combatDestroyedIds,
-                        );
                         return {
                             board: prev.board.map((col) => col.map((s) => (s?.is_marked_for_destruction ? null : s))),
                             playerSymbols: prev.playerSymbols.filter((s) => !combatDestroyedIds.has(s.instanceId)),
                             combatShaking: false,
-                            pendingCombatLootAdds:
-                                lootFromCamps.length > 0
-                                    ? [...(prev.pendingCombatLootAdds ?? []), ...lootFromCamps]
-                                    : prev.pendingCombatLootAdds,
                         };
                     });
                 }

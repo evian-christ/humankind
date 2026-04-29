@@ -1,4 +1,3 @@
-import { S } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import {
     applyFixedDamageToEnemy,
@@ -100,28 +99,6 @@ export function collectCombatDestroyedSymbols(board: BoardGrid, width: number, h
         }
     }
     return destroyedIds;
-}
-
-export function collectLootFromDestroyedCamps(
-    board: BoardGrid,
-    width: number,
-    height: number,
-    destroyedIds: ReadonlySet<string>,
-): number[] {
-    const lootFromCamps: number[] = [];
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-            const sym = board[x][y];
-            if (
-                sym?.is_marked_for_destruction &&
-                destroyedIds.has(sym.instanceId) &&
-                sym.definition.id === S.barbarian_camp
-            ) {
-                lootFromCamps.push(S.loot);
-            }
-        }
-    }
-    return lootFromCamps;
 }
 
 export function pickClovisPreDamageTarget(board: BoardGrid, width: number, height: number): CombatCoord | null {

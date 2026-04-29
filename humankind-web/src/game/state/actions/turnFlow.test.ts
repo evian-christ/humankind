@@ -73,7 +73,6 @@ const makeState = (): GameState => {
         barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
         pendingNewThreatFloats: [],
-        pendingCombatLootAdds: [],
         pendingDestroySource: null,
         pendingOblivionFurnaceRelicId: null,
         bonusSelectionQueue: [],
@@ -105,6 +104,9 @@ const makeState = (): GameState => {
         cancelOblivionFurnacePick: () => {},
         activateClickableRelic: () => {},
         butcherPastureAnimalAt: () => {},
+        trainHorseUnitAt: () => {},
+        trainDeerUnitAt: () => {},
+        openLootAt: () => {},
         appendEventLog: () => {},
         clearEventLog: () => {},
     };

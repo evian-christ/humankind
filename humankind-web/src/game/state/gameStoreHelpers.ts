@@ -1,10 +1,10 @@
 import { SYMBOLS, SymbolType, S, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import { ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID } from '../data/knowledgeUpgrades';
+import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import { RELIC_ID } from '../logic/relics/relicIds';
 import { useRelicStore } from './relicStore';
 import type { GamePhase } from './gameStore';
-import { getBronzeWorkingHpBonus } from './gameCalculations';
 
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
@@ -72,20 +72,18 @@ export const createInstance = (
     def: SymbolDefinition,
     unlockedUpgrades: readonly number[] = [],
 ): PlayerSymbolInstance => {
-    const baseHp = def.base_hp;
+    const resolvedDef = resolveUpgradedUnitDefinition(def, unlockedUpgrades);
+    const baseHp = resolvedDef.base_hp;
     let enemy_hp: number | undefined;
     if (baseHp === undefined) enemy_hp = undefined;
-    else {
-        const bonus = unlockedUpgrades.includes(2) ? getBronzeWorkingHpBonus(def) : 0;
-        enemy_hp = baseHp + bonus;
-    }
+    else enemy_hp = baseHp;
 
     return {
-        definition: def,
+        definition: resolvedDef,
         instanceId: generateInstanceId(),
         effect_counter: 0,
         is_marked_for_destruction: false,
-        remaining_attacks: def.base_attack ? 3 : 0,
+        remaining_attacks: resolvedDef.base_attack ? 3 : 0,
         enemy_hp,
     };
 };
@@ -148,18 +146,6 @@ export const aggregateCollectionDestroyEffects = (
                 break;
             case S.relic_caravan:
                 out.refreshRelicShop = true;
-                break;
-            case S.barbarian_camp:
-                out.addSymbolDefIds.push(S.loot);
-                break;
-            case S.loot:
-                out.food += Math.floor(Math.random() * 10) + 1;
-                out.gold += Math.floor(Math.random() * 10) + 1;
-                out.knowledge += Math.floor(Math.random() * 30) + 1;
-                if (Math.random() < 0.01) out.addSymbolDefIds.push(S.glowing_amber);
-                break;
-            case S.glowing_amber:
-                out.openRelicShop = true;
                 break;
             case S.honey:
                 out.food += 5;

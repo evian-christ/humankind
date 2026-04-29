@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { S, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import {
     collectCombatDestroyedSymbols,
     collectCombatEvents,
-    collectLootFromDestroyedCamps,
     resolveCombatStep,
 } from './combatResolution';
 import type { BoardGrid } from './turnTypes';
@@ -62,12 +61,32 @@ describe('combatResolution', () => {
             getEffectiveMaxHP,
         });
 
-        expect(board[1][0]?.enemy_hp).toBe(5);
+        expect(board[1][0]?.enemy_hp).toBe(7);
         expect(board[1][0]?.is_marked_for_destruction).toBe(false);
-        expect(result.animation).toEqual({ ax: 0, ay: 0, tx: 1, ty: 0, atkDmg: 5, counterDmg: 0 });
+        expect(result.animation).toEqual({ ax: 0, ay: 0, tx: 1, ty: 0, atkDmg: 3, counterDmg: 0 });
     });
 
-    it('collects destroyed ids and camp loot', () => {
+    it('lets upgraded ranged units target the whole board', () => {
+        const board = createEmptyBoard();
+        board[4][3] = createInstance(Sym.crossbowman, 'crossbow');
+        board[0][0] = createInstance(Sym.enemy_warrior, 'enemy_a');
+        board[4][2] = createInstance(Sym.enemy_warrior, 'enemy_b');
+
+        const result = resolveCombatStep({
+            board,
+            width: 5,
+            height: 4,
+            event: { ax: 4, ay: 3 },
+            getAdjacentCoords,
+            getEffectiveMaxHP,
+        });
+
+        expect(board[0][0]?.enemy_hp).toBe(6);
+        expect(board[4][2]?.enemy_hp).toBe(10);
+        expect(result.animation).toEqual({ ax: 4, ay: 3, tx: 0, ty: 0, atkDmg: 4, counterDmg: 0 });
+    });
+
+    it('collects destroyed ids', () => {
         const board = createEmptyBoard();
         const camp = createInstance(Sym.barbarian_camp, 'camp');
         camp.is_marked_for_destruction = true;
@@ -76,6 +95,5 @@ describe('combatResolution', () => {
         const destroyedIds = new Set(collectCombatDestroyedSymbols(board, 5, 4));
 
         expect(destroyedIds.has('camp')).toBe(true);
-        expect(collectLootFromDestroyedCamps(board, 5, 4, destroyedIds)).toEqual([S.loot]);
     });
 });

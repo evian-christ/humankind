@@ -56,7 +56,6 @@ const makeState = (): GameState => {
         barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
         pendingNewThreatFloats: [],
-        pendingCombatLootAdds: [],
         pendingDestroySource: null,
         pendingOblivionFurnaceRelicId: null,
         bonusSelectionQueue: [],
@@ -88,6 +87,9 @@ const makeState = (): GameState => {
         cancelOblivionFurnacePick: () => {},
         activateClickableRelic: () => {},
         butcherPastureAnimalAt: () => {},
+        trainHorseUnitAt: () => {},
+        trainDeerUnitAt: () => {},
+        openLootAt: () => {},
         appendEventLog: () => {},
         clearEventLog: () => {},
     };
@@ -161,6 +163,26 @@ describe('selectionFlow actions', () => {
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(1);
         expect(harness.get().bonusXpPerTurn).toBe(2);
         expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('upgrades warriors into knights when iron working is researched', () => {
+        const warrior = createInstance(SYMBOLS[S.warrior]!, []);
+        const board = createEmptyBoard();
+        board[0][0] = warrior;
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 8,
+            playerSymbols: [warrior],
+            board,
+            unlockedKnowledgeUpgrades: [5],
+        });
+
+        harness.actions.selectUpgrade(2);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(2);
+        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.knight);
+        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.knight);
     });
 
     it('opens oblivion furnace board mode only when a relic-backed cell destroy resolves', () => {

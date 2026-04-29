@@ -1,5 +1,6 @@
 import type { SymbolDefinition } from '../../data/symbolDefinitions';
 import { SYMBOLS, SymbolType, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, S, Sym } from '../../data/symbolDefinitions';
+import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
@@ -77,6 +78,8 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
             const replacementId = activeReplacements.get(sym.id)!;
             finalSym = SYMBOLS[replacementId] || sym;
         }
+
+        finalSym = resolveUpgradedUnitDefinition(finalSym, upgrades);
 
         if (finalSym.type === SymbolType.ENEMY) continue;
         let e = finalSym.type as number;
