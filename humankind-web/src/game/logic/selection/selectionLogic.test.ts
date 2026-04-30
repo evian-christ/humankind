@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CARAVANSERAI_UPGRADE_ID, COMPASS_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import { S } from '../../data/symbolDefinitions';
+import { CARAVANSERAI_UPGRADE_ID, COMPASS_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID, FEUDALISM_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID, MODERN_AGE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { S, SymbolType } from '../../data/symbolDefinitions';
 import { buildFlatPool } from './selectionLogic';
 
 describe('selectionLogic', () => {
@@ -58,5 +58,30 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.id === S.caravanserai)).toBe(true);
+    });
+
+    it('does not include deleted medieval symbols in the pool after feudalism', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.telescope)).toBe(false);
+        expect(pool.some((sym) => sym.id === S.scales)).toBe(false);
+        expect(pool.some((sym) => sym.id === S.embassy)).toBe(false);
+    });
+
+    it('removes medieval and terrain symbols from the pool after modern age', () => {
+        const pool = buildFlatPool({
+            era: 3,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
+        expect(pool.some((sym) => sym.type === SymbolType.TERRAIN)).toBe(false);
     });
 });

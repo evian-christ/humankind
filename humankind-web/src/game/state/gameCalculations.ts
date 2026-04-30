@@ -1,6 +1,7 @@
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
+    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
@@ -24,6 +25,7 @@ import {
     MECHANICS_UPGRADE_ID,
     MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
@@ -131,6 +133,13 @@ export function isUpgradeLegalForKnowledgePick(
     if (uid === FEUDALISM_UPGRADE_ID) {
         return level >= 10 && have.has(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
     }
+    if (uid === MODERN_AGE_UPGRADE_ID) {
+        return level >= 20 && have.has(FEUDALISM_UPGRADE_ID);
+    }
+    if (uid === AGI_PROJECT_UPGRADE_ID) {
+        return level >= 30 && have.has(MODERN_AGE_UPGRADE_ID);
+    }
+    if (uid === 16 && !have.has(1)) return false;
     if (uid === THREE_FIELD_SYSTEM_UPGRADE_ID && !have.has(IRRIGATION_UPGRADE_ID)) return false;
     if (uid === AGRICULTURAL_SURPLUS_UPGRADE_ID && !have.has(THREE_FIELD_SYSTEM_UPGRADE_ID)) return false;
     if (uid === MODERN_AGRICULTURE_UPGRADE_ID && !have.has(AGRICULTURAL_SURPLUS_UPGRADE_ID)) return false;

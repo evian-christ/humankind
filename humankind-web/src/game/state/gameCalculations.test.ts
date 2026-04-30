@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
+    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
@@ -17,6 +18,7 @@ import {
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
@@ -41,6 +43,19 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             IRRIGATION_UPGRADE_ID,
             [AGRICULTURE_UPGRADE_ID],
             5,
+        )).toBe(true);
+    });
+
+    it('requires Writing System before Education', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            16,
+            [],
+            14,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            16,
+            [1],
+            14,
         )).toBe(true);
     });
 
@@ -84,6 +99,42 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             MODERN_AGRICULTURE_UPGRADE_ID,
             [AGRICULTURAL_SURPLUS_UPGRADE_ID],
             23,
+        )).toBe(true);
+    });
+
+    it('requires Medieval Age and level 20 for Modern Age', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            MODERN_AGE_UPGRADE_ID,
+            [],
+            20,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            MODERN_AGE_UPGRADE_ID,
+            [FEUDALISM_UPGRADE_ID],
+            19,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            MODERN_AGE_UPGRADE_ID,
+            [FEUDALISM_UPGRADE_ID],
+            20,
+        )).toBe(true);
+    });
+
+    it('requires Modern Age and level 30 for AGI Project', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            AGI_PROJECT_UPGRADE_ID,
+            [],
+            30,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            AGI_PROJECT_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID],
+            29,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            AGI_PROJECT_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID],
+            30,
         )).toBe(true);
     });
 

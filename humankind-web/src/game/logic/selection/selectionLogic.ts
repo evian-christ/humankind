@@ -11,6 +11,7 @@ import {
     HORSEMANSHIP_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
 export interface SelectionContext {
@@ -42,6 +43,7 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
 
     const upgrades = ctx.upgrades ?? [];
     const feudal = upgrades.includes(FEUDALISM_UPGRADE_ID);
+    const modernAge = upgrades.includes(MODERN_AGE_UPGRADE_ID);
 
     for (const sym of Object.values(SYMBOLS)) {
         let finalSym = sym;
@@ -50,15 +52,15 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         const isReplacementTarget = Array.from(activeReplacements.values()).includes(sym.id);
 
         if (feudal && sym.type === SymbolType.ANCIENT) continue;
+        if (modernAge && sym.type === SymbolType.MEDIEVAL) continue;
+        if (modernAge && sym.type === SymbolType.TERRAIN) continue;
 
         // 업그레이드로 해금되는 심볼들 예외 처리
         let isUnlocked = !EXCLUDED_FROM_BASE_POOL.has(sym.id);
         if (sym.type === SymbolType.ANCIENT && !upgrades.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)) {
             isUnlocked = false;
         }
-        if (sym.id === S.library && upgrades.includes(1) && !upgrades.includes(16)) isUnlocked = true; // Writing -> Library
-        if (sym.id === S.library && upgrades.includes(16)) isUnlocked = false;
-        if (sym.id === S.university && upgrades.includes(16)) isUnlocked = true; // Education -> University
+        if (sym.id === S.library && upgrades.includes(1)) isUnlocked = true; // Writing -> Library
         if (sym.id === S.archer && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
         if (sym.id === S.merchant && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
@@ -111,6 +113,7 @@ export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnloc
     });
     const flat: SymbolDefinition[] = [];
     const feudal = ctx.upgrades?.includes(FEUDALISM_UPGRADE_ID);
+    const modernAge = ctx.upgrades?.includes(MODERN_AGE_UPGRADE_ID);
 
     for (const [catStr, syms] of Object.entries(symbolsByEra)) {
         if (!syms || syms.length === 0) continue;
@@ -118,6 +121,8 @@ export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnloc
         if (cat === SymbolType.RELIGION && !ctx.religionUnlocked) continue;
         if (cat === SymbolType.MEDIEVAL && ctx.era < 2 && !feudal) continue;
         if (cat === SymbolType.MODERN && ctx.era < 3) continue;
+        if (modernAge && cat === SymbolType.MEDIEVAL) continue;
+        if (modernAge && cat === SymbolType.TERRAIN) continue;
         flat.push(...syms);
     }
 

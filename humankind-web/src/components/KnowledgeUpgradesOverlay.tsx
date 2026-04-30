@@ -12,6 +12,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { isUpgradeLegalForKnowledgePick } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
+    AGI_PROJECT_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     AGRICULTURE_UPGRADE_ID,
@@ -47,6 +48,7 @@ import {
     MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -143,12 +145,12 @@ const TIERS: { level: number; ids: (number | null)[] }[] = [
     { level: 12, ids: [TANNING_UPGRADE_ID, null, null, null, null, null, DESERT_STORAGE_UPGRADE_ID] },
     { level: 13, ids: [null, MARITIME_TRADE_UPGRADE_ID, null, null, MECHANICS_UPGRADE_ID, null, null] },
     { level: 14, ids: [null, null, null, null, null, null, null] },
-    { level: 15, ids: [null, null, null, SHIPBUILDING_UPGRADE_ID, null, null, null] },
+    { level: 15, ids: [null, null, null, null, null, SHIPBUILDING_UPGRADE_ID, null, null, null, 16, null, null, null] },
     { level: 16, ids: [null, null, null, null, null, JUNGLE_EXPEDITION_UPGRADE_ID, null] },
     { level: 17, ids: [null, null, null, AGRICULTURAL_SURPLUS_UPGRADE_ID, null, null, CARAVANSERAI_UPGRADE_ID] },
     { level: 18, ids: [FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, null, null, GUNPOWDER_UPGRADE_ID, null, null] },
     { level: 19, ids: [null, null, null, null, null, null, null] },
-    { level: 20, ids: [null, null, null, null, null, null, null] },
+    { level: 20, ids: [null, null, null, MODERN_AGE_UPGRADE_ID, null, null, null] },
     { level: 21, ids: [null, null, OCEANIC_ROUTES_UPGRADE_ID, null, null, null, null] },
     { level: 22, ids: [null, null, null, null, null, null, OASIS_RECOVERY_UPGRADE_ID] },
     { level: 23, ids: [null, null, null, MODERN_AGRICULTURE_UPGRADE_ID, BALLISTICS_UPGRADE_ID, null, null] },
@@ -158,7 +160,7 @@ const TIERS: { level: number; ids: (number | null)[] }[] = [
     { level: 27, ids: [null, null, null, null, null, null, null] },
     { level: 28, ids: [null, null, null, null, INTERCHANGEABLE_PARTS_UPGRADE_ID, null, null] },
     { level: 29, ids: [null, null, null, null, null, null, null] },
-    { level: 30, ids: [null, null, null, null, null, null, null] },
+    { level: 30, ids: [null, null, null, AGI_PROJECT_UPGRADE_ID, null, null, null] },
 ];
 
 const KNOWLEDGE_TREE_CHIP = 110;
@@ -368,8 +370,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         selectedId === OCEANIC_ROUTES_UPGRADE_ID && !unlockedUpgrades.includes(MARITIME_TRADE_UPGRADE_ID);
     const oceanicRoutesBlocksFisheryGuild =
         selectedId === OCEANIC_ROUTES_UPGRADE_ID && !unlockedUpgrades.includes(FISHERY_GUILD_UPGRADE_ID);
+    const educationBlocksWriting =
+        selectedId === 16 && !unlockedUpgrades.includes(1);
     const medievalBlocksAncient =
         selectedId === FEUDALISM_UPGRADE_ID && !unlockedUpgrades.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
+    const modernAgeBlocksMedieval =
+        selectedId === MODERN_AGE_UPGRADE_ID && !unlockedUpgrades.includes(FEUDALISM_UPGRADE_ID);
+    const agiProjectBlocksModernAge =
+        selectedId === AGI_PROJECT_UPGRADE_ID && !unlockedUpgrades.includes(MODERN_AGE_UPGRADE_ID);
     const threeFieldBlocksIrrigation =
         selectedId === THREE_FIELD_SYSTEM_UPGRADE_ID && !unlockedUpgrades.includes(IRRIGATION_UPGRADE_ID);
     const agriculturalSurplusBlocksThreeField =
@@ -412,7 +420,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         !tropicalDevelopmentBlocksJungleExpedition &&
         !oceanicRoutesBlocksMaritimeTrade &&
         !oceanicRoutesBlocksFisheryGuild &&
+        !educationBlocksWriting &&
         !medievalBlocksAncient &&
+        !modernAgeBlocksMedieval &&
+        !agiProjectBlocksModernAge &&
         !threeFieldBlocksIrrigation &&
         !agriculturalSurplusBlocksThreeField &&
         !modernAgricultureBlocksSurplus &&
@@ -448,7 +459,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         tropicalDevelopmentBlocksJungleExpedition ||
         oceanicRoutesBlocksMaritimeTrade ||
         oceanicRoutesBlocksFisheryGuild ||
+        educationBlocksWriting ||
         medievalBlocksAncient ||
+        modernAgeBlocksMedieval ||
+        agiProjectBlocksModernAge ||
         threeFieldBlocksIrrigation ||
         agriculturalSurplusBlocksThreeField ||
         modernAgricultureBlocksSurplus ||
@@ -480,7 +494,11 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         const next: KnowledgeConnectorLine[] = [];
 
         const ancientPos = findTierGridSlot(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
+        const writingPos = findTierGridSlot(1);
+        const educationPos = findTierGridSlot(16);
         const medievalPos = findTierGridSlot(FEUDALISM_UPGRADE_ID);
+        const modernAgePos = findTierGridSlot(MODERN_AGE_UPGRADE_ID);
+        const agiProjectPos = findTierGridSlot(AGI_PROJECT_UPGRADE_ID);
         if (ancientPos && medievalPos) {
             next.push({
                 from: ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
@@ -489,6 +507,36 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 y1: bottomAnchorY(ancientPos.rowIdx, selectedId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID),
                 x2: xForCol(medievalPos.colIdx),
                 y2: topAnchorY(medievalPos.rowIdx, selectedId === FEUDALISM_UPGRADE_ID),
+            });
+        }
+        if (medievalPos && modernAgePos) {
+            next.push({
+                from: FEUDALISM_UPGRADE_ID,
+                to: MODERN_AGE_UPGRADE_ID,
+                x1: xForCol(medievalPos.colIdx),
+                y1: bottomAnchorY(medievalPos.rowIdx, selectedId === FEUDALISM_UPGRADE_ID),
+                x2: xForCol(modernAgePos.colIdx),
+                y2: topAnchorY(modernAgePos.rowIdx, selectedId === MODERN_AGE_UPGRADE_ID),
+            });
+        }
+        if (writingPos && educationPos) {
+            next.push({
+                from: 1,
+                to: 16,
+                x1: xForCol(writingPos.colIdx),
+                y1: bottomAnchorY(writingPos.rowIdx, selectedId === 1),
+                x2: xForCol(educationPos.colIdx),
+                y2: topAnchorY(educationPos.rowIdx, selectedId === 16),
+            });
+        }
+        if (modernAgePos && agiProjectPos) {
+            next.push({
+                from: MODERN_AGE_UPGRADE_ID,
+                to: AGI_PROJECT_UPGRADE_ID,
+                x1: xForCol(modernAgePos.colIdx),
+                y1: bottomAnchorY(modernAgePos.rowIdx, selectedId === MODERN_AGE_UPGRADE_ID),
+                x2: xForCol(agiProjectPos.colIdx),
+                y2: topAnchorY(agiProjectPos.rowIdx, selectedId === AGI_PROJECT_UPGRADE_ID),
             });
         }
 
@@ -1037,7 +1085,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             maritimeTradeBlocksCelestial ||
             oceanicRoutesBlocksMaritimeTrade ||
             oceanicRoutesBlocksFisheryGuild ||
+            educationBlocksWriting ||
             medievalBlocksAncient ||
+            modernAgeBlocksMedieval ||
+            agiProjectBlocksModernAge ||
             threeFieldBlocksIrrigation
         )
             return;
@@ -1540,8 +1591,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                                                                                                                 ? t('knowledgeUpgrade.requiresMaritimeTradeShort', language)
                                                                                                                                 : oceanicRoutesBlocksFisheryGuild
                                                                                                                                     ? t('knowledgeUpgrade.requiresFisheryGuildShort', language)
+                                                                                                                                    : educationBlocksWriting
+                                                                                                                                        ? t('knowledgeUpgrade.requiresWritingShort', language)
                                                                                                                                     : medievalBlocksAncient
                                                                                                                                         ? t('knowledgeUpgrade.requiresAncientShort', language)
+                                                                                                                                        : modernAgeBlocksMedieval
+                                                                                                                                            ? t('knowledgeUpgrade.requiresFeudalismShort', language)
+                                                                                                                                            : agiProjectBlocksModernAge
+                                                                                                                                                ? t('knowledgeUpgrade.requiresModernAgeShort', language)
                                                                                                                                         : threeFieldBlocksIrrigation
                                                                                                                                             ? t('knowledgeUpgrade.requiresIrrigationShort', language)
                                                                                                                                             : agriculturalSurplusBlocksThreeField
