@@ -21,15 +21,7 @@ import {
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
-import {
-    BOARD_HEIGHT,
-    BOARD_WIDTH,
-    countOnBoard,
-    countPlacedSymbols,
-    findMountainSameColumn,
-    isCorner,
-    SEA_TERRAIN_ID,
-} from '../core';
+import { BOARD_HEIGHT, BOARD_WIDTH, countOnBoard, findMountainSameColumn, isCorner, SEA_TERRAIN_ID } from '../core';
 import type { SymbolEffectHandler } from '../core';
 import type { BoardGrid } from '../types';
 
@@ -232,7 +224,12 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
         }
 
         case S.library:
-            state.knowledge += 7;
+            {
+                const occupiedAdj = adj.filter((pos) => boardGrid[pos.x][pos.y] != null);
+                const multiplier = upgrades.includes(16) ? 2 : 1;
+                state.knowledge += occupiedAdj.length * multiplier;
+                occupiedAdj.forEach((pos) => state.contributors.push(pos));
+            }
             return true;
 
         case S.pearl: {
@@ -408,10 +405,6 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             state.food += terrainTypes.size;
             return true;
         }
-
-        case S.university:
-            state.knowledge += countPlacedSymbols(boardGrid);
-            return true;
 
         case S.sheep:
             state.food += 1;

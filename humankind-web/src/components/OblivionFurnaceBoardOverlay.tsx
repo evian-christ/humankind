@@ -11,8 +11,11 @@ type Props = { anchorRef: RefObject<HTMLElement | null> };
 const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     const phase = useGameStore((s) => s.phase);
     const board = useGameStore((s) => s.board);
+    const pendingEdictSource = useGameStore((s) => s.pendingEdictSource);
     const confirmOblivionFurnaceDestroyAt = useGameStore((s) => s.confirmOblivionFurnaceDestroyAt);
+    const confirmEdictDestroyAt = useGameStore((s) => s.confirmEdictDestroyAt);
     const cancelOblivionFurnacePick = useGameStore((s) => s.cancelOblivionFurnacePick);
+    const cancelEdictPick = useGameStore((s) => s.cancelEdictPick);
     const language = useSettingsStore((s) => s.language);
 
     const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
@@ -50,21 +53,34 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
             const targetEl = e.target as HTMLElement;
             if (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA' || targetEl.isContentEditable) return;
             e.preventDefault();
-            cancelOblivionFurnacePick();
+            if (pendingEdictSource) cancelEdictPick();
+            else cancelOblivionFurnacePick();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [cancelOblivionFurnacePick]);
+    }, [cancelEdictPick, cancelOblivionFurnacePick, pendingEdictSource]);
 
     const occupiedCells = useMemo(() => {
         const out: { x: number; y: number }[] = [];
+        if (pendingEdictSource) {
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const x = pendingEdictSource.x + dx;
+                    const y = pendingEdictSource.y + dy;
+                    if (x < 0 || x >= BOARD_WIDTH || y < 0 || y >= BOARD_HEIGHT) continue;
+                    if (board[x][y]) out.push({ x, y });
+                }
+            }
+            return out;
+        }
         for (let x = 0; x < BOARD_WIDTH; x++) {
             for (let y = 0; y < BOARD_HEIGHT; y++) {
                 if (board[x][y]) out.push({ x, y });
             }
         }
         return out;
-    }, [board]);
+    }, [board, pendingEdictSource]);
 
     if (phase !== 'oblivion_furnace_board' || viewSize.w <= 0 || viewSize.h <= 0) return null;
 
@@ -90,6 +106,10 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
         `0 0 ${Math.round(120 * sc)}px ${Math.round(32 * sc)}px rgba(0,0,0,0.42)`,
         `inset 0 ${Math.round(-36 * sc)}px ${Math.round(72 * sc)}px rgba(0,0,0,0.22)`,
     ].join(', ');
+    const isEdictMode = pendingEdictSource != null;
+    const titleKey = isEdictMode ? 'edictBoard.title' : 'oblivionBoard.title';
+    const actionKey = isEdictMode ? 'edictBoard.remove' : 'oblivionBoard.remove';
+    const cancelKey = isEdictMode ? 'edictBoard.cancel' : 'oblivionBoard.cancel';
 
     return (
         <div
@@ -140,7 +160,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                         letterSpacing: 0.5,
                     }}
                 >
-                    {t('oblivionBoard.title', language)}
+                    {t(titleKey, language)}
                 </span>
                 <button
                     type="button"
@@ -160,10 +180,11 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                     }}
                     onClick={(e) => {
                         e.stopPropagation();
-                        cancelOblivionFurnacePick();
+                        if (isEdictMode) cancelEdictPick();
+                        else cancelOblivionFurnacePick();
                     }}
                 >
-                    {t('oblivionBoard.cancel', language)}
+                    {t(cancelKey, language)}
                 </button>
             </div>
 
@@ -194,7 +215,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                         {isHover && (
                             <button
                                 type="button"
-                                aria-label={t('oblivionBoard.remove', language)}
+                                aria-label={t(actionKey, language)}
                                 style={{
                                     position: 'absolute',
                                     left: '50%',
@@ -215,11 +236,12 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    confirmOblivionFurnaceDestroyAt(x, y);
+                                    if (isEdictMode) confirmEdictDestroyAt(x, y);
+                                    else confirmOblivionFurnaceDestroyAt(x, y);
                                     setHovered(null);
                                 }}
                             >
-                                {t('oblivionBoard.remove', language)}
+                                {t(actionKey, language)}
                             </button>
                         )}
                     </div>

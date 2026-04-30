@@ -70,6 +70,20 @@ function isOpenableLoot(symbolId: number): boolean {
     return symbolId === S.loot || symbolId === S.greater_loot || symbolId === S.radiant_loot;
 }
 
+function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+            const candidate = board[nx][ny];
+            if (candidate && !candidate.is_marked_for_destruction) return true;
+        }
+    }
+    return false;
+}
+
 /** index.css 커스텀 커서와 동일 (캔버스 위 호버) */
 const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, pointer`;
 const GAME_CURSOR_HELP = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, help`;
@@ -699,6 +713,11 @@ export class PixiGameApp {
                     state.phase === 'idle' &&
                     !symbol.is_marked_for_destruction &&
                     isOpenableLoot(symDef.id);
+                const canUseEdict =
+                    state.phase === 'idle' &&
+                    symDef.id === S.edict &&
+                    !symbol.is_marked_for_destruction &&
+                    boardHasDestroyableAdjacentSymbol(state.board, x, y);
 
                 const showSymbolHover = () => {
                     this.symbolHoverCell = { x, y };
@@ -709,7 +728,7 @@ export class PixiGameApp {
                     this.onHoverSymbol(null);
                 };
 
-                if (canButcherPasture || canTrainHorse || canTrainTrackerArcher || canOpenLoot) {
+                if (canButcherPasture || canTrainHorse || canTrainTrackerArcher || canOpenLoot || canUseEdict) {
                     const cellRoot = new PIXI.Container();
                     cellRoot.x = cellX;
                     cellRoot.y = cellY;
@@ -724,6 +743,8 @@ export class PixiGameApp {
                     const btnPadX = Math.max(18, 22 * scale);
                     const btnLabel = canButcherPasture
                         ? t('cattleButcher.button', lang)
+                        : canUseEdict
+                          ? t('edictBoard.remove', lang)
                         : canOpenLoot
                           ? t('lootOpen.button', lang)
                           : t('horseTrain.button', lang);
@@ -773,6 +794,8 @@ export class PixiGameApp {
                         if (local.x >= btnX1 && local.x <= btnX2 && local.y >= btnY1 && local.y <= btnY2) {
                             if (canButcherPasture) {
                                 useGameStore.getState().butcherPastureAnimalAt(x, y);
+                            } else if (canUseEdict) {
+                                useGameStore.getState().activateEdictAt(x, y);
                             } else if (canTrainHorse) {
                                 useGameStore.getState().trainHorseUnitAt(x, y);
                             } else if (canTrainTrackerArcher) {

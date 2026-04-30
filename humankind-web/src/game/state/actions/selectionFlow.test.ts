@@ -6,6 +6,7 @@ import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
+import { AGI_PROJECT_UPGRADE_ID, MODERN_AGE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 
 const makeState = (): GameState => {
     const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
@@ -58,6 +59,7 @@ const makeState = (): GameState => {
         pendingNewThreatFloats: [],
         pendingDestroySource: null,
         pendingOblivionFurnaceRelicId: null,
+        pendingEdictSource: null,
         bonusSelectionQueue: [],
         edictRemovalPending: false,
         forceTerrainInNextSymbolChoices: false,
@@ -85,6 +87,9 @@ const makeState = (): GameState => {
         finishDestroySelection: () => {},
         confirmOblivionFurnaceDestroyAt: () => {},
         cancelOblivionFurnacePick: () => {},
+        activateEdictAt: () => {},
+        confirmEdictDestroyAt: () => {},
+        cancelEdictPick: () => {},
         activateClickableRelic: () => {},
         butcherPastureAnimalAt: () => {},
         trainHorseUnitAt: () => {},
@@ -110,8 +115,7 @@ const createHarness = (overrides: Partial<GameState> = {}) => {
             get,
             set,
             createInstance,
-            phaseAfterTurnFlowComplete: (level, demoVictoryLevel) =>
-                level >= demoVictoryLevel ? 'victory' : 'idle',
+            phaseAfterTurnFlowComplete: () => 'idle',
             demoVictoryLevel: 15,
         }),
     };
@@ -195,5 +199,21 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().pendingOblivionFurnaceRelicId).toBeNull();
+    });
+
+    it('grants AGI Core when AGI Project is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 30,
+            era: 3,
+            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(AGI_PROJECT_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(AGI_PROJECT_UPGRADE_ID);
+        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.agi_core)).toBe(true);
+        expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 });

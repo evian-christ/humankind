@@ -123,7 +123,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     // Normal: common operations
     def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Not in corner: stores Gold equal to highest adjacent Food; in corner: gains stored Gold.", sprite: "022.png" }),
     def('monument', { name: "Monument", type: SymbolType.NORMAL, description: "+5 Knowledge.", sprite: "010.png" }),
-    def('library', { name: "Library", type: SymbolType.NORMAL, description: "+7 Knowledge.", sprite: "025.png" }),
+    def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "025.png" }),
     def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+5 Knowledge per relic owned.", sprite: "039.png" }),
     def('university', {
         name: "University",
@@ -137,32 +137,26 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.", sprite: "012.png" }),
     def('totem', { name: "Totem", type: SymbolType.ANCIENT, description: "In a corner: +20 Knowledge.", sprite: "016.png" }),
     def('omen', { name: "Omen", type: SymbolType.ANCIENT, description: "50% chance for +3 Food.", sprite: "018.png" }),
-    def('campfire', { name: "Campfire", type: SymbolType.ANCIENT, description: "+1 Food; 10 turns: destroyed; on destroy: copies the effect of the adjacent symbol with the highest Food produced this turn.", sprite: "019.png" }),
+    def('campfire', { name: "Campfire", type: SymbolType.ANCIENT, description: "Gain Food equal to the Food produced this turn by the highest-producing adjacent symbol. Destroyed.", sprite: "019.png" }),
     def('pottery', { name: "Pottery", type: SymbolType.ANCIENT, description: "+3 Food stored per turn; on destroy: gain Food equal to stored Counter.", sprite: "020.png" }),
-    def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Destroyed; on destroy: adds 1 random Normal symbol.", sprite: "021.png" }),
+    def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Destroyed; on destroy: adds 2 random Normal symbols.", sprite: "021.png" }),
     def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+1 Knowledge per 2 empty slots.", sprite: "038.png" }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.ANCIENT, description: "+1 Food. Destroyed after 5 turns.", sprite: "071.png" }),
 
     // Medieval
-    def('tax', {
-        name: "Tax",
-        type: SymbolType.MEDIEVAL,
-        description:
-            "+Gold equal to a random adjacent symbol's Food produced this turn; -Food equal to that amount.",
-        sprite: "053.png",
-    }),
+    def('tax', { name: "Tax", type: SymbolType.MEDIEVAL, description: "+Gold equal to a random adjacent symbol's Food produced this turn.", sprite: "053.png" }),
     def('scholar', {
         name: "Scholar",
         type: SymbolType.MEDIEVAL,
         description:
-            "Destroys adjacent Ancient symbols. +10 Knowledge per Ancient symbol destroyed.",
+            "Destroys all adjacent Ancient symbols. Permanently gain +5 Knowledge per Ancient symbol destroyed.",
         sprite: "064.png",
     }),
     def('holy_relic', {
         name: "Holy Relic",
         type: SymbolType.MEDIEVAL,
         description:
-            "+5 Knowledge. Each turn adjacent to a Religion doctrine symbol: +1 toward a counter; at 10: permanently +5 Knowledge per turn and reset counter.",
+            "If there is a Religion symbol on the board: +7 Knowledge, +7 Gold.",
         sprite: "065.png",
     }),
     def('telescope', {
@@ -181,7 +175,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('edict', {
         name: "Edict",
         type: SymbolType.MEDIEVAL,
-        description: "Destroyed; on destroy: choose 1 owned symbol to remove (no on-destroy effects).",
+        description: "Consume this to destroy 1 adjacent symbol.",
         sprite: "069.png",
     }),
     def('embassy', {
@@ -189,6 +183,14 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         type: SymbolType.MEDIEVAL,
         description: "Destroyed; on destroy: next turn, the first symbol-selection reroll costs 0 Gold.",
         sprite: "070.png",
+    }),
+
+    // Modern special
+    def('agi_core', {
+        name: "AGI Core",
+        type: SymbolType.MODERN,
+        description: "Absorbs the Knowledge production of all symbols on the board. When absorbed Knowledge reaches 500, you win the game.",
+        sprite: "-",
     }),
 
     // Special reward
@@ -269,6 +271,8 @@ export const RELIGION_DOCTRINE_IDS = RELIGION_SYMBOL_IDS;
 const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'merchant', 'horse', 'crab', 'library', 'pearl',
     'compass',
+    'telescope', 'scales', 'embassy',
+    'agi_core',
     'loot', 'greater_loot', 'radiant_loot',
     'christianity', 'islam', 'buddhism', 'hinduism',
     'archer', 'tracker_archer', 'knight', 'cavalry', 'crossbowman', 'musketman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
@@ -289,7 +293,7 @@ export const isBasePool = (s: SymbolDefinition) => {
 const FOOD_PRODUCING_KEYS: SymbolKey[] = [
     'wheat', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
     'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey', 'corn', 'wild_berries',
-    'sheep', 'mushroom', 'forest', 'horse', 'crab', 'campfire', 'wild_seeds', 'expedition',
+    'sheep', 'mushroom', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition',
 ];
 
 /** Food를 생산하는 심볼 ID 목록 */
@@ -298,7 +302,6 @@ export const FOOD_PRODUCING_IDS = new Set<number>(FOOD_PRODUCING_KEYS.map((k) =>
 const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
     'monument', 'totem', 'library', 'pearl', 'stargazer', 'stone_tablet',
     'compass', 'papyrus', 'expedition',
-    'university', 'scholar', 'holy_relic', 'telescope', 'scales',
 ];
 
 /** Knowledge를 생산하는 심볼 ID 목록 */
@@ -309,10 +312,7 @@ const GOLD_PRODUCING_KEYS: SymbolKey[] = [
 ];
 
 /** Gold를 생산하는 심볼 ID 목록 */
-export const GOLD_PRODUCING_IDS = new Set<number>([
-    ...GOLD_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]),
-    TAX_SYMBOL_ID,
-]);
+export const GOLD_PRODUCING_IDS = new Set<number>(GOLD_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
 export { SYMBOL_NUMERIC_ID, type SymbolKey, S } from './symbolIdRegistry';
 

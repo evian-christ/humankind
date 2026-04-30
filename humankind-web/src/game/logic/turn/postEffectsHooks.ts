@@ -9,6 +9,7 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
+import { randomBaseNormalSymbolId } from '../symbolEffects/core';
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];
 export type EffectEntry = { x: number; y: number; food: number; gold: number; knowledge: number };
@@ -38,9 +39,11 @@ export interface UrWheelPlan {
 export interface PostEffectsResult {
     destroyedCount: number;
     destroyedSymbols: { id: number; x: number; y: number }[];
+    addSymbolIds: number[];
     bonusFood: number;
     bonusGold: number;
     bonusKnowledge: number;
+    agiVictory: boolean;
     relicOwnEffectFloats: RelicFloat[];
     knowledgeOwnEffectFloats: KnowledgeFloat[];
     /** 우르 전차 바퀴(3) 처리 계획(애니메이션은 호출자가 결정) */
@@ -89,6 +92,8 @@ export function runPostEffectsHooks(args: {
     let bonusFood = 0;
     let bonusGold = 0;
     let bonusKnowledge = 0;
+    let agiVictory = false;
+    const addSymbolIds: number[] = [];
     const relicOwnEffectFloats: RelicFloat[] = [];
     const knowledgeOwnEffectFloats: KnowledgeFloat[] = [];
 
@@ -159,7 +164,7 @@ export function runPostEffectsHooks(args: {
         }
     };
 
-    // ── Campfire (19): 파괴 시 인접 심볼 중 "이번 턴 식량 생산"이 가장 높은 심볼의 효과 복사 ──
+    // ── Campfire (19): 파괴 시 인접 심볼 중 "이번 턴 식량 생산"이 가장 높은 심볼의 식량만큼 획득 ──
     {
         rebuildEffectBySlot();
 
@@ -184,13 +189,20 @@ export function runPostEffectsHooks(args: {
 
                 const src = effectBySlot.get(`${bestPos.x},${bestPos.y}`);
                 if (!src) continue;
-                if (src.food === 0 && src.gold === 0 && src.knowledge === 0) continue;
+                if (src.food <= 0) continue;
 
                 bonusFood += src.food;
-                bonusGold += src.gold;
-                bonusKnowledge += src.knowledge;
-                effects.push({ x: cx, y: cy, food: src.food, gold: src.gold, knowledge: src.knowledge });
+                effects.push({ x: cx, y: cy, food: src.food, gold: 0, knowledge: 0 });
             }
+        }
+    }
+
+    // ── Tribal Village (48): 파괴 시 무작위 일반 심볼 2개 추가 ──
+    for (let x = 0; x < boardWidth; x++) {
+        for (let y = 0; y < boardHeight; y++) {
+            const s = board[x][y];
+            if (!s || s.definition.id !== S.tribal_village || !s.is_marked_for_destruction) continue;
+            addSymbolIds.push(randomBaseNormalSymbolId(), randomBaseNormalSymbolId());
         }
     }
 
@@ -415,7 +427,7 @@ export function runPostEffectsHooks(args: {
         });
     }
 
-    // ── Tax (53): 무작위 인접 심볼 슬롯의 이번 턴 식량 합계만큼 G+, F- (effects 집계 후 정산)
+    // ── Tax (53): 무작위 인접 심볼 슬롯의 이번 턴 식량 합계만큼 G+ (effects 집계 후 정산)
     const foodBySlotKey = new Map<string, number>();
     for (const e of effects) {
         const k = `${e.x},${e.y}`;
@@ -434,9 +446,26 @@ export function runPostEffectsHooks(args: {
             const pick = adjOccupied[Math.floor(Math.random() * adjOccupied.length)];
             const F = Math.max(0, foodBySlotKey.get(`${pick.x},${pick.y}`) ?? 0);
             if (F <= 0) continue;
-            bonusFood -= F;
             bonusGold += F;
-            effects.push({ x: tx, y: ty, food: -F, gold: F, knowledge: 0 });
+            effects.push({ x: tx, y: ty, food: 0, gold: F, knowledge: 0 });
+        }
+    }
+
+    // ── AGI Core (63): 보드 위 모든 심볼의 지식 생산량을 흡수하고, 누적 500 이상이면 즉시 승리 ──
+    const knowledgeBySlotKey = new Map<string, number>();
+    for (const e of effects) {
+        const k = `${e.x},${e.y}`;
+        knowledgeBySlotKey.set(k, (knowledgeBySlotKey.get(k) ?? 0) + (e.knowledge ?? 0));
+    }
+    const totalBoardKnowledgeProduced = Array.from(knowledgeBySlotKey.values()).reduce((sum, value) => sum + Math.max(0, value), 0);
+    if (totalBoardKnowledgeProduced > 0) {
+        for (let ax = 0; ax < boardWidth; ax++) {
+            for (let ay = 0; ay < boardHeight; ay++) {
+                const cell = board[ax][ay];
+                if (!cell || cell.definition.id !== S.agi_core || cell.is_marked_for_destruction) continue;
+                cell.effect_counter = (cell.effect_counter ?? 0) + totalBoardKnowledgeProduced;
+                if (cell.effect_counter >= 500) agiVictory = true;
+            }
         }
     }
 
@@ -503,9 +532,11 @@ export function runPostEffectsHooks(args: {
     return {
         destroyedCount,
         destroyedSymbols,
+        addSymbolIds,
         bonusFood,
         bonusGold,
         bonusKnowledge,
+        agiVictory,
         relicOwnEffectFloats,
         knowledgeOwnEffectFloats,
         urWheelPlan,

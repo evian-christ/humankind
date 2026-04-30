@@ -212,6 +212,8 @@ export const createTurnFlowActions = ({
             const bonusFood = post.bonusFood;
             let bonusGold = post.bonusGold;
             const bonusKnowledge = post.bonusKnowledge;
+            const bonusAddSymbolIds = post.addSymbolIds;
+            const agiVictory = post.agiVictory;
             const relicOwnEffectFloats = post.relicOwnEffectFloats;
             const knowledgeOwnEffectFloats = post.knowledgeOwnEffectFloats;
             const urWheelInstanceId: string | null = post.urWheelPlan?.instanceId ?? null;
@@ -263,7 +265,7 @@ export const createTurnFlowActions = ({
                         board: cleanBoard,
                         playerSymbols: prev.playerSymbols,
                         symbolsToSpawnOnBoard: toSpawn,
-                        symbolsToAdd: toAdd,
+                        symbolsToAdd: [...toAdd, ...bonusAddSymbolIds],
                         symbolDefinitions: SYMBOLS,
                         unlockedKnowledgeUpgrades: finishUpgrades,
                         boardWidth,
@@ -283,6 +285,7 @@ export const createTurnFlowActions = ({
                     const nextChoiceRes = prev.edictRemovalPending
                         ? { choices: [] as SymbolDefinition[], consumedForceTerrain: false }
                         : generateChoicesSelection(selCtx);
+                    const nextPhase: GamePhase = agiVictory ? 'victory' : 'processing';
 
                     return {
                         food: prev.food + tFood + bonusFood,
@@ -299,7 +302,7 @@ export const createTurnFlowActions = ({
                         board: generated.board,
                         playerSymbols: filteredSymbols,
                         lastEffects: [...effects],
-                        phase: 'processing' as GamePhase,
+                        phase: nextPhase,
                         symbolChoices: nextChoiceRes.choices,
                         forceTerrainInNextSymbolChoices:
                             prev.forceTerrainInNextSymbolChoices && nextChoiceRes.consumedForceTerrain
@@ -331,6 +334,10 @@ export const createTurnFlowActions = ({
                             erasEntered: eraAfter - eraBeforeKnowledgeFinish,
                         },
                     });
+                }
+
+                if (get().phase === 'victory') {
+                    return;
                 }
 
                 setTimeout(() => {

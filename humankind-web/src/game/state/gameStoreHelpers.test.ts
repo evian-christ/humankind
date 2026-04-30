@@ -1,28 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { CARAVANSERAI_UPGRADE_ID } from '../data/knowledgeUpgrades';
-import { aggregateCollectionDestroyEffects, createInstance } from './gameStoreHelpers';
-import { Sym } from '../data/symbolDefinitions';
+import {
+    aggregateCollectionDestroyEffects,
+    createStartingBoard,
+    ensureStartingWildSeedsOwned,
+    createInstance,
+} from './gameStoreHelpers';
+import { S, SYMBOLS } from '../data/symbolDefinitions';
+import { SymbolType } from '../data/symbolTypes';
 
-describe('aggregateCollectionDestroyEffects', () => {
-    it('grants destroy rewards for Dye and Papyrus', () => {
-        const result = aggregateCollectionDestroyEffects(
-            [createInstance(Sym.dye), createInstance(Sym.papyrus)],
-            false,
-            [],
-        );
+describe('gameStoreHelpers starting layout', () => {
+    it('creates a starting board with oral tradition and two wild seeds in fixed slots', () => {
+        const { board, playerSymbols } = createStartingBoard();
 
-        expect(result.gold).toBe(10);
-        expect(result.knowledge).toBe(10);
+        expect(playerSymbols.map((sym) => sym.definition.id)).toEqual([
+            S.oral_tradition,
+            S.wild_seeds,
+            S.wild_seeds,
+        ]);
+        expect(board[2][1]?.definition.id).toBe(S.oral_tradition);
+        expect(board[1][2]?.definition.id).toBe(S.wild_seeds);
+        expect(board[3][2]?.definition.id).toBe(S.wild_seeds);
     });
 
-    it('upgrades destroy rewards for Dye and Papyrus with Caravanserai', () => {
-        const result = aggregateCollectionDestroyEffects(
-            [createInstance(Sym.dye), createInstance(Sym.papyrus)],
-            false,
-            [CARAVANSERAI_UPGRADE_ID],
-        );
+    it('tops up missing starting wild seeds to two copies', () => {
+        const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
+        const withOneSeed = [
+            oral,
+            createInstance(SYMBOLS[S.wild_seeds]!, []),
+        ];
 
-        expect(result.gold).toBe(20);
-        expect(result.knowledge).toBe(20);
+        const result = ensureStartingWildSeedsOwned(withOneSeed);
+
+        expect(result.filter((sym) => sym.definition.id === S.wild_seeds)).toHaveLength(2);
+    });
+
+    it('grants two random normal symbols when tribal village is destroyed from collection', () => {
+        const removed = [createInstance(SYMBOLS[S.tribal_village]!, [])];
+
+        const result = aggregateCollectionDestroyEffects(removed, false, []);
+
+        expect(result.addSymbolDefIds).toHaveLength(2);
+        expect(result.addSymbolDefIds.every((id) => SYMBOLS[id]?.type === SymbolType.NORMAL)).toBe(true);
     });
 });

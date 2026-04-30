@@ -213,4 +213,37 @@ describe('gameStore pasture butchering', () => {
         expect(useRelicStore.getState().relics).toHaveLength(1);
         vi.restoreAllMocks();
     });
+
+    it('consumes edict to destroy an adjacent symbol chosen by the player', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const edict = createInstance(Sym.edict, 'edict');
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        board[1][1] = edict;
+        board[2][1] = wheat;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [edict, wheat],
+            phase: 'idle',
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+        });
+
+        useGameStore.getState().activateEdictAt(1, 1);
+        expect(useGameStore.getState().pendingEdictSource?.instanceId).toBe('edict');
+        expect(useGameStore.getState().phase).toBe('oblivion_furnace_board');
+
+        useGameStore.getState().confirmEdictDestroyAt(2, 1);
+
+        const next = useGameStore.getState();
+        expect(next.board[1][1]).toBeNull();
+        expect(next.board[2][1]).toBeNull();
+        expect(next.playerSymbols).toHaveLength(0);
+        expect(next.phase).toBe('idle');
+        expect(next.pendingEdictSource).toBeNull();
+    });
 });

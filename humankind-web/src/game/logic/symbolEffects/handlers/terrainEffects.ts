@@ -7,7 +7,6 @@ import type { SymbolEffectHandler } from '../core';
 import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
-    FEUDALISM_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
@@ -83,21 +82,9 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
 
         case S.mountain:
             state.food += 1;
-            if (upgrades.includes(FEUDALISM_UPGRADE_ID)) state.food += 1;
             if (relicEffects.quarryEmptyGold) {
                 adj.forEach(pos => {
                     if (!boardGrid[pos.x][pos.y]) state.gold += 1;
-                });
-            }
-            if (upgrades.includes(FEUDALISM_UPGRADE_ID)) {
-                adj.forEach(pos => {
-                    const t = boardGrid[pos.x][pos.y];
-                    if (t && t.definition.type === SymbolType.ENEMY) {
-                        const maxHp = t.definition.base_hp ?? 10;
-                        t.enemy_hp = (t.enemy_hp ?? maxHp) - 3;
-                        if (t.enemy_hp <= 0) t.is_marked_for_destruction = true;
-                        state.contributors.push(pos);
-                    }
                 });
             }
             return true;

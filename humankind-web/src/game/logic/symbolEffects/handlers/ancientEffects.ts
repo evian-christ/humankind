@@ -1,5 +1,5 @@
 import { S } from '../../../data/symbolDefinitions';
-import { countEmptySlots, isCorner, randomBaseNormalSymbolId } from '../core';
+import { countEmptySlots, isCorner } from '../core';
 import type { SymbolEffectHandler } from '../core';
 
 export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, adj, state }) => {
@@ -28,12 +28,7 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.campfire:
-            state.food += 1;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 10) {
-                symbolInstance.effect_counter = 10;
-                symbolInstance.is_marked_for_destruction = true;
-            }
+            symbolInstance.is_marked_for_destruction = true;
             return true;
 
         case S.pottery:
@@ -41,7 +36,6 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.tribal_village:
-            state.addSymbolIds.push(randomBaseNormalSymbolId());
             symbolInstance.is_marked_for_destruction = true;
             return true;
 

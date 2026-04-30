@@ -89,7 +89,6 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             knowledge: prev.knowledge + dKnowledge,
             bonusXpPerTurn: prev.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
-            edictRemovalPending: prev.edictRemovalPending || symAgg.edictRemovalPending,
             freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: prev.isRelicShopOpen || symAgg.openRelicShop,
             lastEffects: [...prev.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
@@ -257,6 +256,96 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
                 action: 'loot_open',
                 relicId: reward.relicId ?? null,
             },
+        });
+    },
+    activateEdictAt: (x: number, y: number) => {
+        const prev = get();
+        if (prev.phase !== 'idle') return;
+        const edict = prev.board[x]?.[y];
+        if (!edict || edict.definition.id !== S.edict || edict.is_marked_for_destruction) return;
+
+        const hasAdjacentTarget = getAdjacentCoords(x, y).some(({ x: ax, y: ay }) => {
+            const cell = prev.board[ax]?.[ay];
+            return !!cell && !cell.is_marked_for_destruction && cell.instanceId !== edict.instanceId;
+        });
+        if (!hasAdjacentTarget) return;
+
+        set({
+            phase: 'oblivion_furnace_board',
+            pendingOblivionFurnaceRelicId: null,
+            pendingEdictSource: { x, y, instanceId: edict.instanceId },
+        });
+    },
+    confirmEdictDestroyAt: (x: number, y: number) => {
+        const state = get();
+        if (state.phase !== 'oblivion_furnace_board') return;
+        const pending = state.pendingEdictSource;
+        if (!pending) return;
+        if (x < 0 || x >= state.board.length || y < 0 || y >= state.board[0]!.length) return;
+
+        const target = state.board[x][y];
+        const edict = state.board[pending.x]?.[pending.y];
+        if (!target || !edict || edict.instanceId !== pending.instanceId) return;
+        if (target.instanceId === edict.instanceId) return;
+
+        const isAdjacent = getAdjacentCoords(pending.x, pending.y).some((pos) => pos.x === x && pos.y === y);
+        if (!isAdjacent) return;
+
+        const removed = [edict, target];
+        const symAgg = aggregateCollectionDestroyEffects(removed, true, state.unlockedKnowledgeUpgrades || []);
+        const shBonus = scarabAndHinduismBonusForOwnedRemoves(state.board, removed.length);
+        const dFood = symAgg.food + shBonus.food;
+        const dGold = symAgg.gold + shBonus.gold;
+        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
+
+        const instanceIds = new Set([edict.instanceId, target.instanceId]);
+        const newBoard = state.board.map((col) => [...col]);
+        newBoard[pending.x][pending.y] = null;
+        newBoard[x][y] = null;
+
+        const baseFiltered = state.playerSymbols.filter((s) => !instanceIds.has(s.instanceId));
+        const newSymbols = appendSymbolDefIdsToPlayer(
+            baseFiltered,
+            symAgg.addSymbolDefIds,
+            state.unlockedKnowledgeUpgrades || [],
+        );
+
+        set({
+            board: newBoard,
+            playerSymbols: newSymbols,
+            food: state.food + dFood,
+            gold: state.gold + dGold,
+            knowledge: state.knowledge + dKnowledge,
+            bonusXpPerTurn: state.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
+            forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+            freeSelectionRerolls: (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
+            isRelicShopOpen: state.isRelicShopOpen || symAgg.openRelicShop,
+            lastEffects: [...state.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
+            phase: 'idle',
+            pendingEdictSource: null,
+            pendingOblivionFurnaceRelicId: null,
+        });
+        if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'system',
+            slot: { x: pending.x, y: pending.y },
+            symbolId: S.edict,
+            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
+            meta: {
+                action: 'edict_destroy',
+                targetSlot: { x, y },
+                targetSymbolId: target.definition.id,
+            },
+        });
+    },
+    cancelEdictPick: () => {
+        const state = get();
+        if (state.phase !== 'oblivion_furnace_board' || !state.pendingEdictSource) return;
+        set({
+            phase: 'idle',
+            pendingEdictSource: null,
+            pendingOblivionFurnaceRelicId: null,
         });
     },
 });

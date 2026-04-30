@@ -149,6 +149,58 @@ describe('symbolEffectResolution', () => {
         expect(wheat.effect_counter).toBe(0);
     });
 
+    it('marks campfire for destruction immediately', () => {
+        const board = createEmptyBoard();
+        const campfire = createInstance(Sym.campfire, 'campfire');
+        board[0][0] = campfire;
+
+        const result = processSingleSymbolEffects(campfire, board, 0, 0, { upgrades: [] });
+
+        expect(result.food).toBe(0);
+        expect(campfire.is_marked_for_destruction).toBe(true);
+    });
+
+    it('marks tribal village for destruction without adding symbols during slot resolution', () => {
+        const board = createEmptyBoard();
+        const village = createInstance(Sym.tribal_village, 'tribal_village');
+        board[0][0] = village;
+
+        const result = processSingleSymbolEffects(village, board, 0, 0, { upgrades: [] });
+
+        expect(result.addSymbolIds).toBeUndefined();
+        expect(village.is_marked_for_destruction).toBe(true);
+    });
+
+    it('grants permanent knowledge per destroyed adjacent ancient symbol for scholar', () => {
+        const board = createEmptyBoard();
+        const scholar = createInstance(Sym.scholar, 'scholar');
+        const campfire = createInstance(Sym.campfire, 'campfire');
+        const totem = createInstance(Sym.totem, 'totem');
+        board[1][1] = scholar;
+        board[1][0] = campfire;
+        board[2][1] = totem;
+
+        const result = processSingleSymbolEffects(scholar, board, 1, 1, { upgrades: [] });
+
+        expect(result.knowledge).toBe(0);
+        expect(result.bonusXpPerTurnDelta).toBe(10);
+        expect(campfire.is_marked_for_destruction).toBe(true);
+        expect(totem.is_marked_for_destruction).toBe(true);
+    });
+
+    it('grants holy relic resources when any religion symbol is on the board', () => {
+        const board = createEmptyBoard();
+        const relic = createInstance(Sym.holy_relic, 'holy_relic');
+        const doctrine = createInstance(Sym.christianity, 'christianity');
+        board[1][1] = relic;
+        board[4][3] = doctrine;
+
+        const result = processSingleSymbolEffects(relic, board, 1, 1, { upgrades: [] });
+
+        expect(result.knowledge).toBe(7);
+        expect(result.gold).toBe(7);
+    });
+
     it('adds board grassland count on top of upgraded crop payout', () => {
         const board = createEmptyBoard();
         const rice = createInstance(Sym.rice, 'rice');
@@ -347,6 +399,23 @@ describe('symbolEffectResolution', () => {
 
         expect(dyeResult.gold).toBe(1);
         expect(papyrusResult.knowledge).toBe(1);
+    });
+
+    it('makes Library produce knowledge per adjacent symbol and double with Education', () => {
+        const board = createEmptyBoard();
+        const library = createInstance(Sym.library, 'library');
+        board[1][1] = library;
+        board[0][1] = createInstance(Sym.wheat, 'wheat');
+        board[1][0] = createInstance(Sym.rice, 'rice');
+        board[2][2] = createInstance(Sym.stone, 'stone');
+
+        const baseResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [] });
+        const educationResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [16] });
+
+        expect(baseResult.knowledge).toBe(3);
+        expect(baseResult.contributors).toEqual([{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 2, y: 2 }]);
+        expect(educationResult.knowledge).toBe(6);
+        expect(educationResult.contributors).toEqual([{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 2, y: 2 }]);
     });
 
     it('applies tiered fish and pearl effects from board-wide sea counts', () => {

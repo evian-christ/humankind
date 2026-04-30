@@ -34,20 +34,6 @@ export function getStageFoodPaymentBase(_stageId: number): number {
   return 50;
 }
 
-/** 런 시작 시 고대 유물 잔해·고대 부족 합류 유물 개수 */
-export function getStageStartingRelicCounts(stageId: number): { debris: number; tribe: number } {
-  switch (stageId) {
-    case 1:
-      return { debris: 4, tribe: 1 };
-    case 2:
-      return { debris: 3, tribe: 1 };
-    case 3:
-      return { debris: 3, tribe: 0 };
-    default:
-      return { debris: 3, tribe: 0 };
-  }
-}
-
 /** HUD 기본 생산(턴 시작 패시브)에 더하는 스테이지 보너스 — 보드 심볼 효과 제외 */
 export function getStagePassiveBonus(stageId: number): { food: number; gold: number; knowledge: number } {
   switch (stageId) {

@@ -28,15 +28,28 @@ export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
         .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
 
     /** `buildFlatPool`에서 중세시대 해금 시 포함되는 SymbolType.MEDIEVAL 심볼 */
-    const poolAddKeys: SymbolKey[] = ['tax', 'scholar', 'holy_relic', 'telescope', 'scales', 'pioneer', 'edict', 'embassy'];
-
-    /** `symbolEffects` case mountain: 식량·인접 적 피해 규칙이 바뀌는 지형만 */
-    const effectModifyTerrainKeys: SymbolKey[] = ['mountain'];
+    const poolAddKeys: SymbolKey[] = ['tax', 'scholar', 'holy_relic', 'pioneer', 'edict'];
 
     return [
         ...poolRemoveKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_remove' as const })),
         ...poolAddKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_add' as const })),
-        ...effectModifyTerrainKeys.map((symbolKey) => ({ symbolKey, relation: 'effect_modify' as const })),
+    ];
+}
+
+export function buildModernAgeDescSymbols(): KnowledgeUpgradeDescSymbol[] {
+    const poolRemoveKeys = Object.values(SYMBOLS)
+        .filter((s) => s.type === SymbolType.MEDIEVAL || s.type === SymbolType.TERRAIN)
+        .map((s) => s.key as SymbolKey)
+        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
+
+    const poolAddKeys = Object.values(SYMBOLS)
+        .filter((s) => s.type === SymbolType.MODERN && s.key !== 'agi_core')
+        .map((s) => s.key as SymbolKey)
+        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
+
+    return [
+        ...poolRemoveKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_remove' as const })),
+        ...poolAddKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_add' as const })),
     ];
 }
 
@@ -120,6 +133,8 @@ export const THREE_FIELD_SYSTEM_UPGRADE_ID = 35;
 export const AGRICULTURAL_SURPLUS_UPGRADE_ID = 36;
 /** 현대 농업 — 농업 잉여 선행, 밀·쌀이 보드 위 초원 수로 카운터 가속 */
 export const MODERN_AGRICULTURE_UPGRADE_ID = 37;
+export const MODERN_AGE_UPGRADE_ID = 60;
+export const AGI_PROJECT_UPGRADE_ID = 61;
 /** 철제 기술 — 전사를 검사로 업그레이드 */
 export const IRON_WORKING_UPGRADE_ID = 2;
 /** 기계장치 — 궁수를 석궁병으로 업그레이드 */
@@ -156,7 +171,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 1,
         name: 'Writing System',
         type: SymbolType.ANCIENT,
-        description: 'Permanently increases base Knowledge generation by +2. Unlocks Library symbol.',
+        description: 'Unlocks Library. Base Knowledge production +2.',
         sprite: '001.png',
         descSymbols: [{ symbolKey: 'library', relation: 'pool_add' }],
     },
@@ -412,7 +427,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 5,
         name: 'Archery',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Archer symbol for selection.',
+        description: 'Unlocks Archer.',
         sprite: '005.png',
         descSymbols: [{ symbolKey: 'archer', relation: 'pool_add' }],
     },
@@ -461,13 +476,12 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Base Food +5, Base Gold +2, Base Knowledge +2.',
         sprite: '-',
     },
-    /** 레벨 10 이상에서만 선택지에 등장 — 중세 풀·지형 가중·산 강화 */
+    /** 레벨 10 이상에서만 선택지에 등장 — 중세 풀·지형 가중 */
     15: {
         id: 15,
         name: 'Medieval Age',
         type: SymbolType.MEDIEVAL,
-        description:
-            'Medieval age: Ancient symbols leave the shop pool; Medieval symbols are added. Terrain symbol odds x0.2. Mountains +1 Food. Adjacent enemy units lose 3 HP each turn from Mountains.',
+        description: 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2.',
         sprite: '-',
         descSymbols: buildFeudalismDescSymbols(),
     },
@@ -477,12 +491,9 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 16,
         name: 'Education',
         type: SymbolType.MEDIEVAL,
-        description: 'Libraries are replaced with Universities. Base Knowledge production +2.',
+        description: 'Upgrades Library. Base Knowledge production +2.',
         sprite: '-',
-        descSymbols: [
-            { symbolKey: 'library', relation: 'pool_remove' },
-            { symbolKey: 'university', relation: 'pool_add' },
-        ],
+        descSymbols: [{ symbolKey: 'library', relation: 'effect_modify' }],
     },
     24: {
         id: 24,
@@ -606,6 +617,22 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'rice', relation: 'effect_modify' },
         ],
     },
+    [MODERN_AGE_UPGRADE_ID]: {
+        id: MODERN_AGE_UPGRADE_ID,
+        name: 'Modern Age',
+        type: SymbolType.MODERN,
+        description: 'Medieval symbols no longer appear. Unlocks all Modern symbols. Terrain symbols no longer appear.',
+        sprite: '-',
+        descSymbols: buildModernAgeDescSymbols(),
+    },
+    [AGI_PROJECT_UPGRADE_ID]: {
+        id: AGI_PROJECT_UPGRADE_ID,
+        name: 'AGI Project',
+        type: SymbolType.MODERN,
+        description: 'Gain the AGI Core.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'agi_core', relation: 'pool_add' }],
+    },
     [PASTURE_MANAGEMENT_UPGRADE_ID]: {
         id: PASTURE_MANAGEMENT_UPGRADE_ID,
         name: 'Pasture Management',
@@ -631,10 +658,12 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
 };
 
 export const FEUDALISM_UPGRADE_ID = 15;
+export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
 export const SACRIFICIAL_RITE_UPGRADE_ID = 8;
 export const TERRITORIAL_REORG_UPGRADE_ID = 22;
 
 const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
+    [16]: [1],
     [IRON_WORKING_UPGRADE_ID]: [5],
     [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
     [HORSEMANSHIP_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
@@ -644,6 +673,8 @@ const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
     [CELESTIAL_NAVIGATION_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
     [COMPASS_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
     [FEUDALISM_UPGRADE_ID]: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+    [MODERN_AGE_UPGRADE_ID]: [FEUDALISM_UPGRADE_ID],
+    [AGI_PROJECT_UPGRADE_ID]: [MODERN_AGE_UPGRADE_ID],
     [SHIPBUILDING_UPGRADE_ID]: [FISHERIES_UPGRADE_ID],
     [FISHERY_GUILD_UPGRADE_ID]: [SEAFARING_UPGRADE_ID],
     [MARITIME_TRADE_UPGRADE_ID]: [CELESTIAL_NAVIGATION_UPGRADE_ID],

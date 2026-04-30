@@ -1,8 +1,9 @@
-import { SYMBOLS, SymbolType, S, type SymbolDefinition } from '../data/symbolDefinitions';
+import { SYMBOLS, S, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
-import { ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID } from '../data/knowledgeUpgrades';
+import { CARAVANSERAI_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID } from '../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import { RELIC_ID } from '../logic/relics/relicIds';
+import { randomBaseNormalSymbolId } from '../logic/symbolEffects/core';
 import { useRelicStore } from './relicStore';
 import type { GamePhase } from './gameStore';
 
@@ -10,18 +11,32 @@ export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 
 export const ORAL_TRADITION_ANCHOR = { x: 2, y: 1 } as const;
+export const STARTING_WILD_SEED_ANCHORS = [{ x: 1, y: 2 }, { x: 3, y: 2 }] as const;
 
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
 
-export const phaseAfterTurnFlowComplete = (level: number, demoVictoryLevel: number): GamePhase =>
-    level >= demoVictoryLevel ? 'victory' : 'idle';
+export const phaseAfterTurnFlowComplete = (_level: number, _demoVictoryLevel: number): GamePhase => 'idle';
 
 export const ensureOralTraditionOwned = (playerSymbols: PlayerSymbolInstance[]): PlayerSymbolInstance[] => {
     if (playerSymbols.some((s) => s.definition.id === S.oral_tradition)) return playerSymbols;
     const def = SYMBOLS[S.oral_tradition];
     if (!def) return playerSymbols;
     return [...playerSymbols, createInstance(def, [])];
+};
+
+export const ensureStartingWildSeedsOwned = (playerSymbols: PlayerSymbolInstance[]): PlayerSymbolInstance[] => {
+    const wildSeedsDef = SYMBOLS[S.wild_seeds];
+    if (!wildSeedsDef) return playerSymbols;
+
+    const ownedCount = playerSymbols.filter((s) => s.definition.id === S.wild_seeds).length;
+    if (ownedCount >= STARTING_WILD_SEED_ANCHORS.length) return playerSymbols;
+
+    const next = [...playerSymbols];
+    for (let i = ownedCount; i < STARTING_WILD_SEED_ANCHORS.length; i++) {
+        next.push(createInstance(wildSeedsDef, []));
+    }
+    return next;
 };
 
 export const placeOralTraditionAtBoardCenter = (
@@ -63,6 +78,34 @@ export const placeOralTraditionAtBoardCenter = (
     return { board: b, playerSymbols: symList };
 };
 
+export const placeStartingWildSeeds = (
+    board: (PlayerSymbolInstance | null)[][],
+    playerSymbols: PlayerSymbolInstance[],
+): { board: (PlayerSymbolInstance | null)[][]; playerSymbols: PlayerSymbolInstance[] } => {
+    const symList = [...playerSymbols];
+    const wildSeedInstances = symList.filter((s) => s.definition.id === S.wild_seeds);
+    if (wildSeedInstances.length === 0) return { board, playerSymbols: symList };
+
+    const b = board.map((col) => [...col]);
+
+    for (const inst of wildSeedInstances) {
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                const cell = b[x][y];
+                if (cell && cell.instanceId === inst.instanceId) b[x][y] = null;
+            }
+        }
+    }
+
+    STARTING_WILD_SEED_ANCHORS.forEach((anchor, index) => {
+        const inst = wildSeedInstances[index];
+        if (!inst) return;
+        b[anchor.x][anchor.y] = inst;
+    });
+
+    return { board: b, playerSymbols: symList };
+};
+
 export const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] =>
     Array(BOARD_WIDTH)
         .fill(null)
@@ -88,20 +131,6 @@ export const createInstance = (
     };
 };
 
-const randomEra1SymbolIdForDestroy = (unlockedKnowledgeUpgrades: readonly number[]): number => {
-    const ids = [
-        S.wheat, S.rice, S.cattle, S.banana, S.fish, S.sea, S.stone, S.copper, S.grassland, S.monument, S.oasis,
-        S.oral_tradition, S.rainforest, S.plains, S.mountain, S.totem, S.omen, S.campfire, S.pottery,
-        S.tribal_village, S.deer, S.date, S.warrior,
-    ];
-    const ancientOk = unlockedKnowledgeUpgrades.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
-    const pool = ancientOk
-        ? ids
-        : ids.filter((id) => SYMBOLS[id] && SYMBOLS[id].type !== SymbolType.ANCIENT);
-    const pick = pool.length > 0 ? pool : [S.wheat];
-    return pick[Math.floor(Math.random() * pick.length)];
-};
-
 export interface CollectionDestroyAgg {
     food: number;
     gold: number;
@@ -111,13 +140,12 @@ export interface CollectionDestroyAgg {
     refreshRelicShop: boolean;
     bonusXpPerTurnDelta: number;
     forceTerrainInNextChoices: boolean;
-    edictRemovalPending: boolean;
     freeSelectionRerolls: number;
 }
 
 export const aggregateCollectionDestroyEffects = (
     removed: PlayerSymbolInstance[],
-    skipEdictFromSymbol69: boolean,
+    _skipEdictFromSymbol69: boolean,
     unlockedKnowledgeUpgrades: readonly number[],
 ): CollectionDestroyAgg => {
     const out: CollectionDestroyAgg = {
@@ -129,7 +157,6 @@ export const aggregateCollectionDestroyEffects = (
         refreshRelicShop: false,
         bonusXpPerTurnDelta: 0,
         forceTerrainInNextChoices: false,
-        edictRemovalPending: false,
         freeSelectionRerolls: 0,
     };
     for (const sym of removed) {
@@ -140,8 +167,8 @@ export const aggregateCollectionDestroyEffects = (
                 break;
             case S.tribal_village:
                 out.addSymbolDefIds.push(
-                    randomEra1SymbolIdForDestroy(unlockedKnowledgeUpgrades),
-                    randomEra1SymbolIdForDestroy(unlockedKnowledgeUpgrades),
+                    randomBaseNormalSymbolId(),
+                    randomBaseNormalSymbolId(),
                 );
                 break;
             case S.relic_caravan:
@@ -161,12 +188,6 @@ export const aggregateCollectionDestroyEffects = (
                 break;
             case S.pioneer:
                 out.forceTerrainInNextChoices = true;
-                break;
-            case S.edict:
-                if (!skipEdictFromSymbol69) out.edictRemovalPending = true;
-                break;
-            case S.embassy:
-                out.freeSelectionRerolls += 1;
                 break;
             default:
                 break;
@@ -217,7 +238,14 @@ export const appendSymbolDefIdsToPlayer = (
 
 export const getStartingSymbols = (): PlayerSymbolInstance[] => {
     const oralTradition = SYMBOLS[S.oral_tradition];
-    return oralTradition ? [createInstance(oralTradition, [])] : [];
+    const wildSeeds = SYMBOLS[S.wild_seeds];
+    const out: PlayerSymbolInstance[] = [];
+    if (oralTradition) out.push(createInstance(oralTradition, []));
+    if (wildSeeds) {
+        out.push(createInstance(wildSeeds, []));
+        out.push(createInstance(wildSeeds, []));
+    }
+    return out;
 };
 
 export const createStartingBoard = (): {
@@ -226,6 +254,6 @@ export const createStartingBoard = (): {
 } => {
     const symbols = getStartingSymbols();
     const board = createEmptyBoard();
-    board[ORAL_TRADITION_ANCHOR.x][ORAL_TRADITION_ANCHOR.y] = symbols[0] ?? null;
-    return { board, playerSymbols: symbols };
+    const oralPlaced = placeOralTraditionAtBoardCenter(board, symbols);
+    return placeStartingWildSeeds(oralPlaced.board, oralPlaced.playerSymbols);
 };

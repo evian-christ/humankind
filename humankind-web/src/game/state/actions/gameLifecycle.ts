@@ -1,14 +1,14 @@
 import type { LeaderId } from '../../data/leaders';
 import { LEADERS, getLeaderStartingRelics, isLeaderPlayable } from '../../data/leaders';
-import { RELICS } from '../../data/relicDefinitions';
-import { TOTAL_STAGE_COUNT, getStageStartingRelicCounts } from '../../data/stages';
+import { TOTAL_STAGE_COUNT } from '../../data/stages';
 import { SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
-import { RELIC_ID } from '../../logic/relics/relicIds';
 import type { GameState } from '../gameStore';
 import {
     createEmptyBoard,
     createStartingBoard,
+    ensureStartingWildSeedsOwned,
     ensureOralTraditionOwned,
+    placeStartingWildSeeds,
     placeOralTraditionAtBoardCenter,
 } from '../gameStoreHelpers';
 import { useRelicStore } from '../relicStore';
@@ -57,6 +57,7 @@ const createCommonResetPatch = () => ({
     pendingNewThreatFloats: [],
     pendingDestroySource: null,
     pendingOblivionFurnaceRelicId: null,
+    pendingEdictSource: null,
     bonusSelectionQueue: [],
     edictRemovalPending: false,
     forceTerrainInNextSymbolChoices: false,
@@ -102,16 +103,6 @@ export const createGameLifecycleActions = ({
         const leaderRelics = getLeaderStartingRelics(leaderId);
         leaderRelics.forEach((def) => relicStore.addRelic(def));
 
-        const { debris: debrisCount, tribe: tribeCount } = getStageStartingRelicCounts(resolvedStage);
-        const debrisDef = RELICS[RELIC_ID.ANCIENT_RELIC_DEBRIS];
-        const tribeDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
-        if (debrisDef) {
-            for (let i = 0; i < debrisCount; i++) relicStore.addRelic(debrisDef);
-        }
-        if (tribeDef) {
-            for (let i = 0; i < tribeCount; i++) relicStore.addRelic(tribeDef);
-        }
-
         const leader = LEADERS[leaderId];
         const startingFood = leader?.startingFood ?? 0;
         const startingGold = leader?.startingGold ?? 0;
@@ -126,9 +117,11 @@ export const createGameLifecycleActions = ({
             .map((def) => createInstance(def));
 
         playerSymbols = ensureOralTraditionOwned(playerSymbols);
+        playerSymbols = ensureStartingWildSeedsOwned(playerSymbols);
 
         const board = createEmptyBoard();
-        const placed = placeOralTraditionAtBoardCenter(board, playerSymbols);
+        const oralPlaced = placeOralTraditionAtBoardCenter(board, playerSymbols);
+        const placed = placeStartingWildSeeds(oralPlaced.board, oralPlaced.playerSymbols);
 
         set({
             leaderId,

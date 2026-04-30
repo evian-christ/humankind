@@ -63,8 +63,6 @@ const _ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = 
     3: { 0: 10, 1: 20, 2: 30, 3: 30, 4: 10 },
 };
 
-/** 데모 승리: 이 레벨 이상이면 턴(선택 흐름) 종료 시 victory */
-export const DEMO_VICTORY_LEVEL = 15;
 export type GamePhase =
     | 'idle'
     | 'spinning'
@@ -184,6 +182,8 @@ export interface GameState {
     pendingDestroySource: typeof TERRITORIAL_REORG_UPGRADE_ID | typeof EDICT_SYMBOL_ID | null;
     /** 망각의 화로 발동 시 제거할 유물 instanceId */
     pendingOblivionFurnaceRelicId: string | null;
+    /** 칙령 발동 시 소비할 심볼 위치/인스턴스 */
+    pendingEdictSource: { x: number; y: number; instanceId: string } | null;
     /** 영토 정비(22): 남은 보너스 선택 (첫 턴은 symbolChoices로 이미 지형 3개가 열림) */
     bonusSelectionQueue: Array<'terrain' | 'any'>;
     /** 칙령(69) 등: 턴 처리 끝난 뒤 보유 심볼 제거 단계 필요 */
@@ -226,6 +226,12 @@ export interface GameState {
     confirmOblivionFurnaceDestroyAt: (x: number, y: number) => void;
     /** 망각의 화로 보드 선택 모드 취소 (유물 유지) */
     cancelOblivionFurnacePick: () => void;
+    /** 칙령: idle 시 발동하여 인접 심볼 파괴 대상을 선택 */
+    activateEdictAt: (x: number, y: number) => void;
+    /** 칙령: 인접 보드 심볼 파괴 확정 */
+    confirmEdictDestroyAt: (x: number, y: number) => void;
+    /** 칙령 대상 선택 취소 */
+    cancelEdictPick: () => void;
     /** 조몬 토기 조각·고대 유물 잔해 등 클릭 발동 유물 */
     activateClickableRelic: (instanceId: string) => void;
     /** 소·양: 평원 인접·idle 시 도축(보드 제거; 소 +10 Food, 양 +5 Food/+5 Gold; 파괴 보상은 집계 반영) */
@@ -366,6 +372,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     pendingNewThreatFloats: [],
     pendingDestroySource: null,
     pendingOblivionFurnaceRelicId: null,
+    pendingEdictSource: null,
     bonusSelectionQueue: [],
     edictRemovalPending: false,
     forceTerrainInNextSymbolChoices: false,
@@ -401,7 +408,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         set,
         createInstance,
         phaseAfterTurnFlowComplete,
-        demoVictoryLevel: DEMO_VICTORY_LEVEL,
+        demoVictoryLevel: 15,
     }),
 
     toggleRelicShop: () => {
@@ -441,7 +448,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         get,
         set,
         phaseAfterTurnFlowComplete,
-        demoVictoryLevel: DEMO_VICTORY_LEVEL,
+        demoVictoryLevel: 15,
     }),
 
     ...createGameLifecycleActions({

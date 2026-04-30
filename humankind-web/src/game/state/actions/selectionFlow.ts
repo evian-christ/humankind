@@ -1,5 +1,6 @@
 import { SYMBOLS, EDICT_SYMBOL_ID, S, SymbolType } from '../../data/symbolDefinitions';
 import {
+    AGI_PROJECT_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
@@ -236,10 +237,11 @@ export const createSelectionFlowActions = ({
         const newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];
 
-        if (uid === 16) {
-            newPlayerSymbols = newPlayerSymbols.map((s) =>
-                s.definition.id === S.library ? { ...s, definition: SYMBOLS[S.university]! } : s,
-            );
+        if (uid === AGI_PROJECT_UPGRADE_ID) {
+            const agiCoreDef = SYMBOLS[S.agi_core];
+            if (agiCoreDef) {
+                newPlayerSymbols = [...newPlayerSymbols, createInstance(agiCoreDef, newUnlocked)];
+            }
         }
 
         if (UNIT_TRANSFORM_UPGRADE_IDS.has(uid)) {
@@ -342,7 +344,6 @@ export const createSelectionFlowActions = ({
             knowledge: s.knowledge + dKnowledge,
             bonusXpPerTurn: s.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
-            edictRemovalPending: s.edictRemovalPending || symAgg.edictRemovalPending,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
         });
@@ -472,7 +473,6 @@ export const createSelectionFlowActions = ({
             knowledge: s.knowledge + dKnowledge,
             bonusXpPerTurn: s.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
-            edictRemovalPending: s.edictRemovalPending || symAgg.edictRemovalPending,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
         });
