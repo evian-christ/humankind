@@ -65,7 +65,7 @@ const DESC_ONLY_SYMBOL_VISUAL: Partial<
     hay: { key: 'hay', sprite: '051.png', type: SymbolType.NORMAL },
 };
 
-function resolveUpgradeDescSymbolVisual(
+export function resolveUpgradeDescSymbolVisual(
     symbolKey: KnowledgeUpgradeDescSymbolKey,
 ): Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> | null {
     const live = SYMBOLS_BY_KEY[symbolKey as SymbolKey];

@@ -1,45 +1,10 @@
 import {
-    AGRICULTURE_UPGRADE_ID,
-    AGRICULTURAL_SURPLUS_UPGRADE_ID,
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    BALLISTICS_UPGRADE_ID,
-    CARAVANSERAI_UPGRADE_ID,
-    CELESTIAL_NAVIGATION_UPGRADE_ID,
-    COMPASS_UPGRADE_ID,
-    DESERT_STORAGE_UPGRADE_ID,
-    DRY_STORAGE_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    FORESTRY_UPGRADE_ID,
-    FISHERY_GUILD_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
-    GUNPOWDER_UPGRADE_ID,
-    HORSEMANSHIP_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
-    INTERCHANGEABLE_PARTS_UPGRADE_ID,
-    IRON_WORKING_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
-    JUNGLE_EXPEDITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
-    MECHANICS_UPGRADE_ID,
-    MINING_UPGRADE_ID,
-    MODERN_AGRICULTURE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
-    MARITIME_TRADE_UPGRADE_ID,
-    NOMADIC_TRADITION_UPGRADE_ID,
-    OASIS_RECOVERY_UPGRADE_ID,
-    OCEANIC_ROUTES_UPGRADE_ID,
-    PASTURE_MANAGEMENT_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
-    PRESERVATION_UPGRADE_ID,
-    SEAFARING_UPGRADE_ID,
-    SHIPBUILDING_UPGRADE_ID,
-    TANNING_UPGRADE_ID,
-    TRACKING_UPGRADE_ID,
-    TROPICAL_DEVELOPMENT_UPGRADE_ID,
-    THREE_FIELD_SYSTEM_UPGRADE_ID,
+    getKnowledgeUpgradeDirectPrerequisites,
 } from '../data/knowledgeUpgrades';
 import { getStageFoodPaymentBase, getStagePassiveBonus } from '../data/stages';
 import { SymbolType } from '../data/symbolDefinitions';
@@ -139,38 +104,7 @@ export function isUpgradeLegalForKnowledgePick(
     if (uid === AGI_PROJECT_UPGRADE_ID) {
         return level >= 30 && have.has(MODERN_AGE_UPGRADE_ID);
     }
-    if (uid === 16 && !have.has(1)) return false;
-    if (uid === THREE_FIELD_SYSTEM_UPGRADE_ID && !have.has(IRRIGATION_UPGRADE_ID)) return false;
-    if (uid === AGRICULTURAL_SURPLUS_UPGRADE_ID && !have.has(THREE_FIELD_SYSTEM_UPGRADE_ID)) return false;
-    if (uid === MODERN_AGRICULTURE_UPGRADE_ID && !have.has(AGRICULTURAL_SURPLUS_UPGRADE_ID)) return false;
-    if (uid === NOMADIC_TRADITION_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
-    if (uid === PASTURE_MANAGEMENT_UPGRADE_ID && !have.has(NOMADIC_TRADITION_UPGRADE_ID)) return false;
-    if (uid === IRON_WORKING_UPGRADE_ID && !have.has(5)) return false;
-    if (uid === IRRIGATION_UPGRADE_ID && !have.has(AGRICULTURE_UPGRADE_ID)) return false;
-    if (uid === HORSEMANSHIP_UPGRADE_ID && !have.has(PASTORALISM_UPGRADE_ID)) return false;
-    if (uid === SEAFARING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
-    if (uid === CELESTIAL_NAVIGATION_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
-    if (uid === COMPASS_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
-    if (uid === SHIPBUILDING_UPGRADE_ID && !have.has(FISHERIES_UPGRADE_ID)) return false;
-    if (uid === DRY_STORAGE_UPGRADE_ID && !have.has(FOREIGN_TRADE_UPGRADE_ID)) return false;
-    if (uid === DESERT_STORAGE_UPGRADE_ID && !have.has(DRY_STORAGE_UPGRADE_ID)) return false;
-    if (uid === CARAVANSERAI_UPGRADE_ID && !have.has(DESERT_STORAGE_UPGRADE_ID)) return false;
-    if (uid === OASIS_RECOVERY_UPGRADE_ID && !have.has(CARAVANSERAI_UPGRADE_ID)) return false;
-    if (uid === FISHERY_GUILD_UPGRADE_ID && !have.has(SEAFARING_UPGRADE_ID)) return false;
-    if (uid === MARITIME_TRADE_UPGRADE_ID && !have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)) return false;
-    if (uid === TRACKING_UPGRADE_ID && !have.has(HUNTING_UPGRADE_ID)) return false;
-    if (uid === TANNING_UPGRADE_ID && !have.has(TRACKING_UPGRADE_ID)) return false;
-    if (uid === FORESTRY_UPGRADE_ID && !have.has(TANNING_UPGRADE_ID)) return false;
-    if (uid === PRESERVATION_UPGRADE_ID && !have.has(FORESTRY_UPGRADE_ID)) return false;
-    if (uid === PLANTATION_UPGRADE_ID && !have.has(MINING_UPGRADE_ID)) return false;
-    if (uid === JUNGLE_EXPEDITION_UPGRADE_ID && !have.has(PLANTATION_UPGRADE_ID)) return false;
-    if (uid === TROPICAL_DEVELOPMENT_UPGRADE_ID && !have.has(JUNGLE_EXPEDITION_UPGRADE_ID)) return false;
-    if (uid === OCEANIC_ROUTES_UPGRADE_ID && !have.has(MARITIME_TRADE_UPGRADE_ID)) return false;
-    if (uid === OCEANIC_ROUTES_UPGRADE_ID && !have.has(FISHERY_GUILD_UPGRADE_ID)) return false;
-    if (uid === MECHANICS_UPGRADE_ID && !have.has(IRON_WORKING_UPGRADE_ID)) return false;
-    if (uid === GUNPOWDER_UPGRADE_ID && !have.has(MECHANICS_UPGRADE_ID)) return false;
-    if (uid === BALLISTICS_UPGRADE_ID && !have.has(GUNPOWDER_UPGRADE_ID)) return false;
-    if (uid === INTERCHANGEABLE_PARTS_UPGRADE_ID && !have.has(BALLISTICS_UPGRADE_ID)) return false;
+    if (getKnowledgeUpgradeDirectPrerequisites(uid).some((prereqId) => !have.has(prereqId))) return false;
     if (upgrade.type === SymbolType.MEDIEVAL) return medievalUnlocked;
     return upgradeEra <= currentEra;
 }

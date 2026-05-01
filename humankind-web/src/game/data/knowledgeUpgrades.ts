@@ -662,7 +662,7 @@ export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
 export const SACRIFICIAL_RITE_UPGRADE_ID = 8;
 export const TERRITORIAL_REORG_UPGRADE_ID = 22;
 
-const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
+export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
     [16]: [1],
     [IRON_WORKING_UPGRADE_ID]: [5],
     [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
@@ -698,6 +698,25 @@ const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
     [CARAVANSERAI_UPGRADE_ID]: [DESERT_STORAGE_UPGRADE_ID],
     [OASIS_RECOVERY_UPGRADE_ID]: [CARAVANSERAI_UPGRADE_ID],
 };
+
+const KNOWLEDGE_UPGRADE_DEPENDENTS = Object.entries(KNOWLEDGE_UPGRADE_PREREQUISITES).reduce<
+    Record<number, number[]>
+>((acc, [upgradeId, prereqIds]) => {
+    const parsedUpgradeId = Number(upgradeId);
+    for (const prereqId of prereqIds) {
+        acc[prereqId] ??= [];
+        acc[prereqId]!.push(parsedUpgradeId);
+    }
+    return acc;
+}, {});
+
+export function getKnowledgeUpgradeDirectPrerequisites(upgradeId: number): readonly number[] {
+    return KNOWLEDGE_UPGRADE_PREREQUISITES[Number(upgradeId)] ?? [];
+}
+
+export function getKnowledgeUpgradeDirectDependents(upgradeId: number): readonly number[] {
+    return KNOWLEDGE_UPGRADE_DEPENDENTS[Number(upgradeId)] ?? [];
+}
 
 export function getKnowledgeUpgradePrerequisiteClosure(upgradeId: number): number[] {
     const result = new Set<number>();
