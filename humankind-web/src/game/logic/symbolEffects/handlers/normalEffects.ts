@@ -28,7 +28,7 @@ import {
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
-import { BOARD_HEIGHT, BOARD_WIDTH, countOnBoard, findMountainSameColumn, isCorner, SEA_TERRAIN_ID } from '../core';
+import { BOARD_HEIGHT, BOARD_WIDTH, countOnBoard, findMountainSameColumn, SEA_TERRAIN_ID } from '../core';
 import type { SymbolEffectHandler } from '../core';
 import type { BoardGrid } from '../types';
 

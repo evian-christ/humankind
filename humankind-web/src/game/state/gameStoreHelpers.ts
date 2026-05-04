@@ -201,8 +201,8 @@ export const scarabBonusForOwnedRemoves = (
     removeCount: number,
 ): { gold: number; food: number; knowledge: number } => {
     let gold = 0;
-    let food = 0;
-    let knowledge = 0;
+    const food = 0;
+    const knowledge = 0;
     if (removeCount <= 0) return { gold, food, knowledge };
     const relics = useRelicStore.getState().relics;
     if (relics.some((r) => r.definition.id === RELIC_ID.SCARAB)) {
