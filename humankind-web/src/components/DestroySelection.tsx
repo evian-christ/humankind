@@ -21,6 +21,7 @@ const SYMBOL_TYPE_ERA_KEY: Record<number, string> = {
     [SymbolType.UNIT]: 'era.unit',
     [SymbolType.ENEMY]: 'era.enemy',
     [SymbolType.DISASTER]: 'era.disaster',
+    [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
 const CELL_PX = Math.round(70 * 1.5);

@@ -28,6 +28,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.UNIT]: 'era.normal',
     [SymbolType.ENEMY]: 'era.normal',
     [SymbolType.DISASTER]: 'era.normal',
+    [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -65,7 +66,7 @@ const DESC_ONLY_SYMBOL_VISUAL: Partial<
     hay: { key: 'hay', sprite: '051.png', type: SymbolType.NORMAL },
 };
 
-export function resolveUpgradeDescSymbolVisual(
+function resolveUpgradeDescSymbolVisual(
     symbolKey: KnowledgeUpgradeDescSymbolKey,
 ): Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> | null {
     const live = SYMBOLS_BY_KEY[symbolKey as SymbolKey];

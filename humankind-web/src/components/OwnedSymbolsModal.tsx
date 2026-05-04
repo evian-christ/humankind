@@ -26,6 +26,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MEDIEVAL]: 'era.medieval',
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
+    [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
 type Props = {
@@ -314,4 +315,3 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
 };
 
 export default OwnedSymbolsModal;
-

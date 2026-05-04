@@ -24,11 +24,12 @@ const ERA_KEYS: Record<number, string> = {
     [SymbolType.UNIT]: 'unit',
     [SymbolType.ENEMY]: 'enemy',
     [SymbolType.DISASTER]: 'disaster',
+    [SymbolType.SPECIAL]: 'specialSymbol',
 };
 
 
 
-const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.NORMAL, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION];
+const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.NORMAL, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION, SymbolType.SPECIAL];
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 

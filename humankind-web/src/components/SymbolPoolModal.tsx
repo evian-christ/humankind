@@ -13,6 +13,7 @@ const TYPE_META: Record<number, { label: string; labelKo: string; color: string 
     [SymbolType.TERRAIN]:  { label: 'Terrain',   labelKo: '지형',     color: '#4ade80' },
     [SymbolType.ANCIENT]:  { label: 'Ancient',   labelKo: '고대',     color: '#fbbf24' },
     [SymbolType.UNIT]:     { label: 'Unit',      labelKo: '유닛',     color: '#38bdf8' },
+    [SymbolType.SPECIAL]:  { label: 'Special',   labelKo: '특수',     color: '#c084fc' },
 };
 
 const SymbolPoolModal = () => {
@@ -45,6 +46,7 @@ const SymbolPoolModal = () => {
         SymbolType.NORMAL,
         SymbolType.ANCIENT,
         SymbolType.UNIT,
+        SymbolType.SPECIAL,
         SymbolType.MEDIEVAL,
         SymbolType.MODERN,
         SymbolType.TERRAIN,

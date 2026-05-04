@@ -14,20 +14,28 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    AGRICULTURE_UPGRADE_ID,
+    ARCHITECTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
+    COLONIALISM_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
+    ELECTRICITY_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
+    EXPLORATION_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
+    GUILD_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
+    MILITARY_SCIENCE_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
     LAW_CODE_UPGRADE_ID,
@@ -36,12 +44,14 @@ import {
     KNOWLEDGE_UPGRADES,
     MECHANICS_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
+    THEOCRACY_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     MINING_UPGRADE_ID,
@@ -52,8 +62,12 @@ import {
     PASTURE_MANAGEMENT_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
     PRESERVATION_UPGRADE_ID,
+    SCIENTIFIC_THEORY_UPGRADE_ID,
+    STATE_LABOR_UPGRADE_ID,
+    STEAM_POWER_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
+    URBANIZATION_UPGRADE_ID,
     getKnowledgeUpgradeDirectDependents,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../game/data/knowledgeUpgrades';
@@ -73,6 +87,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.UNIT]: 'era.normal',
     [SymbolType.ENEMY]: 'era.normal',
     [SymbolType.DISASTER]: 'era.normal',
+    [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
 interface Props {
@@ -99,37 +114,53 @@ type KnowledgeUpgradeTooltipPosition = {
 
 /** 칩 열 수 — 개발용 확장 13열 */
 const KNOWLEDGE_TREE_GRID_COLS = 13;
+
+function buildCenteredTierRow(...upgradeIds: number[]): (number | null)[] {
+    const row = Array<number | null>(KNOWLEDGE_TREE_GRID_COLS).fill(null);
+    if (upgradeIds.length === 0) return row;
+
+    const minWidth = upgradeIds.length * 2 - 1;
+    const startCol = Math.max(0, Math.floor((KNOWLEDGE_TREE_GRID_COLS - minWidth) / 2));
+
+    for (let i = 0; i < upgradeIds.length; i += 1) {
+        const colIdx = startCol + i * 2;
+        if (colIdx >= 0 && colIdx < KNOWLEDGE_TREE_GRID_COLS) row[colIdx] = upgradeIds[i]!;
+    }
+
+    return row;
+}
+
 const TIERS: { level: number; ids: (number | null)[] }[] = [
-    { level: 1, ids: [null, null, null, null, null, null, ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, null, null, null, null, null, null] },
-    { level: 2, ids: [null, HUNTING_UPGRADE_ID, null, PASTORALISM_UPGRADE_ID, null, FISHERIES_UPGRADE_ID, null, 27, null, MINING_UPGRADE_ID, null, FOREIGN_TRADE_UPGRADE_ID, null] },
-    { level: 3, ids: [null, CHIEFDOM_UPGRADE_ID, null, null, 5, null, LAW_CODE_UPGRADE_ID, null, 6, null, null, 8, null] },
-    { level: 4, ids: [null, null, HORSEMANSHIP_UPGRADE_ID, null, null, SEAFARING_UPGRADE_ID, null, CELESTIAL_NAVIGATION_UPGRADE_ID, null, null, null, null, null] },
-    { level: 5, ids: [null, null, null, null, null, null, IRRIGATION_UPGRADE_ID, null, 1, null, null, null, null] },
-    { level: 6, ids: [null, null, null, null, null, null, null, null, null, null, DRY_STORAGE_UPGRADE_ID, null, null] },
-    { level: 7, ids: [null, null, TRACKING_UPGRADE_ID, null, null, null, null, null, null, 4, null, null, null] },
-    { level: 8, ids: [null, null, null, null, IRON_WORKING_UPGRADE_ID, null, null, null, null, null, null, null, null] },
-    { level: 9, ids: [null, null, null, NOMADIC_TRADITION_UPGRADE_ID, null, null, COMPASS_UPGRADE_ID, null, 10, null, null, null, null] },
-    { level: 10, ids: [null, null, null, null, null, null, FEUDALISM_UPGRADE_ID, null, null, null, null, null, null] },
-    { level: 11, ids: [null, null, null, null, FISHERY_GUILD_UPGRADE_ID, null, null, THREE_FIELD_SYSTEM_UPGRADE_ID, null, PLANTATION_UPGRADE_ID, null, null, null] },
-    { level: 12, ids: [null, null, TANNING_UPGRADE_ID, null, null, null, null, null, null, null, DESERT_STORAGE_UPGRADE_ID, null, null] },
-    { level: 13, ids: [null, null, null, null, null, MARITIME_TRADE_UPGRADE_ID, null, null, MECHANICS_UPGRADE_ID, null, null, null, null] },
-    { level: 14, ids: [null, null, null, null, null, null, null, null, null, null, null, null, null] },
-    { level: 15, ids: [null, null, null, null, null, null, SHIPBUILDING_UPGRADE_ID, null, 16, null, null, null, null] },
-    { level: 16, ids: [null, null, null, null, null, null, null, null, null, JUNGLE_EXPEDITION_UPGRADE_ID, null, null, null] },
-    { level: 17, ids: [null, null, null, null, null, null, AGRICULTURAL_SURPLUS_UPGRADE_ID, null, null, null, CARAVANSERAI_UPGRADE_ID, null, null] },
-    { level: 18, ids: [null, null, FORESTRY_UPGRADE_ID, null, PASTURE_MANAGEMENT_UPGRADE_ID, null, 24, null, GUNPOWDER_UPGRADE_ID, null, null, null, null] },
-    { level: 19, ids: [null, null, null, null, null, null, null, null, null, null, null, null, null] },
-    { level: 20, ids: [null, null, null, null, null, null, MODERN_AGE_UPGRADE_ID, null, null, null, null, null, null] },
-    { level: 21, ids: [null, null, null, null, null, OCEANIC_ROUTES_UPGRADE_ID, null, null, null, null, null, null, null] },
-    { level: 22, ids: [null, null, null, null, null, null, null, null, null, null, OASIS_RECOVERY_UPGRADE_ID, null, null] },
-    { level: 23, ids: [null, null, null, null, null, null, MODERN_AGRICULTURE_UPGRADE_ID, null, BALLISTICS_UPGRADE_ID, null, null, null, null] },
-    { level: 24, ids: [null, null, PRESERVATION_UPGRADE_ID, null, null, null, null, null, null, null, null, null, null] },
-    { level: 25, ids: [null, null, null, null, null, null, null, null, null, TROPICAL_DEVELOPMENT_UPGRADE_ID, null, null, null] },
-    { level: 26, ids: [null, null, null, null, null, null, null, null, null, null, null, null, null] },
-    { level: 27, ids: [null, null, null, null, null, null, null, null, null, null, null, null, null] },
-    { level: 28, ids: [null, null, null, null, null, null, null, null, INTERCHANGEABLE_PARTS_UPGRADE_ID, null, null, null, null] },
-    { level: 29, ids: [null, null, null, null, null, null, null, null, null, null, null, null, null] },
-    { level: 30, ids: [null, null, null, null, null, null, AGI_PROJECT_UPGRADE_ID, null, null, null, null, null, null] },
+    { level: 1, ids: buildCenteredTierRow(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) },
+    { level: 2, ids: buildCenteredTierRow(HUNTING_UPGRADE_ID, PASTORALISM_UPGRADE_ID, FISHERIES_UPGRADE_ID, AGRICULTURE_UPGRADE_ID, MINING_UPGRADE_ID, FOREIGN_TRADE_UPGRADE_ID) },
+    { level: 3, ids: buildCenteredTierRow(CHIEFDOM_UPGRADE_ID, 5, LAW_CODE_UPGRADE_ID, 6, 8) },
+    { level: 4, ids: buildCenteredTierRow(HORSEMANSHIP_UPGRADE_ID, SEAFARING_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID) },
+    { level: 5, ids: buildCenteredTierRow(IRRIGATION_UPGRADE_ID, 1) },
+    { level: 6, ids: buildCenteredTierRow(ARCHITECTURE_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID) },
+    { level: 7, ids: buildCenteredTierRow(TRACKING_UPGRADE_ID, 4) },
+    { level: 8, ids: buildCenteredTierRow(IRON_WORKING_UPGRADE_ID, 10) },
+    { level: 9, ids: buildCenteredTierRow(NOMADIC_TRADITION_UPGRADE_ID, STATE_LABOR_UPGRADE_ID) },
+    { level: 10, ids: buildCenteredTierRow(FEUDALISM_UPGRADE_ID) },
+    { level: 11, ids: buildCenteredTierRow(FISHERY_GUILD_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID, PLANTATION_UPGRADE_ID) },
+    { level: 12, ids: buildCenteredTierRow(TANNING_UPGRADE_ID, COMPASS_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID) },
+    { level: 13, ids: buildCenteredTierRow(MECHANICS_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID) },
+    { level: 14, ids: buildCenteredTierRow(MILITARY_SCIENCE_UPGRADE_ID, FEUDAL_CORN_UPGRADE_ID, GUILD_UPGRADE_ID, EXPLORATION_UPGRADE_ID) },
+    { level: 15, ids: buildCenteredTierRow(SHIPBUILDING_UPGRADE_ID, 16) },
+    { level: 16, ids: buildCenteredTierRow(THEOCRACY_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID) },
+    { level: 17, ids: buildCenteredTierRow(AGRICULTURAL_SURPLUS_UPGRADE_ID, 24, CARAVANSERAI_UPGRADE_ID) },
+    { level: 18, ids: buildCenteredTierRow(FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, GUNPOWDER_UPGRADE_ID) },
+    { level: 19, ids: buildCenteredTierRow(NATIONALISM_UPGRADE_ID, COLONIALISM_UPGRADE_ID) },
+    { level: 20, ids: buildCenteredTierRow(MODERN_AGE_UPGRADE_ID) },
+    { level: 21, ids: buildCenteredTierRow(OCEANIC_ROUTES_UPGRADE_ID) },
+    { level: 22, ids: buildCenteredTierRow(STEAM_POWER_UPGRADE_ID, OASIS_RECOVERY_UPGRADE_ID) },
+    { level: 23, ids: buildCenteredTierRow(BALLISTICS_UPGRADE_ID, MODERN_AGRICULTURE_UPGRADE_ID) },
+    { level: 24, ids: buildCenteredTierRow(PRESERVATION_UPGRADE_ID, URBANIZATION_UPGRADE_ID) },
+    { level: 25, ids: buildCenteredTierRow(SCIENTIFIC_THEORY_UPGRADE_ID, TROPICAL_DEVELOPMENT_UPGRADE_ID) },
+    { level: 26, ids: buildCenteredTierRow(ELECTRICITY_UPGRADE_ID) },
+    { level: 27, ids: buildCenteredTierRow() },
+    { level: 28, ids: buildCenteredTierRow(INTERCHANGEABLE_PARTS_UPGRADE_ID) },
+    { level: 29, ids: buildCenteredTierRow() },
+    { level: 30, ids: buildCenteredTierRow(AGI_PROJECT_UPGRADE_ID) },
 ];
 
 const KNOWLEDGE_TREE_CHIP = 110;
@@ -193,6 +224,28 @@ function findTierGridSlot(upgradeId: number): { rowIdx: number; colIdx: number }
 function getTierLevelForUpgrade(upgradeId: number | null): number {
     if (upgradeId == null) return 1;
     return TIERS.find((tier) => tier.ids.includes(upgradeId))?.level ?? 1;
+}
+
+function collectConnectedUpgradeIds(upgradeId: number | null): Set<number> {
+    if (upgradeId == null) return new Set<number>();
+
+    const visited = new Set<number>();
+    const stack = [upgradeId];
+
+    while (stack.length > 0) {
+        const current = stack.pop()!;
+        if (visited.has(current)) continue;
+        visited.add(current);
+
+        for (const prereqId of getKnowledgeUpgradeDirectPrerequisites(current)) {
+            if (!visited.has(prereqId)) stack.push(prereqId);
+        }
+        for (const dependentId of getKnowledgeUpgradeDirectDependents(current)) {
+            if (!visited.has(dependentId)) stack.push(dependentId);
+        }
+    }
+
+    return visited;
 }
 
 function KnowledgeConnectorSegment({ seg }: { seg: KnowledgeConnectorRenderLine }) {
@@ -274,11 +327,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
     const selectedTierLevel = getTierLevelForUpgrade(selectedId);
     const activeFocusId = hoveredId ?? selectedId;
-    const activeDirectPrereqs = activeFocusId != null ? [...getKnowledgeUpgradeDirectPrerequisites(activeFocusId)] : [];
-    const activeDirectDependents = activeFocusId != null ? [...getKnowledgeUpgradeDirectDependents(activeFocusId)] : [];
-    const activeEmphasisIds = new Set<number>(
-        activeFocusId != null ? [activeFocusId, ...activeDirectPrereqs, ...activeDirectDependents] : [],
-    );
+    const activeConnectionIds = collectConnectedUpgradeIds(activeFocusId);
     const selectedDirectPrereqs = selectedId != null ? [...getKnowledgeUpgradeDirectPrerequisites(selectedId)] : [];
     const selectedDirectDependents = selectedId != null ? [...getKnowledgeUpgradeDirectDependents(selectedId)] : [];
     const unmetSelectedPrereqs = selectedDirectPrereqs.filter((prereqId) => !unlockedUpgrades.includes(prereqId));
@@ -457,18 +506,15 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
 
     const detailEraColor =
         selectedUpgrade != null ? getSymbolColorHex(selectedUpgrade.type) : '#888888';
-    const activeConnectionIds = new Set<number>(
-        activeFocusId != null ? [activeFocusId, ...activeDirectPrereqs, ...activeDirectDependents] : [],
-    );
     const connectorRenderLines: KnowledgeConnectorRenderLine[] = connectorLines.map((line) => ({
         ...line,
         active:
             activeFocusId != null &&
-            (line.from === activeFocusId || line.to === activeFocusId),
+            activeConnectionIds.has(line.from) &&
+            activeConnectionIds.has(line.to),
         dimmed:
             activeFocusId != null &&
-            line.from !== activeFocusId &&
-            line.to !== activeFocusId,
+            !(activeConnectionIds.has(line.from) && activeConnectionIds.has(line.to)),
     }));
 
     const handleUnlock = (e: ReactMouseEvent<HTMLButtonElement>) => {
