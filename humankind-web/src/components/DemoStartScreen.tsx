@@ -59,20 +59,20 @@ export default function DemoStartScreen() {
 
   const tutorialItems = isKorean
     ? [
-        <>이 데모의 승리 조건은 레벨 15 달성입니다. 초반에는 {resource('food')} 기반과 시너지가 좋은 심볼을 차근차근 쌓으세요.</>,
+        <>이 데모는 AGI Core 프로젝트를 완성해 승리하는 풀게임입니다. 초반에는 {resource('food')} 기반과 시너지가 좋은 심볼을 차근차근 쌓으세요.</>,
         <>매 턴 <span className="demo-inline-code">SPIN</span>을 누르면 보유 심볼이 5x4 보드에 무작위로 배치되고, 효과가 자동으로 순서대로 발동합니다.</>,
         <>매 턴 효과 계산이 끝난 후, 무작위 심볼 3개 중 하나를 택하여 얻을 수 있습니다.</>,
         <>10턴마다 백성이 {resource('food')}을 요구합니다. 지불하지 못하면 즉시 패배하니, 초반에는 안정적인 운영이 가장 중요합니다.</>,
         <>{resource('food')}은 생존, {resource('gold')}는 리롤과 유물 구매, {resource('knowledge')}는 레벨을 업하여 영구 업그레이드와 시대 전환에 쓰입니다.</>,
-        <>중요: 게임 시작과 함께 주어진 유물을 잘 활용하세요.</>,
+        <>Modern 시대까지 연구를 이어가고 AGI Core를 활용해 최종 승리를 노리세요.</>,
       ]
     : [
-        <>Victory in this demo means reaching Level 15. Early on, build a stable {resource('food')} engine and stack symbols with strong synergy.</>,
+        <>This demo is a full run: win by completing the AGI Core project. Early on, build a stable {resource('food')} engine and stack symbols with strong synergy.</>,
         <>Each turn, press <span className="demo-inline-code">SPIN</span>. Your owned symbols are placed randomly on the 5x4 board, and their effects resolve automatically.</>,
         <>After each turn's effects finish resolving, you may choose 1 of 3 random symbols to gain.</>,
         <>Every 10 turns, the people demand {resource('food')}. If you cannot pay, the run ends immediately, so stabilize your economy first.</>,
         <>{resource('food')} keeps you alive, {resource('gold')} pays for rerolls and relics, and {resource('knowledge')} is used to level up for permanent upgrades and era transitions.</>,
-        <>Important: make good use of the relic you receive at the start of the game.</>,
+        <>Push into the Modern era and use AGI Core to close out the run.</>,
       ];
 
   return (
