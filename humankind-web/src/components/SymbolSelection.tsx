@@ -15,6 +15,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MEDIEVAL]: 'era.medieval',
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
+    [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -116,9 +117,7 @@ const SymbolSelection = () => {
 
     // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
     const hasLydia = relics.some(r => r.definition.id === 2);
-    const baseRerollCost = getRerollCost(level);
-    const rerollCostUnscaled = hasLydia ? Math.floor(baseRerollCost * 0.5) : baseRerollCost;
-    const rerollCost = rerollCostUnscaled;
+    const rerollCost = getRerollCost(level, hasLydia ? 0.5 : 1);
     const maxRerolls = hasLydia ? 3 : Infinity;
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
     const canReroll = gold >= rerollCost && (rerollsLeft === null || rerollsLeft > 0);

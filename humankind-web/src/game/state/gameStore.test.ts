@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+    MILITARY_SCIENCE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
@@ -154,6 +155,34 @@ describe('gameStore pasture butchering', () => {
         expect(next.board[2][1]?.enemy_hp).toBe(12);
         expect(next.playerSymbols.some((sym) => sym.instanceId === 'horse')).toBe(false);
         expect(next.playerSymbols.find((sym) => sym.instanceId === 'warrior')?.definition.id).toBe(Sym.cavalry.id);
+    });
+
+    it('trains an adjacent melee unit into cavalry corps with Military Science', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const horse = createInstance(Sym.horse, 'horse');
+        const warrior = createInstance(Sym.warrior, 'warrior');
+        warrior.enemy_hp = 7;
+        board[1][1] = horse;
+        board[2][1] = warrior;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [horse, warrior],
+            phase: 'idle',
+            unlockedKnowledgeUpgrades: [MILITARY_SCIENCE_UPGRADE_ID],
+            lastEffects: [],
+        });
+
+        useGameStore.getState().trainHorseUnitAt(1, 1);
+
+        const next = useGameStore.getState();
+        expect(next.board[1][1]).toBeNull();
+        expect(next.board[2][1]?.definition.id).toBe(Sym.cavalry_corps.id);
+        expect(next.board[2][1]?.enemy_hp).toBe(27);
+        expect(next.playerSymbols.some((sym) => sym.instanceId === 'horse')).toBe(false);
+        expect(next.playerSymbols.find((sym) => sym.instanceId === 'warrior')?.definition.id).toBe(Sym.cavalry_corps.id);
     });
 
     it('consumes deer and trains an adjacent ranged unit into tracker archer after Tracking', async () => {

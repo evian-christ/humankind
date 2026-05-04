@@ -21,7 +21,7 @@ import { useRelicStore } from '../relicStore';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
-    scarabAndHinduismBonusForOwnedRemoves,
+    scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import {
     getRerollCost,
@@ -165,8 +165,7 @@ export const createSelectionFlowActions = ({
         }
 
         const hasLydia = useRelicStore.getState().relics.some((r) => r.definition.id === RELIC_ID.LYDIA_COIN);
-        const baseRerollCost = getRerollCost(state.level);
-        const rerollCost = hasLydia ? Math.floor(baseRerollCost * 0.5) : baseRerollCost;
+        const rerollCost = getRerollCost(state.level, hasLydia ? 0.5 : 1);
         const maxRerolls = hasLydia ? 3 : Infinity;
 
         if (state.rerollsThisTurn >= maxRerolls) return;
@@ -333,7 +332,7 @@ export const createSelectionFlowActions = ({
         const removed = state.playerSymbols.filter((s) => instanceIds.includes(s.instanceId));
         const skipEd69 = src === EDICT_SYMBOL_ID;
         const symAgg = aggregateCollectionDestroyEffects(removed, skipEd69, state.unlockedKnowledgeUpgrades || []);
-        const shBonus = scarabAndHinduismBonusForOwnedRemoves(state.board, removed.length);
+        const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
         const dFood = symAgg.food + shBonus.food;
         const dGold = symAgg.gold + shBonus.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;
@@ -462,7 +461,7 @@ export const createSelectionFlowActions = ({
         const instanceIds = [sym.instanceId];
         const removed = [sym];
         const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
-        const shBonus = scarabAndHinduismBonusForOwnedRemoves(state.board, removed.length);
+        const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
         const dFood = symAgg.food + shBonus.food;
         const dGold = symAgg.gold + shBonus.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;

@@ -13,7 +13,7 @@ type Props = {
 };
 
 /**
- * 메인 보드(PixiGameApp)와 동일 규칙의 카운터·상인 골드·공격·체력·야만 주둔지 턴 표시.
+ * 메인 보드(PixiGameApp)와 동일 규칙의 카운터·공격·체력·야만 주둔지 턴 표시.
  * 부모는 `position: 'relative'` 셀 안에 스프라이트와 함께 둡니다.
  */
 export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
@@ -45,8 +45,6 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const showHp = def.base_hp !== undefined && def.base_hp > 0;
     const hpValue = sym.enemy_hp ?? def.base_hp;
     const showCampCounter = def.id === S.barbarian_camp;
-    const showMerchantStoredGold = def.id === S.merchant && (sym.stored_gold ?? 0) > 0;
-
     const font = { fontFamily: 'Mulmaru, sans-serif' as const, lineHeight: 1 as const };
     const statShadow =
         '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
@@ -84,23 +82,6 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
                     }}
                 >
                     {sym.effect_counter}
-                </div>
-            )}
-
-            {showMerchantStoredGold && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: ux(2),
-                        bottom: uy(4),
-                        fontSize: fs,
-                        ...font,
-                        color: '#fbbf24',
-                        fontWeight: 800,
-                        textShadow: statShadow,
-                    }}
-                >
-                    {sym.stored_gold}
                 </div>
             )}
 

@@ -2,18 +2,25 @@ import { S, SYMBOLS, SymbolType } from '../../../data/symbolDefinitions';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
+    ARCHITECTURE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
-    FISHERY_GUILD_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
+    COLONIALISM_UPGRADE_ID,
+    EXPLORATION_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
+    FISHERY_GUILD_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
+    MILITARY_SCIENCE_UPGRADE_ID,
     MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
     PRESERVATION_UPGRADE_ID,
+    SCIENTIFIC_THEORY_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
@@ -156,12 +163,8 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             }
             return true;
 
-        case S.copper:
-            state.gold += countOnBoard(boardGrid, S.copper) === 3 ? 3 : 1;
-            return true;
-
         case S.monument:
-            state.knowledge += 5;
+            state.knowledge += upgrades.includes(NATIONALISM_UPGRADE_ID) ? 10 : 5;
             return true;
 
         case S.stone_tablet:
@@ -178,13 +181,8 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
 
         case S.merchant:
-            if (!isCorner(x, y)) {
-                symbolInstance.merchant_store_pending = true;
-            } else {
-                state.gold += symbolInstance.stored_gold ?? 0;
-                symbolInstance.stored_gold = 0;
-                symbolInstance.merchant_store_pending = false;
-            }
+            symbolInstance.merchant_store_pending = true;
+            symbolInstance.stored_gold = 0;
             return true;
 
         case S.crab: {
@@ -225,10 +223,18 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
 
         case S.library:
             {
-                const occupiedAdj = adj.filter((pos) => boardGrid[pos.x][pos.y] != null);
-                const multiplier = upgrades.includes(16) ? 2 : 1;
-                state.knowledge += occupiedAdj.length * multiplier;
-                occupiedAdj.forEach((pos) => state.contributors.push(pos));
+                if (upgrades.includes(SCIENTIFIC_THEORY_UPGRADE_ID)) {
+                    const occupiedBoard = boardGrid.flatMap((column, bx) =>
+                        column.flatMap((symbol, by) => (symbol != null ? [{ x: bx, y: by }] : [])),
+                    );
+                    state.knowledge += occupiedBoard.length * 2;
+                    state.contributors.push(...occupiedBoard);
+                } else {
+                    const occupiedAdj = adj.filter((pos) => boardGrid[pos.x][pos.y] != null);
+                    const multiplier = upgrades.includes(16) ? 2 : 1;
+                    state.knowledge += occupiedAdj.length * multiplier;
+                    occupiedAdj.forEach((pos) => state.contributors.push(pos));
+                }
             }
             return true;
 
@@ -353,7 +359,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                     state.contributors.push(pos);
                 }
             });
-            state.food += adjacentTerrain;
+            state.food += adjacentTerrain * (upgrades.includes(ARCHITECTURE_UPGRADE_ID) ? 2 : 1);
             return true;
         }
 
@@ -367,13 +373,13 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                 }
             }
             if ([...terrainCounts.values()].some((count) => count >= 5)) {
-                state.food += 5;
+                state.food += upgrades.includes(EXPLORATION_UPGRADE_ID) ? 10 : 5;
             }
             return true;
         }
 
         case S.corn:
-            state.food += 2;
+            state.food += upgrades.includes(FEUDAL_CORN_UPGRADE_ID) ? 4 : 2;
             return true;
 
         case S.wild_berries: {
@@ -402,7 +408,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                     if (s?.definition.type === SymbolType.TERRAIN) terrainTypes.add(s.definition.id);
                 }
             }
-            state.food += terrainTypes.size;
+            state.food += terrainTypes.size * (upgrades.includes(COLONIALISM_UPGRADE_ID) ? 3 : 1);
             return true;
         }
 
@@ -457,11 +463,12 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
 
         case S.horse: {
-            state.food += 1;
-            state.gold += 1;
+            const hasMilitaryScience = upgrades.includes(MILITARY_SCIENCE_UPGRADE_ID);
+            state.food += hasMilitaryScience ? 2 : 1;
+            state.gold += hasMilitaryScience ? 2 : 1;
             const plainsAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === S.plains);
             if (plainsAdj) {
-                state.food += 2;
+                state.food += hasMilitaryScience ? 4 : 2;
                 state.contributors.push(plainsAdj);
             }
             return true;

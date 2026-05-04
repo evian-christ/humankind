@@ -3,7 +3,7 @@
  * ID를 바꿀 때는 이 파일의 값만 수정하면 되며,
  * 게임 로직에서는 `SYMBOL_NUMERIC_ID`(숫자 비교) 또는 `definition.key`(문자 식별)를 사용합니다.
  *
- * 배치 규칙: 지형(1–8) → 일반(9–40, 41–42 비움) → 고대(43–50) → 중세(51–58) → 종교(59–62) → 현대 특수(63–66) → 재해(67–69) → 특수 보상(77–79) → 전투 전용(80+)
+ * 배치 규칙: 지형(1–8) → 일반(9–38) → 고대(39–46) → 중세(47–54) → 종교(55–58) → 현대 특수(59) → 특수 보상(60–62) → 전투 전용(63–72) → 적(73–74) → 재해(75–77)
  */
 export const SYMBOL_NUMERIC_ID = {
     // ── Terrain (1–8): 초원→평원→바다→숲→열대우림→사막→오아시스→산 ──
@@ -16,7 +16,7 @@ export const SYMBOL_NUMERIC_ID = {
     oasis: 7,
     mountain: 8,
 
-    // ── Normal (9–40): 메인 덱 축 + 공통 운영층 기준 ──
+    // ── Normal (9–38): 메인 덱 축 + 공통 운영층 기준 ──
     // 초원축
     wheat: 9,
     rice: 10,
@@ -51,74 +51,75 @@ export const SYMBOL_NUMERIC_ID = {
 
     // 산/특수 포지션
     stone: 29,
-    copper: 30,
 
     // 브릿지 / 하이브리드
-    wild_berries: 31,
-    honey: 32,
-    spices: 33,
-    salt: 34,
+    wild_berries: 30,
+    honey: 31,
+    spices: 32,
+    salt: 33,
 
     // 공통 운영층
-    merchant: 35,
-    monument: 36,
-    library: 37,
-    stone_tablet: 38,
-    university: 39,
-    relic_caravan: 40,
+    merchant: 34,
+    monument: 35,
+    library: 36,
+    stone_tablet: 37,
+    relic_caravan: 38,
 
-    // ── Ancient (43–50) ──
-    oral_tradition: 43,
-    totem: 44,
-    omen: 45,
-    campfire: 46,
-    pottery: 47,
-    tribal_village: 48,
-    stargazer: 49,
-    wild_seeds: 50,
+    // ── Ancient (39–46) ──
+    oral_tradition: 39,
+    totem: 40,
+    omen: 41,
+    campfire: 42,
+    pottery: 43,
+    tribal_village: 44,
+    stargazer: 45,
+    wild_seeds: 46,
 
-    // ── Medieval (51–58) ──
-    tax: 51,
-    scholar: 52,
-    holy_relic: 53,
-    telescope: 54,
-    scales: 55,
-    pioneer: 56,
-    edict: 57,
-    embassy: 58,
+    // ── Medieval (47–54) ──
+    tax: 47,
+    scholar: 48,
+    holy_relic: 49,
+    telescope: 50,
+    scales: 51,
+    pioneer: 52,
+    edict: 53,
+    embassy: 54,
 
-    // ── Religion (59–62) ──
-    christianity: 59,
-    islam: 60,
-    buddhism: 61,
-    hinduism: 62,
+    // ── Religion (55–58) ──
+    christianity: 55,
+    islam: 56,
+    buddhism: 57,
+    hinduism: 58,
 
-    // ── Modern special (63–66) ──
-    agi_core: 63,
+    // ── Modern special (59) ──
+    agi_core: 59,
 
-    // ── Disaster (67–69) ──
-    flood: 67,
-    earthquake: 68,
-    drought: 69,
+    // ── Special reward (60–62) ──
+    loot: 60,
+    greater_loot: 61,
+    radiant_loot: 62,
 
-    // ── Special reward (77–79) ──
-    loot: 77,
-    greater_loot: 78,
-    radiant_loot: 79,
+    // ── Combat-only dev range (63–72) ──
+    // melee by era -> ranged by era
+    warrior: 63,
+    cavalry: 64,
+    knight: 65,
+    cavalry_corps: 66,
+    musketman: 67,
+    infantry: 68,
+    archer: 69,
+    tracker_archer: 70,
+    crossbowman: 71,
+    cannon: 72,
 
-    // ── Combat-only dev range (80+) ──
-    // melee by era -> ranged by era -> enemies
-    warrior: 80,
-    cavalry: 81,
-    knight: 82,
-    musketman: 83,
-    infantry: 84,
-    archer: 85,
-    tracker_archer: 86,
-    crossbowman: 87,
-    cannon: 88,
-    barbarian_camp: 89,
-    enemy_warrior: 90,
+    // ── Enemy (73–74) ──
+    barbarian_camp: 73,
+    enemy_warrior: 74,
+
+    // ── Disaster (75–77) ──
+    flood: 75,
+    earthquake: 76,
+    drought: 77,
 } as const;
 
 export type SymbolKey = keyof typeof SYMBOL_NUMERIC_ID;

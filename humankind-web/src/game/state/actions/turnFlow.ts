@@ -402,6 +402,7 @@ export const createTurnFlowActions = ({
                     boardWidth,
                     boardHeight,
                     getAdjacentCoords,
+                    unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
                 });
 
                 set({ activeSlot: null, activeContributors: [], pendingContributors: [] });

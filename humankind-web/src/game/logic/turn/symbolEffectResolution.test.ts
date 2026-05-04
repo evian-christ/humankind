@@ -3,21 +3,30 @@ import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinit
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
+    ARCHITECTURE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    COLONIALISM_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
+    EXPLORATION_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
+    GUILD_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
     PRESERVATION_UPGRADE_ID,
+    SCIENTIFIC_THEORY_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
+    THEOCRACY_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
@@ -25,9 +34,9 @@ import {
 import type { PlayerSymbolInstance } from '../../types';
 import { processSingleSymbolEffects } from '../symbolEffects';
 import {
-    applyMerchantStoredGold,
     buildFoodBySlotKey,
     collectDisabledTerrainCoords,
+    computeMerchantDeferredEffects,
     computeReligionDeferredEffects,
     slotKey,
 } from './symbolEffectResolution';
@@ -72,15 +81,146 @@ describe('symbolEffectResolution', () => {
         expect(disabled.has(slotKey(2, 2))).toBe(false);
     });
 
-    it('computes deferred Christianity and Islam effects from cached adjacent production', () => {
+    it('computes deferred Christianity, Islam, Buddhism, and Hinduism effects from board state', () => {
         const board = createEmptyBoard();
         board[1][1] = createInstance(Sym.christianity, 'christianity');
         board[2][1] = createInstance(Sym.wheat, 'wheat');
-        board[2][2] = createInstance(Sym.islam, 'islam');
-        board[3][2] = createInstance(Sym.library, 'library');
 
         const cache = new Map([
             [slotKey(2, 1), { food: 4, gold: 0, knowledge: 0 }],
+        ]);
+
+        const christianityResult = computeReligionDeferredEffects({
+            board,
+            religionSlots: [
+                { x: 1, y: 1, id: S.christianity },
+            ],
+            religionEffectCache: cache,
+            getAdjacentCoords,
+        });
+
+        expect(christianityResult.effects).toEqual([
+            { x: 1, y: 1, food: 4, gold: 0, knowledge: 0 },
+        ]);
+        expect(christianityResult.foodDelta).toBe(4);
+        expect(christianityResult.goldDelta).toBe(0);
+        expect(christianityResult.knowledgeDelta).toBe(0);
+
+        const islamBoard = createEmptyBoard();
+        islamBoard[2][2] = createInstance(Sym.islam, 'islam');
+        islamBoard[3][2] = createInstance(Sym.library, 'library');
+        const islamResult = computeReligionDeferredEffects({
+            board: islamBoard,
+            religionSlots: [{ x: 2, y: 2, id: S.islam }],
+            religionEffectCache: new Map([[slotKey(3, 2), { food: 0, gold: 0, knowledge: 5 }]]),
+            getAdjacentCoords,
+        });
+        expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 0, gold: 2, knowledge: 0 }]);
+
+        const buddhismBoard = createEmptyBoard();
+        buddhismBoard[0][1] = createInstance(Sym.buddhism, 'buddhism');
+        buddhismBoard[4][3] = createInstance(Sym.wheat, 'wheat');
+        const buddhismResult = computeReligionDeferredEffects({
+            board: buddhismBoard,
+            religionSlots: [{ x: 0, y: 1, id: S.buddhism }],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+        });
+        expect(buddhismResult.effects).toEqual([{ x: 0, y: 1, food: 36, gold: 0, knowledge: 0 }]);
+
+        const hinduismBoard = createEmptyBoard();
+        hinduismBoard[0][0] = createInstance(Sym.hinduism, 'hinduism');
+        const hinduismResult = computeReligionDeferredEffects({
+            board: hinduismBoard,
+            religionSlots: [{ x: 0, y: 0, id: S.hinduism }],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+        });
+        expect(hinduismResult.effects).toEqual([{ x: 0, y: 0, food: 10, gold: 0, knowledge: 10 }]);
+    });
+
+    it('upgrades religion effects with Theocracy while preserving destroy-on-other-religion', () => {
+        const christianityBoard = createEmptyBoard();
+        christianityBoard[1][1] = createInstance(Sym.christianity, 'christianity');
+        christianityBoard[2][1] = createInstance(Sym.wheat, 'wheat');
+        christianityBoard[4][3] = createInstance(Sym.rice, 'rice');
+
+        const christianityResult = computeReligionDeferredEffects({
+            board: christianityBoard,
+            religionSlots: [{ x: 1, y: 1, id: S.christianity }],
+            religionEffectCache: new Map([
+                [slotKey(2, 1), { food: 4, gold: 0, knowledge: 0 }],
+                [slotKey(4, 3), { food: 9, gold: 0, knowledge: 0 }],
+            ]),
+            getAdjacentCoords,
+            unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
+        });
+        expect(christianityResult.effects).toEqual([{ x: 1, y: 1, food: 9, gold: 0, knowledge: 0 }]);
+
+        const islamBoard = createEmptyBoard();
+        islamBoard[2][2] = createInstance(Sym.islam, 'islam');
+        islamBoard[3][2] = createInstance(Sym.library, 'library');
+        const islamResult = computeReligionDeferredEffects({
+            board: islamBoard,
+            religionSlots: [{ x: 2, y: 2, id: S.islam }],
+            religionEffectCache: new Map([[slotKey(3, 2), { food: 0, gold: 0, knowledge: 5 }]]),
+            getAdjacentCoords,
+            unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
+        });
+        expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 0, gold: 3, knowledge: 0 }]);
+
+        const buddhismBoard = createEmptyBoard();
+        buddhismBoard[0][1] = createInstance(Sym.buddhism, 'buddhism');
+        buddhismBoard[4][3] = createInstance(Sym.wheat, 'wheat');
+        const buddhismResult = computeReligionDeferredEffects({
+            board: buddhismBoard,
+            religionSlots: [{ x: 0, y: 1, id: S.buddhism }],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+            unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
+        });
+        expect(buddhismResult.effects).toEqual([{ x: 0, y: 1, food: 72, gold: 0, knowledge: 0 }]);
+
+        const hinduismBoard = createEmptyBoard();
+        hinduismBoard[0][0] = createInstance(Sym.hinduism, 'hinduism');
+        const hinduismResult = computeReligionDeferredEffects({
+            board: hinduismBoard,
+            religionSlots: [{ x: 0, y: 0, id: S.hinduism }],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+            unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
+        });
+        expect(hinduismResult.effects).toEqual([{ x: 0, y: 0, food: 20, gold: 0, knowledge: 20 }]);
+
+        const conflictBoard = createEmptyBoard();
+        const christianity = createInstance(Sym.christianity, 'c1');
+        const islam = createInstance(Sym.islam, 'i1');
+        conflictBoard[0][0] = christianity;
+        conflictBoard[4][3] = islam;
+        const conflictResult = computeReligionDeferredEffects({
+            board: conflictBoard,
+            religionSlots: [
+                { x: 0, y: 0, id: S.christianity },
+                { x: 4, y: 3, id: S.islam },
+            ],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+            unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
+        });
+        expect(conflictResult.effects).toEqual([]);
+        expect(christianity.is_marked_for_destruction).toBe(true);
+        expect(islam.is_marked_for_destruction).toBe(true);
+    });
+
+    it('destroys religion symbols when another religion is on the board', () => {
+        const board = createEmptyBoard();
+        const christianity = createInstance(Sym.christianity, 'christianity');
+        const islam = createInstance(Sym.islam, 'islam');
+        board[1][1] = christianity;
+        board[2][2] = islam;
+        board[3][2] = createInstance(Sym.library, 'library');
+
+        const cache = new Map([
             [slotKey(3, 2), { food: 0, gold: 0, knowledge: 5 }],
         ]);
 
@@ -94,20 +234,22 @@ describe('symbolEffectResolution', () => {
             getAdjacentCoords,
         });
 
-        expect(result.effects).toEqual([
-            { x: 1, y: 1, food: -46, gold: 0, knowledge: 0 },
-            { x: 2, y: 2, food: -50, gold: 2, knowledge: 0 },
-        ]);
-        expect(result.foodDelta).toBe(-96);
-        expect(result.goldDelta).toBe(2);
+        expect(result.effects).toEqual([]);
+        expect(result.foodDelta).toBe(0);
+        expect(result.goldDelta).toBe(0);
+        expect(result.knowledgeDelta).toBe(0);
+        expect(christianity.is_marked_for_destruction).toBe(true);
+        expect(islam.is_marked_for_destruction).toBe(true);
     });
 
-    it('builds food totals by slot and applies pending merchant stored gold', () => {
+    it('builds food totals by slot and applies deferred merchant gold from a random adjacent symbol', () => {
         const board = createEmptyBoard();
         const merchant = createInstance(Sym.merchant, 'merchant');
         merchant.merchant_store_pending = true;
         merchant.stored_gold = 1;
         board[1][1] = merchant;
+        board[0][1] = createInstance(Sym.wheat, 'left');
+        board[2][1] = createInstance(Sym.rice, 'right');
 
         const foodBySlotKey = buildFoodBySlotKey([
             { x: 0, y: 1, food: -2, gold: 0, knowledge: 0 },
@@ -115,7 +257,9 @@ describe('symbolEffectResolution', () => {
             { x: 2, y: 1, food: 3, gold: 0, knowledge: 0 },
         ]);
 
-        applyMerchantStoredGold({
+        vi.spyOn(Math, 'random').mockReturnValue(0.99);
+
+        const result = computeMerchantDeferredEffects({
             board,
             width: 5,
             height: 4,
@@ -124,8 +268,122 @@ describe('symbolEffectResolution', () => {
         });
 
         expect(foodBySlotKey.get(slotKey(2, 1))).toBe(7);
-        expect(merchant.stored_gold).toBe(8);
+        expect(result.effects).toEqual([{ x: 1, y: 1, food: 0, gold: 7, knowledge: 0 }]);
+        expect(result.goldDelta).toBe(7);
+        expect(merchant.stored_gold).toBe(0);
         expect(merchant.merchant_store_pending).toBe(false);
+        vi.restoreAllMocks();
+    });
+
+    it('upgrades merchant to use the highest adjacent food with Guild', () => {
+        const board = createEmptyBoard();
+        const merchant = createInstance(Sym.merchant, 'merchant');
+        merchant.merchant_store_pending = true;
+        board[1][1] = merchant;
+        board[0][1] = createInstance(Sym.wheat, 'left');
+        board[2][1] = createInstance(Sym.rice, 'right');
+
+        const result = computeMerchantDeferredEffects({
+            board,
+            width: 5,
+            height: 4,
+            foodBySlotKey: buildFoodBySlotKey([
+                { x: 0, y: 1, food: 3, gold: 0, knowledge: 0 },
+                { x: 2, y: 1, food: 8, gold: 0, knowledge: 0 },
+            ]),
+            getAdjacentCoords,
+            unlockedKnowledgeUpgrades: [GUILD_UPGRADE_ID],
+        });
+
+        expect(result.effects).toEqual([{ x: 1, y: 1, food: 0, gold: 8, knowledge: 0 }]);
+        expect(result.goldDelta).toBe(8);
+        expect(merchant.merchant_store_pending).toBe(false);
+    });
+
+    it('upgrades corn to produce 4 food with Feudalism', () => {
+        const board = createEmptyBoard();
+        const corn = createInstance(Sym.corn, 'corn');
+        board[0][0] = corn;
+
+        const baseResult = processSingleSymbolEffects(corn, board, 0, 0, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(corn, board, 0, 0, { upgrades: [FEUDAL_CORN_UPGRADE_ID] });
+
+        expect(baseResult.food).toBe(2);
+        expect(upgradedResult.food).toBe(4);
+    });
+
+    it('upgrades salt to produce 2 food per adjacent terrain with Architecture', () => {
+        const board = createEmptyBoard();
+        const salt = createInstance(Sym.salt, 'salt');
+        board[1][1] = salt;
+        board[0][0] = createInstance(Sym.grassland, 'grassland');
+        board[1][0] = createInstance(Sym.plains, 'plains');
+        board[2][2] = createInstance(Sym.forest, 'forest');
+
+        const baseResult = processSingleSymbolEffects(salt, board, 1, 1, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(salt, board, 1, 1, { upgrades: [ARCHITECTURE_UPGRADE_ID] });
+
+        expect(baseResult.food).toBe(3);
+        expect(upgradedResult.food).toBe(6);
+    });
+
+    it('upgrades monument to produce 10 knowledge with Nationalism', () => {
+        const board = createEmptyBoard();
+        const monument = createInstance(Sym.monument, 'monument');
+        board[0][0] = monument;
+
+        const baseResult = processSingleSymbolEffects(monument, board, 0, 0, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(monument, board, 0, 0, { upgrades: [NATIONALISM_UPGRADE_ID] });
+
+        expect(baseResult.knowledge).toBe(5);
+        expect(upgradedResult.knowledge).toBe(10);
+    });
+
+    it('upgrades honey to produce 10 food with Exploration when 5 of the same terrain exist', () => {
+        const board = createEmptyBoard();
+        const honey = createInstance(Sym.honey, 'honey');
+        board[0][0] = honey;
+        board[0][1] = createInstance(Sym.forest, 'forest_1');
+        board[1][0] = createInstance(Sym.forest, 'forest_2');
+        board[1][1] = createInstance(Sym.forest, 'forest_3');
+        board[2][0] = createInstance(Sym.forest, 'forest_4');
+        board[2][1] = createInstance(Sym.forest, 'forest_5');
+
+        const baseResult = processSingleSymbolEffects(honey, board, 0, 0, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(honey, board, 0, 0, { upgrades: [EXPLORATION_UPGRADE_ID] });
+
+        expect(baseResult.food).toBe(5);
+        expect(upgradedResult.food).toBe(10);
+    });
+
+    it('upgrades spices to produce 3 food per terrain type with Colonialism', () => {
+        const board = createEmptyBoard();
+        const spices = createInstance(Sym.spices, 'spices');
+        board[0][0] = spices;
+        board[0][1] = createInstance(Sym.grassland, 'grassland');
+        board[1][0] = createInstance(Sym.plains, 'plains');
+        board[1][1] = createInstance(Sym.forest, 'forest');
+
+        const baseResult = processSingleSymbolEffects(spices, board, 0, 0, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(spices, board, 0, 0, { upgrades: [COLONIALISM_UPGRADE_ID] });
+
+        expect(baseResult.food).toBe(3);
+        expect(upgradedResult.food).toBe(9);
+    });
+
+    it('upgrades horse with Military Science', () => {
+        const board = createEmptyBoard();
+        const horse = createInstance(Sym.horse, 'horse');
+        board[1][1] = horse;
+        board[0][1] = createInstance(Sym.plains, 'plains');
+
+        const baseResult = processSingleSymbolEffects(horse, board, 1, 1, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(horse, board, 1, 1, { upgrades: [MILITARY_SCIENCE_UPGRADE_ID] });
+
+        expect(baseResult.food).toBe(3);
+        expect(baseResult.gold).toBe(1);
+        expect(upgradedResult.food).toBe(6);
+        expect(upgradedResult.gold).toBe(2);
     });
 
     it('adds board grassland count to wheat payout with Three-field System', () => {
@@ -418,6 +676,27 @@ describe('symbolEffectResolution', () => {
         expect(educationResult.contributors).toEqual([{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 2, y: 2 }]);
     });
 
+    it('makes Library produce knowledge per board symbol with Scientific Theory', () => {
+        const board = createEmptyBoard();
+        const library = createInstance(Sym.library, 'library');
+        board[1][1] = library;
+        board[0][1] = createInstance(Sym.wheat, 'wheat');
+        board[1][0] = createInstance(Sym.rice, 'rice');
+        board[2][2] = createInstance(Sym.stone, 'stone');
+        board[4][3] = createInstance(Sym.fish, 'fish');
+
+        const result = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [16, SCIENTIFIC_THEORY_UPGRADE_ID] });
+
+        expect(result.knowledge).toBe(10);
+        expect(result.contributors).toEqual([
+            { x: 0, y: 1 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 2, y: 2 },
+            { x: 4, y: 3 },
+        ]);
+    });
+
     it('applies tiered fish and pearl effects from board-wide sea counts', () => {
         const board = createEmptyBoard();
         const fish = createInstance(Sym.fish, 'fish');
@@ -584,7 +863,6 @@ describe('symbolEffectResolution', () => {
         board[0][1] = createInstance(Sym.wheat, 'wheat');
         board[1][1] = createInstance(Sym.rice, 'rice');
         board[2][0] = createInstance(Sym.stone, 'stone');
-        board[2][2] = createInstance(Sym.copper, 'copper');
 
         const pearlResult = processSingleSymbolEffects(
             pearl,

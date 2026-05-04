@@ -12,7 +12,7 @@ import { handleDisasterEffects } from './symbolEffects/handlers/disasterEffects'
 import { handleEnemyEffects } from './symbolEffects/handlers/enemyEffects';
 import { handleMedievalEffects } from './symbolEffects/handlers/medievalEffects';
 import { handleNormalEffects } from './symbolEffects/handlers/normalEffects';
-import { applyReligionDoctrinePenalty, handleReligionEffects } from './symbolEffects/handlers/religionEffects';
+import { handleReligionEffects } from './symbolEffects/handlers/religionEffects';
 import { handleTerrainEffects } from './symbolEffects/handlers/terrainEffects';
 import { DEFAULT_RELIC_EFFECTS, type ActiveRelicEffects, type BoardGrid, type EffectResult, type SymbolEffectContext } from './symbolEffects/types';
 
@@ -68,8 +68,6 @@ export const processSingleSymbolEffects = (
     for (const handler of EFFECT_HANDLERS) {
         if (handler(handlerCtx)) break;
     }
-
-    applyReligionDoctrinePenalty(handlerCtx);
 
     return buildEffectResult(state);
 };

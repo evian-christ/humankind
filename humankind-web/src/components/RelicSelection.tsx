@@ -1,4 +1,5 @@
 import { useGameStore } from '../game/state/gameStore';
+import { getInflatedGoldCost } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
@@ -13,6 +14,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MEDIEVAL]: 'era.medieval',
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
+    [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
 // Helper function inside component to render effect text
@@ -30,8 +32,9 @@ const RelicSelection = () => {
     const relicChoices = useGameStore((s) => s.relicChoices);
     const buyRelic = useGameStore((s) => s.buyRelic);
     const gold = useGameStore((s) => s.gold);
+    const level = useGameStore((s) => s.level);
     const turn = useGameStore((s) => s.turn);
-    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades);
+    const leaderId = useGameStore((s) => s.leaderId);
     const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
     const language = useSettingsStore((s) => s.language);
 
@@ -39,11 +42,11 @@ const RelicSelection = () => {
 
     const turnsUntilRefresh = 10 - (turn % 10);
     const relicShopTitle = t('game.relicShopTitle', language).replace('{turns}', String(turnsUntilRefresh));
-    const hasGoldenTrade = (unlockedKnowledgeUpgrades || []).includes(11);
+    const hasGoldenTrade = leaderId === 'ramesses';
 
     const getEffectiveRelicCost = (relic: { id: number; cost: number }) => {
         const isHalfPrice = relicHalfPriceRelicId === relic.id;
-        return hasGoldenTrade && isHalfPrice ? Math.floor(relic.cost * 0.5) : relic.cost;
+        return getInflatedGoldCost(relic.cost, level, hasGoldenTrade && isHalfPrice ? 0.5 : 1);
     };
 
     const isGoldenTradeDiscount = (relic: { id: number; cost: number }) =>
@@ -131,7 +134,7 @@ const RelicSelection = () => {
                                         isGoldenTradeDiscount(relic)
                                             ? t('game.relicShopBuyDiscountAria', language)
                                                 .replace('{sale}', String(getEffectiveRelicCost(relic)))
-                                                .replace('{original}', String(relic.cost))
+                                                .replace('{original}', String(getInflatedGoldCost(relic.cost, level)))
                                             : undefined
                                     }
                                 >
@@ -141,7 +144,7 @@ const RelicSelection = () => {
                                                 <span className="relic-card-buy-price-icon relic-card-buy-price-icon--was" aria-hidden>
                                                     &#9679;
                                                 </span>
-                                                <span className="relic-card-buy-price-num relic-card-buy-price-num--struck">{relic.cost}</span>
+                                                <span className="relic-card-buy-price-num relic-card-buy-price-num--struck">{getInflatedGoldCost(relic.cost, level)}</span>
                                             </span>
                                             <span className="relic-card-buy-price-now">
                                                 <span className="relic-card-buy-price-icon" aria-hidden>

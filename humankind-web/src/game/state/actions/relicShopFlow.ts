@@ -1,5 +1,6 @@
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { useRelicStore } from '../relicStore';
+import { getInflatedGoldCost } from '../gameCalculations';
 import type { GameState } from '../gameStore';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
@@ -21,7 +22,7 @@ export const createRelicShopFlowActions = ({ get, set }: RelicShopFlowDeps) => (
 
         const hasGoldenTrade = state.leaderId === 'ramesses';
         const isHalfPrice = state.relicHalfPriceRelicId === relicId;
-        const effectiveCost = hasGoldenTrade && isHalfPrice ? Math.floor(def.cost * 0.5) : def.cost;
+        const effectiveCost = getInflatedGoldCost(def.cost, state.level, hasGoldenTrade && isHalfPrice ? 0.5 : 1);
 
         if (state.gold < effectiveCost) return;
 

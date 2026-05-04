@@ -16,7 +16,7 @@ import type { RelicInstance } from '../../game/state/relicStore';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
 import type { PlayerSymbolInstance } from '../../game/types';
 import { isMeleeUnit, isRangedUnit } from '../../game/data/unitUpgrades';
-import { TRACKING_UPGRADE_ID } from '../../game/data/knowledgeUpgrades';
+import { MILITARY_SCIENCE_UPGRADE_ID, TRACKING_UPGRADE_ID } from '../../game/data/knowledgeUpgrades';
 import { loadGameAssets } from './AssetLoader';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -34,7 +34,12 @@ function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][], x: num
     return false;
 }
 
-function boardHasTrainableAdjacentMelee(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
+function boardHasTrainableAdjacentMelee(
+    board: (PlayerSymbolInstance | null)[][],
+    x: number,
+    y: number,
+    trainedCavalryId: number,
+): boolean {
     for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
             if (dx === 0 && dy === 0) continue;
@@ -42,7 +47,7 @@ function boardHasTrainableAdjacentMelee(board: (PlayerSymbolInstance | null)[][]
             const ny = y + dy;
             if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
             const candidate = board[nx][ny];
-            if (candidate && !candidate.is_marked_for_destruction && isMeleeUnit(candidate.definition) && candidate.definition.id !== S.cavalry) {
+            if (candidate && !candidate.is_marked_for_destruction && isMeleeUnit(candidate.definition) && candidate.definition.id !== trainedCavalryId) {
                 return true;
             }
         }
@@ -702,7 +707,12 @@ export class PixiGameApp {
                     state.phase === 'idle' &&
                     symDef.id === S.horse &&
                     !symbol.is_marked_for_destruction &&
-                    boardHasTrainableAdjacentMelee(state.board, x, y);
+                    boardHasTrainableAdjacentMelee(
+                        state.board,
+                        x,
+                        y,
+                        state.unlockedKnowledgeUpgrades.includes(MILITARY_SCIENCE_UPGRADE_ID) ? S.cavalry_corps : S.cavalry,
+                    );
                 const canTrainTrackerArcher =
                     state.phase === 'idle' &&
                     symDef.id === S.deer &&
@@ -906,24 +916,6 @@ export class PixiGameApp {
                     counterText.x = cellX + cellWidth - 21;
                     counterText.y = cellY + cellHeight - 24 + liftY + wobbleY;
                     drawTarget.addChild(counterText);
-                }
-
-                // Merchant(22): 저장된 골드를 카운터로 표시
-                if (symDef.id === S.merchant && (symbol.stored_gold ?? 0) > 0) {
-                    const storedGoldText = new PIXI.Text({
-                        text: String(symbol.stored_gold),
-                        style: new PIXI.TextStyle({
-                            fill: '#fbbf24',
-                            fontSize: 30 * fs,
-                            fontWeight: 'bold',
-                            fontFamily,
-                            stroke: { color: '#000000', width: 3 },
-                        }),
-                    });
-                    storedGoldText.anchor.set(0.5, 0.5);
-                    storedGoldText.x = cellX + cellWidth - 21;
-                    storedGoldText.y = cellY + cellHeight - 24 + liftY + wobbleY;
-                    drawTarget.addChild(storedGoldText);
                 }
 
                 if (symDef.base_attack !== undefined && symDef.base_attack > 0) {

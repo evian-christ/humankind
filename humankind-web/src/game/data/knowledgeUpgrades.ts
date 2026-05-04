@@ -135,6 +135,19 @@ export const AGRICULTURAL_SURPLUS_UPGRADE_ID = 36;
 export const MODERN_AGRICULTURE_UPGRADE_ID = 37;
 export const MODERN_AGE_UPGRADE_ID = 60;
 export const AGI_PROJECT_UPGRADE_ID = 61;
+export const SCIENTIFIC_THEORY_UPGRADE_ID = 62;
+export const THEOCRACY_UPGRADE_ID = 63;
+export const GUILD_UPGRADE_ID = 64;
+export const STATE_LABOR_UPGRADE_ID = 65;
+export const FEUDAL_CORN_UPGRADE_ID = 66;
+export const ARCHITECTURE_UPGRADE_ID = 67;
+export const NATIONALISM_UPGRADE_ID = 68;
+export const EXPLORATION_UPGRADE_ID = 69;
+export const COLONIALISM_UPGRADE_ID = 70;
+export const MILITARY_SCIENCE_UPGRADE_ID = 71;
+export const URBANIZATION_UPGRADE_ID = 72;
+export const STEAM_POWER_UPGRADE_ID = 73;
+export const ELECTRICITY_UPGRADE_ID = 74;
 /** 철제 기술 — 전사를 검사로 업그레이드 */
 export const IRON_WORKING_UPGRADE_ID = 2;
 /** 기계장치 — 궁수를 석궁병으로 업그레이드 */
@@ -171,7 +184,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 1,
         name: 'Writing System',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Library. Base Knowledge production +2.',
+        description: 'Unlocks Library.',
         sprite: '001.png',
         descSymbols: [{ symbolKey: 'library', relation: 'pool_add' }],
     },
@@ -366,6 +379,46 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         sprite: '-',
         descSymbols: [{ symbolKey: 'wild_berries', relation: 'effect_modify' }],
     },
+    [ARCHITECTURE_UPGRADE_ID]: {
+        id: ARCHITECTURE_UPGRADE_ID,
+        name: 'Architecture',
+        type: SymbolType.ANCIENT,
+        description: 'Base Knowledge production +1. Upgrades Salt.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'salt', relation: 'effect_modify' }],
+    },
+    [NATIONALISM_UPGRADE_ID]: {
+        id: NATIONALISM_UPGRADE_ID,
+        name: 'Nationalism',
+        type: SymbolType.MEDIEVAL,
+        description: 'Base Knowledge production +3. Upgrades Monument.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'monument', relation: 'effect_modify' }],
+    },
+    [EXPLORATION_UPGRADE_ID]: {
+        id: EXPLORATION_UPGRADE_ID,
+        name: 'Exploration',
+        type: SymbolType.MEDIEVAL,
+        description: 'Base Gold production +2. Upgrades Honey.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'honey', relation: 'effect_modify' }],
+    },
+    [COLONIALISM_UPGRADE_ID]: {
+        id: COLONIALISM_UPGRADE_ID,
+        name: 'Colonialism',
+        type: SymbolType.MEDIEVAL,
+        description: 'Base Gold production +3. Upgrades Spices.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'spices', relation: 'effect_modify' }],
+    },
+    [MILITARY_SCIENCE_UPGRADE_ID]: {
+        id: MILITARY_SCIENCE_UPGRADE_ID,
+        name: 'Military Science',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Horse.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'horse', relation: 'effect_modify' }],
+    },
     [MECHANICS_UPGRADE_ID]: {
         id: MECHANICS_UPGRADE_ID,
         name: 'Mechanics',
@@ -435,7 +488,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 6,
         name: 'Currency',
         type: SymbolType.ANCIENT,
-        description: 'Permanently increases base Gold generation by +2. Unlocks Merchant symbol.',
+        description: 'Unlocks Merchant symbol.',
         sprite: '006.png',
         descSymbols: [{ symbolKey: 'merchant', relation: 'pool_add' }],
     },
@@ -458,6 +511,42 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             'Gain 3 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
         sprite: '-',
     },
+    [STATE_LABOR_UPGRADE_ID]: {
+        id: STATE_LABOR_UPGRADE_ID,
+        name: 'State Labor',
+        type: SymbolType.ANCIENT,
+        description: 'Base Food production +1. Base Gold production +1.',
+        sprite: '-',
+    },
+    [URBANIZATION_UPGRADE_ID]: {
+        id: URBANIZATION_UPGRADE_ID,
+        name: 'Urbanization',
+        type: SymbolType.MODERN,
+        description: 'Base Food production +10. Base Gold production +2.',
+        sprite: '-',
+    },
+    [STEAM_POWER_UPGRADE_ID]: {
+        id: STEAM_POWER_UPGRADE_ID,
+        name: 'Steam Power',
+        type: SymbolType.MODERN,
+        description: 'Base Gold production +8. Base Knowledge production +4.',
+        sprite: '-',
+    },
+    [ELECTRICITY_UPGRADE_ID]: {
+        id: ELECTRICITY_UPGRADE_ID,
+        name: 'Electricity',
+        type: SymbolType.MODERN,
+        description: 'Base Food production +5. Base Gold production +10. Base Knowledge production +5.',
+        sprite: '-',
+    },
+    [FEUDAL_CORN_UPGRADE_ID]: {
+        id: FEUDAL_CORN_UPGRADE_ID,
+        name: 'Feudalism',
+        type: SymbolType.ANCIENT,
+        description: 'Base Food production +2. Upgrades Corn.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'corn', relation: 'effect_modify' }],
+    },
     [FISHERIES_UPGRADE_ID]: {
         id: FISHERIES_UPGRADE_ID,
         name: 'Fisheries',
@@ -473,7 +562,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 10,
         name: 'Mathematics',
         type: SymbolType.ANCIENT,
-        description: 'Base Food +5, Base Gold +2, Base Knowledge +2.',
+        description: 'Base Food +1, Base Knowledge +1.',
         sprite: '-',
     },
     /** 레벨 10 이상에서만 선택지에 등장 — 중세 풀·지형 가중 */
@@ -491,16 +580,45 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: 16,
         name: 'Education',
         type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Library. Base Knowledge production +2.',
+        description: 'Upgrades Library.',
         sprite: '-',
         descSymbols: [{ symbolKey: 'library', relation: 'effect_modify' }],
+    },
+    [THEOCRACY_UPGRADE_ID]: {
+        id: THEOCRACY_UPGRADE_ID,
+        name: 'Theocracy',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Christianity, Islam, Buddhism, and Hinduism.',
+        sprite: '-',
+        descSymbols: [
+            { symbolKey: 'christianity', relation: 'effect_modify' },
+            { symbolKey: 'islam', relation: 'effect_modify' },
+            { symbolKey: 'buddhism', relation: 'effect_modify' },
+            { symbolKey: 'hinduism', relation: 'effect_modify' },
+        ],
+    },
+    [GUILD_UPGRADE_ID]: {
+        id: GUILD_UPGRADE_ID,
+        name: 'Guild',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Merchant.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'merchant', relation: 'effect_modify' }],
     },
     24: {
         id: 24,
         name: 'Printing Press',
         type: SymbolType.MEDIEVAL,
-        description: 'Base Food +10, Base Gold +5, Base Knowledge +5.',
+        description: 'Base Gold +2, Base Knowledge +2.',
         sprite: '-',
+    },
+    [SCIENTIFIC_THEORY_UPGRADE_ID]: {
+        id: SCIENTIFIC_THEORY_UPGRADE_ID,
+        name: 'Scientific Theory',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Library.',
+        sprite: '-',
+        descSymbols: [{ symbolKey: 'library', relation: 'effect_modify' }],
     },
     [COMPASS_UPGRADE_ID]: {
         id: COMPASS_UPGRADE_ID,
@@ -664,6 +782,10 @@ export const TERRITORIAL_REORG_UPGRADE_ID = 22;
 
 export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
     [16]: [1],
+    [THEOCRACY_UPGRADE_ID]: [4],
+    [GUILD_UPGRADE_ID]: [6],
+    [MILITARY_SCIENCE_UPGRADE_ID]: [HORSEMANSHIP_UPGRADE_ID],
+    [SCIENTIFIC_THEORY_UPGRADE_ID]: [16],
     [IRON_WORKING_UPGRADE_ID]: [5],
     [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
     [HORSEMANSHIP_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],

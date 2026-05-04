@@ -154,6 +154,20 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
+    it('charges the inflated reroll cost by knowledge level', () => {
+        const harness = createHarness({
+            level: 20,
+            gold: 7,
+            symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.wheat]!, SYMBOLS[S.wheat]!],
+        });
+
+        harness.actions.rerollSymbols();
+
+        expect(harness.get().gold).toBe(2);
+        expect(harness.get().rerollsThisTurn).toBe(1);
+        expect(harness.get().symbolChoices).toHaveLength(3);
+    });
+
     it('applies a legal knowledge upgrade and spends one research point', () => {
         const harness = createHarness({
             phase: 'idle',

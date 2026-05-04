@@ -2,17 +2,25 @@ import type { Language } from '../game/state/settingsStore';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
+    ARCHITECTURE_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
+    COLONIALISM_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
+    ELECTRICITY_UPGRADE_ID,
+    EXPLORATION_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
+    GUILD_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MINING_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
@@ -23,10 +31,14 @@ import {
     SEAFARING_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
+    STEAM_POWER_UPGRADE_ID,
+    STATE_LABOR_UPGRADE_ID,
     TANNING_UPGRADE_ID,
+    THEOCRACY_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
+    URBANIZATION_UPGRADE_ID,
 } from '../game/data/knowledgeUpgrades';
 
 const translations: Record<Language, Record<string, string>> = {
@@ -255,6 +267,7 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Era names
         'era.special': 'Religion',
+        'era.specialSymbol': 'Special',
         'era.normal': 'Normal',
         'era.ancient': 'Ancient',
         'era.medieval': 'Medieval',
@@ -316,7 +329,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.fish.name': 'Fish',
         'symbol.sea.name': 'Sea',
         'symbol.stone.name': 'Stone',
-        'symbol.copper.name': 'Copper',
         'symbol.grassland.name': 'Grassland',
         'symbol.monument.name': 'Monument',
         'symbol.oasis.name': 'Oasis',
@@ -350,6 +362,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.tracker_archer.name': 'Tracker Archer',
         'symbol.knight.name': 'Knight',
         'symbol.cavalry.name': 'Cavalry',
+        'symbol.cavalry_corps.name': 'Cavalry Corps',
         'symbol.crossbowman.name': 'Crossbowman',
         'symbol.musketman.name': 'Musketman',
         'symbol.cannon.name': 'Cannon',
@@ -373,7 +386,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.hay.name': 'Hay',
         'symbol.spices.name': 'Spices',
         'symbol.tax.name': 'Tax',
-        'symbol.university.name': 'University',
         'symbol.aqueduct.name': 'Aqueduct',
         'symbol.rye.name': 'Rye',
         'symbol.sheep.name': 'Sheep',
@@ -411,7 +423,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.fish.desc': 'When adjacent to Sea: +2 Food.',
         'symbol.sea.desc': '+1 Gold per 3 adjacent symbols.',
         'symbol.stone.desc': '+1 Gold; when a Mountain is in the same column: +2 additional Gold.',
-        'symbol.copper.desc': '+1 Gold; if exactly 3 Copper on board: x3 Gold production.',
         'symbol.grassland.desc': '+1 Food.',
         'symbol.grassland.descWithIrrigation': '+2 Food.',
         'symbol.grassland.descWithThreeField': '+5 Food.',
@@ -426,7 +437,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.campfire.desc': 'Gain Food equal to the Food produced this turn by the highest-producing adjacent symbol. Destroyed.',
         'symbol.pottery.desc': '+3 Food stored per turn; on destroy: gain Food equal to stored Counter.',
         'symbol.tribal_village.desc': 'Destroyed; on destroy: adds 2 random Normal symbols.',
-        'symbol.merchant.desc': 'Not in corner: stores Gold equal to highest adjacent Food; in corner: gains stored Gold.',
+        'symbol.merchant.desc': 'Produces Gold equal to the Food produced by a random adjacent symbol.',
         'symbol.horse.desc': '+1 Food, +1 Gold; when adjacent to Plains: +2 additional Food. When adjacent to a melee unit: Cavalry training opportunity.',
         'symbol.crab.desc': 'When adjacent to Sea or Harbor: +1 Food, +2 Gold.',
         'symbol.library.desc': '+1 Knowledge per adjacent symbol.',
@@ -440,15 +451,16 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.radiant_loot.desc': 'Open to gain a large reward.',
         'symbol.fur.desc': '+2 Gold per 2 Forests placed on the board.',
         'symbol.date.desc': '+1 Food; on destroy: +10 Food.',
-        'symbol.christianity.desc': '+Food equal to highest adjacent Food; adjacent to Religion: -50 Food.',
-        'symbol.islam.desc': '+2 Gold per adjacent symbol that produces Knowledge; adjacent to Religion: -50 Food.',
-        'symbol.buddhism.desc': 'Per empty slot: +2 Food; adjacent to Religion: -50 Food.',
-        'symbol.hinduism.desc': '+5 Food and +5 Knowledge per symbol destroyed this turn; adjacent to Religion: -50 Food.',
+        'symbol.christianity.desc': '+Food equal to the highest Food produced by an adjacent symbol. Destroyed if another Religion symbol is on the board.',
+        'symbol.islam.desc': '+2 Gold per Knowledge-producing symbol on the board. Destroyed if another Religion symbol is on the board.',
+        'symbol.buddhism.desc': '+2 Food per empty slot on the board. Destroyed if another Religion symbol is on the board.',
+        'symbol.hinduism.desc': 'If placed in a corner: +10 Food and +10 Knowledge. Destroyed if another Religion symbol is on the board.',
         'symbol.warrior.desc': 'Primitive melee unit.',
         'symbol.archer.desc': 'Ancient ranged unit.',
         'symbol.tracker_archer.desc': 'Ancient ranged unit. When adjacent to Forest: +1 Food.',
         'symbol.knight.desc': 'Ancient melee unit.',
         'symbol.cavalry.desc': 'Ancient melee unit.',
+        'symbol.cavalry_corps.desc': 'Medieval melee unit.',
         'symbol.crossbowman.desc': 'Medieval ranged unit.',
         'symbol.musketman.desc': 'Medieval melee unit.',
         'symbol.cannon.desc': 'Modern ranged unit.',
@@ -471,7 +483,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.hay.desc': 'When adjacent to Plains: counter +1. On destroy: gain Food equal to Counter.',
         'symbol.spices.desc': '+1 Food per different terrain type placed.',
         'symbol.tax.desc': '+Gold equal to a random adjacent symbol\'s Food produced this turn.',
-        'symbol.university.desc': '+1 Knowledge per symbol placed on the board.',
         'symbol.aqueduct.desc': 'Adjacent Wheat, Rice, and Rye produce double Food this turn.',
         'symbol.rye.desc': '+2 Food; when adjacent to Plains: +2 additional Food.',
         'symbol.sheep.desc':
@@ -534,7 +545,7 @@ const translations: Record<Language, Record<string, string>> = {
 
         // ── Knowledge Upgrades ──
         'knowledgeUpgrade.1.name': 'Writing System',
-        'knowledgeUpgrade.1.desc': 'Unlocks Library. Base Knowledge production +2.',
+        'knowledgeUpgrade.1.desc': 'Unlocks Library.',
         'knowledgeUpgrade.2.name': 'Iron Working',
         'knowledgeUpgrade.2.desc': 'Upgrades Warrior into Knight.',
         'knowledgeUpgrade.3.name': 'Irrigation',
@@ -544,7 +555,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.5.name': 'Archery',
         'knowledgeUpgrade.5.desc': 'Unlocks Archer.',
         'knowledgeUpgrade.6.name': 'Currency',
-        'knowledgeUpgrade.6.desc': 'Permanently increases base Gold generation by +2. Unlocks Merchant symbol.',
+        'knowledgeUpgrade.6.desc': 'Unlocks Merchant symbol.',
         'knowledgeUpgrade.7.name': 'Horsemanship',
         'knowledgeUpgrade.7.desc': 'Adds Horse to the symbol selection pool. Upgrades Plains.',
         'knowledgeUpgrade.8.name': 'Sacrificial Rite',
@@ -565,6 +576,21 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.33.name': 'Foreign Trade',
         'knowledgeUpgrade.33.desc': 'Upgrades Desert.',
         'knowledgeUpgrade.symbolDescAfter.33.desert': '+2 Gold; destroys 1 random adjacent Normal or era symbol.',
+        'knowledgeUpgrade.67.name': 'Architecture',
+        'knowledgeUpgrade.67.desc': 'Base Knowledge production +1. Upgrades Salt.',
+        'knowledgeUpgrade.symbolDescAfter.67.salt': '+2 Food per adjacent terrain symbol.',
+        'knowledgeUpgrade.68.name': 'Nationalism',
+        'knowledgeUpgrade.68.desc': 'Base Knowledge production +3. Upgrades Monument.',
+        'knowledgeUpgrade.symbolDescAfter.68.monument': '+10 Knowledge.',
+        'knowledgeUpgrade.69.name': 'Exploration',
+        'knowledgeUpgrade.69.desc': 'Base Gold production +2. Upgrades Honey.',
+        'knowledgeUpgrade.symbolDescAfter.69.honey': 'If 5 or more of the same terrain are placed on the board: +10 Food.',
+        'knowledgeUpgrade.70.name': 'Colonialism',
+        'knowledgeUpgrade.71.name': 'Military Science',
+        'knowledgeUpgrade.70.desc': 'Base Gold production +3. Upgrades Spices.',
+        'knowledgeUpgrade.71.desc': 'Upgrades Horse.',
+        'knowledgeUpgrade.symbolDescAfter.70.spices': '+3 Food per different terrain type placed.',
+        'knowledgeUpgrade.symbolDescAfter.71.horse': '+2 Food, +2 Gold; when adjacent to Plains: +4 additional Food. When adjacent to a melee unit: Cavalry Corps training opportunity.',
         'knowledgeUpgrade.52.name': 'Trade Goods Exchange',
         'knowledgeUpgrade.52.desc': 'Dye and Papyrus are added to the symbol selection pool.',
         'knowledgeUpgrade.53.name': 'Dry Storage',
@@ -593,8 +619,19 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.34.desc': 'Base Food production +2. Upgrades Wild Berries.',
         'knowledgeUpgrade.symbolDescAfter.34.wild_berries':
             '+1 Food; when adjacent to Forest or Rainforest: +4 Food; when adjacent to Mountain: +5 Knowledge.',
+        'knowledgeUpgrade.66.name': 'Feudalism',
+        'knowledgeUpgrade.66.desc': 'Base Food production +2. Upgrades Corn.',
+        'knowledgeUpgrade.symbolDescAfter.66.corn': '+4 Food.',
         'knowledgeUpgrade.10.name': 'Mathematics',
-        'knowledgeUpgrade.10.desc': 'Base Food production +5, Base Gold production +2, Base Knowledge production +2.',
+        'knowledgeUpgrade.10.desc': 'Base Food production +1, Base Knowledge production +1.',
+        'knowledgeUpgrade.65.name': 'State Labor',
+        'knowledgeUpgrade.65.desc': 'Base Food production +1. Base Gold production +1.',
+        [`knowledgeUpgrade.${URBANIZATION_UPGRADE_ID}.name`]: 'Urbanization',
+        [`knowledgeUpgrade.${URBANIZATION_UPGRADE_ID}.desc`]: 'Base Food production +10. Base Gold production +2.',
+        [`knowledgeUpgrade.${STEAM_POWER_UPGRADE_ID}.name`]: 'Steam Power',
+        [`knowledgeUpgrade.${STEAM_POWER_UPGRADE_ID}.desc`]: 'Base Gold production +8. Base Knowledge production +4.',
+        [`knowledgeUpgrade.${ELECTRICITY_UPGRADE_ID}.name`]: 'Electricity',
+        [`knowledgeUpgrade.${ELECTRICITY_UPGRADE_ID}.desc`]: 'Base Food production +5. Base Gold production +10. Base Knowledge production +5.',
         'knowledgeUpgrade.25.name': 'Ancient Era',
         'knowledgeUpgrade.25.desc': 'Unlocks all Ancient symbols.',
         'knowledgeUpgrade.26.name': 'Pastoralism',
@@ -608,10 +645,22 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.61.name': 'AGI Project',
         'knowledgeUpgrade.61.desc': 'Gain the AGI Core.',
         'knowledgeUpgrade.16.name': 'Education',
-        'knowledgeUpgrade.16.desc': 'Upgrades Library. Base Knowledge production +2.',
+        'knowledgeUpgrade.16.desc': 'Upgrades Library.',
+        'knowledgeUpgrade.63.name': 'Theocracy',
+        'knowledgeUpgrade.63.desc': 'Upgrades Christianity, Islam, Buddhism, and Hinduism.',
+        'knowledgeUpgrade.64.name': 'Guild',
+        'knowledgeUpgrade.64.desc': 'Upgrades Merchant.',
+        'knowledgeUpgrade.symbolDescAfter.63.christianity': '+Food equal to the highest Food produced by any symbol on the board. Destroyed if another Religion symbol is on the board.',
+        'knowledgeUpgrade.symbolDescAfter.63.islam': '+3 Gold per Knowledge-producing symbol on the board. Destroyed if another Religion symbol is on the board.',
+        'knowledgeUpgrade.symbolDescAfter.63.buddhism': '+4 Food per empty slot on the board. Destroyed if another Religion symbol is on the board.',
+        'knowledgeUpgrade.symbolDescAfter.63.hinduism': 'If placed in a corner: +20 Food and +20 Knowledge. Destroyed if another Religion symbol is on the board.',
+        'knowledgeUpgrade.symbolDescAfter.64.merchant': 'Produces Gold equal to the highest Food produced by an adjacent symbol.',
         'knowledgeUpgrade.symbolDescAfter.16.library': '+2 Knowledge per adjacent symbol.',
+        'knowledgeUpgrade.62.name': 'Scientific Theory',
+        'knowledgeUpgrade.62.desc': 'Upgrades Library.',
+        'knowledgeUpgrade.symbolDescAfter.62.library': '+2 Knowledge per symbol on the board.',
         'knowledgeUpgrade.24.name': 'Printing Press',
-        'knowledgeUpgrade.24.desc': 'Base Food +10, Base Gold +5, Base Knowledge +5.',
+        'knowledgeUpgrade.24.desc': 'Base Gold +2, Base Knowledge +2.',
         'knowledgeUpgrade.35.name': 'Three-field System',
         'knowledgeUpgrade.35.desc': 'Upgrades Wheat, Rice, and Grassland.',
         'knowledgeUpgrade.36.name': 'Agricultural Surplus',
@@ -667,7 +716,7 @@ const translations: Record<Language, Record<string, string>> = {
         'cattleButcher.button': 'Butcher',
         'cattleButcher.aria': 'Butcher for bonus resources',
         'horseTrain.button': 'Train',
-        'horseTrain.aria': 'Train an adjacent melee unit into Cavalry',
+        'horseTrain.aria': 'Train an adjacent melee unit',
         'lootOpen.button': 'Open',
         'lootOpen.aria': 'Open for treasure rewards',
         'knowledgeUpgrade.11.name': 'Golden Trade',
@@ -898,6 +947,7 @@ const translations: Record<Language, Record<string, string>> = {
 
         // Era names
         'era.special': '종교',
+        'era.specialSymbol': '특수',
         'era.normal': '일반',
         'era.ancient': '고대',
         'era.medieval': '중세',
@@ -959,7 +1009,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.fish.name': '물고기',
         'symbol.sea.name': '바다',
         'symbol.stone.name': '돌',
-        'symbol.copper.name': '구리',
         'symbol.grassland.name': '초원',
         'symbol.monument.name': '기념비',
         'symbol.oasis.name': '오아시스',
@@ -992,6 +1041,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.tracker_archer.name': '추적궁병',
         'symbol.knight.name': '검사',
         'symbol.cavalry.name': '기마병',
+        'symbol.cavalry_corps.name': '기병대',
         'symbol.crossbowman.name': '석궁병',
         'symbol.musketman.name': '머스킷병',
         'symbol.cannon.name': '대포',
@@ -1015,7 +1065,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.hay.name': '건초',
         'symbol.spices.name': '향신료',
         'symbol.tax.name': '세금',
-        'symbol.university.name': '대학',
         'symbol.aqueduct.name': '송수로',
         'symbol.rye.name': '귀리',
         'symbol.sheep.name': '양',
@@ -1053,7 +1102,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.fish.desc': '보드에 배치된 바다가 1개: 식량 +1; 2개: 식량 +2; 3개 이상: 식량 +4.',
         'symbol.sea.desc': '인접한 심볼 3개당: 골드 +1.',
         'symbol.stone.desc': '골드 +1; 같은 열에 산이 있으면: 골드 +2 추가.',
-        'symbol.copper.desc': '골드 +1; 보드에 구리 3개인 경우: 골드 생산 x3.',
         'symbol.grassland.desc': '식량 +1.',
         'symbol.grassland.descWithIrrigation': '식량 +2.',
         'symbol.grassland.descWithThreeField': '식량 +5.',
@@ -1068,7 +1116,7 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.campfire.desc': '이번 턴 식량 생산이 가장 높은 인접 심볼의 식량만큼 획득. 파괴.',
         'symbol.pottery.desc': '매 턴 저장 식량 +3; 파괴 시: 저장량만큼 식량 획득.',
         'symbol.tribal_village.desc': '파괴; 파괴 시: 무작위 일반 심볼 2개 추가.',
-        'symbol.merchant.desc': '구석 아닐 시: 인접 심볼 중 최고 식량 생산만큼 골드 저장; 구석 배치 시: 저장된 골드 획득.',
+        'symbol.merchant.desc': '무작위 인접 심볼의 식량 생산량 만큼 골드를 생산합니다.',
         'symbol.horse.desc': '식량 +1, 골드 +1; 평원에 인접 시: 식량 +2 추가 생산. 근접 유닛에 인접 시: 기마병 훈련 기회.',
         'symbol.crab.desc': '보드에 배치된 바다가 1개: 식량 +1, 골드 +1; 2개: 식량 +2, 골드 +2; 3개 이상: 식량 +2, 골드 +2.',
         'symbol.library.desc': '인접한 심볼 하나당 지식 +1.',
@@ -1082,15 +1130,16 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.radiant_loot.desc': '개봉하여 큰 보상을 획득합니다.',
         'symbol.fur.desc': '보드에 배치된 숲 2개마다: 골드 +2.',
         'symbol.date.desc': '식량 +1; 파괴 시: 식량 +10.',
-        'symbol.christianity.desc': '인접 심볼 중 최고 식량 생산량만큼 식량 생산; 종교 심볼 인접 시: 식량 -50.',
-        'symbol.islam.desc': '지식을 생산하는 인접 심볼 1개당 골드 +2; 종교 심볼 인접 시: 식량 -50.',
-        'symbol.buddhism.desc': '빈 슬롯 1개당: 식량 +2; 종교 심볼 인접 시: 식량 -50.',
-        'symbol.hinduism.desc': '이번 턴 파괴된 심볼 1개당 식량 +5, 지식 +5; 종교 심볼 인접 시: 식량 -50.',
+        'symbol.christianity.desc': '인접한 심볼 중 가장 높은 식량 생산량만큼 식량을 생산합니다. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
+        'symbol.islam.desc': '보드 위 지식을 생산하는 심볼 하나당 골드 +2. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
+        'symbol.buddhism.desc': '보드 위 빈 슬롯 1개당 식량 +2. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
+        'symbol.hinduism.desc': '구석에 배치 시 식량 +10, 지식 +10. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
         'symbol.warrior.desc': '원시 근접 유닛.',
         'symbol.archer.desc': '고대 원거리 유닛.',
         'symbol.tracker_archer.desc': '고대 원거리 유닛. 숲과 인접 시: 식량 +1.',
         'symbol.knight.desc': '고대 근접 유닛.',
         'symbol.cavalry.desc': '고대 근접 유닛.',
+        'symbol.cavalry_corps.desc': '중세 근접 유닛.',
         'symbol.crossbowman.desc': '중세 원거리 유닛.',
         'symbol.musketman.desc': '중세 근접 유닛.',
         'symbol.cannon.desc': '근대 원거리 유닛.',
@@ -1113,7 +1162,6 @@ const translations: Record<Language, Record<string, string>> = {
         'symbol.hay.desc': '평원 인접 시: 카운터 +1. 파괴 시: 카운터 만큼 식량 생산.',
         'symbol.spices.desc': '배치 된 다른 지형 유형 하나당: 식량 +1.',
         'symbol.tax.desc': '무작위 인접 심볼이 이번 턴 생산한 식량만큼 골드를 생산합니다.',
-        'symbol.university.desc': '배치된 심볼 하나당 지식 +1.',
         'symbol.aqueduct.desc': '인접한 밀·쌀·귀리의 이번 턴 식량 생산이 2배가 됩니다.',
         'symbol.rye.desc': '식량 +2. 평원 인접 시: 식량 +2 추가.',
         'symbol.sheep.desc':
@@ -1176,7 +1224,7 @@ const translations: Record<Language, Record<string, string>> = {
 
         // ── Knowledge Upgrades ──
         'knowledgeUpgrade.1.name': '문자',
-        'knowledgeUpgrade.1.desc': '도서관을 해금합니다. 기본 지식 생산 +2.',
+        'knowledgeUpgrade.1.desc': '도서관을 해금합니다.',
         'knowledgeUpgrade.2.name': '철제 기술',
         'knowledgeUpgrade.2.desc': '전사를 검사로 업그레이드합니다.',
         'knowledgeUpgrade.3.name': '관개',
@@ -1186,7 +1234,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.5.name': '궁술',
         'knowledgeUpgrade.5.desc': '궁수를 해금합니다.',
         'knowledgeUpgrade.6.name': '화폐',
-        'knowledgeUpgrade.6.desc': '기본 골드 생산량이 +2 증가합니다. 상인 심볼을 해금합니다.',
+        'knowledgeUpgrade.6.desc': '상인 심볼을 해금합니다.',
         'knowledgeUpgrade.7.name': '기마술',
         'knowledgeUpgrade.7.desc': '말을 해금합니다. 평원을 업그레이드합니다.',
         'knowledgeUpgrade.8.name': '희생 제의',
@@ -1206,6 +1254,21 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.33.name': '외국 무역',
         'knowledgeUpgrade.33.desc': '사막을 업그레이드합니다.',
         'knowledgeUpgrade.symbolDescAfter.33.desert': '골드 +2; 무작위 인접 일반·시대 심볼 1개 파괴.',
+        'knowledgeUpgrade.67.name': '건축',
+        'knowledgeUpgrade.67.desc': '기본 지식 생산 +1. 소금을 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.67.salt': '인접 지형 심볼 1개당: 식량 +2.',
+        'knowledgeUpgrade.68.name': '민족주의',
+        'knowledgeUpgrade.68.desc': '기본 지식 생산 +3. 기념비를 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.68.monument': '지식 +10.',
+        'knowledgeUpgrade.69.name': '탐험',
+        'knowledgeUpgrade.69.desc': '기본 골드 생산 +2. 꿀을 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.69.honey': '같은 지형 5개 이상 배치 시: 식량 +10.',
+        'knowledgeUpgrade.70.name': '식민주의',
+        'knowledgeUpgrade.71.name': '군사 과학',
+        'knowledgeUpgrade.70.desc': '기본 골드 생산 +3. 향신료를 업그레이드합니다.',
+        'knowledgeUpgrade.71.desc': '말을 업그레이드합니다.',
+        'knowledgeUpgrade.symbolDescAfter.70.spices': '배치된 다른 지형 유형 하나당: 식량 +3.',
+        'knowledgeUpgrade.symbolDescAfter.71.horse': '식량 +2, 골드 +2; 평원에 인접 시: 식량 +4 추가 생산. 근접 유닛에 인접 시: 기병대 훈련 기회.',
         'knowledgeUpgrade.52.name': '대상품 교역',
         'knowledgeUpgrade.52.desc': '염료와 파피루스를 해금합니다.',
         'knowledgeUpgrade.53.name': '건조 저장술',
@@ -1232,8 +1295,19 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.34.name': '족장제',
         'knowledgeUpgrade.34.desc': '기본 식량 생산 +2. 야생열매를 업그레이드합니다.',
         'knowledgeUpgrade.symbolDescAfter.34.wild_berries': '식량 +1; 숲 혹은 열대우림 인접 시: 식량 +4; 산 인접 시: 지식 +5.',
+        'knowledgeUpgrade.66.name': '봉건제',
+        'knowledgeUpgrade.66.desc': '기본 식량 생산 +2. 옥수수를 업그레이드 합니다.',
+        'knowledgeUpgrade.symbolDescAfter.66.corn': '식량 +4.',
         'knowledgeUpgrade.10.name': '수학',
-        'knowledgeUpgrade.10.desc': '기본 식량 생산 +5, 기본 골드 생산 +2, 기본 지식 생산 +2.',
+        'knowledgeUpgrade.10.desc': '기본 식량 생산 +1, 기본 지식 생산 +1.',
+        'knowledgeUpgrade.65.name': '국가 노동력',
+        'knowledgeUpgrade.65.desc': '기본 식량 생산 +1. 기본 골드 생산 +1.',
+        [`knowledgeUpgrade.${URBANIZATION_UPGRADE_ID}.name`]: '도시화',
+        [`knowledgeUpgrade.${URBANIZATION_UPGRADE_ID}.desc`]: '기본 식량 생산 +10. 기본 골드 생산 +2.',
+        [`knowledgeUpgrade.${STEAM_POWER_UPGRADE_ID}.name`]: '증기력',
+        [`knowledgeUpgrade.${STEAM_POWER_UPGRADE_ID}.desc`]: '기본 골드 생산 +8. 기본 지식 생산 +4.',
+        [`knowledgeUpgrade.${ELECTRICITY_UPGRADE_ID}.name`]: '전기',
+        [`knowledgeUpgrade.${ELECTRICITY_UPGRADE_ID}.desc`]: '기본 식량 생산 +5. 기본 골드 생산 +10. 기본 지식 생산 +5.',
         'knowledgeUpgrade.25.name': '고대 시대',
         'knowledgeUpgrade.25.desc': '고대 심볼을 모두 해금합니다.',
         'knowledgeUpgrade.26.name': '목축업',
@@ -1247,10 +1321,22 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.61.name': 'AGI 프로젝트',
         'knowledgeUpgrade.61.desc': 'AGI 코어를 획득합니다.',
         'knowledgeUpgrade.16.name': '교육',
-        'knowledgeUpgrade.16.desc': '도서관을 업그레이드 합니다. 기본 지식 생산 +2.',
+        'knowledgeUpgrade.16.desc': '도서관을 업그레이드 합니다.',
+        'knowledgeUpgrade.63.name': '신권',
+        'knowledgeUpgrade.63.desc': '기독교, 이슬람, 불교, 힌두교를 업그레이드합니다.',
+        'knowledgeUpgrade.64.name': '길드',
+        'knowledgeUpgrade.64.desc': '상인을 업그레이드 합니다.',
+        'knowledgeUpgrade.symbolDescAfter.63.christianity': '보드 위 심볼 중 가장 높은 식량 생산량 만큼 식량을 생산합니다. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.63.islam': '보드 위 지식을 생산하는 심볼 하나당 골드 +3. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.63.buddhism': '보드 위 빈 슬롯 하나당 식량 +4. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.63.hinduism': '구석에 배치 시 식량 +20, 지식 +20. 보드에 다른 종교 심볼이 있을 경우: 파괴.',
+        'knowledgeUpgrade.symbolDescAfter.64.merchant': '인접 심볼 중 가장 높은 식량 생산량 만큼 골드를 생산합니다.',
         'knowledgeUpgrade.symbolDescAfter.16.library': '인접한 심볼 하나당 지식 +2.',
+        'knowledgeUpgrade.62.name': '과학이론',
+        'knowledgeUpgrade.62.desc': '도서관을 업그레이드 합니다.',
+        'knowledgeUpgrade.symbolDescAfter.62.library': '보드 위 심볼 하나당: 지식 +2.',
         'knowledgeUpgrade.24.name': '인쇄술',
-        'knowledgeUpgrade.24.desc': '기본 식량 생산 +10, 기본 골드 생산 +5, 기본 지식 생산 +5.',
+        'knowledgeUpgrade.24.desc': '기본 골드 생산 +2, 기본 지식 생산 +2.',
         'knowledgeUpgrade.35.name': '삼포제',
         'knowledgeUpgrade.35.desc': '밀, 쌀, 초원을 업그레이드합니다.',
         'knowledgeUpgrade.36.name': '농업 잉여',
@@ -1306,7 +1392,7 @@ const translations: Record<Language, Record<string, string>> = {
         'cattleButcher.button': '도축',
         'cattleButcher.aria': '도축 시 보너스 획득',
         'horseTrain.button': '훈련',
-        'horseTrain.aria': '인접한 근접 유닛을 기마병으로 훈련',
+        'horseTrain.aria': '인접한 근접 유닛 훈련',
         'lootOpen.button': '개봉',
         'lootOpen.aria': '전리품 보상 개봉',
         'knowledgeUpgrade.11.name': '황금의 거래',
@@ -1598,9 +1684,59 @@ export function getBoardSymbolTooltipDesc(
     }
     if (symbolKey === 'library') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(16)
+        return have.has(62)
+            ? t('knowledgeUpgrade.symbolDescAfter.62.library', lang)
+            : have.has(16)
             ? t('knowledgeUpgrade.symbolDescAfter.16.library', lang)
             : t('symbol.library.desc', lang);
+    }
+    if (symbolKey === 'merchant') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(GUILD_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.64.merchant', lang)
+            : t('symbol.merchant.desc', lang);
+    }
+    if (symbolKey === 'horse') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(MILITARY_SCIENCE_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.71.horse', lang)
+            : t('symbol.horse.desc', lang);
+    }
+    if (symbolKey === 'corn') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(FEUDAL_CORN_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.66.corn', lang)
+            : t('symbol.corn.desc', lang);
+    }
+    if (symbolKey === 'salt') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(ARCHITECTURE_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.67.salt', lang)
+            : t('symbol.salt.desc', lang);
+    }
+    if (symbolKey === 'monument') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(NATIONALISM_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.68.monument', lang)
+            : t('symbol.monument.desc', lang);
+    }
+    if (symbolKey === 'honey') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(EXPLORATION_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.69.honey', lang)
+            : t('symbol.honey.desc', lang);
+    }
+    if (symbolKey === 'spices') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(COLONIALISM_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.70.spices', lang)
+            : t('symbol.spices.desc', lang);
+    }
+    if (symbolKey === 'christianity' || symbolKey === 'islam' || symbolKey === 'buddhism' || symbolKey === 'hinduism') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(THEOCRACY_UPGRADE_ID)
+            ? t(`knowledgeUpgrade.symbolDescAfter.63.${symbolKey}`, lang)
+            : t(`symbol.${symbolKey}.desc`, lang);
     }
     if (symbolKey !== 'wheat' && symbolKey !== 'rice') {
         return t(`symbol.${symbolKey}.desc`, lang);

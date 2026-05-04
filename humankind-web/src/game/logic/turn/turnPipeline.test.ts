@@ -80,6 +80,7 @@ describe('turnPipeline', () => {
         });
 
         expect(shouldDeferReligionEffect(S.christianity)).toBe(true);
+        expect(shouldDeferReligionEffect(S.buddhism)).toBe(true);
         expect(result).toEqual({ food: 0, knowledge: 0, gold: 0 });
         expect(pipeline.religionSlotsToRecalculate).toEqual([{ x: 1, y: 1, id: S.christianity }]);
     });

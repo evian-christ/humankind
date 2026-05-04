@@ -8,5 +8,6 @@ export enum SymbolType {
     ANCIENT = 5,
     UNIT = 6,
     ENEMY = 7,
-    DISASTER = 8
+    DISASTER = 8,
+    SPECIAL = 9
 }

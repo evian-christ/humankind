@@ -1,4 +1,4 @@
-import { NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, TRACKING_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { MILITARY_SCIENCE_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, TRACKING_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS } from '../../data/symbolDefinitions';
 import { isMeleeUnit, isRangedUnit } from '../../data/unitUpgrades';
 import type { GameState } from '../gameStore';
@@ -6,7 +6,7 @@ import { RELICS } from '../../data/relicDefinitions';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
-    scarabAndHinduismBonusForOwnedRemoves,
+    scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import { useRelicStore } from '../relicStore';
 
@@ -55,7 +55,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         const removed = [sym];
         const symAgg = aggregateCollectionDestroyEffects(removed, false, prev.unlockedKnowledgeUpgrades || []);
-        const shBonus = scarabAndHinduismBonusForOwnedRemoves(prev.board, removed.length);
+        const shBonus = scarabBonusForOwnedRemoves(prev.board, removed.length);
         const hasNomadicTradition = (prev.unlockedKnowledgeUpgrades || []).includes(NOMADIC_TRADITION_UPGRADE_ID);
         const butcherFood = sid === S.cattle ? (hasNomadicTradition ? 15 : 10) : 5;
         const butcherGoldFlat = sid === S.sheep ? (hasNomadicTradition ? 10 : 5) : 0;
@@ -112,18 +112,21 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (prev.phase !== 'idle') return;
         const horse = prev.board[x]?.[y];
         if (!horse || horse.definition.id !== S.horse || horse.is_marked_for_destruction) return;
+        const trainedCavalryId = (prev.unlockedKnowledgeUpgrades || []).includes(MILITARY_SCIENCE_UPGRADE_ID)
+            ? S.cavalry_corps
+            : S.cavalry;
 
         const targetCoord = getAdjacentCoords(x, y).find(({ x: ax, y: ay }) => {
             const candidate = prev.board[ax]?.[ay];
             return !!candidate &&
                 !candidate.is_marked_for_destruction &&
                 isMeleeUnit(candidate.definition) &&
-                candidate.definition.id !== S.cavalry;
+                candidate.definition.id !== trainedCavalryId;
         });
         if (!targetCoord) return;
 
         const target = prev.board[targetCoord.x][targetCoord.y];
-        const cavalryDef = SYMBOLS[S.cavalry]!;
+        const cavalryDef = SYMBOLS[trainedCavalryId]!;
         if (!target) return;
 
         const prevMax = target.definition.base_hp ?? 0;
@@ -159,7 +162,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
                 action: 'horse_train',
                 targetSlot: targetCoord,
                 fromSymbolId: target.definition.id,
-                toSymbolId: S.cavalry,
+                toSymbolId: trainedCavalryId,
             },
         });
     },
@@ -293,7 +296,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         const removed = [edict, target];
         const symAgg = aggregateCollectionDestroyEffects(removed, true, state.unlockedKnowledgeUpgrades || []);
-        const shBonus = scarabAndHinduismBonusForOwnedRemoves(state.board, removed.length);
+        const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
         const dFood = symAgg.food + shBonus.food;
         const dGold = symAgg.gold + shBonus.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;

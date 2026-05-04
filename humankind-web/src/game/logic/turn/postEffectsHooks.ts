@@ -233,23 +233,10 @@ export function runPostEffectsHooks(args: {
         }
     }
 
-    // ── Hinduism (34): 이번 턴 파괴 예정 심볼 1개당 식량/지식 +5 (힌두교 타일마다)
     let finalDestroyedCount = 0;
     for (let hx = 0; hx < boardWidth; hx++) {
         for (let hy = 0; hy < boardHeight; hy++) {
             if (board[hx][hy]?.is_marked_for_destruction) finalDestroyedCount++;
-        }
-    }
-    if (finalDestroyedCount > 0) {
-        for (let hx = 0; hx < boardWidth; hx++) {
-            for (let hy = 0; hy < boardHeight; hy++) {
-                const hs = board[hx][hy];
-                if (!hs || hs.definition.id !== S.hinduism || hs.is_marked_for_destruction) continue;
-                const delta = finalDestroyedCount * 5;
-                bonusFood += delta;
-                bonusKnowledge += delta;
-                effects.push({ x: hx, y: hy, food: delta, gold: 0, knowledge: delta });
-            }
         }
     }
 

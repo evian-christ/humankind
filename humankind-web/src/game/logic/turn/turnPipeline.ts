@@ -2,9 +2,9 @@ import { S, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import type { ActiveRelicEffects, EffectResult, SymbolEffectContext } from '../symbolEffects/types';
 import {
-    applyMerchantStoredGold,
     buildFoodBySlotKey,
     collectDisabledTerrainCoords,
+    computeMerchantDeferredEffects,
     computeReligionDeferredEffects,
     slotKey,
     type DeferredReligionSlot,
@@ -75,6 +75,7 @@ export interface CompleteSlotEffectsArgs {
     boardWidth: number;
     boardHeight: number;
     getAdjacentCoords: (x: number, y: number) => Array<{ x: number; y: number }>;
+    unlockedKnowledgeUpgrades?: readonly number[];
 }
 
 export interface ApplyGeneratedSymbolsArgs {
@@ -127,7 +128,7 @@ export function createSlotEffectPipeline(args: CreateSlotEffectPipelineArgs): Sl
 }
 
 export function shouldDeferReligionEffect(symbolId: number): boolean {
-    return symbolId === S.christianity || symbolId === S.islam;
+    return symbolId === S.christianity || symbolId === S.islam || symbolId === S.buddhism || symbolId === S.hinduism;
 }
 
 export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
@@ -180,25 +181,31 @@ export function applySlotEffectResult(
 }
 
 export function completeSlotEffects(args: CompleteSlotEffectsArgs): void {
-    const { pipeline, board, boardWidth, boardHeight, getAdjacentCoords } = args;
+    const { pipeline, board, boardWidth, boardHeight, getAdjacentCoords, unlockedKnowledgeUpgrades = [] } = args;
     const religionResult = computeReligionDeferredEffects({
         board,
         religionSlots: pipeline.religionSlotsToRecalculate,
         religionEffectCache: pipeline.religionEffectCache,
         getAdjacentCoords,
+        unlockedKnowledgeUpgrades,
     });
 
     pipeline.accumulatedEffects.push(...religionResult.effects);
     pipeline.totals.food += religionResult.foodDelta;
     pipeline.totals.gold += religionResult.goldDelta;
+    pipeline.totals.knowledge += religionResult.knowledgeDelta;
 
-    applyMerchantStoredGold({
+    const merchantResult = computeMerchantDeferredEffects({
         board,
         width: boardWidth,
         height: boardHeight,
         foodBySlotKey: buildFoodBySlotKey(pipeline.accumulatedEffects),
         getAdjacentCoords,
+        unlockedKnowledgeUpgrades,
     });
+
+    pipeline.accumulatedEffects.push(...merchantResult.effects);
+    pipeline.totals.gold += merchantResult.goldDelta;
 }
 
 export function removeMarkedSymbolsFromBoard(board: BoardGrid): BoardGrid {

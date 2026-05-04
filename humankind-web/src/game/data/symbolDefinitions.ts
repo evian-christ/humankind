@@ -112,7 +112,6 @@ const SYMBOL_LIST: SymbolDefinition[] = [
 
     // Normal: mountain / special position
     def('stone', { name: "Stone", type: SymbolType.NORMAL, description: "+1 Gold; when a Mountain is in the same column: +2 additional Gold.", sprite: "007.png" }),
-    def('copper', { name: "Copper", type: SymbolType.NORMAL, description: "+1 Gold; if exactly 3 Copper on board: x3 Gold production.", sprite: "008.png" }),
 
     // Normal: bridge / hybrid
     def('wild_berries', { name: "Wild Berries", type: SymbolType.NORMAL, description: "+1 Food; when adjacent to Forest or Rainforest: +2 Food; when adjacent to Mountain: +2 Knowledge.", sprite: "050.png" }),
@@ -121,16 +120,10 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('salt', { name: "Salt", type: SymbolType.NORMAL, description: "+1 Food per adjacent terrain symbol.", sprite: "047.png" }),
 
     // Normal: common operations
-    def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Not in corner: stores Gold equal to highest adjacent Food; in corner: gains stored Gold.", sprite: "022.png" }),
+    def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Produces Gold equal to the Food produced by a random adjacent symbol.", sprite: "022.png" }),
     def('monument', { name: "Monument", type: SymbolType.NORMAL, description: "+5 Knowledge.", sprite: "010.png" }),
     def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "025.png" }),
     def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+5 Knowledge per relic owned.", sprite: "039.png" }),
-    def('university', {
-        name: "University",
-        type: SymbolType.NORMAL,
-        description: "+1 Knowledge per symbol placed on the board.",
-        sprite: "054.png",
-    }),
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "037.png" }),
 
     // Ancient
@@ -188,7 +181,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     // Modern special
     def('agi_core', {
         name: "AGI Core",
-        type: SymbolType.MODERN,
+        type: SymbolType.SPECIAL,
         description: "Absorbs the Knowledge production of all symbols on the board. When absorbed Knowledge reaches 500, you win the game.",
         sprite: "-",
     }),
@@ -196,33 +189,34 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     // Special reward
     def('loot', {
         name: "Loot",
-        type: SymbolType.NORMAL,
+        type: SymbolType.SPECIAL,
         description: "Open to gain a small reward. When adjacent to Loot: absorb it and upgrade into Greater Loot.",
         sprite: "-",
     }),
     def('greater_loot', {
         name: "Greater Loot",
-        type: SymbolType.NORMAL,
+        type: SymbolType.SPECIAL,
         description: "Open to gain a reward. When adjacent to Greater Loot: absorb it and upgrade into Radiant Loot.",
         sprite: "-",
     }),
     def('radiant_loot', {
         name: "Radiant Loot",
-        type: SymbolType.NORMAL,
+        type: SymbolType.SPECIAL,
         description: "Open to gain a large reward.",
         sprite: "-",
     }),
 
     // Religion
-    def('christianity', { name: "Christianity", type: SymbolType.RELIGION, description: "+Food equal to the highest Food produced by an adjacent symbol; adjacent to a Religion symbol: -50 Food.", sprite: "031.png" }),
-    def('islam', { name: "Islam", type: SymbolType.RELIGION, description: "+2 Gold per adjacent symbol that produces Knowledge; adjacent to a Religion symbol: -50 Food.", sprite: "032.png" }),
-    def('buddhism', { name: "Buddhism", type: SymbolType.RELIGION, description: "+2 Food per empty slot; adjacent to a Religion symbol: -50 Food.", sprite: "033.png" }),
-    def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "+5 Food and +5 Knowledge per symbol destroyed this turn; adjacent to a Religion symbol: -50 Food.", sprite: "034.png" }),
+    def('christianity', { name: "Christianity", type: SymbolType.RELIGION, description: "+Food equal to the highest Food produced by an adjacent symbol. Destroyed if another Religion symbol is on the board.", sprite: "031.png" }),
+    def('islam', { name: "Islam", type: SymbolType.RELIGION, description: "+2 Gold per Knowledge-producing symbol on the board. Destroyed if another Religion symbol is on the board.", sprite: "032.png" }),
+    def('buddhism', { name: "Buddhism", type: SymbolType.RELIGION, description: "+2 Food per empty slot on the board. Destroyed if another Religion symbol is on the board.", sprite: "033.png" }),
+    def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If placed in a corner: +10 Food and +10 Knowledge. Destroyed if another Religion symbol is on the board.", sprite: "034.png" }),
 
     // Unit
     def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Primitive melee unit.", base_attack: 3, base_hp: 10, sprite: "035.png" }),
     def('cavalry', { name: "Cavalry", type: SymbolType.UNIT, description: "Ancient melee unit.", base_attack: 4, base_hp: 15, sprite: "035.png" }),
     def('knight', { name: "Knight", type: SymbolType.UNIT, description: "Ancient melee unit.", base_attack: 5, base_hp: 20, sprite: "035.png" }),
+    def('cavalry_corps', { name: "Cavalry Corps", type: SymbolType.UNIT, description: "Medieval melee unit.", base_attack: 7, base_hp: 30, sprite: "035.png" }),
     def('musketman', { name: "Musketman", type: SymbolType.UNIT, description: "Medieval melee unit.", base_attack: 10, base_hp: 40, sprite: "035.png" }),
     def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Modern melee unit.", base_attack: 20, base_hp: 80, sprite: "035.png" }),
     def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Ancient ranged unit.", base_attack: 2, base_hp: 4, sprite: "036.png" }),
@@ -275,9 +269,9 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'agi_core',
     'loot', 'greater_loot', 'radiant_loot',
     'christianity', 'islam', 'buddhism', 'hinduism',
-    'archer', 'tracker_archer', 'knight', 'cavalry', 'crossbowman', 'musketman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
+    'archer', 'tracker_archer', 'knight', 'cavalry', 'cavalry_corps', 'crossbowman', 'musketman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
     'flood', 'earthquake', 'drought',
-    'university', 'wool', 'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
+    'wool', 'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
 ];
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
@@ -308,7 +302,7 @@ const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
 export const KNOWLEDGE_PRODUCING_IDS = new Set<number>(KNOWLEDGE_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
 const GOLD_PRODUCING_KEYS: SymbolKey[] = [
-    'sea', 'stone', 'copper', 'mountain', 'merchant', 'fur', 'dye',
+    'sea', 'stone', 'mountain', 'merchant', 'fur', 'dye',
 ];
 
 /** Gold를 생산하는 심볼 ID 목록 */
@@ -326,6 +320,7 @@ export const getSymbolColor = (type: SymbolType): number => {
         case SymbolType.TERRAIN: return 0x22c55e; // 녹색 지형
         case SymbolType.UNIT: return 0x3b82f6; // 유닛 (파랑계열)
         case SymbolType.ENEMY: return 0xef4444; // 적 (빨강)
+        case SymbolType.SPECIAL: return 0xc084fc; // 특수
         default: return 0x9ca3af;
     }
 };
@@ -340,6 +335,7 @@ export const getSymbolColorHex = (type: SymbolType): string => {
         case SymbolType.TERRAIN: return '#22c55e';
         case SymbolType.UNIT: return '#3b82f6';
         case SymbolType.ENEMY: return '#ef4444';
+        case SymbolType.SPECIAL: return '#c084fc';
         default: return '#9ca3af';
     }
 };

@@ -196,8 +196,8 @@ export const aggregateCollectionDestroyEffects = (
     return out;
 };
 
-export const scarabAndHinduismBonusForOwnedRemoves = (
-    board: (PlayerSymbolInstance | null)[][],
+export const scarabBonusForOwnedRemoves = (
+    _board: (PlayerSymbolInstance | null)[][],
     removeCount: number,
 ): { gold: number; food: number; knowledge: number } => {
     let gold = 0;
@@ -207,18 +207,6 @@ export const scarabAndHinduismBonusForOwnedRemoves = (
     const relics = useRelicStore.getState().relics;
     if (relics.some((r) => r.definition.id === RELIC_ID.SCARAB)) {
         gold += removeCount * 3;
-    }
-    let hinduTiles = 0;
-    for (let x = 0; x < BOARD_WIDTH; x++) {
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            const s = board[x][y];
-            if (s && s.definition.id === S.hinduism && !s.is_marked_for_destruction) hinduTiles++;
-        }
-    }
-    if (hinduTiles > 0) {
-        const d = hinduTiles * 5 * removeCount;
-        food += d;
-        knowledge += d;
     }
     return { gold, food, knowledge };
 };

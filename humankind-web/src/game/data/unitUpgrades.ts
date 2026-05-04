@@ -9,7 +9,7 @@ import {
 import { S } from './symbolIdRegistry';
 
 export const RANGED_UNIT_IDS = new Set<number>([S.archer, S.tracker_archer, S.crossbowman, S.cannon]);
-export const MELEE_UNIT_IDS = new Set<number>([S.warrior, S.knight, S.cavalry, S.musketman, S.infantry]);
+export const MELEE_UNIT_IDS = new Set<number>([S.warrior, S.knight, S.cavalry, S.cavalry_corps, S.musketman, S.infantry]);
 
 export function resolveUpgradedUnitDefinition(
     definition: SymbolDefinition,
