@@ -87,6 +87,7 @@ const RelicSelection = () => {
                                     <div className="relic-spotlight" />
                                     {relic ? (
                                         <div className="relic-sprite-in-case">
+                                            <span className="relic-sprite-shadow" aria-hidden="true" />
                                             {relic.sprite && relic.sprite !== '-' && relic.sprite !== '-.png' ? (
                                                 <img src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`} alt={t(`relic.${relic.id}.name`, language)} />
                                             ) : (

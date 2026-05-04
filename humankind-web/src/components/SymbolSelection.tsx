@@ -41,54 +41,63 @@ const SymbolCard = ({
     const displayHp = symbol.base_hp;
 
     return (
-        <button
-            className="selection-card"
-            onClick={onClick}
-            style={{ '--card-glow': `${eraColor}cc`, background: `url("${ASSET_BASE_URL}assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px` } as React.CSSProperties}
+        <div
+            className="selection-card-frame"
+            style={{
+                '--card-glow': `${eraColor}cc`,
+                '--selection-card-bg': `url("${ASSET_BASE_URL}assets/ui/cards_ancient_300x500.png")`,
+            } as React.CSSProperties}
         >
-            {/* 시대 — 스프라이트 위 */}
-            <div className="selection-card-rarity" style={{
-                color: eraColor,
-                fontSize: '20px',
-                fontWeight: '900',
-                letterSpacing: '3px',
-                textShadow: `-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 12px ${eraColor}b3`,
-                marginBottom: '8px',
-                display: 'inline-block',
-                transform: 'scaleX(1.4)',
-                transformOrigin: 'center'
-            }}>
-                {eraName}
-            </div>
-
-            {/* 스프라이트 */}
-            {symbol.sprite && symbol.sprite !== '-' && symbol.sprite !== '-.png' ? (
-                <img
-                    src={`${ASSET_BASE_URL}assets/symbols/${symbol.sprite}`}
-                    alt={symName}
-                    className="selection-card-sprite"
-                    style={{ imageRendering: 'pixelated' }}
-                />
-            ) : (
-                <div className="selection-card-sprite-placeholder">
-                    {symName}
+            <button
+                type="button"
+                className="selection-card"
+                onClick={onClick}
+                style={{ background: `url("${ASSET_BASE_URL}assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px` }}
+            >
+                {/* 시대 — 스프라이트 위 */}
+                <div className="selection-card-rarity" style={{
+                    color: eraColor,
+                    fontSize: '20px',
+                    fontWeight: '900',
+                    letterSpacing: '3px',
+                    textShadow: `-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 12px ${eraColor}b3`,
+                    marginBottom: '8px',
+                    display: 'inline-block',
+                    transform: 'scaleX(1.4)',
+                    transformOrigin: 'center'
+                }}>
+                    {eraName}
                 </div>
-            )}
 
-            {/* 이름 */}
-            <div className="selection-card-name">{symName}</div>
-            {(symbol.base_attack !== undefined || displayHp !== undefined) && (
-                <div className="selection-card-stats" style={{ display: 'flex', gap: '16px', fontSize: '24px', margin: '8px 0', fontWeight: 'bold', color: '#1a1a1a' }}>
-                    {symbol.base_attack !== undefined && <span>⚔ {symbol.base_attack}</span>}
-                    {displayHp !== undefined && <span>♥ {displayHp}</span>}
+                {/* 스프라이트 */}
+                {symbol.sprite && symbol.sprite !== '-' && symbol.sprite !== '-.png' ? (
+                    <img
+                        src={`${ASSET_BASE_URL}assets/symbols/${symbol.sprite}`}
+                        alt={symName}
+                        className="selection-card-sprite"
+                        style={{ imageRendering: 'pixelated' }}
+                    />
+                ) : (
+                    <div className="selection-card-sprite-placeholder">
+                        {symName}
+                    </div>
+                )}
+
+                {/* 이름 */}
+                <div className="selection-card-name">{symName}</div>
+                {(symbol.base_attack !== undefined || displayHp !== undefined) && (
+                    <div className="selection-card-stats" style={{ display: 'flex', gap: '16px', fontSize: '24px', margin: '8px 0', fontWeight: 'bold', color: '#1a1a1a' }}>
+                        {symbol.base_attack !== undefined && <span>⚔ {symbol.base_attack}</span>}
+                        {displayHp !== undefined && <span>♥ {displayHp}</span>}
+                    </div>
+                )}
+                <div className="selection-card-desc">
+                    {symDesc.split('\n').map((line, i) => (
+                        <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
+                    ))}
                 </div>
-            )}
-            <div className="selection-card-desc">
-                {symDesc.split('\n').map((line, i) => (
-                    <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
-                ))}
-            </div>
-        </button>
+            </button>
+        </div>
     );
 };
 

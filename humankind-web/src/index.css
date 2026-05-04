@@ -704,6 +704,7 @@ button.spin-btn:disabled:active {
   display: flex;
   gap: 30px;
   margin-bottom: 48px;
+  overflow: visible;
 }
 
 @keyframes cardMysticGlow {
@@ -720,7 +721,42 @@ button.spin-btn:disabled:active {
   }
 }
 
+.selection-card-frame {
+  width: 400px;
+  height: 667px;
+  position: relative;
+  flex: 0 0 auto;
+  overflow: visible;
+  transition: transform 0.15s ease;
+}
+
+.selection-card-frame:hover {
+  transform: translateY(-8px);
+}
+
+.selection-card-frame::before {
+  content: '';
+  position: absolute;
+  inset: -48px;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--selection-card-bg) no-repeat center / 400px 667px;
+  filter:
+    drop-shadow(0 0 20px rgba(255, 255, 255, 0.44))
+    drop-shadow(0 0 34px rgba(255, 255, 255, 0.18));
+  opacity: 1;
+  transition: filter 0.15s ease;
+}
+
+.selection-card-frame:hover::before {
+  filter:
+    drop-shadow(0 0 26px rgba(255, 255, 255, 0.56))
+    drop-shadow(0 0 42px rgba(255, 255, 255, 0.22));
+}
+
 .selection-card {
+  position: relative;
+  z-index: 1;
   width: 400px;
   height: 667px;
   border: none;
@@ -730,20 +766,12 @@ button.spin-btn:disabled:active {
   align-items: center;
   padding: 120px 24px 24px;
   gap: 10px;
-  transition: all 0.15s ease, filter 0.05s ease;
+  transition: transform 0.15s ease;
   font-family: 'Mulmaru', sans-serif;
   color: #1a1a1a;
   image-rendering: pixelated;
-  /* 타입별 색 아우라 대신, 아주 약한 하얀 아우라 */
   animation: none;
-  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.44));
-}
-
-.selection-card:hover {
-  transform: translateY(-8px);
-  /* Hover 시에도 약하게 유지 */
-  filter: drop-shadow(0 0 26px rgba(255, 255, 255, 0.56));
-  animation: none;
+  overflow: hidden;
 }
 
 .selection-card-sprite {
@@ -884,7 +912,11 @@ button.spin-btn:disabled:active {
   z-index: 502;
   display: flex;
   justify-content: center;
-  pointer-events: none;
+  pointer-events: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  isolation: isolate;
+  will-change: transform;
 }
 
 .relic-museum-buy-bar-inner {
@@ -895,7 +927,9 @@ button.spin-btn:disabled:active {
   justify-content: space-between;
   align-items: center;
   padding: 0 15px;
-  pointer-events: none;
+  pointer-events: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .relic-museum-buy-slot {
@@ -906,7 +940,8 @@ button.spin-btn:disabled:active {
   align-items: center;
   box-sizing: border-box;
   padding: 0 6px;
-  pointer-events: none;
+  pointer-events: auto;
+  backface-visibility: hidden;
 }
 
 .relic-museum-buy-slot:first-child {
@@ -948,6 +983,8 @@ button.spin-btn:disabled:active {
   top: 63px;
   /* Moved slightly down to rest better on the miniature pedestal */
   left: 50%;
+  width: 120px;
+  height: 120px;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
@@ -1019,29 +1056,66 @@ button.spin-btn:disabled:active {
 @keyframes floatRelicSprite {
   0% {
     transform: translateY(0);
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0));
   }
 
   50% {
     transform: translateY(-14px);
-    filter: drop-shadow(0 20px 18px rgba(0, 0, 0, 0.5));
   }
 
   100% {
     transform: translateY(0);
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0));
   }
 }
 
+@keyframes floatRelicShadow {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.65);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: translate(-50%, 20px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.65);
+  }
+}
+
+.relic-sprite-shadow {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0.34) 36%,
+      rgba(0, 0, 0, 0.16) 58%,
+      rgba(0, 0, 0, 0) 76%);
+  pointer-events: none;
+  z-index: 0;
+  animation: floatRelicShadow 4s infinite ease-in-out;
+  will-change: transform, opacity;
+}
+
 .relic-sprite-in-case img {
+  position: relative;
+  z-index: 1;
   width: 120px;
   height: 120px;
   object-fit: contain;
   image-rendering: pixelated;
   animation: floatRelicSprite 4s infinite ease-in-out;
+  will-change: transform;
 }
 
 .relic-sprite-in-case .placeholder {
+  position: relative;
+  z-index: 1;
   width: 120px;
   height: 120px;
   box-sizing: border-box;
@@ -1052,6 +1126,7 @@ button.spin-btn:disabled:active {
   line-height: 1;
   animation: floatRelicSprite 4s infinite ease-in-out;
   transform-origin: center;
+  will-change: transform;
 }
 
 .relic-museum-info-row {
@@ -1146,6 +1221,10 @@ button.spin-btn:disabled:active {
   border-radius: 0;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   overflow: hidden;
+  opacity: 1;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: background, border-color, color;
 }
 
 .relic-card-buy-btn:hover {
@@ -1172,6 +1251,8 @@ button.spin-btn:disabled:active {
   transform-origin: center;
   white-space: nowrap;
   line-height: 1;
+  opacity: 1;
+  backface-visibility: hidden;
 }
 
 .relic-card-buy-price-icon {
