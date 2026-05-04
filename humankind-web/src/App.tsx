@@ -51,13 +51,16 @@ const CustomCursor = () => {
       if (cursorRef.current) cursorRef.current.style.display = 'none';
     };
 
-    window.addEventListener('mousemove', onHover);
-    window.addEventListener('mouseout', (e) => {
+    const onMouseOut = (e: MouseEvent) => {
       if (!e.relatedTarget) onLeave();
-    });
+    };
+
+    window.addEventListener('mousemove', onHover);
+    window.addEventListener('mouseout', onMouseOut);
     
     return () => {
       window.removeEventListener('mousemove', onHover);
+      window.removeEventListener('mouseout', onMouseOut);
     };
   }, []);
 
