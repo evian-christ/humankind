@@ -4,106 +4,29 @@ import {
     BOARD_HEIGHT,
     useGameStore,
 } from '../../game/state/gameStore';
-import { computeBoardPixelLayout } from '../../game/layout/boardPixelLayout';
 import type { GameState } from '../../game/state/gameStore';
-import { SPIN_SPEED_CONFIG, COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../game/state/settingsStore';
-import type { Language, SettingsState } from '../../game/state/settingsStore';
+import { SPIN_SPEED_CONFIG, useSettingsStore } from '../../game/state/settingsStore';
+import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
 import { getSymbolColor, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
-import { useRelicStore } from '../../game/state/relicStore';
-import type { RelicInstance } from '../../game/state/relicStore';
-import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, FloatingEffect, CombatBounce, CellLayout, ReelState } from './types';
-import type { PlayerSymbolInstance } from '../../game/types';
-import { isMeleeUnit, isRangedUnit } from '../../game/data/unitUpgrades';
-import { MILITARY_SCIENCE_UPGRADE_ID, TRACKING_UPGRADE_ID } from '../../game/data/knowledgeUpgrades';
+import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, CellLayout, ReelState } from './types';
 import { loadGameAssets } from './AssetLoader';
-
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
-
-function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-            if (board[nx][ny]?.definition.id === S.plains) return true;
-        }
-    }
-    return false;
-}
-
-function boardHasTrainableAdjacentMelee(
-    board: (PlayerSymbolInstance | null)[][],
-    x: number,
-    y: number,
-    trainedCavalryId: number,
-): boolean {
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-            const candidate = board[nx][ny];
-            if (candidate && !candidate.is_marked_for_destruction && isMeleeUnit(candidate.definition) && candidate.definition.id !== trainedCavalryId) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-function boardHasTrainableAdjacentRanged(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-            const candidate = board[nx][ny];
-            if (candidate && !candidate.is_marked_for_destruction && isRangedUnit(candidate.definition) && candidate.definition.id !== S.tracker_archer) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-function isOpenableLoot(symbolId: number): boolean {
-    return symbolId === S.loot || symbolId === S.greater_loot || symbolId === S.radiant_loot;
-}
-
-function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-            const candidate = board[nx][ny];
-            if (candidate && !candidate.is_marked_for_destruction) return true;
-        }
-    }
-    return false;
-}
-
-/** index.css 커스텀 커서와 동일 (캔버스 위 호버) */
-const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, pointer`;
-const GAME_CURSOR_HELP = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, help`;
-
-const FLOAT_DURATION = 800; // ms — 텍스트가 떠오르는 시간
-const FLOAT_DISTANCE = 30; // px — 위로 이동 거리
-
-/** 야만인/재해 플로팅: 우측 이동 후 빠르게 위로 사라짐 */
-const THREAT_FLOAT_DRIFT_MS = 220;
-const THREAT_FLOAT_TOTAL_MS = 1800; // 위로 올라가는 시간 늘려서 글 읽을 여유
-const THREAT_FLOAT_DRIFT_RIGHT = 36;
-const THREAT_FLOAT_UP = 85;
-
-/** 클릭으로 발동하는 유물 (gameStore.activateClickableRelic) */
-const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19]);
+import { BoardRenderer } from './renderers/BoardRenderer';
+import { CombatRenderer } from './renderers/CombatRenderer';
+import { FloatingTextRenderer } from './renderers/FloatingTextRenderer';
+import { HudRenderer } from './renderers/HudRenderer';
+import { RelicRenderer } from './renderers/RelicRenderer';
+import { UpgradeRenderer } from './renderers/UpgradeRenderer';
+import {
+    ASSET_BASE_URL,
+    GAME_CURSOR_POINTER,
+    boardHasAdjacentPlains,
+    boardHasDestroyableAdjacentSymbol,
+    boardHasTrainableAdjacentMelee,
+    boardHasTrainableAdjacentRanged,
+    isOpenableLoot,
+} from './renderers/rendererShared';
 
 export class PixiGameApp {
     public app: PIXI.Application;
@@ -122,41 +45,30 @@ export class PixiGameApp {
     private hitContainer = new PIXI.Container();
     private hudTopContainer = new PIXI.Container();
 
-    /** 식량 요구 텍스트 (2턴 이하일 때 진동용) */
-    private foodDemandLabel: PIXI.Text | null = null;
-    private foodDemandCenter: { x: number; y: number } = { x: 0, y: 0 };
+    private boardRenderer: BoardRenderer;
+    private floatingTextRenderer: FloatingTextRenderer;
+    private combatRenderer: CombatRenderer;
+    private hudRenderer: HudRenderer;
+    private relicRenderer: RelicRenderer;
+    private upgradeRenderer: UpgradeRenderer;
 
     // Callbacks
     private onHoverSymbol: (symbol: HoveredSymbol | null) => void;
-    private onHoverRelic: (relic: HoveredRelic | null) => void;
-    private onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void;
     private onHoverHudStat!: (stat: HoveredHudStat | null) => void;
     private hudHoverSnapshot: HoveredHudStat | null = null;
 
     // Refs equivalent state
-    private floatingEffects: FloatingEffect[] = [];
-    /** 야만인/재해 전용 플로팅 (우측 → 위로 빠르게) */
-    private threatFloatingEffects: { texts: PIXI.Text[]; startX: number; startY: number; elapsed: number }[] = [];
     private runningTotalTexts: { food: PIXI.Text | null; gold: PIXI.Text | null; knowledge: PIXI.Text | null } = { food: null, gold: null, knowledge: null };
-    private prevEffectCount: number = 0;
-    private prevCombatFloatCount: number = 0;
-    private prevRelicFloatCount: number = 0;
-    private prevKnowledgeUpgradeFloatCount: number = 0;
 
     private reels: ReelState[] = [];
     private spinElapsed: number = 0;
     private spinActive: boolean = false;
 
     private cellLayout: CellLayout | null = null;
-    private pendingNewThreatFloatsShown = false;
-    private combatBounce: CombatBounce | null = null;
-    private combatShaking: boolean = false;
     private contributorWobbleTime: number = 0;
 
     /** renderBoard가 히트영역을 갈아엎어도 포인터는 그대로일 수 있어, 마지막 호버를 저장 후 재동기화 */
     private symbolHoverCell: { x: number; y: number } | null = null;
-    private relicHoverSnapshot: { instanceId: string; screenX: number; screenY: number } | null = null;
-    private upgradeHoverSnapshot: { id: number; screenX: number; screenY: number } | null = null;
 
     private getPulse01() {
         // 0..1 부드러운 펄스
@@ -210,10 +122,22 @@ export class PixiGameApp {
         this.app = new PIXI.Application();
         this.canvas = canvas;
         this.onHoverSymbol = onHoverSymbol;
-        this.onHoverRelic = onHoverRelic;
-        this.onHoverUpgrade = onHoverUpgrade;
         this.onHoverHudStat = onHoverHudStat;
         this.hitContainer.eventMode = 'static';
+        this.boardRenderer = new BoardRenderer({
+            bgContainer: this.bgContainer,
+            boardContainer: this.boardContainer,
+        });
+        this.floatingTextRenderer = new FloatingTextRenderer(this.floatContainer);
+        this.combatRenderer = new CombatRenderer(this.combatContainer, this.floatingTextRenderer);
+        this.hudRenderer = new HudRenderer(this.hudTopContainer);
+        this.relicRenderer = new RelicRenderer({
+            bgContainer: this.bgContainer,
+            hitContainer: this.hitContainer,
+            floatingTextRenderer: this.floatingTextRenderer,
+            onHoverRelic,
+        });
+        this.upgradeRenderer = new UpgradeRenderer(onHoverUpgrade);
     }
 
     public async init() {
@@ -293,136 +217,9 @@ export class PixiGameApp {
     private onTick(ticker: PIXI.Ticker) {
         const dt = ticker.deltaMS;
 
-        // Floating effects
-        for (let i = this.floatingEffects.length - 1; i >= 0; i--) {
-            const f = this.floatingEffects[i];
-            f.elapsed += dt;
-            const progress = Math.min(f.elapsed / FLOAT_DURATION, 1);
-            const ease = 1 - (1 - progress) * (1 - progress);
-            const offsetY = -FLOAT_DISTANCE * ease;
-            const alpha = progress < 0.7 ? 1 : 1 - (progress - 0.7) / 0.3;
-
-            for (const txt of f.texts) {
-                txt.y = f.startY + (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY + offsetY;
-                txt.alpha = alpha;
-            }
-
-            if (progress >= 1) {
-                for (const txt of f.texts) {
-                    txt.parent?.removeChild(txt);
-                    txt.destroy();
-                }
-                this.floatingEffects.splice(i, 1);
-            }
-        }
-
-        // Threat floating: 작은 크기로 시작 → 가로 이동하면서 크기 커짐 → 위로 올라가며 사라짐
-        for (let i = this.threatFloatingEffects.length - 1; i >= 0; i--) {
-            const t = this.threatFloatingEffects[i];
-            t.elapsed += dt;
-            const elapsed = t.elapsed;
-            if (elapsed < THREAT_FLOAT_DRIFT_MS) {
-                const p = elapsed / THREAT_FLOAT_DRIFT_MS;
-                const ease = 1 - (1 - p) * (1 - p);
-                const offsetX = THREAT_FLOAT_DRIFT_RIGHT * ease;
-                const scale = 0.35 + 0.65 * ease; // 작은 크기 → 최종 크기
-                for (const txt of t.texts) {
-                    txt.x = t.startX + offsetX;
-                    txt.y = t.startY;
-                    txt.alpha = 1;
-                    txt.scale.set(scale, scale);
-                }
-            } else {
-                const phase2Len = THREAT_FLOAT_TOTAL_MS - THREAT_FLOAT_DRIFT_MS;
-                const phase2Elapsed = elapsed - THREAT_FLOAT_DRIFT_MS;
-                const p = Math.min(phase2Elapsed / phase2Len, 1);
-                const ease = 1 - (1 - p) * (1 - p);
-                const offsetY = -THREAT_FLOAT_UP * ease;
-                const alpha = p < 0.5 ? 1 : 1 - (p - 0.5) / 0.5;
-                for (const txt of t.texts) {
-                    txt.x = t.startX + THREAT_FLOAT_DRIFT_RIGHT;
-                    txt.y = t.startY + offsetY;
-                    txt.alpha = alpha;
-                    txt.scale.set(1, 1);
-                }
-                if (elapsed >= THREAT_FLOAT_TOTAL_MS) {
-                    for (const txt of t.texts) {
-                        txt.parent?.removeChild(txt);
-                        txt.destroy();
-                    }
-                    this.threatFloatingEffects.splice(i, 1);
-                }
-            }
-        }
-
-        // Combat bounce
-        if (this.combatBounce) {
-            const b = this.combatBounce;
-            b.elapsed += dt;
-            const halfDur = b.duration / 2;
-            const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-
-            if (b.elapsed < halfDur) {
-                const progress = b.elapsed / halfDur;
-                const ease = easeInOut(Math.min(progress, 1));
-                b.sprite.x = b.fromX + (b.toX - b.fromX) * ease;
-                b.sprite.y = b.fromY + (b.toY - b.fromY) * ease;
-
-                if (!b.hitSpawned && progress >= 0.7 && b.atkDmg > 0) {
-                    b.hitSpawned = true;
-                    const dmgTxt = new PIXI.Text({
-                        text: `-${b.atkDmg}`,
-                        style: new PIXI.TextStyle({
-                            fill: '#ef4444',
-                            fontSize: 34,
-                            fontWeight: 'bold',
-                            fontFamily: 'Mulmaru',
-                            stroke: { color: '#000000', width: 3 },
-                        }),
-                    });
-                    dmgTxt.anchor.set(1, 1);
-                    dmgTxt.x = b.targetHpX;
-                    dmgTxt.y = b.targetHpY;
-                    (dmgTxt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                    this.floatContainer.addChild(dmgTxt);
-                    this.floatingEffects.push({
-                        texts: [dmgTxt],
-                        startY: b.targetHpY,
-                        elapsed: 0,
-                    });
-                }
-            } else if (b.elapsed < b.duration) {
-                const progress = (b.elapsed - halfDur) / halfDur;
-                const ease = easeInOut(Math.min(progress, 1));
-                b.sprite.x = b.toX + (b.fromX - b.toX) * ease;
-                b.sprite.y = b.toY + (b.fromY - b.toY) * ease;
-            } else {
-                if (b.sprite.parent) b.sprite.parent.removeChild(b.sprite);
-                b.sprite.destroy();
-                this.combatBounce = null;
-            }
-        }
-
-        // Combat shake
-        if (this.combatShaking) {
-            this.combatContainer.x = Math.sin(Date.now() / 20) * 6;
-        } else {
-            this.combatContainer.x = 0;
-        }
-
-        // 식량 요구 텍스트 진동 (2턴 이하일 때 긴장감)
-        if (this.foodDemandLabel?.parent) {
-            const s = useGameStore.getState();
-            const turnsUntilPayment = s.turn % 10 === 0 ? 10 : 10 - (s.turn % 10);
-            if (turnsUntilPayment <= 2) {
-                const shake = 2;
-                this.foodDemandLabel.x = this.foodDemandCenter.x + (Math.random() - 0.5) * 2 * shake;
-                this.foodDemandLabel.y = this.foodDemandCenter.y + (Math.random() - 0.5) * 2 * shake;
-            } else {
-                this.foodDemandLabel.x = this.foodDemandCenter.x;
-                this.foodDemandLabel.y = this.foodDemandCenter.y;
-            }
-        }
+        this.floatingTextRenderer.tick(dt);
+        this.combatRenderer.tick(dt);
+        this.hudRenderer.tickFoodDemandShake();
 
         // Contributor wobble: phase 2일 때만 타이머 증가·렌더 (phase 3 진입 시 두 번째 wobble 방지)
         const state = useGameStore.getState();
@@ -508,92 +305,39 @@ export class PixiGameApp {
         if (!this.app || !this.app.renderer || this.destroyed) return;
 
         const w = this.app.screen?.width || 1920;
-        const h = this.app.screen?.height || 1080;
 
-        this.combatShaking = state.combatShaking;
-        if (state.phase !== 'showing_new_threats') this.pendingNewThreatFloatsShown = false;
+        this.combatRenderer.setShaking(state.combatShaking);
+        this.floatingTextRenderer.resetThreatGateIfNeeded(state.phase);
 
         this.boardContainer.removeChildren();
         this.effectsContainer.removeChildren();
         this.hitContainer.removeChildren();
         this.bgContainer.removeChildren();
         this.hudTopContainer.removeChildren();
-        this.foodDemandLabel = null;
-        for (const t of this.threatFloatingEffects) {
-            for (const txt of t.texts) {
-                txt.parent?.removeChild(txt);
-                txt.destroy();
-            }
-        }
-        this.threatFloatingEffects = [];
+        this.floatingTextRenderer.clearThreats();
 
-        if (!state.combatAnimation) {
-            this.combatContainer.removeChildren();
-            this.combatContainer.x = 0;
-        }
+        this.combatRenderer.clearIfNoAnimation(!!state.combatAnimation);
 
-        // Render Background
-        const bg = new PIXI.Graphics();
-        bg.rect(0, 0, w, h);
-        bg.fill({ color: 0x252525 });
-        this.bgContainer.addChild(bg);
-
-        const viewLayout = computeBoardPixelLayout(w, h);
+        const frame = this.boardRenderer.beginFrame(this.app, state, settings);
+        if (!frame) return;
         const {
             startX,
             startY,
-            boardW,
-            boardH,
             cellWidth,
             cellHeight,
             gridOffsetX,
             gridOffsetY,
             colGap,
             scale,
-        } = viewLayout;
+        } = frame;
         const lang = settings.language;
-        const fontFamily = 'Mulmaru';
+        const fontFamily = frame.fontFamily;
         const fs = 1;
-        const rowGap = 0;
+        const rowGap = frame.rowGap;
 
         // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
 
-        this.cellLayout = { startX, startY, boardW, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap };
-
-        // Draw Slot Cells (White background with thin black border)
-        const cellGraphics = new PIXI.Graphics();
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                const cellX = startX + gridOffsetX + x * (cellWidth + colGap);
-                const cellY = startY + gridOffsetY + y * (cellHeight + rowGap);
-                
-                cellGraphics.rect(cellX, cellY, cellWidth, cellHeight);
-                cellGraphics.fill({ color: 0xffffff });
-            }
-        }
-        this.boardContainer.addChild(cellGraphics);
-
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < BOARD_WIDTH; x++) {
-                const cellX = startX + gridOffsetX + x * (cellWidth + colGap);
-                const cellY = startY + gridOffsetY + y * (cellHeight + rowGap);
-                const slotNum = y * BOARD_WIDTH + x + 1;
-                
-                const text = new PIXI.Text({
-                    text: slotNum.toString(),
-                    style: new PIXI.TextStyle({
-                        fontFamily,
-                        fontSize: 64 * scale,
-                        fill: 0xe0e0e0,
-                        fontWeight: 'bold',
-                    })
-                });
-                text.anchor.set(0.5);
-                text.x = cellX + cellWidth / 2;
-                text.y = cellY + cellHeight / 2;
-                this.boardContainer.addChild(text);
-            }
-        }
+        this.cellLayout = this.boardRenderer.toCellLayout(frame);
 
 
         // Spin initialization logic
@@ -707,18 +451,12 @@ export class PixiGameApp {
                     state.phase === 'idle' &&
                     symDef.id === S.horse &&
                     !symbol.is_marked_for_destruction &&
-                    boardHasTrainableAdjacentMelee(
-                        state.board,
-                        x,
-                        y,
-                        state.unlockedKnowledgeUpgrades.includes(MILITARY_SCIENCE_UPGRADE_ID) ? S.cavalry_corps : S.cavalry,
-                    );
+                    boardHasTrainableAdjacentMelee(state.board, x, y, state.unlockedKnowledgeUpgrades);
                 const canTrainTrackerArcher =
                     state.phase === 'idle' &&
                     symDef.id === S.deer &&
                     !symbol.is_marked_for_destruction &&
-                    state.unlockedKnowledgeUpgrades.includes(TRACKING_UPGRADE_ID) &&
-                    boardHasTrainableAdjacentRanged(state.board, x, y);
+                    boardHasTrainableAdjacentRanged(state.board, x, y, state.unlockedKnowledgeUpgrades);
                 const canOpenLoot =
                     state.phase === 'idle' &&
                     !symbol.is_marked_for_destruction &&
@@ -994,113 +732,14 @@ export class PixiGameApp {
             }
         }
 
-        // Floating texts for processed effects
-        if (state.lastEffects.length === 0 && this.prevEffectCount > 0) {
-            this.prevEffectCount = 0;
-        } else if (state.lastEffects.length > this.prevEffectCount) {
-            const newEffects = state.lastEffects.slice(this.prevEffectCount);
-            this.prevEffectCount = state.lastEffects.length;
+        const floatLayout = { ...this.cellLayout!, scale };
+        this.floatingTextRenderer.renderBoardEffectFloats(state, floatLayout);
+        this.floatingTextRenderer.renderCombatFloats(state, floatLayout);
+        this.floatingTextRenderer.renderThreatFloats(state, floatLayout);
+        this.floatingTextRenderer.resetKnowledgeUpgradeFloatCountIfEmpty(state);
 
-            for (const effect of newEffects) {
-                const effectFontSize = Math.max(24, cellHeight * 0.22) * fs;
-                const baseX = startX + gridOffsetX + effect.x * (cellWidth + colGap) + cellWidth / 2;
-                const baseY = startY + gridOffsetY + effect.y * (cellHeight + rowGap) + 8 * scale;
-
-                const lines = [];
-                if (effect.food !== 0) lines.push({ text: `${effect.food > 0 ? '+' : ''}${effect.food}`, color: effect.food > 0 ? '#4ade80' : '#ef4444' });
-                if (effect.gold !== 0) lines.push({ text: `${effect.gold > 0 ? '+' : ''}${effect.gold}`, color: effect.gold > 0 ? '#fbbf24' : '#ef4444' });
-                if (effect.knowledge !== 0) lines.push({ text: `${effect.knowledge > 0 ? '+' : ''}${effect.knowledge}`, color: effect.knowledge > 0 ? '#60a5fa' : '#ef4444' });
-
-                const gapText = 6 * scale;
-                const tempTexts: PIXI.Text[] = [];
-                for (const line of lines) {
-                    const txt = new PIXI.Text({
-                        text: line.text,
-                        style: new PIXI.TextStyle({ fill: line.color, fontSize: effectFontSize, fontFamily, stroke: { color: '#000000', width: 3 } }),
-                    });
-                    txt.anchor.set(0, 0);
-                    tempTexts.push(txt);
-                }
-                const totalW = tempTexts.reduce((sum, t) => sum + t.width, 0) + gapText * (tempTexts.length - 1);
-                let curX = baseX - totalW / 2;
-
-                const floatTexts: PIXI.Text[] = [];
-                for (const txt of tempTexts) {
-                    txt.x = curX;
-                    (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                    txt.y = baseY;
-                    this.floatContainer.addChild(txt);
-                    floatTexts.push(txt);
-                    curX += txt.width + gapText;
-                }
-
-                if (floatTexts.length > 0) {
-                    this.floatingEffects.push({ texts: floatTexts, startY: baseY, elapsed: 0 });
-                }
-            }
-        }
-
-        // ── Combat/relic float texts (e.g., Clovis -1) ──
-        if (!state.combatFloats || state.combatFloats.length === 0) {
-            this.prevCombatFloatCount = 0;
-        } else if (state.combatFloats.length > this.prevCombatFloatCount) {
-            const newFloats = state.combatFloats.slice(this.prevCombatFloatCount);
-            this.prevCombatFloatCount = state.combatFloats.length;
-            const fontSize = Math.max(28, cellHeight * 0.28) * fs;
-            for (const f of newFloats) {
-                const fx = startX + gridOffsetX + f.x * (cellWidth + colGap) + cellWidth / 2;
-                const fy = startY + gridOffsetY + f.y * (cellHeight + rowGap) + cellHeight * 0.25;
-                const txt = new PIXI.Text({
-                    text: f.text,
-                    style: new PIXI.TextStyle({
-                        fill: f.color ?? '#ef4444',
-                        fontSize,
-                        fontWeight: 'bold',
-                        fontFamily: 'Mulmaru',
-                        stroke: { color: '#000000', width: 4 },
-                    }),
-                });
-                txt.anchor.set(0.5, 0);
-                txt.x = fx;
-                txt.y = fy;
-                (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                this.floatContainer.addChild(txt);
-                this.floatingEffects.push({ texts: [txt], startY: fy, elapsed: 0 });
-            }
-        }
-
-        // ── 첫 배치된 야만인/재해: 셀 위 플로팅 (빨간색+검은테두리, 우측→위로 빠르게) ──
-        if (state.phase === 'showing_new_threats' && state.pendingNewThreatFloats?.length && this.cellLayout && !this.pendingNewThreatFloatsShown) {
-            this.pendingNewThreatFloatsShown = true;
-            const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = this.cellLayout;
-            const rowGap = 0;
-            const threatFloatFontSize = Math.max(28, cellHeight * 0.24) * fs;
-            for (const { x, y, label } of state.pendingNewThreatFloats) {
-                const cx = startX + gridOffsetX + x * (cellWidth + colGap) + cellWidth / 2;
-                const baseY = startY + gridOffsetY + y * (cellHeight + rowGap) + cellHeight * 0.28;
-                const txt = new PIXI.Text({
-                    text: label,
-                    style: new PIXI.TextStyle({
-                        fill: '#ff3333',
-                        fontSize: threatFloatFontSize,
-                        fontWeight: 'bold',
-                        fontFamily: 'Mulmaru',
-                        stroke: { color: '#000000', width: 4 },
-                    }),
-                });
-                txt.anchor.set(0.5, 0);
-                txt.x = cx;
-                txt.y = baseY;
-                txt.scale.set(0.35, 0.35); // 처음엔 작게, 가로 이동하면서 커짐
-                this.floatContainer.addChild(txt);
-                this.threatFloatingEffects.push({ texts: [txt], startX: cx, startY: baseY, elapsed: 0 });
-            }
-            setTimeout(() => useGameStore.getState().continueProcessingAfterNewThreatFloats(), THREAT_FLOAT_TOTAL_MS + 200);
-        }
-
-        // UI bars (Knowledge, Food, Gold) — 하단 스핀 버튼 위쪽 중앙
-        this.renderUI(state, settings, scale, fs, w, h, startX, startY, boardW, boardH);
-        this.renderRelics(scale, lang);
+        this.hudRenderer.render(scale, w);
+        this.relicRenderer.render(state, scale, w);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
 
@@ -1137,269 +776,15 @@ export class PixiGameApp {
             }
         }
 
-        if (this.relicHoverSnapshot && this.onHoverRelic) {
-            const relic = useRelicStore.getState().relics.find((r) => r.instanceId === this.relicHoverSnapshot!.instanceId);
-            if (relic) {
-                this.onHoverRelic({
-                    relicInfo: relic,
-                    screenX: this.relicHoverSnapshot.screenX,
-                    screenY: this.relicHoverSnapshot.screenY,
-                });
-            } else {
-                this.relicHoverSnapshot = null;
-                this.onHoverRelic(null);
-            }
-        }
-
+        this.relicRenderer.syncHoverAfterRebuild();
+        this.upgradeRenderer.syncHoverAfterRebuild();
 
         if (this.hudHoverSnapshot && this.onHoverHudStat) {
             this.onHoverHudStat(this.hudHoverSnapshot);
         }
     }
 
-    private renderRelics(scale: number, _lang: Language) {
-        if (!this.cellLayout) return;
-        const relics = useRelicStore.getState().relics;
-        if (relics.length === 0) return;
-
-        const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
-        const state = useGameStore.getState();
-
-        // 상단 HUD 바 아래 — 화면 좌측 상단에 작게 가로 배치
-        const HUD_HEIGHT = 80 * scale;       // 상단 UI 바 높이
-        const iconSize = 64 * scale;         // 컴팩트 크기
-        const gapX = 8 * scale;
-        const gapY = 8 * scale;
-        const MARGIN_LEFT = 16 * scale;
-        const MARGIN_TOP = HUD_HEIGHT + 8 * scale;
-        const w = this.app?.screen?.width ?? 1920;
-        const iconsPerRow = Math.max(1, Math.floor((w - MARGIN_LEFT * 2) / (iconSize + gapX)));
-
-        const relicPanel = new PIXI.Container();
-        relicPanel.x = MARGIN_LEFT;
-        relicPanel.y = MARGIN_TOP;
-        this.bgContainer.addChildAt(relicPanel, 1);
-
-
-        const layout: { relic: RelicInstance; iconX: number; iconY: number }[] = [];
-        let curX = 0;
-        let curY = 0;
-        for (const relic of relics) {
-            if (curX > 0 && curX + iconSize > iconsPerRow * (iconSize + gapX)) {
-                curX = 0;
-                curY += iconSize + gapY;
-            }
-            layout.push({ relic, iconX: curX, iconY: curY });
-            curX += iconSize + gapX;
-        }
-
-        const panelWX = relicPanel.x;
-        const panelWY = relicPanel.y;
-
-        const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
-
-        for (const { relic, iconX, iconY } of layout) {
-            const isShakingThisRelic = shakeRelicDefId === relic.definition.id;
-            const shakeX = isShakingThisRelic ? Math.sin(Date.now() / 20) * (5 * scale) : 0;
-            const shakeY = isShakingThisRelic ? Math.cos(Date.now() / 17) * (4 * scale) : 0;
-            const worldIconX = panelWX + iconX + shakeX;
-            const worldIconY = panelWY + iconY + shakeY;
-            relicCenterByInstanceId.set(relic.instanceId, {
-                x: worldIconX + iconSize / 2,
-                y: worldIconY + iconSize / 2,
-            });
-
-            const cx = iconX + iconSize / 2 + shakeX;
-            const cy = iconY + iconSize / 2 + shakeY;
-
-            if (relic.definition.sprite && relic.definition.sprite !== '-' && relic.definition.sprite !== '-.png') {
-                const texture =
-                    (PIXI.Assets.get(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`) as PIXI.Texture | undefined)
-                    ?? PIXI.Texture.from(`${ASSET_BASE_URL}assets/relics/${relic.definition.sprite}`);
-                const sp = new PIXI.Sprite(texture);
-                sp.x = iconX + shakeX;
-                sp.y = iconY + shakeY;
-                sp.width = iconSize;
-                sp.height = iconSize;
-                relicPanel.addChild(sp);
-            } else {
-                const spPlaceholder = new PIXI.Text({
-                    text: '🏺',
-                    style: new PIXI.TextStyle({ fontSize: iconSize * 0.6 }),
-                });
-                spPlaceholder.anchor.set(0.5);
-                spPlaceholder.x = cx;
-                spPlaceholder.y = cy;
-                relicPanel.addChild(spPlaceholder);
-            }
-
-            const hitArea = new PIXI.Graphics();
-            hitArea.rect(worldIconX, worldIconY, iconSize, iconSize);
-            hitArea.fill({ color: 0x000000, alpha: 0 });
-            hitArea.eventMode = 'static';
-            const relicClickable = CLICKABLE_RELIC_IDS.has(relic.definition.id);
-            hitArea.cursor = relicClickable ? GAME_CURSOR_POINTER : GAME_CURSOR_HELP;
-
-            hitArea.on('pointerover', () => {
-                this.relicHoverSnapshot = {
-                    instanceId: relic.instanceId,
-                    screenX: worldIconX + iconSize,
-                    screenY: worldIconY,
-                };
-                this.onHoverRelic({ relicInfo: relic, screenX: worldIconX + iconSize, screenY: worldIconY });
-            });
-            hitArea.on('pointerout', () => {
-                this.relicHoverSnapshot = null;
-                this.onHoverRelic(null);
-            });
-            if (relicClickable) {
-                hitArea.on('pointertap', () => {
-                    useGameStore.getState().activateClickableRelic(relic.instanceId);
-                });
-            }
-            this.hitContainer.addChild(hitArea);
-
-            {
-                const rid = relic.definition.id;
-                let counterStr: string | null = null;
-                if (rid === 3 || rid === 9) counterStr = String(relic.effect_counter);
-                else if (rid === 4) counterStr = String(relic.bonus_stacks);
-                else if (rid === 6) counterStr = String(1 + (relic.bonus_stacks ?? 0));
-                if (counterStr !== null) {
-                    const counterText = new PIXI.Text({
-                        text: counterStr,
-                        style: new PIXI.TextStyle({
-                            fill: '#d1d5db',
-                            fontSize: 26 * scale,
-                            fontWeight: 'bold',
-                            fontFamily: 'Mulmaru',
-                            stroke: { color: '#000000', width: 3 },
-                        }),
-                    });
-                    counterText.anchor.set(0.5, 0.5);
-                    counterText.x = iconX + iconSize - 14 * scale;
-                    counterText.y = iconY + iconSize - 16 * scale;
-                    relicPanel.addChild(counterText);
-                }
-            }
-        }
-
-        // ── Relic floats (e.g., Jomon cashout +Food) ──
-        if (!state.relicFloats || state.relicFloats.length === 0) {
-            this.prevRelicFloatCount = 0;
-        } else if (state.relicFloats.length > this.prevRelicFloatCount) {
-            const newFloats = state.relicFloats.slice(this.prevRelicFloatCount);
-            this.prevRelicFloatCount = state.relicFloats.length;
-            const fontSize = Math.max(26, iconSize * 0.32);
-            for (const f of newFloats) {
-                const c = relicCenterByInstanceId.get(f.relicInstanceId);
-                if (!c) continue;
-                const txt = new PIXI.Text({
-                    text: f.text,
-                    style: new PIXI.TextStyle({
-                        fill: f.color ?? '#ffffff',
-                        fontSize,
-                        fontWeight: 'bold',
-                        fontFamily: 'Mulmaru',
-                        stroke: { color: '#000000', width: 4 },
-                    }),
-                });
-                txt.anchor.set(0.5, 0.5);
-                txt.x = c.x;
-                txt.y = c.y - iconSize * 0.15;
-                (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                this.floatContainer.addChild(txt);
-                this.floatingEffects.push({ texts: [txt], startY: txt.y, elapsed: 0 });
-            }
-        }
-    }
-
-
-    private renderUI(
-        _state: GameState,
-        _settings: SettingsState,
-        scale: number,
-        _fs: number,
-        w: number,
-        _h: number,
-        _boardStartX: number,
-        _boardStartY: number,
-        _boardW: number,
-        _boardH: number
-    ) {
-        // UI rendering is now handled by React (App.tsx / .hud-top)
-        this.hudTopContainer.removeChildren();
-        this.foodDemandCenter = { x: w / 2, y: 44 * scale };
-    }
-
     public triggerCombatAnimation(anim: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number }) {
-        if (!this.cellLayout) return;
-
-        const effectSpeed = useSettingsStore.getState().effectSpeed;
-        const bounceDuration = COMBAT_BOUNCE_DURATION[effectSpeed];
-        if (bounceDuration === 0) return;
-
-        if (this.combatBounce) {
-            const prev = this.combatBounce;
-            if (prev.sprite.parent) prev.sprite.parent.removeChild(prev.sprite);
-            prev.sprite.destroy();
-            this.combatBounce = null;
-        }
-
-        const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = this.cellLayout;
-        const { ax, ay, tx, ty, atkDmg } = anim;
-
-        const aCX = startX + gridOffsetX + ax * (cellWidth + colGap) + cellWidth / 2;
-        const aCY = startY + gridOffsetY + ay * cellHeight + cellHeight / 2;
-        const tCX = startX + gridOffsetX + tx * (cellWidth + colGap) + cellWidth / 2;
-        const tCY = startY + gridOffsetY + ty * cellHeight + cellHeight / 2;
-
-        const moveToX = aCX + (tCX - aCX) * 0.55;
-        const moveToY = aCY + (tCY - aCY) * 0.55;
-
-        const board = useGameStore.getState().board;
-        const attackerDef = board[ax]?.[ay]?.definition;
-        let bounceSprite: PIXI.Container;
-
-        if (attackerDef?.sprite && attackerDef.sprite !== '-' && attackerDef.sprite !== '-.png') {
-            const SPRITE_PX = 32;
-            const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
-            const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
-            const sp = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/symbols/${attackerDef.sprite}`);
-            sp.anchor.set(0.5);
-            sp.width = spriteSize;
-            sp.height = spriteSize;
-            bounceSprite = sp;
-        } else {
-            const lang = useSettingsStore.getState().language;
-            const symName = t(`symbol.${attackerDef?.key ?? 'warrior'}.name`, lang);
-            const rarityColor = attackerDef ? getSymbolColor(attackerDef.type) : 0xffffff;
-            const container = new PIXI.Container();
-            const txt = new PIXI.Text({
-                text: symName,
-                style: new PIXI.TextStyle({ fill: rarityColor, fontSize: 32, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 2 } }),
-            });
-            txt.anchor.set(0.5);
-            container.addChild(txt);
-            bounceSprite = container;
-        }
-        bounceSprite.x = aCX;
-        bounceSprite.y = aCY;
-        this.combatContainer.addChild(bounceSprite);
-
-        const targetHpX = startX + gridOffsetX + tx * (cellWidth + colGap) + cellWidth - 5;
-        const targetHpY = startY + gridOffsetY + ty * cellHeight + cellHeight - 5;
-
-        this.combatBounce = {
-            sprite: bounceSprite,
-            fromX: aCX, fromY: aCY,
-            toX: moveToX, toY: moveToY,
-            elapsed: 0,
-            duration: bounceDuration,
-            hitSpawned: false,
-            atkDmg,
-            targetHpX,
-            targetHpY,
-        };
+        this.combatRenderer.trigger(anim, this.cellLayout);
     }
 }

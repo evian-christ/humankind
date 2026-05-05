@@ -1,0 +1,157 @@
+import * as PIXI from 'pixi.js';
+import { BOARD_HEIGHT, BOARD_WIDTH, useGameStore } from '../../../game/state/gameStore';
+import { COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../../game/state/settingsStore';
+import { getSymbolColor } from '../../../game/data/symbolDefinitions';
+import { t } from '../../../i18n';
+import type { CellLayout, CombatBounce } from '../types';
+import { ASSET_BASE_URL } from './rendererShared';
+import type { FloatingTextRenderer } from './FloatingTextRenderer';
+
+export class CombatRenderer {
+    private container: PIXI.Container;
+    private floatingTextRenderer: FloatingTextRenderer;
+    private combatBounce: CombatBounce | null = null;
+    private combatShaking = false;
+
+    constructor(container: PIXI.Container, floatingTextRenderer: FloatingTextRenderer) {
+        this.container = container;
+        this.floatingTextRenderer = floatingTextRenderer;
+    }
+
+    public setShaking(shaking: boolean) {
+        this.combatShaking = shaking;
+    }
+
+    public clearIfNoAnimation(hasCombatAnimation: boolean) {
+        if (hasCombatAnimation) return;
+        this.container.removeChildren();
+        this.container.x = 0;
+    }
+
+    public tick(dt: number) {
+        this.tickBounce(dt);
+        this.container.x = this.combatShaking ? Math.sin(Date.now() / 20) * 6 : 0;
+    }
+
+    public trigger(anim: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number }, cellLayout: CellLayout | null) {
+        if (!cellLayout) return;
+
+        const effectSpeed = useSettingsStore.getState().effectSpeed;
+        const bounceDuration = COMBAT_BOUNCE_DURATION[effectSpeed];
+        if (bounceDuration === 0) return;
+
+        this.clearBounce();
+
+        const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = cellLayout;
+        const { ax, ay, tx, ty, atkDmg } = anim;
+
+        if (ax < 0 || ax >= BOARD_WIDTH || ay < 0 || ay >= BOARD_HEIGHT) return;
+
+        const aCX = startX + gridOffsetX + ax * (cellWidth + colGap) + cellWidth / 2;
+        const aCY = startY + gridOffsetY + ay * cellHeight + cellHeight / 2;
+        const tCX = startX + gridOffsetX + tx * (cellWidth + colGap) + cellWidth / 2;
+        const tCY = startY + gridOffsetY + ty * cellHeight + cellHeight / 2;
+
+        const moveToX = aCX + (tCX - aCX) * 0.55;
+        const moveToY = aCY + (tCY - aCY) * 0.55;
+
+        const board = useGameStore.getState().board;
+        const attackerDef = board[ax]?.[ay]?.definition;
+        let bounceSprite: PIXI.Container;
+
+        if (attackerDef?.sprite && attackerDef.sprite !== '-' && attackerDef.sprite !== '-.png') {
+            const spriteSize = 32 * Math.max(1, Math.floor((Math.min(cellWidth - 6, cellHeight) * 0.85) / 32));
+            const sp = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/symbols/${attackerDef.sprite}`);
+            sp.anchor.set(0.5);
+            sp.width = spriteSize;
+            sp.height = spriteSize;
+            bounceSprite = sp;
+        } else {
+            const lang = useSettingsStore.getState().language;
+            const symName = t(`symbol.${attackerDef?.key ?? 'warrior'}.name`, lang);
+            const rarityColor = attackerDef ? getSymbolColor(attackerDef.type) : 0xffffff;
+            const container = new PIXI.Container();
+            const txt = new PIXI.Text({
+                text: symName,
+                style: new PIXI.TextStyle({ fill: rarityColor, fontSize: 32, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 2 } }),
+            });
+            txt.anchor.set(0.5);
+            container.addChild(txt);
+            bounceSprite = container;
+        }
+
+        bounceSprite.x = aCX;
+        bounceSprite.y = aCY;
+        this.container.addChild(bounceSprite);
+
+        this.combatBounce = {
+            sprite: bounceSprite,
+            fromX: aCX,
+            fromY: aCY,
+            toX: moveToX,
+            toY: moveToY,
+            elapsed: 0,
+            duration: bounceDuration,
+            hitSpawned: false,
+            atkDmg,
+            targetHpX: startX + gridOffsetX + tx * (cellWidth + colGap) + cellWidth - 5,
+            targetHpY: startY + gridOffsetY + ty * cellHeight + cellHeight - 5,
+        };
+    }
+
+    private clearBounce() {
+        if (!this.combatBounce) return;
+        const prev = this.combatBounce;
+        if (prev.sprite.parent) prev.sprite.parent.removeChild(prev.sprite);
+        prev.sprite.destroy();
+        this.combatBounce = null;
+    }
+
+    private tickBounce(dt: number) {
+        if (!this.combatBounce) return;
+
+        const b = this.combatBounce;
+        b.elapsed += dt;
+        const halfDur = b.duration / 2;
+        const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+        if (b.elapsed < halfDur) {
+            const progress = b.elapsed / halfDur;
+            const ease = easeInOut(Math.min(progress, 1));
+            b.sprite.x = b.fromX + (b.toX - b.fromX) * ease;
+            b.sprite.y = b.fromY + (b.toY - b.fromY) * ease;
+
+            if (!b.hitSpawned && progress >= 0.7 && b.atkDmg > 0) {
+                b.hitSpawned = true;
+                const dmgTxt = new PIXI.Text({
+                    text: `-${b.atkDmg}`,
+                    style: new PIXI.TextStyle({
+                        fill: '#ef4444',
+                        fontSize: 34,
+                        fontWeight: 'bold',
+                        fontFamily: 'Mulmaru',
+                        stroke: { color: '#000000', width: 3 },
+                    }),
+                });
+                dmgTxt.anchor.set(1, 1);
+                dmgTxt.x = b.targetHpX;
+                dmgTxt.y = b.targetHpY;
+                (dmgTxt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                this.floatingTextRenderer.addText(dmgTxt, b.targetHpY);
+            }
+            return;
+        }
+
+        if (b.elapsed < b.duration) {
+            const progress = (b.elapsed - halfDur) / halfDur;
+            const ease = easeInOut(Math.min(progress, 1));
+            b.sprite.x = b.toX + (b.fromX - b.toX) * ease;
+            b.sprite.y = b.toY + (b.fromY - b.toY) * ease;
+            return;
+        }
+
+        if (b.sprite.parent) b.sprite.parent.removeChild(b.sprite);
+        b.sprite.destroy();
+        this.combatBounce = null;
+    }
+}
