@@ -2,14 +2,18 @@ import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     ARCHITECTURE_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    LAW_CODE_UPGRADE_ID,
+    MATHEMATICS_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
+    PRINTING_PRESS_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
@@ -85,14 +89,14 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
     const knowledge =
         2 +
         (upgrades.includes(ARCHITECTURE_UPGRADE_ID) ? 1 : 0) +
-        (upgrades.includes(32) ? 2 : 0) +
-        (upgrades.includes(10) ? 1 : 0) +
-        (upgrades.includes(24) ? 2 : 0) +
+        (upgrades.includes(LAW_CODE_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
+        (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(NATIONALISM_UPGRADE_ID) ? 3 : 0) +
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 5 : 0);
     const gold =
-        (upgrades.includes(24) ? 2 : 0) +
+        (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(EXPLORATION_UPGRADE_ID) ? 2 : 0) +
@@ -100,8 +104,8 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 8 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 10 : 0);
     const food =
-        (upgrades.includes(34) ? 2 : 0) +
-        (upgrades.includes(10) ? 1 : 0) +
+        (upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 10 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 5 : 0) +

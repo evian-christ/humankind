@@ -3,8 +3,10 @@ import { SYMBOLS, SymbolType, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, S,
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    ARCHERY_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
+    CURRENCY_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
@@ -12,6 +14,7 @@ import {
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    WRITING_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
 export interface SelectionContext {
@@ -60,9 +63,9 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.type === SymbolType.ANCIENT && !upgrades.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)) {
             isUnlocked = false;
         }
-        if (sym.id === S.library && upgrades.includes(1)) isUnlocked = true; // Writing -> Library
-        if (sym.id === S.archer && upgrades.includes(5)) isUnlocked = true; // Archery -> Archer
-        if (sym.id === S.merchant && upgrades.includes(6)) isUnlocked = true; // Currency -> Merchant
+        if (sym.id === S.library && upgrades.includes(WRITING_SYSTEM_UPGRADE_ID)) isUnlocked = true; // Writing -> Library
+        if (sym.id === S.archer && upgrades.includes(ARCHERY_UPGRADE_ID)) isUnlocked = true; // Archery -> Archer
+        if (sym.id === S.merchant && upgrades.includes(CURRENCY_UPGRADE_ID)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
         if ((sym.id === S.crab || sym.id === S.pearl) && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Crab, Pearl
         if (sym.id === S.compass && upgrades.includes(COMPASS_UPGRADE_ID)) isUnlocked = true; // Compass -> Compass

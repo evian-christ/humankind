@@ -6,7 +6,11 @@ import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
-import { AGI_PROJECT_UPGRADE_ID, MODERN_AGE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import {
+    AGI_PROJECT_UPGRADE_ID,
+    ARCHERY_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
+} from '../../data/knowledgeUpgrades';
 
 const makeState = (): GameState => {
     const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
@@ -193,7 +197,7 @@ describe('selectionFlow actions', () => {
             level: 8,
             playerSymbols: [warrior],
             board,
-            unlockedKnowledgeUpgrades: [5],
+            unlockedKnowledgeUpgrades: [ARCHERY_UPGRADE_ID],
         });
 
         harness.actions.selectUpgrade(2);

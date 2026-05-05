@@ -66,98 +66,71 @@ export interface KnowledgeUpgrade {
 export type KnowledgeUpgradeType = SymbolType;
 
 /** 고대 타입 심볼을 상점/선택 풀에 넣기 위한 선행 연구 */
-export const ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID = 25;
-/** 목축업 — 소·양 효과 업그레이드(상세는 심볼 툴팁) */
-export const PASTORALISM_UPGRADE_ID = 26;
-/** 유목 전통 — 목축업 선행, 소·양·양모 보상 강화 */
-export const NOMADIC_TRADITION_UPGRADE_ID = 39;
-/** 나침반 — 나침반 심볼을 선택 풀에 추가 */
-export const COMPASS_UPGRADE_ID = 40;
-/** 조선 — 바다가 보드 위에서 2개로 간주됨 */
-export const SHIPBUILDING_UPGRADE_ID = 41;
-/** 어업 조합 — 물고기·게를 상위 단계로 업그레이드 */
-export const FISHERY_GUILD_UPGRADE_ID = 42;
-/** 해상 무역 — 진주와 바다를 강화 */
-export const MARITIME_TRADE_UPGRADE_ID = 43;
-/** 원양 항로 — 물고기·게·진주·바다의 최종 해상 업그레이드 */
-export const OCEANIC_ROUTES_UPGRADE_ID = 44;
-/** 플랜테이션 — 바나나·열대우림 업그레이드 */
-export const PLANTATION_UPGRADE_ID = 45;
-/** 정글탐사 — 탐사대 심볼 해금 */
-export const JUNGLE_EXPEDITION_UPGRADE_ID = 46;
-/** 열대 개발 — 열대우림·탐사대 최종 업그레이드 */
-export const TROPICAL_DEVELOPMENT_UPGRADE_ID = 47;
-/** 추적술 — 숲·버섯·사슴 업그레이드 */
-export const TRACKING_UPGRADE_ID = 48;
-/** 무두질 — 모피·사슴 업그레이드 */
-export const TANNING_UPGRADE_ID = 49;
-/** 임업 — 숲 상위 업그레이드 */
-export const FORESTRY_UPGRADE_ID = 50;
-/** 보존 — 사슴·버섯 상위 업그레이드 */
-export const PRESERVATION_UPGRADE_ID = 51;
-/** 목장제 — 유목 전통 선행, 도축 시 인접 평원 카운터 누적 */
-export const PASTURE_MANAGEMENT_UPGRADE_ID = 38;
-/** 기마술 — 말 풀 추가·평원 업그레이드(목축업 선행) */
-export const HORSEMANSHIP_UPGRADE_ID = 7;
-/** 농업 — 밀·쌀 주기 식량 보정 */
-export const AGRICULTURE_UPGRADE_ID = 27;
-/** 관개 — 농업(27) 선행 */
-export const IRRIGATION_UPGRADE_ID = 3;
-/** 어업 — 게·진주 심볼 풀 해금 */
-export const FISHERIES_UPGRADE_ID = 9;
-/** 항해술 — 물고기·게 바다 인접 생산 업그레이드(어업 선행) */
-export const SEAFARING_UPGRADE_ID = 28;
-/** 천문항법 — 천체·해도로 항해를 정밀화(항해술 선행) */
-export const CELESTIAL_NAVIGATION_UPGRADE_ID = 29;
-/** 채광 — 열대우림·돌 업그레이드 */
-export const MINING_UPGRADE_ID = 30;
-/** 수렵 — 멧돼지·모피 심볼 풀 해금 */
-export const HUNTING_UPGRADE_ID = 31;
-/** 법전 — 기본 지식 생산 +2 */
-export const LAW_CODE_UPGRADE_ID = 32;
-/** 외국 무역 — 사막 업그레이드 */
-export const FOREIGN_TRADE_UPGRADE_ID = 33;
-/** 대상품 교역 — 염료·파피루스 심볼 풀 해금(외국 무역 선행) */
-export const DRY_STORAGE_UPGRADE_ID = 52;
-/** 건조 저장술 — 오아시스·대추 업그레이드(대상품 교역 선행) */
-export const DESERT_STORAGE_UPGRADE_ID = 53;
-/** 카라밴세라이 — 카라밴세라이 해금 및 염료·파피루스 업그레이드(건조 저장술 선행) */
-export const CARAVANSERAI_UPGRADE_ID = 54;
-/** 오아시스 회수망 — 사막·오아시스 최종 업그레이드(카라밴세라이 선행) */
-export const OASIS_RECOVERY_UPGRADE_ID = 55;
-/** 족장제 — 기본 식량 +2, 야생열매 업그레이드 */
-export const CHIEFDOM_UPGRADE_ID = 34;
-/** 삼포제 — 관개 선행, 밀·쌀 주기 식량이 보드 위 초원 수를 참조하고 초원을 강화 */
-export const THREE_FIELD_SYSTEM_UPGRADE_ID = 35;
-/** 농업 잉여 — 삼포제 선행, 밀·쌀의 인접 초원 카운터 가속 강화 */
-export const AGRICULTURAL_SURPLUS_UPGRADE_ID = 36;
-/** 현대 농업 — 농업 잉여 선행, 밀·쌀이 보드 위 초원 수로 카운터 가속 */
-export const MODERN_AGRICULTURE_UPGRADE_ID = 37;
-export const MODERN_AGE_UPGRADE_ID = 60;
-export const AGI_PROJECT_UPGRADE_ID = 61;
-export const SCIENTIFIC_THEORY_UPGRADE_ID = 62;
-export const THEOCRACY_UPGRADE_ID = 63;
-export const GUILD_UPGRADE_ID = 64;
-export const STATE_LABOR_UPGRADE_ID = 65;
-export const FEUDAL_CORN_UPGRADE_ID = 66;
-export const ARCHITECTURE_UPGRADE_ID = 67;
-export const NATIONALISM_UPGRADE_ID = 68;
-export const EXPLORATION_UPGRADE_ID = 69;
-export const COLONIALISM_UPGRADE_ID = 70;
-export const MILITARY_SCIENCE_UPGRADE_ID = 71;
-export const URBANIZATION_UPGRADE_ID = 72;
-export const STEAM_POWER_UPGRADE_ID = 73;
-export const ELECTRICITY_UPGRADE_ID = 74;
-/** 철제 기술 — 전사를 검사로 업그레이드 */
-export const IRON_WORKING_UPGRADE_ID = 2;
-/** 기계장치 — 궁수를 석궁병으로 업그레이드 */
-export const MECHANICS_UPGRADE_ID = 56;
-/** 화약 — 검사를 머스킷병으로 업그레이드 */
-export const GUNPOWDER_UPGRADE_ID = 57;
-/** 탄도학 — 석궁병을 대포로 업그레이드 */
-export const BALLISTICS_UPGRADE_ID = 58;
-/** 교체식 부품 — 머스킷병을 보병으로 업그레이드 */
-export const INTERCHANGEABLE_PARTS_UPGRADE_ID = 59;
+export const ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID = 1;
+export const HUNTING_UPGRADE_ID = 2;
+export const PASTORALISM_UPGRADE_ID = 3;
+export const FISHERIES_UPGRADE_ID = 4;
+export const AGRICULTURE_UPGRADE_ID = 5;
+export const MINING_UPGRADE_ID = 6;
+export const FOREIGN_TRADE_UPGRADE_ID = 7;
+export const CHIEFDOM_UPGRADE_ID = 8;
+export const ARCHERY_UPGRADE_ID = 9;
+export const LAW_CODE_UPGRADE_ID = 10;
+export const CURRENCY_UPGRADE_ID = 11;
+export const SACRIFICIAL_RITE_UPGRADE_ID = 12;
+export const HORSEMANSHIP_UPGRADE_ID = 13;
+export const SEAFARING_UPGRADE_ID = 14;
+export const CELESTIAL_NAVIGATION_UPGRADE_ID = 15;
+export const IRRIGATION_UPGRADE_ID = 16;
+export const WRITING_SYSTEM_UPGRADE_ID = 17;
+export const ARCHITECTURE_UPGRADE_ID = 18;
+export const DRY_STORAGE_UPGRADE_ID = 19;
+export const TRACKING_UPGRADE_ID = 20;
+export const THEOLOGY_UPGRADE_ID = 21;
+export const IRON_WORKING_UPGRADE_ID = 22;
+export const MATHEMATICS_UPGRADE_ID = 23;
+export const NOMADIC_TRADITION_UPGRADE_ID = 24;
+export const STATE_LABOR_UPGRADE_ID = 25;
+export const FEUDALISM_UPGRADE_ID = 26;
+export const FISHERY_GUILD_UPGRADE_ID = 27;
+export const THREE_FIELD_SYSTEM_UPGRADE_ID = 28;
+export const PLANTATION_UPGRADE_ID = 29;
+export const TANNING_UPGRADE_ID = 30;
+export const COMPASS_UPGRADE_ID = 31;
+export const DESERT_STORAGE_UPGRADE_ID = 32;
+export const MECHANICS_UPGRADE_ID = 33;
+export const MARITIME_TRADE_UPGRADE_ID = 34;
+export const MILITARY_SCIENCE_UPGRADE_ID = 35;
+export const FEUDAL_CORN_UPGRADE_ID = 36;
+export const GUILD_UPGRADE_ID = 37;
+export const EXPLORATION_UPGRADE_ID = 38;
+export const SHIPBUILDING_UPGRADE_ID = 39;
+export const EDUCATION_UPGRADE_ID = 40;
+export const THEOCRACY_UPGRADE_ID = 41;
+export const JUNGLE_EXPEDITION_UPGRADE_ID = 42;
+export const AGRICULTURAL_SURPLUS_UPGRADE_ID = 43;
+export const PRINTING_PRESS_UPGRADE_ID = 44;
+export const CARAVANSERAI_UPGRADE_ID = 45;
+export const FORESTRY_UPGRADE_ID = 46;
+export const PASTURE_MANAGEMENT_UPGRADE_ID = 47;
+export const GUNPOWDER_UPGRADE_ID = 48;
+export const NATIONALISM_UPGRADE_ID = 49;
+export const COLONIALISM_UPGRADE_ID = 50;
+export const MODERN_AGE_UPGRADE_ID = 51;
+export const OCEANIC_ROUTES_UPGRADE_ID = 52;
+export const STEAM_POWER_UPGRADE_ID = 53;
+export const OASIS_RECOVERY_UPGRADE_ID = 54;
+export const BALLISTICS_UPGRADE_ID = 55;
+export const MODERN_AGRICULTURE_UPGRADE_ID = 56;
+export const PRESERVATION_UPGRADE_ID = 57;
+export const URBANIZATION_UPGRADE_ID = 58;
+export const SCIENTIFIC_THEORY_UPGRADE_ID = 59;
+export const TROPICAL_DEVELOPMENT_UPGRADE_ID = 60;
+export const ELECTRICITY_UPGRADE_ID = 61;
+export const INTERCHANGEABLE_PARTS_UPGRADE_ID = 62;
+export const AGI_PROJECT_UPGRADE_ID = 63;
+export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
+export const TERRITORIAL_REORG_UPGRADE_ID = -1;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
@@ -166,7 +139,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Ancient Era',
         type: SymbolType.ANCIENT,
         description: 'Unlocks Ancient-type symbols for the symbol selection pool.',
-        sprite: '-',
+        sprite: '001.png',
         descSymbols: buildAncientSymbolsUnlockDescSymbols(),
     },
     [PASTORALISM_UPGRADE_ID]: {
@@ -174,18 +147,18 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Pastoralism',
         type: SymbolType.ANCIENT,
         description: 'Upgrades Cattle and Sheep.',
-        sprite: '-',
+        sprite: '003.png',
         descSymbols: [
             { symbolKey: 'cattle', relation: 'effect_modify' },
             { symbolKey: 'sheep', relation: 'effect_modify' },
         ],
     },
-    1: {
-        id: 1,
+    [WRITING_SYSTEM_UPGRADE_ID]: {
+        id: WRITING_SYSTEM_UPGRADE_ID,
         name: 'Writing System',
         type: SymbolType.ANCIENT,
         description: 'Unlocks Library.',
-        sprite: '001.png',
+        sprite: '-',
         descSymbols: [{ symbolKey: 'library', relation: 'pool_add' }],
     },
     [IRON_WORKING_UPGRADE_ID]: {
@@ -193,7 +166,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Iron Working',
         type: SymbolType.ANCIENT,
         description: 'Upgrades Warrior into Knight.',
-        sprite: '002.png',
+        sprite: '-',
         descSymbols: [
             { symbolKey: 'warrior', relation: 'effect_modify' },
             { symbolKey: 'knight', relation: 'pool_add' },
@@ -204,7 +177,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Irrigation',
         type: SymbolType.ANCIENT,
         description: 'Upgrades Wheat, Rice, and Grassland.',
-        sprite: '003.png',
+        sprite: '-',
         descSymbols: [
             { symbolKey: 'wheat', relation: 'effect_modify' },
             { symbolKey: 'rice', relation: 'effect_modify' },
@@ -216,7 +189,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Agriculture',
         type: SymbolType.ANCIENT,
         description: 'Upgrades Wheat and Rice.',
-        sprite: '-',
+        sprite: '005.png',
         descSymbols: [
             { symbolKey: 'wheat', relation: 'effect_modify' },
             { symbolKey: 'rice', relation: 'effect_modify' },
@@ -249,7 +222,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Mining',
         type: SymbolType.ANCIENT,
         description: 'Upgrades Rainforest and Stone.',
-        sprite: '-',
+        sprite: '006.png',
         descSymbols: [
             { symbolKey: 'rainforest', relation: 'effect_modify' },
             { symbolKey: 'stone', relation: 'effect_modify' },
@@ -260,7 +233,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Hunting',
         type: SymbolType.ANCIENT,
         description: 'Unlocks Mushroom and Fur for the symbol selection pool.',
-        sprite: '-',
+        sprite: '002.png',
         descSymbols: [
             { symbolKey: 'mushroom', relation: 'pool_add' },
             { symbolKey: 'fur', relation: 'pool_add' },
@@ -281,7 +254,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     [TANNING_UPGRADE_ID]: {
         id: TANNING_UPGRADE_ID,
         name: 'Tanning',
-        type: SymbolType.ANCIENT,
+        type: SymbolType.MEDIEVAL,
         description: 'Upgrades Fur and Deer.',
         sprite: '-',
         descSymbols: [
@@ -292,7 +265,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     [FORESTRY_UPGRADE_ID]: {
         id: FORESTRY_UPGRADE_ID,
         name: 'Forestry',
-        type: SymbolType.ANCIENT,
+        type: SymbolType.MEDIEVAL,
         description: 'Upgrades Forest.',
         sprite: '-',
         descSymbols: [
@@ -302,7 +275,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     [PRESERVATION_UPGRADE_ID]: {
         id: PRESERVATION_UPGRADE_ID,
         name: 'Preservation',
-        type: SymbolType.ANCIENT,
+        type: SymbolType.MODERN,
         description: 'Upgrades Deer and Mushroom.',
         sprite: '-',
         descSymbols: [
@@ -322,7 +295,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Foreign Trade',
         type: SymbolType.ANCIENT,
         description: 'Upgrades Desert.',
-        sprite: '-',
+        sprite: '007.png',
         descSymbols: [{ symbolKey: 'desert', relation: 'effect_modify' }],
     },
     [DRY_STORAGE_UPGRADE_ID]: {
@@ -376,7 +349,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Chiefdom',
         type: SymbolType.ANCIENT,
         description: 'Base Food production +2. Upgrades Wild Berries.',
-        sprite: '-',
+        sprite: '008.png',
         descSymbols: [{ symbolKey: 'wild_berries', relation: 'effect_modify' }],
     },
     [ARCHITECTURE_UPGRADE_ID]: {
@@ -463,12 +436,12 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'infantry', relation: 'pool_add' },
         ],
     },
-    4: {
-        id: 4,
+    [THEOLOGY_UPGRADE_ID]: {
+        id: THEOLOGY_UPGRADE_ID,
         name: 'Theology',
         type: SymbolType.ANCIENT,
         description: 'Unlocks Religion symbols for selection.',
-        sprite: '004.png',
+        sprite: '-',
         descSymbols: [
             { symbolKey: 'christianity', relation: 'pool_add' },
             { symbolKey: 'islam', relation: 'pool_add' },
@@ -476,20 +449,20 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'hinduism', relation: 'pool_add' },
         ],
     },
-    5: {
-        id: 5,
+    [ARCHERY_UPGRADE_ID]: {
+        id: ARCHERY_UPGRADE_ID,
         name: 'Archery',
         type: SymbolType.ANCIENT,
         description: 'Unlocks Archer.',
-        sprite: '005.png',
+        sprite: '009.png',
         descSymbols: [{ symbolKey: 'archer', relation: 'pool_add' }],
     },
-    6: {
-        id: 6,
+    [CURRENCY_UPGRADE_ID]: {
+        id: CURRENCY_UPGRADE_ID,
         name: 'Currency',
         type: SymbolType.ANCIENT,
         description: 'Unlocks Merchant symbol.',
-        sprite: '006.png',
+        sprite: '-',
         descSymbols: [{ symbolKey: 'merchant', relation: 'pool_add' }],
     },
     [HORSEMANSHIP_UPGRADE_ID]: {
@@ -497,14 +470,14 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Horsemanship',
         type: SymbolType.ANCIENT,
         description: 'Adds Horse to the symbol selection pool. Upgrades Plains.',
-        sprite: '007.png',
+        sprite: '-',
         descSymbols: [
             { symbolKey: 'horse', relation: 'pool_add' },
             { symbolKey: 'plains', relation: 'effect_modify' },
         ],
     },
-    8: {
-        id: 8,
+    [SACRIFICIAL_RITE_UPGRADE_ID]: {
+        id: SACRIFICIAL_RITE_UPGRADE_ID,
         name: 'Sacrificial Rite',
         type: SymbolType.ANCIENT,
         description:
@@ -542,7 +515,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     [FEUDAL_CORN_UPGRADE_ID]: {
         id: FEUDAL_CORN_UPGRADE_ID,
         name: 'Feudalism',
-        type: SymbolType.ANCIENT,
+        type: SymbolType.MEDIEVAL,
         description: 'Base Food production +2. Upgrades Corn.',
         sprite: '-',
         descSymbols: [{ symbolKey: 'corn', relation: 'effect_modify' }],
@@ -552,22 +525,22 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Fisheries',
         type: SymbolType.ANCIENT,
         description: 'Crab and Pearl are added to the symbol selection pool.',
-        sprite: '-',
+        sprite: '004.png',
         descSymbols: [
             { symbolKey: 'crab', relation: 'pool_add' },
             { symbolKey: 'pearl', relation: 'pool_add' },
         ],
     },
-    10: {
-        id: 10,
+    [MATHEMATICS_UPGRADE_ID]: {
+        id: MATHEMATICS_UPGRADE_ID,
         name: 'Mathematics',
         type: SymbolType.ANCIENT,
         description: 'Base Food +1, Base Knowledge +1.',
         sprite: '-',
     },
     /** 레벨 10 이상에서만 선택지에 등장 — 중세 풀·지형 가중 */
-    15: {
-        id: 15,
+    [FEUDALISM_UPGRADE_ID]: {
+        id: FEUDALISM_UPGRADE_ID,
         name: 'Medieval Age',
         type: SymbolType.MEDIEVAL,
         description: 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2.',
@@ -576,8 +549,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     },
 
     // ── Medieval Upgrades (require Medieval Age upgrade or era 2+) ──
-    16: {
-        id: 16,
+    [EDUCATION_UPGRADE_ID]: {
+        id: EDUCATION_UPGRADE_ID,
         name: 'Education',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Library.',
@@ -605,8 +578,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         sprite: '-',
         descSymbols: [{ symbolKey: 'merchant', relation: 'effect_modify' }],
     },
-    24: {
-        id: 24,
+    [PRINTING_PRESS_UPGRADE_ID]: {
+        id: PRINTING_PRESS_UPGRADE_ID,
         name: 'Printing Press',
         type: SymbolType.MEDIEVAL,
         description: 'Base Gold +2, Base Knowledge +2.',
@@ -623,7 +596,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     [COMPASS_UPGRADE_ID]: {
         id: COMPASS_UPGRADE_ID,
         name: 'Compass',
-        type: SymbolType.ANCIENT,
+        type: SymbolType.MEDIEVAL,
         description: 'Compass is added to the symbol selection pool.',
         sprite: '-',
         descSymbols: [{ symbolKey: 'compass', relation: 'pool_add' }],
@@ -775,18 +748,13 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
 
 };
 
-export const FEUDALISM_UPGRADE_ID = 15;
-export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
-export const SACRIFICIAL_RITE_UPGRADE_ID = 8;
-export const TERRITORIAL_REORG_UPGRADE_ID = 22;
-
 export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
-    [16]: [1],
-    [THEOCRACY_UPGRADE_ID]: [4],
-    [GUILD_UPGRADE_ID]: [6],
+    [EDUCATION_UPGRADE_ID]: [WRITING_SYSTEM_UPGRADE_ID],
+    [THEOCRACY_UPGRADE_ID]: [THEOLOGY_UPGRADE_ID],
+    [GUILD_UPGRADE_ID]: [CURRENCY_UPGRADE_ID],
     [MILITARY_SCIENCE_UPGRADE_ID]: [HORSEMANSHIP_UPGRADE_ID],
-    [SCIENTIFIC_THEORY_UPGRADE_ID]: [16],
-    [IRON_WORKING_UPGRADE_ID]: [5],
+    [SCIENTIFIC_THEORY_UPGRADE_ID]: [EDUCATION_UPGRADE_ID],
+    [IRON_WORKING_UPGRADE_ID]: [ARCHERY_UPGRADE_ID],
     [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
     [HORSEMANSHIP_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
     [NOMADIC_TRADITION_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],

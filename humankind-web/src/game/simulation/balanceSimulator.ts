@@ -40,7 +40,9 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
+    THEOLOGY_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
+    WRITING_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
@@ -514,8 +516,8 @@ const chooseUpgrade = (
 const applyUpgrade = (state: SimulationState, upgradeId: number) => {
     const nextUnlocked = [...state.unlockedKnowledgeUpgrades, upgradeId];
     state.unlockedKnowledgeUpgrades = nextUnlocked;
-    if (upgradeId === 4) state.religionUnlocked = true;
-    if (upgradeId === 1) state.bonusXpPerTurn += 2;
+    if (upgradeId === THEOLOGY_UPGRADE_ID) state.religionUnlocked = true;
+    if (upgradeId === WRITING_SYSTEM_UPGRADE_ID) state.bonusXpPerTurn += 2;
     if (upgradeId === AGI_PROJECT_UPGRADE_ID && SYMBOLS[S.agi_core]) {
         state.playerSymbols.push(createSimulationInstance(SYMBOLS[S.agi_core]!, nextUnlocked));
     }

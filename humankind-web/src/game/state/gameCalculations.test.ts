@@ -7,7 +7,9 @@ import {
     ARCHITECTURE_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
+    CURRENCY_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
+    EDUCATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
@@ -44,9 +46,14 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     GUILD_UPGRADE_ID,
+    HORSEMANSHIP_UPGRADE_ID,
+    MATHEMATICS_UPGRADE_ID,
+    PRINTING_PRESS_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
+    THEOLOGY_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
+    WRITING_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import {
     getGoldInflationMultiplier,
@@ -92,13 +99,13 @@ describe('isUpgradeLegalForKnowledgePick', () => {
 
     it('requires Writing System before Education', () => {
         expect(isUpgradeLegalForKnowledgePick(
-            16,
+            EDUCATION_UPGRADE_ID,
             [],
             14,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
-            16,
-            [1],
+            EDUCATION_UPGRADE_ID,
+            [WRITING_SYSTEM_UPGRADE_ID],
             14,
         )).toBe(true);
     });
@@ -111,7 +118,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             SCIENTIFIC_THEORY_UPGRADE_ID,
-            [16],
+            [EDUCATION_UPGRADE_ID],
             25,
         )).toBe(true);
     });
@@ -124,7 +131,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             THEOCRACY_UPGRADE_ID,
-            [4],
+            [THEOLOGY_UPGRADE_ID],
             15,
         )).toBe(true);
     });
@@ -137,7 +144,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             GUILD_UPGRADE_ID,
-            [6],
+            [CURRENCY_UPGRADE_ID],
             14,
         )).toBe(true);
     });
@@ -150,7 +157,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             MILITARY_SCIENCE_UPGRADE_ID,
-            [7],
+            [HORSEMANSHIP_UPGRADE_ID],
             14,
         )).toBe(true);
     });
@@ -499,14 +506,14 @@ describe('getHudTurnStartPassiveTotals', () => {
     it('does not add passive production for Writing System, Currency, Education, or Scientific Theory', () => {
         expect(getHudTurnStartPassiveTotals({
             stageId: 1,
-            unlockedKnowledgeUpgrades: [1, 6, 16, SCIENTIFIC_THEORY_UPGRADE_ID],
+            unlockedKnowledgeUpgrades: [WRITING_SYSTEM_UPGRADE_ID, CURRENCY_UPGRADE_ID, EDUCATION_UPGRADE_ID, SCIENTIFIC_THEORY_UPGRADE_ID],
         })).toEqual({ food: 2, gold: 2, knowledge: 4 });
     });
 
     it('applies updated Mathematics and Printing Press passive production', () => {
         expect(getHudTurnStartPassiveTotals({
             stageId: 1,
-            unlockedKnowledgeUpgrades: [10, 24],
+            unlockedKnowledgeUpgrades: [MATHEMATICS_UPGRADE_ID, PRINTING_PRESS_UPGRADE_ID],
         })).toEqual({ food: 3, gold: 4, knowledge: 7 });
     });
 

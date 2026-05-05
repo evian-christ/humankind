@@ -8,6 +8,7 @@ import {
     KNOWLEDGE_RESOURCE_ICON_URL,
     RELIC_PANEL_TITLE_ICON_URL,
 } from '../../uiAssetUrls';
+import { hasUpgradeSprite, resolveUpgradeSpriteFile } from '../knowledgeUpgradeSprites';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -15,10 +16,10 @@ let assetsLoaded = false;
 
 /** 지식 업그레이드 선택 카드용 64x64 스프라이트 경로 (없으면 000.png) */
 const getUpgradeSpritePaths = (): string[] => {
-    const paths = new Set<string>([`${ASSET_BASE_URL}assets/upgrades/000.png`]);
+    const paths = new Set<string>();
     for (const u of Object.values(KNOWLEDGE_UPGRADES)) {
-        if (u.sprite && u.sprite !== '-' && u.sprite !== '-.png') {
-            paths.add(`${ASSET_BASE_URL}assets/upgrades/${u.sprite}`);
+        if (hasUpgradeSprite(u.sprite)) {
+            paths.add(resolveUpgradeSpriteFile(u.sprite));
         }
     }
     return Array.from(paths);

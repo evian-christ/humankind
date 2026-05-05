@@ -6,6 +6,7 @@ import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
+    EDUCATION_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
@@ -231,7 +232,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                     state.contributors.push(...occupiedBoard);
                 } else {
                     const occupiedAdj = adj.filter((pos) => boardGrid[pos.x][pos.y] != null);
-                    const multiplier = upgrades.includes(16) ? 2 : 1;
+                    const multiplier = upgrades.includes(EDUCATION_UPGRADE_ID) ? 2 : 1;
                     state.knowledge += occupiedAdj.length * multiplier;
                     occupiedAdj.forEach((pos) => state.contributors.push(pos));
                 }
