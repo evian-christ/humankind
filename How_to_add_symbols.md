@@ -115,6 +115,24 @@
 2. [ ] `sprite` 필드: `public/assets/symbols/`에서 파일 존재 확인 → 없으면 `"-"`
 3. [ ] `tags` 필드: 실제 사용처가 있을 때만 추가, 없으면 `[]` (새 태그면 `i18n/index.ts`의 `tag.<tag>`도 추가)
 4. [ ] `description` 필드: 위 3항 효과 텍스트 규칙 준수 (용어, 조건 콜론, 세미콜론 구분)
-5. [ ] `symbolEffects.ts`에 해당 ID의 `case` 블록 추가
+5. [ ] `humankind-web/src/game/logic/symbolEffects/handlers/`의 적절한 handler 파일에 효과 계산 추가
 6. [ ] `i18n/index.ts`에 한국어/영어 이름 및 설명 번역 추가 (`symbol.<key>.*`; 번역도 동일 용어 규칙 적용)
 7. [ ] `AssetLoader.ts`는 `SYMBOLS`에서 동적으로 읽으므로 별도 수정 불필요
+8. [ ] 효과가 턴 후처리, 전투, 종교/상인 같은 지연 계산과 엮이면 `logic/turn/*`와 관련 테스트도 함께 갱신
+9. [ ] 새 효과가 별도 연출을 필요로 하면 계산 결과를 먼저 확정한 뒤 `components/canvas/renderers/*` 또는 React 오버레이에서 표시만 추가
+
+---
+
+## 현재 효과 처리 구조
+
+- `humankind-web/src/game/logic/symbolEffects.ts`는 심볼 효과 엔트리입니다.
+- 실제 효과는 `symbolEffects/handlers/` 아래에 성격별로 나뉩니다.
+  - `terrainEffects.ts`
+  - `ancientEffects.ts`
+  - `medievalEffects.ts`
+  - `religionEffects.ts`
+  - `enemyEffects.ts`
+  - `disasterEffects.ts`
+  - `normalEffects.ts`
+- 여러 슬롯의 결과를 모아서 나중에 계산해야 하는 효과는 `logic/turn/turnPipeline.ts`, `symbolEffectResolution.ts`, `postEffectsHooks.ts` 쪽을 확인합니다.
+- 연출 타이밍은 `state/actions/turnPresentationTimeline.ts`, run 취소는 `state/actions/turnRunScheduler.ts`가 담당합니다. 심볼 효과 handler에서 직접 타이머를 만들지 않습니다.

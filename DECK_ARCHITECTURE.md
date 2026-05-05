@@ -89,6 +89,17 @@
 - 따라서 중세의 성공 여부는 새 심볼 수보다도, 플레이어가 고대에 만든 기반이 중세에서 `직접 생산 중심 엔진`에서 `증폭/전환 중심 엔진`으로 얼마나 명확하게 넘어가는지에 달려 있다.
 - 이 축이 선명해야 다음 시대인 현대도 중세의 상위 호환이 아니라, `연쇄/전역 스케일링`이라는 별도 생산 문법으로 자연스럽게 올라갈 수 있다.
 
+### 8-1. 구현 아키텍처 기준
+- 덱/시대 설계를 구현할 때, 심볼 효과 계산과 연출은 분리한다.
+- 밸런스 판단에 필요한 값은 `logic/turn` 및 `logic/symbolEffects` 계층에서 재현 가능하게 계산되어야 한다.
+- Pixi 연출, hover, 플로팅 텍스트, 전투 bounce는 계산 결과를 표시하는 계층이며, 게임 규칙의 정답을 새로 만들지 않는다.
+- 새 시대/새 심볼을 추가할 때는 다음 경로를 기준으로 책임을 나눈다:
+  - 정적 정의: `game/data/symbolDefinitions.ts`, `symbolIdRegistry.ts`, `i18n/index.ts`
+  - 효과 계산: `game/logic/symbolEffects/handlers/*`
+  - 턴 전체 흐름: `game/logic/turn/*`, `game/state/actions/turnFlow.ts`
+  - 연출/표시: `components/canvas/renderers/*` 또는 React 오버레이
+- 중세/현대 효과가 복잡해질수록 `turnPipeline`, `postEffectsHooks`, handler 테스트를 우선 확장하고, store 내부에 임시 계산을 직접 넣지 않는다.
+
 ## 9. 초원축 농업 업그레이드 방향
 - 초원축은 안정적으로 식량을 생산하는 축으로 유지한다.
 - 약점은 골드, 지식, 전투 확장성이 낮다는 점이며, 이 약점은 의도적으로 유지한다.
