@@ -20,6 +20,7 @@ import SymbolPoolModal from './components/SymbolPoolModal';
 import OwnedSymbolsModal from './components/OwnedSymbolsModal';
 import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
+import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
 import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 
@@ -429,6 +430,9 @@ function App() {
 
       {/* ===== KNOWLEDGE UPGRADES OVERLAY ===== */}
       <KnowledgeUpgradesOverlay isOpen={isKnowledgeOpen} onClose={() => setIsKnowledgeOpen(false)} />
+
+      {/* ===== BALANCE SIMULATOR (F6) ===== */}
+      <BalanceSimulatorOverlay />
     </div>
   );
 }
