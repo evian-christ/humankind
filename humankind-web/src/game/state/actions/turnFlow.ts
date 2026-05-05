@@ -1,7 +1,7 @@
 import { t } from '../../../i18n';
 import { RELICS } from '../../data/relicDefinitions';
 import { SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
-import { useSettingsStore, EFFECT_SPEED_DELAY, COMBAT_BOUNCE_DURATION } from '../settingsStore';
+import { useSettingsStore } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
 import {
@@ -35,6 +35,11 @@ import {
 import type { PlayerSymbolInstance } from '../../types';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import {
+    buildCombatPresentationPlan,
+    buildSlotEffectPresentationPlan,
+} from './turnPresentationTimeline';
+import { createTurnRunScheduler } from './turnRunScheduler';
+import {
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
     getKnowledgeRequiredForLevel,
@@ -63,20 +68,6 @@ interface TurnFlowDeps {
     buildActiveRelicEffects: () => ActiveRelicEffects;
 }
 
-const PHASE1_DELAY: Record<import('../settingsStore').EffectSpeed, number> = {
-    '1x': 220,
-    '2x': 150,
-    '4x': 90,
-    instant: 0,
-};
-
-const PHASE2_DELAY: Record<import('../settingsStore').EffectSpeed, number> = {
-    '1x': 360,
-    '2x': 280,
-    '4x': 180,
-    instant: 0,
-};
-
 export const createTurnFlowActions = ({
     get,
     set,
@@ -86,11 +77,15 @@ export const createTurnFlowActions = ({
     createInstance,
     getAdjacentCoords,
     buildActiveRelicEffects,
-}: TurnFlowDeps) => ({
+}: TurnFlowDeps) => {
+    const turnRuns = createTurnRunScheduler();
+
+    return {
     spinBoard: () => {
         const state = get();
         if ((state.levelUpResearchPoints ?? 0) > 0) return;
         if (state.phase !== 'idle') return;
+        turnRuns.cancelCurrent();
 
         get().appendEventLog({ turn: state.turn + 1, kind: 'turn_start' });
 
@@ -139,6 +134,7 @@ export const createTurnFlowActions = ({
             set({ phase: 'showing_new_threats' });
             return;
         }
+        const turnRun = turnRuns.startRun();
         const baseTotals = computeTurnStartBaseTotals({
             state,
             getHudTurnStartPassiveTotals,
@@ -219,7 +215,7 @@ export const createTurnFlowActions = ({
             const urWheelInstanceId: string | null = post.urWheelPlan?.instanceId ?? null;
             const urWheelMinTarget: { x: number; y: number } | null = post.urWheelPlan?.target ?? null;
             const urWheelShakeMs = 360;
-            const urWheelBounceDur = COMBAT_BOUNCE_DURATION[useSettingsStore.getState().effectSpeed];
+            const urWheelBounceDur = buildCombatPresentationPlan(useSettingsStore.getState().effectSpeed).bounceDurationMs;
 
             const applyUrWheelDestroyAndDecrement = () => {
                 if (!urWheelInstanceId) return;
@@ -340,7 +336,7 @@ export const createTurnFlowActions = ({
                     return;
                 }
 
-                setTimeout(() => {
+                turnRun.schedule(600, () => {
                     const finalState = get();
                     if (finalState.phase === 'processing') {
                         const phaseResolution = resolveTurnEndPhase({
@@ -376,17 +372,17 @@ export const createTurnFlowActions = ({
                             symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
                         });
                     }
-                }, 600);
+                });
             };
 
             if (urWheelInstanceId) {
                 if (urWheelMinTarget && urWheelBounceDur > 0) {
                     set({ preCombatShakeRelicDefId: RELIC_ID.UR_WHEEL });
-                    setTimeout(() => {
+                    turnRun.schedule(urWheelShakeMs, () => {
                         set({ preCombatShakeRelicDefId: null });
                         applyUrWheelDestroyAndDecrement();
                         runFinishProcessingTail();
-                    }, urWheelShakeMs);
+                    });
                     return;
                 }
                 applyUrWheelDestroyAndDecrement();
@@ -395,6 +391,7 @@ export const createTurnFlowActions = ({
         };
 
         const processSlot = (slotIdx: number) => {
+            if (!turnRun.isActive()) return;
             if (slotIdx >= slotPipeline.slotOrder.length) {
                 completeSlotEffects({
                     pipeline: slotPipeline,
@@ -410,7 +407,7 @@ export const createTurnFlowActions = ({
                     lastEffects: [...slotPipeline.accumulatedEffects],
                     runningTotals: { ...slotPipeline.totals },
                 });
-                setTimeout(() => {
+                turnRun.schedule(500, () => {
                     finishProcessing(
                         slotPipeline.totals.food,
                         slotPipeline.totals.knowledge,
@@ -419,7 +416,7 @@ export const createTurnFlowActions = ({
                         slotPipeline.symbolsToSpawnOnBoard,
                         slotPipeline.accumulatedEffects,
                     );
-                }, 500);
+                });
                 return;
             }
 
@@ -451,9 +448,10 @@ export const createTurnFlowActions = ({
             }
 
             const effectSpeed = useSettingsStore.getState().effectSpeed;
-            const phase1 = PHASE1_DELAY[effectSpeed];
-            const phase2 = PHASE2_DELAY[effectSpeed];
-            const delay = EFFECT_SPEED_DELAY[effectSpeed];
+            const timelinePlan = buildSlotEffectPresentationPlan({
+                effectSpeed,
+                contributorCount: result.contributors?.length ?? 0,
+            });
 
             set({
                 activeSlot: { x, y },
@@ -462,11 +460,12 @@ export const createTurnFlowActions = ({
                 effectPhase: 1,
             });
 
-            const hasContributors = (result.contributors ?? []).length > 0;
             const showPhase2 = () => {
+                if (!turnRun.isActive()) return;
                 set({ activeContributors: result.contributors ?? [], effectPhase: 2 });
             };
             const applyEffectsAndContinue = () => {
+                if (!turnRun.isActive()) return;
                 set({ effectPhase: 3, effectPhase3ReachedThisRun: true });
                 applySlotEffectResult(slotPipeline, { x, y }, result);
 
@@ -520,34 +519,34 @@ export const createTurnFlowActions = ({
                     });
                 }
 
-                if (delay === 0) {
+                if (timelinePlan.continueDelayMs === 0) {
                     processSlot(slotIdx + 1);
                 } else {
-                    setTimeout(() => processSlot(slotIdx + 1), delay);
+                    turnRun.schedule(timelinePlan.continueDelayMs, () => processSlot(slotIdx + 1));
                 }
             };
 
-            if (!hasContributors) {
-                if (phase1 === 0) {
+            if (!timelinePlan.hasContributors) {
+                if (timelinePlan.phase1DelayMs === 0) {
                     applyEffectsAndContinue();
                 } else {
-                    setTimeout(applyEffectsAndContinue, phase1);
+                    turnRun.schedule(timelinePlan.phase1DelayMs, applyEffectsAndContinue);
                 }
-            } else if (phase1 === 0 && phase2 === 0) {
+            } else if (timelinePlan.phase1DelayMs === 0 && timelinePlan.phase2DelayMs === 0) {
                 showPhase2();
                 applyEffectsAndContinue();
-            } else if (phase1 === 0) {
+            } else if (timelinePlan.phase1DelayMs === 0) {
                 showPhase2();
-                setTimeout(applyEffectsAndContinue, phase2);
+                turnRun.schedule(timelinePlan.phase2DelayMs, applyEffectsAndContinue);
             } else {
-                setTimeout(() => {
+                turnRun.schedule(timelinePlan.phase1DelayMs, () => {
                     showPhase2();
-                    if (phase2 === 0) {
+                    if (timelinePlan.phase2DelayMs === 0) {
                         applyEffectsAndContinue();
                     } else {
-                        setTimeout(applyEffectsAndContinue, phase2);
+                        turnRun.schedule(timelinePlan.phase2DelayMs, applyEffectsAndContinue);
                     }
-                }, phase1);
+                });
             }
         };
 
@@ -568,11 +567,13 @@ export const createTurnFlowActions = ({
         const combatEvents = collectCombatEvents(combatBoard, boardWidth, boardHeight);
 
         const startEffectPhase = () => {
+            if (!turnRun.isActive()) return;
             const combatDestroyedIds = new Set(collectCombatDestroyedSymbols(get().board, boardWidth, boardHeight));
             const effectSpeed = useSettingsStore.getState().effectSpeed;
-            const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
+            const combatPlan = buildCombatPresentationPlan(effectSpeed);
 
             const doRemoveAndStart = () => {
+                if (!turnRun.isActive()) return;
                 if (combatDestroyedIds.size > 0) {
                     set((prev) => {
                         return {
@@ -592,23 +593,23 @@ export const createTurnFlowActions = ({
                     combatShaking: false,
                 });
 
-                const initialDelay = EFFECT_SPEED_DELAY[effectSpeed];
-                if (initialDelay === 0) {
+                if (combatPlan.initialEffectDelayMs === 0) {
                     processSlot(0);
                 } else {
-                    setTimeout(() => processSlot(0), Math.max(initialDelay, 300));
+                    turnRun.schedule(combatPlan.initialEffectDelayMs, () => processSlot(0));
                 }
             };
 
-            if (combatDestroyedIds.size > 0 && bounceDur > 0) {
+            if (combatDestroyedIds.size > 0 && combatPlan.bounceDurationMs > 0) {
                 set({ combatAnimation: null, combatShaking: true });
-                setTimeout(doRemoveAndStart, Math.max(bounceDur * 2, 200));
+                turnRun.schedule(combatPlan.removalDelayMs, doRemoveAndStart);
             } else {
                 doRemoveAndStart();
             }
         };
 
         const processCombatEvent = (eventIdx: number) => {
+            if (!turnRun.isActive()) return;
             if (eventIdx >= combatEvents.length) {
                 startEffectPhase();
                 return;
@@ -626,16 +627,15 @@ export const createTurnFlowActions = ({
             });
 
             const effectSpeed = useSettingsStore.getState().effectSpeed;
-            const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
-            if (bounceDur === 0) {
+            const combatPlan = buildCombatPresentationPlan(effectSpeed);
+            if (combatPlan.bounceDurationMs === 0) {
                 processCombatEvent(eventIdx + 1);
                 return;
             }
 
-            const stepDelay = bounceDur + 40;
             if (result.animation) {
                 set({ combatAnimation: result.animation });
-                setTimeout(() => processCombatEvent(eventIdx + 1), stepDelay);
+                turnRun.schedule(combatPlan.stepDelayMs, () => processCombatEvent(eventIdx + 1));
             } else {
                 processCombatEvent(eventIdx + 1);
             }
@@ -644,9 +644,9 @@ export const createTurnFlowActions = ({
         if (hasClovis) {
             const pos = pickClovisPreDamageTarget(combatBoard, boardWidth, boardHeight);
             const effectSpeed = useSettingsStore.getState().effectSpeed;
-            const bounceDur = COMBAT_BOUNCE_DURATION[effectSpeed];
+            const combatPlan = buildCombatPresentationPlan(effectSpeed);
 
-            if (!pos || bounceDur === 0) {
+            if (!pos || combatPlan.bounceDurationMs === 0) {
                 if (pos) applyClovisDamage(pos);
                 set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: null });
                 processCombatEvent(0);
@@ -654,11 +654,11 @@ export const createTurnFlowActions = ({
                 const SHAKE_MS = 360;
                 const AFTER_DAMAGE_PAUSE_MS = 180;
                 set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: RELIC_ID.CLOVIS_SPEAR });
-                setTimeout(() => {
+                turnRun.schedule(SHAKE_MS, () => {
                     set({ preCombatShakeRelicDefId: null });
                     if (pos) applyClovisDamage(pos);
-                    setTimeout(() => processCombatEvent(0), AFTER_DAMAGE_PAUSE_MS);
-                }, SHAKE_MS);
+                    turnRun.schedule(AFTER_DAMAGE_PAUSE_MS, () => processCombatEvent(0));
+                });
             }
         } else {
             set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: null });
@@ -670,4 +670,5 @@ export const createTurnFlowActions = ({
         set({ pendingNewThreatFloats: [] });
         get().startProcessing();
     },
-});
+    };
+};

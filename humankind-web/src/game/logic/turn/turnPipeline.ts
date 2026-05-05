@@ -91,9 +91,9 @@ export interface ApplyGeneratedSymbolsArgs {
 }
 
 /**
- * TurnPipeline (최소 스캐폴딩)
- * - 현재 store 내부에 있는 setTimeout/phase 제어는 그대로 두고,
- *   “슬롯 효과 계산 호출 형태”만 표준화해 이후 오케스트레이터 분리를 쉽게 만든다.
+ * TurnPipeline
+ * - 슬롯 효과 계산과 누적 결과 갱신만 담당한다.
+ * - 연출 지연과 run 취소는 state/actions의 턴 타임라인 계층에서 처리한다.
  */
 export function computeSingleSlotEffect(deps: TurnPipelineDeps, args: ProcessSlotArgs): EffectResult {
     return deps.processSingleSymbolEffects(args);
