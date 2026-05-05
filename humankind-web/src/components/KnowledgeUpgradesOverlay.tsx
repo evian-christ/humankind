@@ -14,6 +14,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    ARCHERY_UPGRADE_ID,
     AGRICULTURE_UPGRADE_ID,
     ARCHITECTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
@@ -23,8 +24,10 @@ import {
     CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
+    CURRENCY_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
+    EDUCATION_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
@@ -57,17 +60,22 @@ import {
     MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MATHEMATICS_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
+    PRINTING_PRESS_UPGRADE_ID,
     PRESERVATION_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
+    SACRIFICIAL_RITE_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
+    THEOLOGY_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
+    WRITING_SYSTEM_UPGRADE_ID,
     getKnowledgeUpgradeDirectDependents,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../game/data/knowledgeUpgrades';
@@ -133,21 +141,21 @@ function buildCenteredTierRow(...upgradeIds: number[]): (number | null)[] {
 const TIERS: { level: number; ids: (number | null)[] }[] = [
     { level: 1, ids: buildCenteredTierRow(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) },
     { level: 2, ids: buildCenteredTierRow(HUNTING_UPGRADE_ID, PASTORALISM_UPGRADE_ID, FISHERIES_UPGRADE_ID, AGRICULTURE_UPGRADE_ID, MINING_UPGRADE_ID, FOREIGN_TRADE_UPGRADE_ID) },
-    { level: 3, ids: buildCenteredTierRow(CHIEFDOM_UPGRADE_ID, 5, LAW_CODE_UPGRADE_ID, 6, 8) },
+    { level: 3, ids: buildCenteredTierRow(CHIEFDOM_UPGRADE_ID, ARCHERY_UPGRADE_ID, LAW_CODE_UPGRADE_ID, CURRENCY_UPGRADE_ID, SACRIFICIAL_RITE_UPGRADE_ID) },
     { level: 4, ids: buildCenteredTierRow(HORSEMANSHIP_UPGRADE_ID, SEAFARING_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID) },
-    { level: 5, ids: buildCenteredTierRow(IRRIGATION_UPGRADE_ID, 1) },
+    { level: 5, ids: buildCenteredTierRow(IRRIGATION_UPGRADE_ID, WRITING_SYSTEM_UPGRADE_ID) },
     { level: 6, ids: buildCenteredTierRow(ARCHITECTURE_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID) },
-    { level: 7, ids: buildCenteredTierRow(TRACKING_UPGRADE_ID, 4) },
-    { level: 8, ids: buildCenteredTierRow(IRON_WORKING_UPGRADE_ID, 10) },
+    { level: 7, ids: buildCenteredTierRow(TRACKING_UPGRADE_ID, THEOLOGY_UPGRADE_ID) },
+    { level: 8, ids: buildCenteredTierRow(IRON_WORKING_UPGRADE_ID, MATHEMATICS_UPGRADE_ID) },
     { level: 9, ids: buildCenteredTierRow(NOMADIC_TRADITION_UPGRADE_ID, STATE_LABOR_UPGRADE_ID) },
     { level: 10, ids: buildCenteredTierRow(FEUDALISM_UPGRADE_ID) },
     { level: 11, ids: buildCenteredTierRow(FISHERY_GUILD_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID, PLANTATION_UPGRADE_ID) },
     { level: 12, ids: buildCenteredTierRow(TANNING_UPGRADE_ID, COMPASS_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID) },
     { level: 13, ids: buildCenteredTierRow(MECHANICS_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID) },
     { level: 14, ids: buildCenteredTierRow(MILITARY_SCIENCE_UPGRADE_ID, FEUDAL_CORN_UPGRADE_ID, GUILD_UPGRADE_ID, EXPLORATION_UPGRADE_ID) },
-    { level: 15, ids: buildCenteredTierRow(SHIPBUILDING_UPGRADE_ID, 16) },
+    { level: 15, ids: buildCenteredTierRow(SHIPBUILDING_UPGRADE_ID, EDUCATION_UPGRADE_ID) },
     { level: 16, ids: buildCenteredTierRow(THEOCRACY_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID) },
-    { level: 17, ids: buildCenteredTierRow(AGRICULTURAL_SURPLUS_UPGRADE_ID, 24, CARAVANSERAI_UPGRADE_ID) },
+    { level: 17, ids: buildCenteredTierRow(AGRICULTURAL_SURPLUS_UPGRADE_ID, PRINTING_PRESS_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID) },
     { level: 18, ids: buildCenteredTierRow(FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, GUNPOWDER_UPGRADE_ID) },
     { level: 19, ids: buildCenteredTierRow(NATIONALISM_UPGRADE_ID, COLONIALISM_UPGRADE_ID) },
     { level: 20, ids: buildCenteredTierRow(MODERN_AGE_UPGRADE_ID) },
@@ -186,6 +194,7 @@ const KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED = '#26503a';
 const KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET = 8;
 const KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET = 1;
 const KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y = 5;
+const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
 
 function knowledgeTreeChipFrameShadow(pressed: boolean, researched: boolean): string {
     const inset = researched ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
@@ -193,6 +202,10 @@ function knowledgeTreeChipFrameShadow(pressed: boolean, researched: boolean): st
     return pressed
         ? `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 6px rgba(0,0,0,0.4)`
         : `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 12px rgba(0,0,0,0.4)`;
+}
+
+function knowledgeTreeChipFrameColor(researched: boolean): string {
+    return researched ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
 }
 
 /** Idle chip fill — same before/after research (border differentiates researched) */
@@ -764,6 +777,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                                 const chipFilter = activeFocusId != null && !isSelectionRelated
                                                     ? 'brightness(0.28) saturate(0.8)'
                                                     : 'none';
+                                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked);
+                                                const upgradeSpriteUrl = resolveUpgradeSprite(upgrade.sprite);
                                                 return (
                                                     <button
                                                         key={id}
@@ -796,20 +811,41 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                                                 'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
                                                         }}
                                                     >
-                                                        <img
-                                                            src={resolveUpgradeSprite(upgrade.sprite)}
-                                                            alt={name}
-                                                            title={name}
-                                                            draggable={false}
+                                                        {upgradeSpriteUrl && (
+                                                            <img
+                                                                src={upgradeSpriteUrl}
+                                                                alt={name}
+                                                                title={name}
+                                                                draggable={false}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    inset: '12px',
+                                                                    width: 'calc(100% - 24px)',
+                                                                    height: 'calc(100% - 24px)',
+                                                                    objectFit: 'contain',
+                                                                    imageRendering: 'pixelated',
+                                                                    pointerEvents: 'none',
+                                                                }}
+                                                            />
+                                                        )}
+                                                        {unlocked && (
+                                                            <div
+                                                                aria-hidden
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    inset: 0,
+                                                                    background: 'rgba(70,144,104,0.18)',
+                                                                    pointerEvents: 'none',
+                                                                }}
+                                                            />
+                                                        )}
+                                                        <div
+                                                            aria-hidden
                                                             style={{
                                                                 position: 'absolute',
-                                                                left: '50%',
-                                                                top: '50%',
-                                                                width: '82%',
-                                                                height: '82%',
-                                                                transform: 'translate(-50%, -50%)',
-                                                                objectFit: 'contain',
-                                                                imageRendering: 'pixelated',
+                                                                inset: `${KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET}px`,
+                                                                border: `1px solid ${chipFrameColor}`,
+                                                                boxSizing: 'border-box',
                                                                 pointerEvents: 'none',
                                                             }}
                                                         />
