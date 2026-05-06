@@ -18,6 +18,8 @@ import { FloatingTextRenderer } from './renderers/FloatingTextRenderer';
 import { HudRenderer } from './renderers/HudRenderer';
 import { RelicRenderer } from './renderers/RelicRenderer';
 import { UpgradeRenderer } from './renderers/UpgradeRenderer';
+import { audioManager, type AudioPlaybackHandle } from '../../audio/audioManager';
+import { DEFAULT_AUDIO_CUES } from '../../audio/audioCues';
 import {
     ASSET_BASE_URL,
     GAME_CURSOR_POINTER,
@@ -27,6 +29,66 @@ import {
     boardHasTrainableAdjacentRanged,
     isOpenableLoot,
 } from './renderers/rendererShared';
+
+const SPIN_AUDIO_ESTIMATE_TICK_MS = 1000 / 60;
+
+const clampPlaybackRate = (value: number) => Math.min(4, Math.max(0.25, value));
+
+function estimateSpinDurationMs(args: {
+    cellHeight: number;
+    speedMul: number;
+    stopInterval: number;
+}) {
+    const { cellHeight, speedMul, stopInterval } = args;
+    if (speedMul <= 0) return 0;
+
+    const reelSpeed = 1.2 * speedMul;
+    const decelZone = cellHeight * 1.5;
+    const baseRandomCount = 12;
+    let latestStopMs = 0;
+
+    for (let col = 0; col < BOARD_WIDTH; col++) {
+        let elapsedMs = 0;
+        let scrollY = 0;
+        let stopped = false;
+        let started = false;
+        const startDelay = col * stopInterval;
+        const colRandomCount = baseRandomCount + col;
+        const targetScrollY = (BOARD_HEIGHT + colRandomCount) * cellHeight;
+
+        while (!stopped && elapsedMs < 15000) {
+            elapsedMs += SPIN_AUDIO_ESTIMATE_TICK_MS;
+
+            if (!started) {
+                if (elapsedMs >= startDelay) {
+                    started = true;
+                } else {
+                    continue;
+                }
+            }
+
+            const remaining = targetScrollY - scrollY;
+            if (remaining <= 0) {
+                stopped = true;
+                break;
+            }
+
+            const speed = remaining < decelZone
+                ? Math.max(0.2, reelSpeed * (remaining / decelZone))
+                : reelSpeed;
+
+            scrollY += speed * SPIN_AUDIO_ESTIMATE_TICK_MS;
+            if (scrollY >= targetScrollY) {
+                scrollY = targetScrollY;
+            }
+        }
+
+        latestStopMs = Math.max(latestStopMs, elapsedMs);
+    }
+
+    // finishSpin runs on the tick after the last reel has already reported stopped.
+    return latestStopMs + SPIN_AUDIO_ESTIMATE_TICK_MS;
+}
 
 export class PixiGameApp {
     public app: PIXI.Application;
@@ -63,6 +125,9 @@ export class PixiGameApp {
     private reels: ReelState[] = [];
     private spinElapsed: number = 0;
     private spinActive: boolean = false;
+    private spinLoopHandle: AudioPlaybackHandle | null = null;
+    private spinLoopPendingStop = false;
+    private spinLoopRunId = 0;
 
     private cellLayout: CellLayout | null = null;
     private contributorWobbleTime: number = 0;
@@ -138,6 +203,7 @@ export class PixiGameApp {
             onHoverRelic,
         });
         this.upgradeRenderer = new UpgradeRenderer(onHoverUpgrade);
+        audioManager.registerCue('spin_loop', DEFAULT_AUDIO_CUES.spin_loop);
     }
 
     public async init() {
@@ -183,6 +249,7 @@ export class PixiGameApp {
 
     public destroy() {
         this.destroyed = true;
+        this.stopSpinLoop();
         if (this.app) {
             try {
                 if (this.pixiInitComplete && this.app.renderer) {
@@ -295,10 +362,40 @@ export class PixiGameApp {
 
     private finishSpin() {
         this.spinActive = false;
+        this.stopSpinLoop();
         this.spinContainer.removeChildren();
         for (const reel of this.reels) { reel.mask.destroy(); }
         this.reels = [];
         useGameStore.getState().startProcessing();
+    }
+
+    private startSpinLoop(targetDurationMs: number) {
+        if (this.spinLoopHandle || this.spinLoopPendingStop) return;
+        const runId = ++this.spinLoopRunId;
+
+        void audioManager.unlock()
+            .then(() => audioManager.getCueDurationMs('spin_loop'))
+            .then((audioDurationMs) => {
+                const playbackRate = audioDurationMs && targetDurationMs > 0
+                    ? clampPlaybackRate(audioDurationMs / targetDurationMs)
+                    : 1;
+                return audioManager.play('spin_loop', { playbackRate });
+            })
+            .then((handle) => {
+                if (!handle) return;
+                if (this.spinLoopPendingStop || this.spinLoopRunId !== runId || !this.spinActive || this.destroyed) {
+                    handle.stop();
+                    return;
+                }
+                this.spinLoopHandle = handle;
+            });
+    }
+
+    private stopSpinLoop() {
+        this.spinLoopRunId += 1;
+        this.spinLoopPendingStop = true;
+        this.spinLoopHandle?.stop();
+        this.spinLoopHandle = null;
     }
 
     public renderBoard(state: GameState, settings: SettingsState) {
@@ -354,6 +451,14 @@ export class PixiGameApp {
 
             const RANDOM_COUNT = 12;
             const currentSpinConfig = SPIN_SPEED_CONFIG[settings.spinSpeed];
+            if (currentSpinConfig.speedMul > 0) {
+                this.spinLoopPendingStop = false;
+                this.startSpinLoop(estimateSpinDurationMs({
+                    cellHeight,
+                    speedMul: currentSpinConfig.speedMul,
+                    stopInterval: currentSpinConfig.stopInterval,
+                }));
+            }
 
             for (let col = 0; col < BOARD_WIDTH; col++) {
                 const colX = startX + gridOffsetX + col * (cellWidth + colGap);
