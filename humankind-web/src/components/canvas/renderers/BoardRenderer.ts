@@ -34,7 +34,7 @@ export class BoardRenderer {
         this.boardContainer = args.boardContainer;
     }
 
-    public beginFrame(app: PIXI.Application, state: GameState, _settings: SettingsState): BoardRenderFrame | null {
+    public beginFrame(app: PIXI.Application, _state: GameState, _settings: SettingsState): BoardRenderFrame | null {
         if (!app.renderer) return null;
 
         const width = app.screen?.width || 1920;
@@ -59,7 +59,7 @@ export class BoardRenderer {
 
         this.renderBackground(frame);
         this.renderSlotCells(frame);
-        if (state.phase !== 'spinning') this.renderSlotNumbers(frame);
+        this.renderSlotNumbers(frame);
         return frame;
     }
 
