@@ -10,6 +10,23 @@ const UPGRADE_SPRITE_VERSION: Record<string, string> = {
     '007.png': 'updated-20260505-1641',
     '008.png': 'updated-20260505-1643',
     '009.png': 'updated-20260506-0019',
+    '010.png': 'updated-20260506-0057',
+    '011.png': 'updated-20260506-0101',
+    '012.png': 'updated-20260506-0104',
+    '013.png': 'updated-20260506-0106',
+    '014.png': 'updated-20260506-0111',
+    '015.png': 'updated-20260506-0115',
+    '016.png': 'updated-20260506-0116',
+    '017.png': 'updated-20260506-0116',
+    '018.png': 'updated-20260506-0119',
+    '019.png': 'updated-20260506-0120',
+    '020.png': 'updated-20260506-0125',
+    '021.png': 'updated-20260506-0130',
+    '022.png': 'updated-20260506-0135',
+    '023.png': 'updated-20260506-0141',
+    '024.png': 'updated-20260506-0144',
+    '025.png': 'updated-20260506-0145',
+    '026.png': 'updated-20260506-0148',
 };
 
 export function resolveUpgradeSpriteFile(sprite: string): string {
