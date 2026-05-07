@@ -6,9 +6,19 @@ import { t } from '../i18n';
 export default function StageSelectScreen() {
   const language = useSettingsStore((s) => s.language);
   const selectStage = usePreGameStore((s) => s.selectStage);
+  const returnToIntro = usePreGameStore((s) => s.returnToIntro);
 
   return (
     <div className="stage-select-root">
+      <button
+        type="button"
+        className="main-menu-button stage-select-back"
+        onClick={returnToIntro}
+        aria-label={t('game.back', language)}
+      >
+        ←
+      </button>
+
       <div className="stage-select-panel">
         <div className="stage-select-header">
           <h1 className="pregame-title stage-select-title">{t('pregame.stageTitle', language)}</h1>
@@ -22,7 +32,7 @@ export default function StageSelectScreen() {
                 <button
                   key={stage.id}
                   type="button"
-                  className="pregame-card stage-select-card"
+                  className="main-menu-button stage-select-card"
                   disabled={!unlocked}
                   onClick={() => {
                     if (unlocked) selectStage(stage.id);

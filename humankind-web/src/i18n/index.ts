@@ -193,6 +193,11 @@ const translations: Record<Language, Record<string, string>> = {
         'game.hudBaseProductionShort': 'Base production +{n}',
 
         // Pre-game: Demo / Stage / Leader
+        'mainMenu.title': 'Humankind in a nutshell',
+        'mainMenu.actionsLabel': 'Main menu',
+        'mainMenu.play': 'Play',
+        'mainMenu.achievements': 'Achievements',
+        'mainMenu.settings': 'Settings',
         'pregame.demoTitle': 'Humankind in a Nutshell Gameplay Demo v0.1',
         'pregame.demoSubtitle': 'A quick primer before you choose your stage.',
         'pregame.demoTutorialTitle': 'How to Play',
@@ -873,6 +878,11 @@ const translations: Record<Language, Record<string, string>> = {
         'game.hudBaseProductionShort': '기본 생산 +{n}',
 
         // Pre-game: Demo / Stage / Leader
+        'mainMenu.title': 'Humankind in a nutshell',
+        'mainMenu.actionsLabel': '메인 메뉴',
+        'mainMenu.play': '플레이',
+        'mainMenu.achievements': '도전과제',
+        'mainMenu.settings': '설정',
         'pregame.demoTitle': 'Humankind in a nutshell 게임플레이 데모 v0.1',
         'pregame.demoSubtitle': '스테이지를 고르기 전에 꼭 알아두면 좋은 핵심만 모았습니다.',
         'pregame.demoTutorialTitle': '튜토리얼',

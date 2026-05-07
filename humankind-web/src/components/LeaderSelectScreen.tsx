@@ -64,6 +64,7 @@ function LeaderPortrait({
 export default function LeaderSelectScreen() {
   const language = useSettingsStore((s) => s.language);
   const startWithLeader = usePreGameStore((s) => s.selectLeader);
+  const returnToStageSelect = usePreGameStore((s) => s.returnToStageSelect);
 
   const defaultLeaderId = useMemo(
     () => LEADER_LIST.find((l) => l.enabled)?.id ?? null,
@@ -85,98 +86,112 @@ export default function LeaderSelectScreen() {
 
   return (
     <div className="leader-select-root">
-      <header className="leader-select-header">
-        <h1 className="pregame-title leader-select-title">{t('pregame.leaderTitle', language)}</h1>
-      </header>
+      <button
+        type="button"
+        className="main-menu-button leader-select-back"
+        onClick={returnToStageSelect}
+      >
+        {t('game.back', language)}
+      </button>
 
-      <div className="leader-select-body">
-        <div className="leader-select-portrait-grid" aria-label={t('pregame.leaderTitle', language)}>
-          {LEADER_LIST.map((leader) => {
-            const selected = leader.enabled && chosenLeaderId === leader.id;
-            return (
-              <button
-                key={leader.id}
-                type="button"
-                disabled={!leader.enabled}
-                aria-pressed={selected}
-                aria-disabled={!leader.enabled}
-                className={[
-                  'leader-portrait-btn',
-                  selected ? 'leader-portrait-btn--selected' : '',
-                  !leader.enabled ? 'leader-portrait-btn--locked' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() => {
-                  if (!leader.enabled) return;
-                  setChosenLeaderId(leader.id);
-                }}
-              >
-                <LeaderPortrait
-                  leaderId={leader.id}
-                  alt={t(leader.nameKey, language)}
-                  enabled={leader.enabled}
-                  noPortraitLabel={t('pregame.leaderPortraitPlaceholder', language)}
-                />
-              </button>
-            );
-          })}
-        </div>
+      <main className="leader-select-shell" aria-label={t('pregame.leaderTitle', language)}>
+        <h1 className="main-menu-title leader-select-title">
+          <span className="main-menu-title-main leader-select-title-main">
+            {t('pregame.leaderTitle', language)}
+          </span>
+        </h1>
 
-        <div className="leader-select-detail-col">
-          <div className="leader-select-preview">
-            <div className="leader-select-preview-scroll">
-              <div className="leader-preview-name">
-                {previewLeader ? (
-                  <>
-                    <span className="leader-preview-name__main">{t(previewLeader.nameKey, language)}</span>
-                    {previewLeader.nameSubtitleKey ? (
-                      <span className="leader-preview-name__subtitle">
-                        {t(previewLeader.nameSubtitleKey, language)}
-                      </span>
-                    ) : null}
-                  </>
-                ) : (
-                  '-'
-                )}
+        <div className="leader-select-content">
+          <section className="leader-select-roster" aria-label={t('pregame.leaderTitle', language)}>
+            {LEADER_LIST.map((leader) => {
+              const selected = leader.enabled && chosenLeaderId === leader.id;
+              return (
+                <button
+                  key={leader.id}
+                  type="button"
+                  disabled={!leader.enabled}
+                  aria-pressed={selected}
+                  aria-disabled={!leader.enabled}
+                  aria-label={t(leader.nameKey, language)}
+                  className={[
+                    'main-menu-button',
+                    'leader-card',
+                    selected ? 'leader-card--selected' : '',
+                    !leader.enabled ? 'leader-card--locked' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => {
+                    if (!leader.enabled) return;
+                    setChosenLeaderId(leader.id);
+                  }}
+                >
+                  <span className="leader-card-portrait" aria-hidden="true">
+                    <LeaderPortrait
+                      leaderId={leader.id}
+                      alt={t(leader.nameKey, language)}
+                      enabled={leader.enabled}
+                      noPortraitLabel={t('pregame.leaderPortraitPlaceholder', language)}
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </section>
+
+          {previewLeader ? (
+            <section className="leader-select-profile" aria-live="polite">
+              <div className="leader-profile-hero">
+                <div className="leader-profile-portrait" aria-hidden="true">
+                  <LeaderPortrait
+                    leaderId={previewLeader.id}
+                    alt={t(previewLeader.nameKey, language)}
+                    enabled={previewLeader.enabled}
+                    noPortraitLabel={t('pregame.leaderPortraitPlaceholder', language)}
+                  />
+                </div>
+                <div className="leader-profile-heading">
+                  <div className="leader-profile-name">{t(previewLeader.nameKey, language)}</div>
+                  {previewLeader.nameSubtitleKey ? (
+                    <div className="leader-profile-subtitle">{t(previewLeader.nameSubtitleKey, language)}</div>
+                  ) : null}
+                </div>
               </div>
 
-              {previewLeader && (
-                <div className="leader-preview-effects">
-                  <div className="leader-preview-effect">
-                    <div className="leader-preview-effect-title">
-                      {t(previewLeader.mainEffectNameKey, language)}
-                    </div>
-                    <div className="leader-preview-effect-desc">
-                      {t(previewLeader.mainEffectDescKey, language)}
-                    </div>
+              <div className="leader-profile-effects">
+                <div className="leader-profile-effect">
+                  <div className="leader-profile-effect-title">
+                    {t(previewLeader.mainEffectNameKey, language)}
                   </div>
-
-                  <div className="leader-preview-effect">
-                    <div className="leader-preview-effect-title">
-                      {t(previewLeader.subEffectNameKey, language)}
-                    </div>
-                    <div className="leader-preview-effect-desc">
-                      {t(previewLeader.subEffectDescKey, language)}
-                    </div>
+                  <div className="leader-profile-effect-desc">
+                    {t(previewLeader.mainEffectDescKey, language)}
                   </div>
                 </div>
-              )}
-            </div>
 
-            <div className="leader-select-preview-footer">
-              <button
-                type="button"
-                className="pregame-card leader-select-play"
-                onClick={handlePlay}
-                disabled={chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)}
-              >
-                <span className="leader-select-play-label">{t('pregame.leaderPlay', language)}</span>
-              </button>
-            </div>
-          </div>
+                <div className="leader-profile-effect">
+                  <div className="leader-profile-effect-title">
+                    {t(previewLeader.subEffectNameKey, language)}
+                  </div>
+                  <div className="leader-profile-effect-desc">
+                    {t(previewLeader.subEffectDescKey, language)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="leader-select-actions">
+                <button
+                  type="button"
+                  className="main-menu-button leader-select-play"
+                  onClick={handlePlay}
+                  disabled={chosenLeaderId == null || !isLeaderPlayable(chosenLeaderId)}
+                >
+                  {t('pregame.leaderPlay', language)}
+                </button>
+              </div>
+            </section>
+          ) : null}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
