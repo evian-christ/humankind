@@ -213,7 +213,7 @@ export class PixiGameApp {
         // (React <img>는 표시 자체가 되지만, Pixi 로더는 실패해서 보드 스프라이트가 안 보이는 케이스가 있습니다.)
         (PIXI.TextureSource.defaultOptions as unknown as { crossOrigin?: string | null }).crossOrigin = null;
         await this.app.init({
-            background: '#1a1a1a',
+            background: '#000000',
             antialias: false,
             roundPixels: true,
         });

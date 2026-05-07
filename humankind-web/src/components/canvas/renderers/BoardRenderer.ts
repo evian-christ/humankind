@@ -79,7 +79,7 @@ export class BoardRenderer {
     private renderBackground(frame: BoardRenderFrame) {
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, frame.width, frame.height);
-        bg.fill({ color: 0x252525 });
+        bg.fill({ color: 0x000000 });
         this.bgContainer.addChild(bg);
     }
 

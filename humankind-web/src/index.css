@@ -37,7 +37,7 @@
 
 body {
   overflow: hidden;
-  background: #1a1a1a;
+  background: #000000;
   color: #e0e0e0;
   font-family: 'Mulmaru', sans-serif;
   cursor: none; /* Hide default cursor */
@@ -53,7 +53,7 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   transform-origin: center center;
-  background: #1a1a1a;
+  background: #000000;
   overflow: hidden;
 }
 
@@ -79,8 +79,8 @@ body {
   left: 0;
   right: 0;
   height: 74px;
-  background: rgba(75, 75, 75, 0.95);
-  border-bottom: 2px solid #2a2a2a;
+  background: rgba(0, 0, 0, 0.96);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.16);
   display: flex;
   align-items: center;
   justify-content: space-between; /* 양 끝 정렬 */
@@ -246,6 +246,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+  background: #000000;
 }
 
 /* ===== BOTTOM PANEL (removed) ===== */
@@ -373,7 +374,7 @@ button.spin-btn {
   height: 80px;
   box-sizing: border-box;
   padding: 0;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.72);
   font-family: 'Mulmaru', sans-serif;
   font-size: 32px;
   font-weight: 900;
@@ -381,44 +382,46 @@ button.spin-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(45, 45, 45, 0.85);
-  color: rgba(230, 230, 230, 0.9);
-  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.1s ease;
+  background: rgba(0, 0, 0, 0.88);
+  color: #ffffff;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
   box-shadow:
-    inset 0 0 0 4px #555,
-    0 6px 0 0 #444,
-    0 6px 10px rgba(0, 0, 0, 0.4);
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 button.spin-btn:hover:not(:disabled):not(:active) {
-  background: rgba(65, 65, 65, 0.95);
+  background: rgba(0, 0, 0, 0.96);
+  border-color: #ffffff;
   color: #ffffff;
-  transform: translateY(1px);
+  transform: translateY(-2px);
   box-shadow:
-    inset 0 0 0 4px #666,
-    0 5px 0 0 #555,
-    0 5px 10px rgba(0, 0, 0, 0.4);
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 button.spin-btn:active:not(:disabled) {
-  transform: translateY(5px);
-  box-shadow:
-    inset 0 0 0 4px #555,
-    0 1px 0 0 #444,
-    0 1px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(0);
+  background: #000000;
 }
 
 button.spin-btn:disabled,
 button.spin-btn:disabled:hover,
 button.spin-btn:disabled:active {
-  background: rgba(20, 20, 20, 0.85);
-  color: rgba(100, 100, 100, 0.5);
+  opacity: 0.38;
+  background: rgba(0, 0, 0, 0.62);
+  border-color: rgba(255, 255, 255, 0.32);
+  color: rgba(255, 255, 255, 0.7);
   cursor: default;
-  transform: translateY(5px);
+  transform: none;
   box-shadow:
-    inset 0 0 0 4px #333,
-    0 1px 0 0 #222,
-    0 1px 6px rgba(0, 0, 0, 0.2);
+    0 8px 18px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .reset-btn {
@@ -2512,6 +2515,7 @@ button.spin-btn:disabled:active {
   position: relative;
   width: 100%;
   height: 100%;
+  background: #000000;
 }
 
 .game-screen-black {
@@ -2830,40 +2834,41 @@ button.spin-btn:disabled:active {
   height: 56px;
   padding: 0;
   box-sizing: border-box;
-  background: rgba(45, 45, 45, 0.85);
-  border: none;
+  background: rgba(0, 0, 0, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.72);
   border-radius: 0;
-  color: rgba(220, 220, 220, 0.85);
+  color: #ffffff;
   font-size: 26px;
   line-height: 1;
   cursor: var(--app-cursor-pointer);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.1s ease;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
   box-shadow:
-    inset 0 0 0 4px #555,
-    0 6px 0 0 #444,
-    0 6px 10px rgba(0, 0, 0, 0.4);
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
   -webkit-tap-highlight-color: transparent;
 }
 
 .pause-btn-top:hover {
-  background: rgba(65, 65, 65, 0.95);
-  color: rgba(255, 255, 255, 0.95);
-  transform: translateY(1px);
+  background: rgba(0, 0, 0, 0.96);
+  border-color: #ffffff;
+  color: #ffffff;
+  transform: translateY(-2px);
   box-shadow:
-    inset 0 0 0 4px #666,
-    0 5px 0 0 #555,
-    0 5px 10px rgba(0, 0, 0, 0.4);
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .pause-btn-top:active {
-  transform: translateY(5px);
-  box-shadow:
-    inset 0 0 0 4px #555,
-    0 1px 0 0 #444,
-    0 1px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(0);
+  background: #000000;
 }
 
 /* ===== 메뉴 버튼 (하단 버튼 모음 최우단, 유물/⋯와 동일 사이즈) ===== */
@@ -2917,39 +2922,40 @@ button.bottom-right-btn {
   position: relative;
   box-sizing: border-box;
   padding: 0;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.72);
   font-size: 40px;
   cursor: var(--app-cursor-pointer);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(45, 45, 45, 0.85);
-  color: rgba(230, 230, 230, 0.9);
-  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.1s ease;
+  background: rgba(0, 0, 0, 0.88);
+  color: #ffffff;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
   box-shadow:
-    inset 0 0 0 4px #555,
-    0 6px 0 0 #444,
-    0 6px 10px rgba(0, 0, 0, 0.4);
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 button.relic-shop-btn:hover:not(:active),
 button.bottom-right-btn:hover:not(:active) {
-  background: rgba(65, 65, 65, 0.95);
+  background: rgba(0, 0, 0, 0.96);
+  border-color: #ffffff;
   color: #ffffff;
-  transform: translateY(1px);
+  transform: translateY(-2px);
   box-shadow:
-    inset 0 0 0 4px #666,
-    0 5px 0 0 #555,
-    0 5px 10px rgba(0, 0, 0, 0.4);
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 button.relic-shop-btn:active,
 button.bottom-right-btn:active {
-  transform: translateY(5px);
-  box-shadow:
-    inset 0 0 0 4px #555,
-    0 1px 0 0 #444,
-    0 1px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(0);
+  background: #000000;
 }
 
 button.relic-shop-btn {
