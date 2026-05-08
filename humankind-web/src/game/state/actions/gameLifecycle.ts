@@ -1,6 +1,5 @@
 import type { LeaderId } from '../../data/leaders';
 import { LEADERS, getLeaderStartingRelics, isLeaderPlayable } from '../../data/leaders';
-import { TOTAL_STAGE_COUNT } from '../../data/stages';
 import { SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { GameState } from '../gameStore';
 import {
@@ -12,6 +11,7 @@ import {
     placeOralTraditionAtBoardCenter,
 } from '../gameStoreHelpers';
 import { useRelicStore } from '../relicStore';
+import { clearSavedGame } from '../saveGame';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 
@@ -83,7 +83,6 @@ export const createGameLifecycleActions = ({
             era: 1,
             level: 0,
             turn: 0,
-            stageId: 1,
             board,
             playerSymbols: symbols,
             relicChoices: generateRelicChoices(),
@@ -93,9 +92,9 @@ export const createGameLifecycleActions = ({
         });
     },
 
-    startGameWithDraft: (symbolIds: number[], leaderId: LeaderId, stageId: number) => {
+    startGameWithDraft: (symbolIds: number[], leaderId: LeaderId) => {
         if (!isLeaderPlayable(leaderId)) return;
-        const resolvedStage = stageId >= 1 && stageId <= TOTAL_STAGE_COUNT ? stageId : 1;
+        clearSavedGame();
         const relicStore = useRelicStore.getState();
         const toRemove = relicStore.relics.map((r) => r.instanceId);
         toRemove.forEach((id) => relicStore.removeRelic(id));
@@ -131,7 +130,6 @@ export const createGameLifecycleActions = ({
             era: 1,
             level: 0,
             turn: 0,
-            stageId: resolvedStage,
             board: placed.board,
             playerSymbols: placed.playerSymbols,
             relicChoices: initialRelicChoices,

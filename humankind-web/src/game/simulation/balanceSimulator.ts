@@ -98,7 +98,6 @@ export interface BalanceSimulationConfig {
     runs?: number;
     maxTurns?: number;
     seed?: number;
-    stageId?: number;
     pickStrategy?: BalancePickStrategy;
     upgradeStrategy?: BalanceUpgradeStrategy;
     startingSymbolIds?: number[];
@@ -138,7 +137,6 @@ interface SimulationState {
     level: number;
     era: number;
     turn: number;
-    stageId: number;
     board: BoardGrid;
     playerSymbols: PlayerSymbolInstance[];
     unlockedKnowledgeUpgrades: number[];
@@ -348,7 +346,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             level: 0,
             era: 1,
             turn: 0,
-            stageId: config.stageId,
             board: start.board,
             playerSymbols: start.playerSymbols,
             unlockedKnowledgeUpgrades: [],
@@ -370,7 +367,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
         level: 0,
         era: 1,
         turn: 0,
-        stageId: config.stageId,
         board: Array(BOARD_WIDTH).fill(null).map(() => Array(BOARD_HEIGHT).fill(null)),
         playerSymbols: config.startingSymbolIds
             .map((id) => SYMBOLS[id])
@@ -701,7 +697,6 @@ const simulateTurn = (
 
     const phase = resolveTurnEndPhase({
         turn: state.turn,
-        stageId: state.stageId,
         food: state.food,
         edictRemovalPending: state.edictRemovalPending,
     });
@@ -736,7 +731,6 @@ const normalizeConfig = (config: BalanceSimulationConfig): Required<BalanceSimul
     runs: config.runs ?? 100,
     maxTurns: config.maxTurns ?? 60,
     seed: config.seed ?? 1,
-    stageId: config.stageId ?? 1,
     pickStrategy: config.pickStrategy ?? 'grassland_axis',
     upgradeStrategy: config.upgradeStrategy ?? 'axis_plan',
     startingSymbolIds: config.startingSymbolIds ?? [],

@@ -19,7 +19,6 @@ import {
     URBANIZATION_UPGRADE_ID,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../data/knowledgeUpgrades';
-import { getStageFoodPaymentBase, getStagePassiveBonus } from '../data/stages';
 import { SymbolType } from '../data/symbolDefinitions';
 
 const KNOWLEDGE_LEVELUP_BASE = 50;
@@ -30,7 +29,6 @@ const GOLD_INFLATION_LINEAR_PER_LEVEL = 0.05;
 const GOLD_INFLATION_QUADRATIC_PER_LEVEL = 0.0017;
 
 export interface HudTurnStartPassiveState {
-    stageId: number;
     unlockedKnowledgeUpgrades: number[];
 }
 
@@ -68,8 +66,8 @@ export const getEraFromLevel = (level: number): number => {
     return 3;
 };
 
-export const calculateFoodCost = (turn: number, stageId: number = 1): number => {
-    const base = getStageFoodPaymentBase(stageId);
+export const calculateFoodCost = (turn: number): number => {
+    const base = 50;
     const nth = Math.floor(turn / 10);
     if (nth < 1) return base;
 
@@ -110,12 +108,10 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 10 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 5 : 0) +
         (upgrades.includes(FEUDAL_CORN_UPGRADE_ID) ? 2 : 0);
-    const stageBonus = getStagePassiveBonus(state.stageId ?? 1);
-
     return {
-        food: food + stageBonus.food,
-        gold: gold + stageBonus.gold,
-        knowledge: knowledge + stageBonus.knowledge,
+        food,
+        gold,
+        knowledge,
     };
 }
 

@@ -5,8 +5,11 @@ import { t } from '../i18n';
 
 export default function DemoStartScreen() {
   const language = useSettingsStore((s) => s.language);
-  const proceedToStageSelect = usePreGameStore((s) => s.proceedToStageSelect);
+  const proceedToLeaderSelect = usePreGameStore((s) => s.proceedToLeaderSelect);
   const skipIntroToDefaults = usePreGameStore((s) => s.skipIntroToDefaults);
+  const continueSavedGame = usePreGameStore((s) => s.continueSavedGame);
+  const hasSavedGame = usePreGameStore((s) => s.hasSavedGame);
+  const canContinue = hasSavedGame();
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -33,10 +36,20 @@ export default function DemoStartScreen() {
           <button
             type="button"
             className="main-menu-button"
-            onClick={proceedToStageSelect}
-            aria-label={t('mainMenu.play', language)}
+            onClick={proceedToLeaderSelect}
+            aria-label={t('mainMenu.newGame', language)}
           >
-            {t('mainMenu.play', language)}
+            {t('mainMenu.newGame', language)}
+          </button>
+          <button
+            type="button"
+            className="main-menu-button"
+            onClick={continueSavedGame}
+            disabled={!canContinue}
+            aria-disabled={!canContinue}
+            aria-label={t('mainMenu.continue', language)}
+          >
+            {t('mainMenu.continue', language)}
           </button>
           <button type="button" className="main-menu-button" aria-label={t('mainMenu.achievements', language)}>
             {t('mainMenu.achievements', language)}

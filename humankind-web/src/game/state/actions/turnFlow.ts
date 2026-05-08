@@ -39,6 +39,7 @@ import {
     buildSlotEffectPresentationPlan,
 } from './turnPresentationTimeline';
 import { createTurnRunScheduler } from './turnRunScheduler';
+import { saveGameState } from '../saveGame';
 import {
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
@@ -126,6 +127,7 @@ export const createTurnFlowActions = ({
             effectPhase3ReachedThisRun: false,
             rerollsThisTurn: 0,
         });
+        saveGameState(get());
     },
 
     startProcessing: () => {
@@ -333,6 +335,7 @@ export const createTurnFlowActions = ({
                 }
 
                 if (get().phase === 'victory') {
+                    saveGameState(get());
                     return;
                 }
 
@@ -341,13 +344,13 @@ export const createTurnFlowActions = ({
                     if (finalState.phase === 'processing') {
                         const phaseResolution = resolveTurnEndPhase({
                             turn: finalState.turn,
-                            stageId: finalState.stageId,
                             food: finalState.food,
                             edictRemovalPending: finalState.edictRemovalPending,
                         });
 
                         if (phaseResolution.nextPhase === 'game_over') {
                             set({ phase: 'game_over' as GamePhase });
+                            saveGameState(get());
                             return;
                         }
 
@@ -364,6 +367,7 @@ export const createTurnFlowActions = ({
                                 ...phaseResolution.destroySelection,
                                 phase: 'destroy_selection' as GamePhase,
                             });
+                            saveGameState(get());
                             return;
                         }
 
@@ -371,6 +375,7 @@ export const createTurnFlowActions = ({
                             phase: 'selection' as GamePhase,
                             symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
                         });
+                        saveGameState(get());
                     }
                 });
             };

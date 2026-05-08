@@ -10,7 +10,6 @@ import RelicSelection from './components/RelicSelection';
 import DestroySelection from './components/DestroySelection';
 import OblivionFurnaceBoardOverlay from './components/OblivionFurnaceBoardOverlay';
 import DemoStartScreen from './components/DemoStartScreen';
-import StageSelectScreen from './components/StageSelectScreen';
 import LeaderSelectScreen from './components/LeaderSelectScreen';
 
 import PauseMenu from './components/PauseMenu';
@@ -77,7 +76,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
 
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
-  const returnToStageSelect = usePreGameStore((s) => s.returnToStageSelect);
+  const returnToLeaderSelect = usePreGameStore((s) => s.returnToLeaderSelect);
   const {
     phase,
     turn,
@@ -150,7 +149,6 @@ function App() {
   const level = useGameStore((s) => s.level);
   const food = useGameStore((s) => s.food);
   const gold = useGameStore((s) => s.gold);
-  const stageId = useGameStore((s) => s.stageId);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
   const canPressSpin = phase === 'idle' && (levelUpResearchPoints ?? 0) === 0;
@@ -161,16 +159,6 @@ function App() {
       <>
         <CustomCursor />
         <DemoStartScreen />
-      </>
-    );
-  }
-
-  // 스테이지 선택 화면
-  if (preGameScreen === 'stage') {
-    return (
-      <>
-        <CustomCursor />
-        <StageSelectScreen />
       </>
     );
   }
@@ -191,7 +179,7 @@ function App() {
   const knowledgeRequired = getKnowledgeRequiredForLevel(Math.min(level, 29));
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
   const turnsUntilPayment = turn % 10 === 0 ? 10 : 10 - (turn % 10);
-  const nextCost = calculateFoodCost(turn + turnsUntilPayment, stageId);
+  const nextCost = calculateFoodCost(turn + turnsUntilPayment);
 
   const activeState = useGameStore.getState();
   const hudPassiveTotals = hoveredStat ? getHudTurnStartPassiveTotals(activeState) : null;
@@ -397,7 +385,7 @@ function App() {
           <div className="endgame-panel">
             <div className="endgame-title endgame-defeat">{t('game.gameOver', language)}</div>
             <div className="endgame-subtitle">{t('game.turn', language)} {turn} - {t('game.notEnoughFood', language)}</div>
-            <button className="endgame-btn" onClick={returnToStageSelect}>{t('game.restart', language)}</button>
+            <button className="endgame-btn" onClick={returnToLeaderSelect}>{t('game.restart', language)}</button>
           </div>
         </div>
       )}
@@ -408,7 +396,7 @@ function App() {
           <div className="endgame-panel">
             <div className="endgame-title endgame-victory">{t('game.victory', language)}</div>
             <div className="endgame-subtitle">{t('game.turn', language)} {turn}</div>
-            <button className="endgame-btn" onClick={returnToStageSelect}>{t('game.restart', language)}</button>
+            <button className="endgame-btn" onClick={returnToLeaderSelect}>{t('game.restart', language)}</button>
           </div>
         </div>
       )}

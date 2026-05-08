@@ -11,10 +11,14 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
+const DIFFICULTY_OPTIONS = ['NORMAL', 'HARD', 'PRO'] as const;
 
-function leaderPortraitSrc(id: LeaderId): string | null {
-  if (id === 'ramesses') return `${ASSET_BASE_URL}assets/leaders/001.png`;
-  if (id === 'shihuang') return `${ASSET_BASE_URL}assets/leaders/002.png`;
+type LeaderPortraitVariant = 'full' | 'mini';
+type DifficultyOption = (typeof DIFFICULTY_OPTIONS)[number];
+
+function leaderPortraitSrc(id: LeaderId, variant: LeaderPortraitVariant = 'full'): string | null {
+  if (id === 'ramesses') return `${ASSET_BASE_URL}assets/leaders/001_${variant}.png`;
+  if (id === 'shihuang') return `${ASSET_BASE_URL}assets/leaders/002_${variant}.png`;
   return null;
 }
 
@@ -23,14 +27,16 @@ function LeaderPortrait({
   alt,
   enabled,
   noPortraitLabel,
+  variant = 'full',
 }: {
   leaderId: LeaderId;
   alt: string;
   enabled: boolean;
   noPortraitLabel: string;
+  variant?: LeaderPortraitVariant;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const src = leaderPortraitSrc(leaderId);
+  const src = leaderPortraitSrc(leaderId, variant);
   const showImg = leaderHasPortraitSprite(leaderId) && src && !imgFailed;
 
   if (!enabled) {
@@ -64,13 +70,20 @@ function LeaderPortrait({
 export default function LeaderSelectScreen() {
   const language = useSettingsStore((s) => s.language);
   const startWithLeader = usePreGameStore((s) => s.selectLeader);
-  const returnToStageSelect = usePreGameStore((s) => s.returnToStageSelect);
+  const returnToIntro = usePreGameStore((s) => s.returnToIntro);
 
   const defaultLeaderId = useMemo(
     () => LEADER_LIST.find((l) => l.enabled)?.id ?? null,
     [],
   );
   const [chosenLeaderId, setChosenLeaderId] = useState<LeaderId | null>(defaultLeaderId);
+  const [hoveredLeaderId, setHoveredLeaderId] = useState<LeaderId | null>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyOption>('NORMAL');
+
+  const visibleLeaders = useMemo(
+    () => LEADER_LIST.filter((leader) => leader.enabled && leaderHasPortraitSprite(leader.id)),
+    [],
+  );
 
   const getLeaderById = (id: LeaderId | null): LeaderDefinition | null => {
     if (id == null) return null;
@@ -88,10 +101,11 @@ export default function LeaderSelectScreen() {
     <div className="leader-select-root">
       <button
         type="button"
-        className="main-menu-button leader-select-back"
-        onClick={returnToStageSelect}
+        className="leader-select-back"
+        onClick={returnToIntro}
+        aria-label={t('game.back', language)}
       >
-        {t('game.back', language)}
+        <span aria-hidden="true">←</span>
       </button>
 
       <main className="leader-select-shell" aria-label={t('pregame.leaderTitle', language)}>
@@ -103,8 +117,10 @@ export default function LeaderSelectScreen() {
 
         <div className="leader-select-content">
           <section className="leader-select-roster" aria-label={t('pregame.leaderTitle', language)}>
-            {LEADER_LIST.map((leader) => {
+            {visibleLeaders.map((leader, index) => {
               const selected = leader.enabled && chosenLeaderId === leader.id;
+              const hovered = hoveredLeaderId === leader.id;
+              const muted = chosenLeaderId != null && chosenLeaderId !== leader.id;
               return (
                 <button
                   key={leader.id}
@@ -117,10 +133,27 @@ export default function LeaderSelectScreen() {
                     'main-menu-button',
                     'leader-card',
                     selected ? 'leader-card--selected' : '',
+                    hovered ? 'leader-card--hovered' : '',
+                    muted ? 'leader-card--muted' : '',
                     !leader.enabled ? 'leader-card--locked' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
+                  style={{ zIndex: visibleLeaders.length - index }}
+                  onMouseEnter={() => {
+                    if (!leader.enabled) return;
+                    setHoveredLeaderId(leader.id);
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredLeaderId(null);
+                  }}
+                  onFocus={() => {
+                    if (!leader.enabled) return;
+                    setHoveredLeaderId(leader.id);
+                  }}
+                  onBlur={() => {
+                    setHoveredLeaderId(null);
+                  }}
                   onClick={() => {
                     if (!leader.enabled) return;
                     setChosenLeaderId(leader.id);
@@ -140,43 +173,70 @@ export default function LeaderSelectScreen() {
           </section>
 
           {previewLeader ? (
-            <section className="leader-select-profile" aria-live="polite">
-              <div className="leader-profile-hero">
-                <div className="leader-profile-portrait" aria-hidden="true">
-                  <LeaderPortrait
-                    leaderId={previewLeader.id}
-                    alt={t(previewLeader.nameKey, language)}
-                    enabled={previewLeader.enabled}
-                    noPortraitLabel={t('pregame.leaderPortraitPlaceholder', language)}
-                  />
-                </div>
-                <div className="leader-profile-heading">
-                  <div className="leader-profile-name">{t(previewLeader.nameKey, language)}</div>
-                  {previewLeader.nameSubtitleKey ? (
-                    <div className="leader-profile-subtitle">{t(previewLeader.nameSubtitleKey, language)}</div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="leader-profile-effects">
-                <div className="leader-profile-effect">
-                  <div className="leader-profile-effect-title">
-                    {t(previewLeader.mainEffectNameKey, language)}
+            <aside className="leader-select-side">
+              <section className="leader-select-profile" aria-live="polite">
+                <div className="leader-profile-hero">
+                  <div className="leader-profile-portrait" aria-hidden="true">
+                    <LeaderPortrait
+                      leaderId={previewLeader.id}
+                      alt={t(previewLeader.nameKey, language)}
+                      enabled={previewLeader.enabled}
+                      noPortraitLabel={t('pregame.leaderPortraitPlaceholder', language)}
+                      variant="mini"
+                    />
                   </div>
-                  <div className="leader-profile-effect-desc">
-                    {t(previewLeader.mainEffectDescKey, language)}
+                  <div className="leader-profile-heading">
+                    <div className="leader-profile-name">{t(previewLeader.nameKey, language)}</div>
+                    {previewLeader.nameSubtitleKey ? (
+                      <div className="leader-profile-subtitle">{t(previewLeader.nameSubtitleKey, language)}</div>
+                    ) : null}
                   </div>
                 </div>
 
-                <div className="leader-profile-effect">
-                  <div className="leader-profile-effect-title">
-                    {t(previewLeader.subEffectNameKey, language)}
+                <div className="leader-profile-effects">
+                  <div className="leader-profile-effect">
+                    <div className="leader-profile-effect-title">
+                      {t(previewLeader.mainEffectNameKey, language)}
+                    </div>
+                    <div className="leader-profile-effect-desc">
+                      {t(previewLeader.mainEffectDescKey, language)}
+                    </div>
                   </div>
-                  <div className="leader-profile-effect-desc">
-                    {t(previewLeader.subEffectDescKey, language)}
+
+                  <div className="leader-profile-effect">
+                    <div className="leader-profile-effect-title">
+                      {t(previewLeader.subEffectNameKey, language)}
+                    </div>
+                    <div className="leader-profile-effect-desc">
+                      {t(previewLeader.subEffectDescKey, language)}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </section>
+
+              <section className="leader-difficulty" aria-label={t('pregame.difficultySelect', language)}>
+                <div className="leader-difficulty-buttons">
+                  {DIFFICULTY_OPTIONS.map((difficulty) => {
+                    const selected = selectedDifficulty === difficulty;
+                    return (
+                      <button
+                        key={difficulty}
+                        type="button"
+                        className={[
+                          'leader-difficulty-button',
+                          selected ? 'leader-difficulty-button--selected' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        aria-pressed={selected}
+                        onClick={() => setSelectedDifficulty(difficulty)}
+                      >
+                        {difficulty}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
 
               <div className="leader-select-actions">
                 <button
@@ -188,7 +248,7 @@ export default function LeaderSelectScreen() {
                   {t('pregame.leaderPlay', language)}
                 </button>
               </div>
-            </section>
+            </aside>
           ) : null}
         </div>
       </main>

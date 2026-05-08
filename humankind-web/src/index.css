@@ -21,7 +21,7 @@
   --panel-bg: rgba(30, 30, 30, 0.95);
   --accent: #888888;
   --accent-bright: #cccccc;
-  /* 커스텀 커서 — 크기는 PNG 자체 픽셀 크기로 조절; 핫스팟은 앞 두 숫자 */
+  /* 커스?� 커서 ???�기??PNG ?�체 ?��? ?�기�?조절; ?�스?��? ?????�자 */
   --app-cursor-img: url('/assets/ui/cursor.png?v=2');
 }
 
@@ -46,7 +46,7 @@ body {
 
 
 
-/* #root: width/height/transform 은 JS(settingsStore)에서 해상도에 따라 설정 */
+/* #root: width/height/transform ?� JS(settingsStore)?�서 ?�상?�에 ?�라 ?�정 */
 #root {
   position: fixed;
   top: 50%;
@@ -80,10 +80,9 @@ body {
   right: 0;
   height: 74px;
   background: rgba(0, 0, 0, 0.96);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.16);
   display: flex;
   align-items: center;
-  justify-content: space-between; /* 양 끝 정렬 */
+  justify-content: space-between; /* ?????�렬 */
   padding: 0 20px;
   z-index: 100;
 }
@@ -174,7 +173,7 @@ body {
   position: relative;
 }
 
-/* 스탯 추가 효과 숫자 */
+/* ?�탯 추�? ?�과 ?�자 */
 .running-total-pop {
   position: absolute;
   top: 100%;
@@ -323,9 +322,9 @@ body {
   user-select: none;
 }
 
-/* ===== 보드 하단 액션 바: 스핀은 화면 정중앙, 나머지는 스핀에 붙여 배치 ===== */
-/* 스프라이트 권장 캔버스(면 + 아래 3D 기둥 10px 포함, 예전 box-shadow 0 10px 0 #444 와 동일):
-   - 유물 / 보유심볼: 164×110 | 스핀: 560×110 (@0.5보내기 시 82×55 / 280×55) */
+/* ===== 보드 ?�단 ?�션 �? ?��??� ?�면 ?�중?? ?�머지???��???붙여 배치 ===== */
+/* ?�프?�이??권장 캔버??�?+ ?�래 3D 기둥 10px ?�함, ?�전 box-shadow 0 10px 0 #444 ?� ?�일):
+   - ?�물 / 보유?�볼: 164×110 | ?��?: 560×110 (@0.5보내�???82×55 / 280×55) */
 .bottom-action-bar {
   position: fixed;
   left: 0;
@@ -351,7 +350,7 @@ body {
 }
 
 
-/* 유물: 스핀 왼쪽에 붙임 */
+/* ?�물: ?��? ?�쪽??붙임 */
 .bottom-action-bar-left {
   display: flex;
   flex-direction: row;
@@ -359,7 +358,7 @@ body {
   align-items: flex-end;
 }
 
-/* 보유 심볼: 스핀 오른쪽에 붙임 */
+/* 보유 ?�볼: ?��? ?�른쪽에 붙임 */
 .bottom-action-bar-right {
   display: flex;
   flex-direction: row;
@@ -368,7 +367,7 @@ body {
 }
 
 
-/* 스핀 버튼 (Native CSS Style) */
+/* ?��? 버튼 (Native CSS Style) */
 button.spin-btn {
   width: 504px;
   height: 80px;
@@ -482,7 +481,7 @@ button.spin-btn:disabled:active {
   background: rgba(0, 0, 0, 0.92);
 }
 
-/* 지식 업그레이드: 카드 여백 */
+/* 지???�그?�이?? 카드 ?�백 */
 .selection-overlay--upgrade .selection-cards.upgrade-cards {
   margin-top: 24px;
 }
@@ -496,7 +495,7 @@ button.spin-btn:disabled:active {
   pointer-events: auto;
 }
 
-/* Peek handle — at top when normal, at bottom when peeked */
+/* Peek handle ??at top when normal, at bottom when peeked */
 .selection-peek-handle {
   position: absolute;
   top: 0;
@@ -530,7 +529,7 @@ button.spin-btn:disabled:active {
   border-bottom: none;
 }
 
-/* Content wrapper — slides down when peeked */
+/* Content wrapper ??slides down when peeked */
 .selection-panel-wrapper {
   display: flex;
   flex-direction: column;
@@ -552,7 +551,7 @@ button.spin-btn:disabled:active {
   align-items: center;
 }
 
-/* 유물 상점: 상단 헤더 — 한 줄 컨테이너 안에서 뒤로가기·제목 높이 동일 */
+/* ?�물 ?�점: ?�단 ?�더 ????�?컨테?�너 ?�에???�로가기·제�??�이 ?�일 */
 .relic-shop-header {
   position: fixed;
   top: 0;
@@ -637,7 +636,7 @@ button.spin-btn:disabled:active {
   transform-origin: center;
 }
 
-/* 고정 헤더(패딩 + 뒤로가기 줄) 높이만큼 본문이 가리지 않게 */
+/* 고정 ?�더(?�딩 + ?�로가�?�? ?�이만큼 본문??가리�? ?�게 */
 .selection-panel-wrapper--relic-shop {
   padding-top: calc(max(32px, calc(22px + env(safe-area-inset-top, 0px))) + 88px);
 }
@@ -889,7 +888,7 @@ button.spin-btn:disabled:active {
   /* Manually tuned so the left and right columns center exactly over the glass cases */
 }
 
-/* 양옆 유물만 바깥으로 밀어 가운데와 간격 확대 (중앙 슬롯 위치·배경 박스는 그대로) */
+/* ?�옆 ?�물�?바깥?�로 밀??가?�데?� 간격 ?��? (중앙 ?�롯 ?�치·배경 박스??그�?�? */
 .relic-museum-slot:first-child {
   transform: translateX(-135px);
 }
@@ -906,7 +905,7 @@ button.spin-btn:disabled:active {
   transform: translateX(154px);
 }
 
-/* 구매 버튼 행: 가상 루트(스케일) 기준 하단 고정 — 배경 스프라이트·텍스트 블록 높이와 무관 */
+/* 구매 버튼 ?? 가??루트(?��??? 기�? ?�단 고정 ??배경 ?�프?�이?�·텍?�트 블록 ?�이?� 무�? */
 .relic-museum-buy-bar {
   position: fixed;
   left: 0;
@@ -994,7 +993,7 @@ button.spin-btn:disabled:active {
   align-items: flex-end;
 }
 
-/* 양옆 슬롯: 스프라이트·가격만 가운데 쪽으로 살짝 당겨 간격만 좁힘 (조명·하단 텍스트 줄은 유지) */
+/* ?�옆 ?�롯: ?�프?�이?�·�?격만 가?�데 쪽으�??�짝 ?�겨 간격�?좁힘 (조명·?�단 ?�스??줄�? ?��?) */
 .relic-museum-slot:first-child .relic-sprite-in-case {
   transform: translateX(calc(-50% + 20px));
 }
@@ -1003,7 +1002,7 @@ button.spin-btn:disabled:active {
   transform: translateX(calc(-50% - 20px));
 }
 
-/* Museum stage spotlight — narrow source at top, widening cone downward */
+/* Museum stage spotlight ??narrow source at top, widening cone downward */
 .relic-spotlight {
   position: absolute;
   top: -500px;
@@ -1018,7 +1017,7 @@ button.spin-btn:disabled:active {
   overflow: visible;
 }
 
-/* 양옆 조명: 슬롯 기준 50%는 유지하고, transform으로 화면 중앙 쪽으로 당겨 세 빛 사이 간격 축소 */
+/* ?�옆 조명: ?�롯 기�? 50%???��??�고, transform?�로 ?�면 중앙 쪽으�??�겨 ??�??�이 간격 축소 */
 .relic-museum-slot:first-child .relic-spotlight {
   transform: translateX(calc(-50% + 28px));
 }
@@ -1202,7 +1201,7 @@ button.spin-btn:disabled:active {
   line-height: 1.3;
 }
 
-/* 구매 버튼 — relic-museum-buy-bar 슬롯 너비에 맞춤 (세로는 화면/루트 하단 고정) */
+/* 구매 버튼 ??relic-museum-buy-bar ?�롯 ?�비??맞춤 (?�로???�면/루트 ?�단 고정) */
 .relic-card-buy-btn {
   display: flex;
   align-items: center;
@@ -1330,7 +1329,7 @@ button.spin-btn:disabled:active {
   box-sizing: border-box;
 }
 
-/* 유물 선택 보유 골드 표시 */
+/* ?�물 ?�택 보유 골드 ?�시 */
 .relic-selection-gold {
   display: flex;
   align-items: center;
@@ -1354,7 +1353,7 @@ button.spin-btn:disabled:active {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
-/* 신비한 보라색 배경 펄스 효과 (가로 선형 관통) */
+/* ?�비??보라??배경 ?�스 ?�과 (가�??�형 관?? */
 .relic-bg-glow {
   position: absolute;
   top: 50%;
@@ -1405,7 +1404,7 @@ button.spin-btn:disabled:active {
   flex-shrink: 0;
 }
 
-/* 일시정지 메뉴 `.pause-menu-btn`와 동일 톤: 무채색·얇은 반투명 배경 + 테두리 위주 (DESIGN_REFERENCE 5-4) */
+/* ?�시?��? 메뉴 `.pause-menu-btn`?� ?�일 ?? 무채?�·얇?� 반투�?배경 + ?�두�??�주 (DESIGN_REFERENCE 5-4) */
 .upgrade-card-reroll {
   width: 64px;
   height: 64px;
@@ -1538,7 +1537,7 @@ button.spin-btn:disabled:active {
   width: 100%;
 }
 
-/* 지식 업그레이드 칩 툴팁 — 효과 변경 적용 전·후 */
+/* 지???�그?�이??�??�팁 ???�과 변�??�용 ?�·후 */
 .upgrade-effect-compare {
   margin-top: 10px;
   display: flex;
@@ -1684,7 +1683,7 @@ button.spin-btn:disabled:active {
 
 /* ===== PRE-GAME (Stage / Leader / Draft) ===== */
 .pregame-overlay {
-  /* #root(가상 해상도 공간) 내부를 기준으로 꽉 채우기 */
+  /* #root(가???�상??공간) ?��?�?기�??�로 �?채우�?*/
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
@@ -1697,7 +1696,7 @@ button.spin-btn:disabled:active {
 .pregame-overlay--select {
   align-items: flex-start;
   justify-content: center;
-  /* vw 기반 패딩은 #root 스케일과 분리되어 화면 크기가 달라 보일 수 있음 */
+  /* vw 기반 ?�딩?� #root ?��??�과 분리?�어 ?�면 ?�기가 ?�라 보일 ???�음 */
   padding: 44px 6%;
   box-sizing: border-box;
 }
@@ -1826,129 +1825,7 @@ button.spin-btn:disabled:active {
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.stage-select-root {
-  position: absolute;
-  inset: 0;
-  z-index: 550;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background:
-    radial-gradient(circle at top, rgba(120, 120, 120, 0.12), transparent 45%),
-    rgba(0, 0, 0, 0.9);
-  padding: clamp(18px, 2.6vw, 44px);
-}
-
-/* 데모 시작 패널과 동일 계열 — 스프라이트 없이 CSS만 */
-.stage-select-panel {
-  width: min(100%, 680px);
-  height: min(100%, 560px);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(14px, 1.8vw, 22px);
-  padding: clamp(18px, 2.2vw, 28px);
-  box-sizing: border-box;
-  font-family: 'Mulmaru', sans-serif;
-  background: rgba(15, 15, 15, 0.95);
-  border: 2px solid #555;
-  box-shadow:
-    0 14px 48px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.stage-select-back.main-menu-button {
-  position: absolute;
-  top: 28px;
-  left: 32px;
-  z-index: 2;
-  width: 54px;
-  min-height: 54px;
-  padding: 0;
-  font-size: 30px;
-  line-height: 1;
-}
-
-.stage-select-header {
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.stage-select-title {
-  font-size: clamp(28px, 2.8vw, 48px);
-  letter-spacing: 0.08em;
-  text-align: center;
-}
-
-.stage-select-list {
-  width: min(100%, 360px);
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  align-self: center;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 4px 8px 8px;
-  box-sizing: border-box;
-}
-
-/* 스테이지 버튼 — 메인 메뉴 버튼과 동일한 계열 */
-.stage-select-card.main-menu-button {
-  width: 100%;
-  flex: 0 0 auto;
-}
-
-.stage-select-card-label {
-  position: relative;
-  z-index: 1;
-  display: inline-block;
-  font-family: 'Mulmaru', sans-serif;
-  font-size: inherit;
-  font-weight: 800;
-  letter-spacing: 0;
-  pointer-events: none;
-  text-align: center;
-}
-
-@media (max-width: 1200px) {
-  .stage-select-panel {
-    height: min(100%, 600px);
-  }
-}
-
-@media (max-width: 900px) {
-  .stage-select-panel {
-    height: min(100%, 640px);
-  }
-}
-
-@media (max-width: 640px) {
-  .stage-select-root {
-    padding: 20px;
-  }
-
-  .stage-select-back.main-menu-button {
-    top: 18px;
-    left: 18px;
-    width: 48px;
-    min-height: 48px;
-    font-size: 26px;
-  }
-
-  .stage-select-panel {
-    height: min(100%, 92vh);
-    padding: 20px;
-  }
-
-  .stage-select-list {
-    width: 100%;
-  }
-}
-
-/* 스프라이트 없음: 물음표 / 비활성: Coming soon */
+/* ?�모 ?�작 ?�널�??�일 계열 ???�프?�이???�이 CSS�?*/
 .leader-portrait-placeholder {
   display: flex;
   align-items: center;
@@ -1989,7 +1866,7 @@ button.spin-btn:disabled:active {
   white-space: nowrap;
 }
 
-/* 리더 선택 — 메인 메뉴와 같은 검은 무대 + 흰 외곽선 UI */
+/* 리더 ?�택 ??메인 메뉴?� 같�? 검?� 무�? + ???�곽??UI */
 .leader-select-root {
   position: absolute;
   inset: 0;
@@ -2007,16 +1884,35 @@ button.spin-btn:disabled:active {
   color: #ffffff;
 }
 
-.leader-select-back.main-menu-button {
+.leader-select-back {
   position: absolute;
-  top: 32px;
-  left: 36px;
+  top: 30px;
+  left: 34px;
   z-index: 2;
-  width: auto;
-  min-width: 150px;
-  min-height: 54px;
-  padding: 0 24px;
-  font-size: 22px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 42px;
+  line-height: 1;
+  cursor: pointer;
+  text-shadow: 0 8px 16px rgba(0, 0, 0, 0.74);
+  transition:
+    color 140ms ease,
+    filter 140ms ease;
+}
+
+.leader-select-back:hover,
+.leader-select-back:focus-visible {
+  color: #ffffff;
+  filter: brightness(1.16);
+  outline: none;
 }
 
 .leader-select-shell {
@@ -2035,7 +1931,7 @@ button.spin-btn:disabled:active {
 }
 
 .leader-select-title-main {
-  font-size: 64px;
+  font-size: 48px;
   line-height: 1;
   overflow-wrap: anywhere;
 }
@@ -2054,51 +1950,70 @@ button.spin-btn:disabled:active {
 .leader-select-roster {
   min-width: 0;
   min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: clamp(16px, 1.8vw, 28px);
-  align-items: center;
-  justify-items: center;
-  align-content: stretch;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  align-content: flex-start;
+  padding: 0 clamp(20px, 4vw, 72px) 18px;
+  isolation: isolate;
 }
 
 .leader-card.main-menu-button {
-  width: min(100%, 190px);
-  height: auto;
+  position: relative;
+  width: clamp(180px, 18vw, 292px);
+  height: min(100%, 560px);
   min-width: 0;
   min-height: 0;
-  aspect-ratio: 68 / 104;
+  aspect-ratio: 4 / 5;
   justify-content: center;
   align-items: center;
-  padding: 7px;
+  padding: 0;
   font-size: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform-origin: 50% 100%;
+}
+
+.leader-card.main-menu-button + .leader-card.main-menu-button {
+  margin-left: clamp(-62px, -4.2vw, -30px);
+}
+
+.leader-card.main-menu-button:hover,
+.leader-card.main-menu-button:focus-visible,
+.leader-card.main-menu-button:active {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
 }
 
 .leader-card--selected.main-menu-button,
 .leader-card--selected.main-menu-button:hover,
 .leader-card--selected.main-menu-button:focus-visible {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.14);
-  border-color: #ffffff;
-  box-shadow:
-    0 16px 34px rgba(0, 0, 0, 0.56),
-    0 0 22px rgba(255, 255, 255, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
 }
 
 .leader-card--locked.main-menu-button {
-  opacity: 0.34;
-  filter: grayscale(1);
+  filter: grayscale(1) brightness(0.34);
 }
 
 .leader-card-portrait {
   width: 100%;
   height: 100%;
   display: block;
-  overflow: hidden;
+  overflow: visible;
   border: none;
-  background: rgba(255, 255, 255, 0.025);
+  background: transparent;
+  filter:
+    grayscale(1)
+    brightness(0.46)
+    drop-shadow(0 20px 22px rgba(0, 0, 0, 0.54));
+  transition: filter 180ms ease;
 }
 
 .leader-card-portrait img,
@@ -2112,11 +2027,55 @@ button.spin-btn:disabled:active {
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
+  transition: filter 180ms ease;
+}
+
+.leader-card--muted .leader-card-portrait {
+  filter:
+    grayscale(1)
+    brightness(0.46)
+    drop-shadow(0 18px 18px rgba(0, 0, 0, 0.52));
+}
+
+.leader-card--hovered .leader-card-portrait {
+  filter:
+    grayscale(1)
+    brightness(0.72)
+    drop-shadow(0 20px 20px rgba(0, 0, 0, 0.54));
+}
+
+.leader-card--selected .leader-card-portrait {
+  filter:
+    grayscale(0)
+    brightness(1)
+    drop-shadow(0 26px 28px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 20px rgba(255, 255, 255, 0.16));
+}
+
+.leader-card--selected.leader-card--hovered .leader-card-portrait {
+  filter:
+    grayscale(0)
+    brightness(1.12)
+    drop-shadow(0 26px 28px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 20px rgba(255, 255, 255, 0.16));
+}
+
+.leader-card--selected .leader-card-portrait img {
+  filter: grayscale(0) brightness(1);
+}
+
+.leader-select-side {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
 }
 
 .leader-select-profile {
   min-width: 0;
   min-height: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -2130,15 +2089,15 @@ button.spin-btn:disabled:active {
 
 .leader-profile-hero {
   display: grid;
-  grid-template-columns: 138px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 18px;
   align-items: center;
   flex-shrink: 0;
 }
 
 .leader-profile-portrait {
-  width: 138px;
-  height: 216px;
+  width: 74px;
+  height: 74px;
   display: block;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.72);
@@ -2206,7 +2165,7 @@ button.spin-btn:disabled:active {
   flex-shrink: 0;
   display: flex;
   justify-content: stretch;
-  margin-top: 26px;
+  margin-top: 14px;
 }
 
 .leader-select-play.main-menu-button {
@@ -2214,6 +2173,66 @@ button.spin-btn:disabled:active {
   min-height: 62px;
   padding: 0 18px;
   font-size: 24px;
+}
+
+.leader-difficulty {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.leader-difficulty-label {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.leader-difficulty-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.leader-difficulty-button {
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 10px;
+  border: 2px solid rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    filter 140ms ease;
+}
+
+.leader-difficulty-button:hover,
+.leader-difficulty-button:focus-visible {
+  border-color: rgba(255, 255, 255, 0.72);
+  color: #ffffff;
+  filter: brightness(1.12);
+  outline: none;
+}
+
+.leader-difficulty-button--selected,
+.leader-difficulty-button--selected:hover,
+.leader-difficulty-button--selected:focus-visible {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  box-shadow:
+    0 10px 18px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .leader-card-portrait .leader-portrait-placeholder,
@@ -2239,32 +2258,24 @@ button.spin-btn:disabled:active {
     padding-bottom: 34px;
   }
 
-  .leader-select-back.main-menu-button {
+  .leader-select-back {
     top: 24px;
     left: 28px;
-    min-height: 50px;
-    font-size: 20px;
+    width: 48px;
+    height: 48px;
+    font-size: 38px;
   }
 
   .leader-select-title-main {
-    font-size: 52px;
+    font-size: 42px;
   }
 
   .leader-select-content {
-    margin-top: 40px;
+    margin-top: 34px;
   }
 
   .leader-select-profile {
     padding: 20px;
-  }
-
-  .leader-profile-hero {
-    grid-template-columns: 112px minmax(0, 1fr);
-  }
-
-  .leader-profile-portrait {
-    width: 112px;
-    height: 176px;
   }
 
   .leader-profile-name {
@@ -2293,7 +2304,7 @@ button.spin-btn:disabled:active {
     overflow-y: auto;
   }
 
-  .leader-select-back.main-menu-button {
+  .leader-select-back {
     top: 28px;
     left: 28px;
   }
@@ -2309,11 +2320,14 @@ button.spin-btn:disabled:active {
   }
 
   .leader-select-roster {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-template-rows: repeat(2, auto);
+    padding-inline: clamp(14px, 6vw, 42px);
   }
 
   .leader-select-profile {
+    min-height: 0;
+  }
+
+  .leader-select-side {
     min-height: 0;
   }
 }
@@ -2323,37 +2337,38 @@ button.spin-btn:disabled:active {
     padding: 94px 22px 28px;
   }
 
-  .leader-select-back.main-menu-button {
+  .leader-select-back {
     top: 24px;
     left: 22px;
-    min-width: 120px;
-    min-height: 48px;
-    padding: 0 18px;
-    font-size: 19px;
+    width: 46px;
+    height: 46px;
+    font-size: 36px;
   }
 
   .leader-select-title-main {
-    font-size: 42px;
+    font-size: 34px;
   }
 
   .leader-select-roster {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: none;
-    grid-auto-rows: auto;
+    padding: 10px 6px 8px;
   }
 
   .leader-card.main-menu-button {
-    width: min(100%, 132px);
+    width: clamp(136px, 42vw, 182px);
+  }
+
+  .leader-card.main-menu-button + .leader-card.main-menu-button {
+    margin-left: clamp(-46px, -13vw, -24px);
   }
 
   .leader-profile-hero {
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: 62px minmax(0, 1fr);
     gap: 16px;
   }
 
   .leader-profile-portrait {
-    width: 96px;
-    height: 150px;
+    width: 62px;
+    height: 62px;
   }
 
   .leader-profile-name {
@@ -2440,7 +2455,7 @@ button.spin-btn:disabled:active {
     0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* 데모 시작: 플레이 — 위 `.pregame-card`와 동일한 인게임 3D 버튼(스프라이트 없음) */
+/* ?�모 ?�작: ?�레??????`.pregame-card`?� ?�일???�게??3D 버튼(?�프?�이???�음) */
 .pregame-card.demo-start-play-button {
   width: min(100%, 300px);
   min-height: 64px;
@@ -2496,7 +2511,7 @@ button.spin-btn:disabled:active {
   margin-top: 4px;
 }
 
-/* ===== 드래프트(심볼 선택) 진입 페이드 인 ===== */
+/* ===== ?�래?�트(?�볼 ?�택) 진입 ?�이????===== */
 .pregame-overlay--draft-fade-in {
   animation: pregame-draft-fade-in 0.4s ease-out;
 }
@@ -2510,7 +2525,7 @@ button.spin-btn:disabled:active {
   }
 }
 
-/* ===== 본게임 진입: 검은 화면 → 로드 후 페이드 아웃 ===== */
+/* ===== 본게??진입: 검?� ?�면 ??로드 ???�이???�웃 ===== */
 .game-screen {
   position: relative;
   width: 100%;
@@ -2776,7 +2791,7 @@ button.spin-btn:disabled:active {
   font-size: 12px;
 }
 
-/* HUD 기본 생산: 내용 너비만; position/z-index는 인라인(fixed)로 덮음 */
+/* HUD 기본 ?�산: ?�용 ?�비�? position/z-index???�라??fixed)�???�� */
 .hud-stat-tooltip {
   width: max-content;
   max-width: none;
@@ -2802,7 +2817,7 @@ button.spin-btn:disabled:active {
   font-size: 34px;
 }
 
-/* EffectText: 한 줄 안에서 자연스럽게 흐르게 (상위 pre-wrap·flex와 분리) */
+/* EffectText: ??�??�에???�연?�럽�??�르�?(?�위 pre-wrap·flex?� 분리) */
 .effect-text-root {
   display: inline;
   white-space: normal;
@@ -2810,7 +2825,7 @@ button.spin-btn:disabled:active {
   overflow-wrap: break-word;
 }
 
-/* EffectText: 식량·골드·지식 리소스는 UI 스프라이트(16×16)로 표시 */
+/* EffectText: ?�량·골드·지??리소?�는 UI ?�프?�이??16×16)�??�시 */
 .effect-text-food-icon,
 .effect-text-gold-icon,
 .effect-text-knowledge-icon {
@@ -2824,7 +2839,7 @@ button.spin-btn:disabled:active {
   image-rendering: crisp-edges;
 }
 
-/* ===== 일시정지 버튼 (상단바 우측) ===== */
+/* ===== ?�시?��? 버튼 (?�단�??�측) ===== */
 .pause-btn-top {
   position: fixed;
   top: max(12px, calc(8px + env(safe-area-inset-top, 0px)));
@@ -2871,7 +2886,7 @@ button.spin-btn:disabled:active {
   background: #000000;
 }
 
-/* ===== 메뉴 버튼 (하단 버튼 모음 최우단, 유물/⋯와 동일 사이즈) ===== */
+/* ===== 메뉴 버튼 (?�단 버튼 모음 최우?? ?�물/??? ?�일 ?�이�? ===== */
 .menu-btn {
   width: 100px;
   height: 100px;
@@ -2890,7 +2905,7 @@ button.spin-btn:disabled:active {
   transition: all 0.15s ease;
   box-shadow:
     inset 0 0 0 6px #555,
-    /* 기둥(테두리 아래 3D 바닥면) 색: 스핀버튼처럼 대비되게 */
+    /* 기둥(?�두�??�래 3D 바닥�? ?? ?��?버튼처럼 ?�비되�?*/
     0 10px 0 0 #444,
     0 10px 12px rgba(0, 0, 0, 0.4);
 }
@@ -2913,7 +2928,7 @@ button.spin-btn:disabled:active {
     0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* ===== 하단 사이드 버튼 (유물 상점, 보유 심볼) ===== */
+/* ===== ?�단 ?�이??버튼 (?�물 ?�점, 보유 ?�볼) ===== */
 button.relic-shop-btn,
 button.bottom-right-btn {
   width: 90px;
@@ -3091,7 +3106,7 @@ button.relic-shop-btn--knowledge {
   flex-shrink: 0;
 }
 
-/* ── Tab Bar ── */
+/* ?�?� Tab Bar ?�?� */
 .settings-tabs {
   display: flex;
   width: 100%;
@@ -3123,7 +3138,7 @@ button.relic-shop-btn--knowledge {
   border-bottom-color: #fff;
 }
 
-/* ── Tab Content ── */
+/* ?�?� Tab Content ?�?� */
 .settings-body {
   display: flex;
   flex-direction: column;
@@ -3135,7 +3150,7 @@ button.relic-shop-btn--knowledge {
   min-height: 160px;
 }
 
-/* ── Setting Row (label left, controls right) ── */
+/* ?�?� Setting Row (label left, controls right) ?�?� */
 .settings-row {
   display: flex;
   align-items: center;
@@ -3159,7 +3174,7 @@ button.relic-shop-btn--knowledge {
   align-items: center;
 }
 
-/* ── Segmented Button Group (for speed options) ── */
+/* ?�?� Segmented Button Group (for speed options) ?�?� */
 .settings-seg-btn {
   padding: 8px 22px;
   font-family: 'Mulmaru', sans-serif;
@@ -3196,7 +3211,7 @@ button.relic-shop-btn--knowledge {
   z-index: 2;
 }
 
-/* ── Dropdown ── */
+/* ?�?� Dropdown ?�?� */
 .settings-dropdown-wrap {
   position: relative;
 }
@@ -3242,7 +3257,7 @@ button.relic-shop-btn--knowledge {
   font-size: 16px;
 }
 
-/* ── Back Button ── */
+/* ?�?� Back Button ?�?� */
 .settings-back-btn {
   width: 200px;
   padding: 14px 0;
@@ -3449,7 +3464,7 @@ button.relic-shop-btn--knowledge {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Column widths — symbols */
+/* Column widths ??symbols */
 .databrowser-th--id {
   width: 60px;
 }

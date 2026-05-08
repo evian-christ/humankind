@@ -37,7 +37,6 @@ const makeState = (): GameState => {
         level: 0,
         era: 1,
         turn: 0,
-        stageId: 1,
         board,
         playerSymbols: [oral],
         phase: 'idle',

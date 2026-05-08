@@ -5,7 +5,6 @@ export type TurnEndPhase = 'selection' | 'destroy_selection' | 'game_over';
 
 export interface TurnEndPhaseInput {
     turn: number;
-    stageId: number;
     food: number;
     edictRemovalPending: boolean;
 }
@@ -29,7 +28,7 @@ export interface TurnEndPhaseResolution {
 
 export function resolveTurnEndPhase(input: TurnEndPhaseInput): TurnEndPhaseResolution {
     const isFoodPaymentTurn = input.turn > 0 && input.turn % 10 === 0;
-    const foodCost = isFoodPaymentTurn ? calculateFoodCost(input.turn, input.stageId) : 0;
+    const foodCost = isFoodPaymentTurn ? calculateFoodCost(input.turn) : 0;
 
     if (isFoodPaymentTurn && input.food < foodCost) {
         return {

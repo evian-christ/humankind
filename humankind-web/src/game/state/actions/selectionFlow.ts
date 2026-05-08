@@ -27,6 +27,7 @@ import {
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
 } from '../gameCalculations';
+import { saveGameState } from '../saveGame';
 import type { GamePhase, GameState } from '../gameStore';
 import type { PlayerSymbolInstance } from '../../types';
 
@@ -118,6 +119,7 @@ export const createSelectionFlowActions = ({
                 forceTerrainInNextSymbolChoices: nextForceTerrain,
                 phase: q.length > 0 ? 'selection' : phaseAfterTurnFlowComplete(state.level, demoVictoryLevel),
             });
+            saveGameState(get());
             return;
         }
 
@@ -127,6 +129,7 @@ export const createSelectionFlowActions = ({
             symbolChoices: [],
             symbolSelectionRelicSourceId: null,
         });
+        saveGameState(get());
     },
 
     skipSelection: () => {

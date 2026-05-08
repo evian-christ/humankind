@@ -13,6 +13,7 @@ export interface RelicInstance {
 interface RelicState {
     relics: RelicInstance[];
     addRelic: (def: RelicDefinition) => void;
+    hydrateRelics: (relics: RelicInstance[]) => void;
     removeRelic: (instanceId: string) => void;
     incrementRelicCounter: (instanceId: string) => void;
     /** 남은 턴 등: 1 감소, 0 이하면 유물 제거 (우르·나일) */
@@ -36,6 +37,15 @@ export const useRelicStore = create<RelicState>((set) => ({
                 bonus_stacks: 0,
             }],
         })),
+
+    hydrateRelics: (relics) => {
+        const maxNumericId = relics.reduce((max, relic) => {
+            const match = /^relic_(\d+)$/.exec(relic.instanceId);
+            return match ? Math.max(max, Number(match[1])) : max;
+        }, 0);
+        nextId = Math.max(nextId, maxNumericId + 1);
+        set({ relics });
+    },
 
     removeRelic: (instanceId) =>
         set((state) => ({

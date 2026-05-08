@@ -5,11 +5,10 @@ import { resolveTurnEndPhase } from './phaseResolution';
 
 describe('resolveTurnEndPhase', () => {
     it('returns game_over when food is insufficient on a payment turn', () => {
-        const foodCost = calculateFoodCost(10, 1);
+        const foodCost = calculateFoodCost(10);
 
         const result = resolveTurnEndPhase({
             turn: 10,
-            stageId: 1,
             food: foodCost - 1,
             edictRemovalPending: false,
         });
@@ -22,11 +21,10 @@ describe('resolveTurnEndPhase', () => {
     });
 
     it('subtracts food and moves to selection when food is sufficient on a payment turn', () => {
-        const foodCost = calculateFoodCost(10, 1);
+        const foodCost = calculateFoodCost(10);
 
         const result = resolveTurnEndPhase({
             turn: 10,
-            stageId: 1,
             food: foodCost + 7,
             edictRemovalPending: false,
         });
@@ -42,7 +40,6 @@ describe('resolveTurnEndPhase', () => {
     it('moves to destroy_selection when edict removal is pending', () => {
         const result = resolveTurnEndPhase({
             turn: 3,
-            stageId: 1,
             food: 20,
             edictRemovalPending: true,
         });

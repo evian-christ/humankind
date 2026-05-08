@@ -25,7 +25,6 @@ const makeState = (): GameState => {
         level: 1,
         era: 1,
         turn: 1,
-        stageId: 1,
         board,
         playerSymbols: [oral],
         phase: 'selection',

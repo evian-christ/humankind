@@ -29,7 +29,7 @@ const createInstance = (definition: SymbolDefinition, id: string): PlayerSymbolI
 describe('turnPipeline', () => {
     it('computes turn start base totals through the injected calculator', () => {
         const result = computeTurnStartBaseTotals({
-            state: { stageId: 1 },
+            state: {},
             getHudTurnStartPassiveTotals: () => ({ food: 1, gold: 2, knowledge: 3 }),
         });
 

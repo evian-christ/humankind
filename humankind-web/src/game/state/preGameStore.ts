@@ -1,76 +1,76 @@
 import { create } from 'zustand';
 import type { LeaderId } from '../data/leaders';
 import { useGameStore } from './gameStore';
+import { hasSavedGame as hasSavedGameInStorage, loadSavedGamePatch } from './saveGame';
 
-export type PreGameScreen = 'intro' | 'stage' | 'leader' | null;
+export type PreGameScreen = 'intro' | 'leader' | null;
 
 interface PreGameState {
   screen: PreGameScreen;
-  selectedStageId: number | null;
   selectedLeaderId: LeaderId | null;
 
-  proceedToStageSelect: () => void;
-  /** 메인 메뉴(데모 시작 튜토리얼)로 복귀 */
+  proceedToLeaderSelect: () => void;
   returnToIntro: () => void;
-  selectStage: (stageId: number) => void;
   selectLeader: (leaderId: LeaderId) => void;
   exitPreGame: () => void;
-  /** 게임오버/승리 후 재진입: 스테이지 선택 화면으로 */
-  returnToStageSelect: () => void;
-  /** 데모 시작 화면에서 S: 스테이지 1 + 진시황으로 바로 게임 진입 */
+  returnToLeaderSelect: () => void;
   skipIntroToDefaults: () => void;
+  hasSavedGame: () => boolean;
+  continueSavedGame: () => boolean;
 }
 
 export const usePreGameStore = create<PreGameState>((set, get) => ({
   screen: 'intro',
-  selectedStageId: null,
   selectedLeaderId: null,
 
-  proceedToStageSelect: () => {
-    set({ screen: 'stage' });
+  proceedToLeaderSelect: () => {
+    set({ screen: 'leader' });
   },
 
   returnToIntro: () => {
     set({
       screen: 'intro',
-      selectedStageId: null,
       selectedLeaderId: null,
     });
   },
 
-  selectStage: (stageId) => {
-    set({ selectedStageId: stageId, screen: 'leader' });
-  },
-
   selectLeader: (leaderId) => {
-    const stageId = get().selectedStageId;
-    if (stageId == null) return;
-    useGameStore.getState().startGameWithDraft([], leaderId, stageId);
+    useGameStore.getState().startGameWithDraft([], leaderId);
     get().exitPreGame();
   },
 
   exitPreGame: () => {
     set({
       screen: null,
-      selectedStageId: null,
       selectedLeaderId: null,
     });
   },
 
-  returnToStageSelect: () => {
+  returnToLeaderSelect: () => {
     set({
-      screen: 'stage',
-      selectedStageId: null,
+      screen: 'leader',
       selectedLeaderId: null,
     });
   },
 
   skipIntroToDefaults: () => {
-    useGameStore.getState().startGameWithDraft([], 'shihuang', 1);
+    useGameStore.getState().startGameWithDraft([], 'shihuang');
     set({
       screen: null,
-      selectedStageId: null,
       selectedLeaderId: null,
     });
+  },
+
+  hasSavedGame: () => hasSavedGameInStorage(),
+
+  continueSavedGame: () => {
+    const savedGamePatch = loadSavedGamePatch();
+    if (!savedGamePatch) return false;
+    useGameStore.setState(savedGamePatch);
+    set({
+      screen: null,
+      selectedLeaderId: null,
+    });
+    return true;
   },
 }));

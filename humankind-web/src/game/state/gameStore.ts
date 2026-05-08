@@ -108,8 +108,6 @@ export interface GameState {
     level: number; // 0 ~ 30
     era: number; // derived from level
     turn: number;
-    /** 프리게임 스테이지 ID — 식량 납부·시작 유물·기본 생산 보너스 */
-    stageId: number;
     board: (PlayerSymbolInstance | null)[][];
     playerSymbols: PlayerSymbolInstance[];
     phase: GamePhase;
@@ -213,9 +211,8 @@ export interface GameState {
     buyRelic: (relicId: number) => void;
     selectUpgrade: (upgradeId: number) => void;
 
-        initializeGame: () => void;
-    /** 프리게임: 보유 심볼(symbolIds) + 리더 + 스테이지별 시작 유물로 본게임 시작 */
-    startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId, stageId: number) => void;
+    initializeGame: () => void;
+    startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
     devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
@@ -332,7 +329,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     level: 0,
     era: 1,
     turn: 0,
-    stageId: 1,
     board: INITIAL_STARTING_BOARD_STATE.board,
     playerSymbols: INITIAL_STARTING_BOARD_STATE.playerSymbols,
     phase: 'idle' as GamePhase,
