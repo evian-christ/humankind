@@ -18,28 +18,38 @@ const placeOralTraditionAtBoardCenter = (
 
     const ax = Math.floor(b.length / 2);
     const ay = Math.max(0, Math.floor((b[0]?.length ?? 1) / 2) - 1);
+    let oralX = -1;
+    let oralY = -1;
 
     for (let x = 0; x < b.length; x++) {
         for (let y = 0; y < (b[x]?.length ?? 0); y++) {
             const cell = b[x][y];
-            if (cell && cell.instanceId === oralInst.instanceId) b[x][y] = null;
+            if (cell && cell.instanceId === oralInst.instanceId) {
+                if (oralX < 0) {
+                    oralX = x;
+                    oralY = y;
+                }
+                b[x][y] = null;
+            }
         }
     }
 
     const occupant = b[ax]?.[ay] ?? null;
     if (occupant && occupant.instanceId !== oralInst.instanceId) {
-        let ox = -1;
-        let oy = -1;
-        for (let x = 0; x < b.length; x++) {
-            for (let y = 0; y < (b[x]?.length ?? 0); y++) {
-                const cell = b[x][y];
-                if (cell && cell.instanceId === oralInst.instanceId) {
-                    ox = x;
-                    oy = y;
+        let moved = false;
+        if (oralX >= 0 && b[oralX]?.[oralY] === null) {
+            b[oralX][oralY] = occupant;
+            moved = true;
+        }
+        for (let x = 0; x < b.length && !moved; x++) {
+            for (let y = 0; y < (b[x]?.length ?? 0) && !moved; y++) {
+                if (x === ax && y === ay) continue;
+                if (!b[x][y]) {
+                    b[x][y] = occupant;
+                    moved = true;
                 }
             }
         }
-        if (ox >= 0) b[ox][oy] = occupant;
     }
 
     if (b[ax]) b[ax][ay] = oralInst;
@@ -71,7 +81,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     const spinUpgrades = unlockedKnowledgeUpgrades || [];
     const newThreats: { instanceId: string; label: string }[] = [];
 
-    if (era === 1) {
+    if (era === 1 && turn > 0) {
         barbarianSymbolThreat += 1;
         if (rng.next() * 100 < barbarianSymbolThreat) {
             barbarianSymbolThreat = 0;

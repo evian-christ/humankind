@@ -50,28 +50,38 @@ export const placeOralTraditionAtBoardCenter = (
     const oralInst = symList[oralIdx]!;
     const b = board.map((col) => [...col]);
     const { x: ax, y: ay } = ORAL_TRADITION_ANCHOR;
+    let oralX = -1;
+    let oralY = -1;
 
     for (let x = 0; x < BOARD_WIDTH; x++) {
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             const cell = b[x][y];
-            if (cell && cell.instanceId === oralInst.instanceId) b[x][y] = null;
+            if (cell && cell.instanceId === oralInst.instanceId) {
+                if (oralX < 0) {
+                    oralX = x;
+                    oralY = y;
+                }
+                b[x][y] = null;
+            }
         }
     }
 
     const occupant = b[ax][ay];
     if (occupant && occupant.instanceId !== oralInst.instanceId) {
-        let ox = -1;
-        let oy = -1;
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-            for (let y = 0; y < BOARD_HEIGHT; y++) {
-                const cell = b[x][y];
-                if (cell && cell.instanceId === oralInst.instanceId) {
-                    ox = x;
-                    oy = y;
+        let moved = false;
+        if (oralX >= 0 && b[oralX]?.[oralY] === null) {
+            b[oralX][oralY] = occupant;
+            moved = true;
+        }
+        for (let x = 0; x < BOARD_WIDTH && !moved; x++) {
+            for (let y = 0; y < BOARD_HEIGHT && !moved; y++) {
+                if (x === ax && y === ay) continue;
+                if (!b[x][y]) {
+                    b[x][y] = occupant;
+                    moved = true;
                 }
             }
         }
-        if (ox >= 0) b[ox][oy] = occupant;
     }
 
     b[ax][ay] = oralInst;

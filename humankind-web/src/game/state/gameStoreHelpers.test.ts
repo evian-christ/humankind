@@ -4,6 +4,7 @@ import {
     createStartingBoard,
     ensureStartingWildSeedsOwned,
     createInstance,
+    placeOralTraditionAtBoardCenter,
 } from './gameStoreHelpers';
 import { S, SYMBOLS } from '../data/symbolDefinitions';
 import { SymbolType } from '../data/symbolTypes';
@@ -32,6 +33,21 @@ describe('gameStoreHelpers starting layout', () => {
         const result = ensureStartingWildSeedsOwned(withOneSeed);
 
         expect(result.filter((sym) => sym.definition.id === S.wild_seeds)).toHaveLength(2);
+    });
+
+    it('moves the center occupant when anchoring oral tradition', () => {
+        const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
+        const wildSeed = createInstance(SYMBOLS[S.wild_seeds]!, []);
+        const board = Array(5).fill(null).map(() => Array(4).fill(null));
+        board[0][0] = oral;
+        board[2][1] = wildSeed;
+
+        const result = placeOralTraditionAtBoardCenter(board, [oral, wildSeed]);
+        const placedIds = result.board.flat().filter(Boolean).map((sym) => sym!.instanceId);
+
+        expect(result.board[2][1]?.instanceId).toBe(oral.instanceId);
+        expect(placedIds).toEqual(expect.arrayContaining([oral.instanceId, wildSeed.instanceId]));
+        expect(placedIds).toHaveLength(2);
     });
 
     it('grants two random normal symbols when tribal village is destroyed from collection', () => {
