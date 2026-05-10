@@ -30,6 +30,7 @@ const createCommonResetPatch = () => ({
     symbolChoices: [],
     symbolSelectionRelicSourceId: null,
     lastEffects: [],
+    counterDisplayOverrides: [],
     runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
     activeContributors: [],

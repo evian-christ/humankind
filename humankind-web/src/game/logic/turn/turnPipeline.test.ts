@@ -85,6 +85,122 @@ describe('turnPipeline', () => {
         expect(pipeline.religionSlotsToRecalculate).toEqual([{ x: 1, y: 1, id: S.christianity }]);
     });
 
+    it('captures counter display deltas while resolving slot effects', () => {
+        const board = createEmptyBoard();
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        board[0][0] = wheat;
+        const pipeline = createSlotEffectPipeline({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            baseTotals: { food: 0, gold: 0, knowledge: 0 },
+        });
+
+        const result = resolveSlotEffect({
+            pipeline,
+            deps: {
+                processSingleSymbolEffects: ({ symbol }) => {
+                    symbol.effect_counter += 1;
+                    return { food: 0, knowledge: 0, gold: 0 };
+                },
+            },
+            symbol: wheat,
+            board,
+            x: 0,
+            y: 0,
+            effectCtx: { upgrades: [] },
+            relicEffects: {
+                relicCount: 0,
+                quarryEmptyGold: false,
+                bananaFossilBonus: false,
+                horsemansihpPastureBonus: false,
+                terraFossilDisasterFood: false,
+            },
+        });
+
+        expect(result.counterDelta).toBe(1);
+        expect(result.counterAnchor).toBe('bottom-right');
+        expect(result.counterDisplayTextBefore).toBeNull();
+    });
+
+    it('reports wrapped progress counters as gained progress instead of net display loss', () => {
+        const board = createEmptyBoard();
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        wheat.effect_counter = 9;
+        board[0][0] = wheat;
+        const pipeline = createSlotEffectPipeline({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            baseTotals: { food: 0, gold: 0, knowledge: 0 },
+        });
+
+        const result = resolveSlotEffect({
+            pipeline,
+            deps: {
+                processSingleSymbolEffects: ({ symbol }) => {
+                    symbol.effect_counter += 2;
+                    symbol.effect_counter -= 10;
+                    return { food: 10, knowledge: 0, gold: 0 };
+                },
+            },
+            symbol: wheat,
+            board,
+            x: 0,
+            y: 0,
+            effectCtx: { upgrades: [] },
+            relicEffects: {
+                relicCount: 0,
+                quarryEmptyGold: false,
+                bananaFossilBonus: false,
+                horsemansihpPastureBonus: false,
+                terraFossilDisasterFood: false,
+            },
+        });
+
+        expect(wheat.effect_counter).toBe(1);
+        expect(result.counterDelta).toBe(2);
+        expect(result.counterDisplayTextBefore).toBe('9');
+    });
+
+    it('infers wrapped progress when handlers assign the final remainder directly', () => {
+        const board = createEmptyBoard();
+        const banana = createInstance(Sym.banana, 'banana');
+        banana.effect_counter = 9;
+        board[0][0] = banana;
+        const pipeline = createSlotEffectPipeline({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            baseTotals: { food: 0, gold: 0, knowledge: 0 },
+        });
+
+        const result = resolveSlotEffect({
+            pipeline,
+            deps: {
+                processSingleSymbolEffects: ({ symbol }) => {
+                    symbol.effect_counter = 1;
+                    return { food: 10, knowledge: 0, gold: 0 };
+                },
+            },
+            symbol: banana,
+            board,
+            x: 0,
+            y: 0,
+            effectCtx: { upgrades: [] },
+            relicEffects: {
+                relicCount: 0,
+                quarryEmptyGold: false,
+                bananaFossilBonus: false,
+                horsemansihpPastureBonus: false,
+                terraFossilDisasterFood: false,
+            },
+        });
+
+        expect(result.counterDelta).toBe(2);
+        expect(result.counterDisplayTextBefore).toBe('9/10');
+    });
+
     it('applies immediate slot effects to totals and accumulated effects', () => {
         const board = createEmptyBoard();
         const wheat = createInstance(Sym.wheat, 'wheat');
@@ -101,6 +217,32 @@ describe('turnPipeline', () => {
 
         expect(pipeline.totals).toEqual({ food: 5, gold: 7, knowledge: 9 });
         expect(pipeline.accumulatedEffects).toEqual([{ x: 0, y: 0, food: 4, gold: 5, knowledge: 6 }]);
+    });
+
+    it('keeps counter-only slot effects for board floats without changing resource totals', () => {
+        const board = createEmptyBoard();
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        board[0][0] = wheat;
+        const pipeline = createSlotEffectPipeline({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            baseTotals: { food: 1, gold: 2, knowledge: 3 },
+        });
+        const effect: EffectResult = {
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            counterDelta: 1,
+            counterAnchor: 'bottom-right',
+        };
+
+        applySlotEffectResult(pipeline, { x: 0, y: 0 }, effect);
+
+        expect(pipeline.totals).toEqual({ food: 1, gold: 2, knowledge: 3 });
+        expect(pipeline.accumulatedEffects).toEqual([
+            { x: 0, y: 0, food: 0, gold: 0, knowledge: 0, counter: 1, counterAnchor: 'bottom-right' },
+        ]);
     });
 
     it('removes marked board symbols and tracks removed instance ids before spawned replacements', () => {

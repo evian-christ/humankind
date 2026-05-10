@@ -28,6 +28,7 @@ import { createTurnFlowActions } from './actions/turnFlow';
 import { createRelicShopFlowActions } from './actions/relicShopFlow';
 import { createGameLifecycleActions } from './actions/gameLifecycle';
 import { createBoardInteractionActions } from './actions/boardInteraction';
+import type { BoardEffectDelta } from '../logic/turn/turnTypes';
 
 export { type PlayerSymbolInstance } from '../types';
 export { BOARD_HEIGHT, BOARD_WIDTH } from './gameStoreHelpers';
@@ -118,7 +119,8 @@ export interface GameState {
     relicChoices: (RelicDefinition | null)[];
     /** 람세스 황금의 거래: 이번 입고(상점 갱신)에서 50% 할인된 유물 ID */
     relicHalfPriceRelicId: number | null;
-    lastEffects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>;
+    lastEffects: BoardEffectDelta[];
+    counterDisplayOverrides: Array<{ x: number; y: number; text: string | null }>;
     /** processing 중 누적 합산 (food, gold, knowledge) */
     runningTotals: { food: number; gold: number; knowledge: number };
     /** 현재 처리 중인 슬롯 좌표 (null이면 하이라이트 없음) */
@@ -337,6 +339,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     relicChoices: generateRelicChoices(),
     relicHalfPriceRelicId: null,
     lastEffects: [],
+    counterDisplayOverrides: [],
     runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
     activeContributors: [],

@@ -249,6 +249,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             relicChoices: save.state.relicChoices.map((id) => (id == null ? null : RELICS[id] ?? null)),
             relicHalfPriceRelicId: save.state.relicHalfPriceRelicId,
             lastEffects: save.state.lastEffects,
+            counterDisplayOverrides: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],

@@ -1,4 +1,5 @@
-import { S, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { PLANTATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { BARBARIAN_CAMP_SPAWN_INTERVAL, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import type { ActiveRelicEffects, EffectResult, SymbolEffectContext } from '../symbolEffects/types';
 import {
@@ -11,7 +12,7 @@ import {
     type SlotEffect,
     type SlotEffectCache,
 } from './symbolEffectResolution';
-import type { BoardGrid, CreateSymbolInstance } from './turnTypes';
+import type { BoardCounterFloatAnchor, BoardGrid, CreateSymbolInstance } from './turnTypes';
 
 export type { BoardGrid } from './turnTypes';
 
@@ -90,6 +91,125 @@ export interface ApplyGeneratedSymbolsArgs {
     createSymbolInstance: CreateSymbolInstance;
 }
 
+type CounterFloatMode = 'direct-progress' | 'direct-countdown' | 'display-countdown';
+
+interface CounterFloatConfig {
+    anchor: BoardCounterFloatAnchor;
+    mode: CounterFloatMode;
+    wrapThreshold?: number;
+}
+
+function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolEffectContext): CounterFloatConfig | null {
+    const def = symbol.definition;
+    if (def.id === S.barbarian_camp) {
+        return { anchor: 'bottom-left', mode: 'display-countdown', wrapThreshold: BARBARIAN_CAMP_SPAWN_INTERVAL };
+    }
+    if (def.id === S.flood || def.id === S.drought) return { anchor: 'bottom-right', mode: 'direct-countdown' };
+    if (def.id === S.wheat) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 10 };
+    if (def.id === S.rice) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 20 };
+    if (def.id === S.banana) {
+        return {
+            anchor: 'bottom-right',
+            mode: 'direct-progress',
+            wrapThreshold: effectCtx?.upgrades.includes(PLANTATION_UPGRADE_ID) ? 7 : 10,
+        };
+    }
+    if (def.type !== SymbolType.ENEMY && def.base_hp === undefined) {
+        return { anchor: 'bottom-right', mode: 'direct-progress' };
+    }
+    return null;
+}
+
+function getCounterDisplayValue(symbol: PlayerSymbolInstance, rawValue: number): number {
+    return symbol.definition.id === S.barbarian_camp
+        ? BARBARIAN_CAMP_SPAWN_INTERVAL - rawValue
+        : rawValue;
+}
+
+function getCounterDisplayText(symbol: PlayerSymbolInstance, rawValue: number): string | null {
+    if (symbol.definition.id === S.barbarian_camp) {
+        return String(BARBARIAN_CAMP_SPAWN_INTERVAL - rawValue);
+    }
+    if (symbol.definition.id === S.banana) {
+        const perm = symbol.banana_permanent_food_bonus ?? 0;
+        const parts: string[] = [];
+        if (perm > 0) parts.push(`+${perm}`);
+        if (rawValue > 0) parts.push(`${rawValue}/10`);
+        return parts.length ? parts.join(' ') : null;
+    }
+    return rawValue > 0 ? String(rawValue) : null;
+}
+
+function createCounterMutationTracker(symbol: PlayerSymbolInstance, effectCtx: SymbolEffectContext) {
+    const config = getCounterFloatConfig(symbol, effectCtx);
+    if (!config) return null;
+
+    let currentValue = symbol.effect_counter || 0;
+    const initialValue = currentValue;
+    const initialDisplayValue = getCounterDisplayValue(symbol, initialValue);
+    const textBefore = getCounterDisplayText(symbol, initialValue);
+    let positiveDelta = 0;
+    let negativeDelta = 0;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(symbol, 'effect_counter');
+
+    Object.defineProperty(symbol, 'effect_counter', {
+        configurable: true,
+        enumerable: true,
+        get: () => currentValue,
+        set: (nextValue) => {
+            const normalizedValue = Number(nextValue) || 0;
+            const beforeDisplayValue = getCounterDisplayValue(symbol, currentValue);
+            const afterDisplayValue = getCounterDisplayValue(symbol, normalizedValue);
+            const delta = afterDisplayValue - beforeDisplayValue;
+            if (delta > 0) positiveDelta += delta;
+            if (delta < 0) negativeDelta += delta;
+            currentValue = normalizedValue;
+        },
+    });
+
+    return {
+        finish(): Pick<EffectResult, 'counterDelta' | 'counterAnchor' | 'counterDisplayTextBefore'> | null {
+            if (originalDescriptor) {
+                Object.defineProperty(symbol, 'effect_counter', {
+                    ...originalDescriptor,
+                    value: currentValue,
+                });
+            } else {
+                Object.defineProperty(symbol, 'effect_counter', {
+                    configurable: true,
+                    enumerable: true,
+                    writable: true,
+                    value: currentValue,
+                });
+            }
+
+            const finalDisplayValue = getCounterDisplayValue(symbol, currentValue);
+            let counterDelta = 0;
+            if (config.mode === 'direct-countdown') {
+                counterDelta = negativeDelta || positiveDelta;
+            } else if (config.mode === 'display-countdown') {
+                if (negativeDelta) {
+                    counterDelta = negativeDelta;
+                } else if (config.wrapThreshold && finalDisplayValue > initialDisplayValue) {
+                    counterDelta = -(initialDisplayValue + config.wrapThreshold - finalDisplayValue);
+                } else {
+                    counterDelta = positiveDelta;
+                }
+            } else if (positiveDelta) {
+                counterDelta = positiveDelta;
+            } else if (config.wrapThreshold && currentValue < initialValue) {
+                counterDelta = config.wrapThreshold - initialValue + currentValue;
+            } else {
+                counterDelta = negativeDelta;
+            }
+
+            return counterDelta
+                ? { counterDelta, counterAnchor: config.anchor, counterDisplayTextBefore: textBefore }
+                : null;
+        },
+    };
+}
+
 /**
  * TurnPipeline
  * - 슬롯 효과 계산과 누적 결과 갱신만 담당한다.
@@ -139,6 +259,7 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         return { food: 0, knowledge: 0, gold: 0 };
     }
 
+    const counterTracker = createCounterMutationTracker(symbol, effectCtx);
     const result = computeSingleSlotEffect(deps, {
         symbol,
         board,
@@ -148,6 +269,12 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         relicEffects,
         disabledTerrainCoords: pipeline.disabledTerrainCoords,
     });
+    const counterResult = counterTracker?.finish();
+    if (counterResult) {
+        result.counterDelta = counterResult.counterDelta;
+        result.counterAnchor = counterResult.counterAnchor;
+        result.counterDisplayTextBefore = counterResult.counterDisplayTextBefore;
+    }
 
     pipeline.religionEffectCache.set(slotKey(x, y), {
         food: result.food,
@@ -166,14 +293,22 @@ export function applySlotEffectResult(
     slot: { x: number; y: number },
     result: EffectResult,
 ): void {
-    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
-        pipeline.accumulatedEffects.push({
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || result.counterDelta) {
+        const effect: SlotEffect = {
             x: slot.x,
             y: slot.y,
             food: result.food,
             gold: result.gold,
             knowledge: result.knowledge,
-        });
+        };
+        if (result.counterDelta) effect.counter = result.counterDelta;
+        if (result.counterAnchor) effect.counterAnchor = result.counterAnchor;
+        if (result.counterDisplayTextBefore !== undefined) {
+            effect.counterDisplayTextBefore = result.counterDisplayTextBefore;
+        }
+        pipeline.accumulatedEffects.push(effect);
+    }
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
         pipeline.totals.food += result.food;
         pipeline.totals.knowledge += result.knowledge;
         pipeline.totals.gold += result.gold;

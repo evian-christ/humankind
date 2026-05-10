@@ -3,9 +3,12 @@ import { BOARD_HEIGHT, BOARD_WIDTH, useGameStore } from '../../../game/state/gam
 import { COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../../game/state/settingsStore';
 import { getSymbolColor } from '../../../game/data/symbolDefinitions';
 import { t } from '../../../i18n';
+import { audioManager } from '../../../audio/audioManager';
 import type { CellLayout, CombatBounce } from '../types';
 import { ASSET_BASE_URL } from './rendererShared';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
+
+const RANGED_ATTACKER_KEYS = new Set(['archer', 'tracker_archer', 'crossbowman', 'cannon']);
 
 export class CombatRenderer {
     private container: PIXI.Container;
@@ -28,9 +31,14 @@ export class CombatRenderer {
         this.container.x = 0;
     }
 
-    public tick(dt: number) {
-        this.tickBounce(dt);
+    public tick(dt: number): boolean {
+        const bounceFinished = this.tickBounce(dt);
         this.container.x = this.combatShaking ? Math.sin(Date.now() / 20) * 6 : 0;
+        return bounceFinished;
+    }
+
+    public isAnimatingAttacker(x: number, y: number): boolean {
+        return this.combatBounce?.attackerX === x && this.combatBounce?.attackerY === y;
     }
 
     public trigger(anim: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number }, cellLayout: CellLayout | null) {
@@ -57,6 +65,10 @@ export class CombatRenderer {
 
         const board = useGameStore.getState().board;
         const attackerDef = board[ax]?.[ay]?.definition;
+        if (attackerDef?.base_attack && attackerDef.base_attack > 0) {
+            const cueId = RANGED_ATTACKER_KEYS.has(attackerDef.key) ? 'attack_ranged' : 'attack_melee';
+            void audioManager.play(cueId);
+        }
         let bounceSprite: PIXI.Container;
 
         if (attackerDef?.sprite && attackerDef.sprite !== '-' && attackerDef.sprite !== '-.png') {
@@ -86,6 +98,8 @@ export class CombatRenderer {
 
         this.combatBounce = {
             sprite: bounceSprite,
+            attackerX: ax,
+            attackerY: ay,
             fromX: aCX,
             fromY: aCY,
             toX: moveToX,
@@ -107,8 +121,8 @@ export class CombatRenderer {
         this.combatBounce = null;
     }
 
-    private tickBounce(dt: number) {
-        if (!this.combatBounce) return;
+    private tickBounce(dt: number): boolean {
+        if (!this.combatBounce) return false;
 
         const b = this.combatBounce;
         b.elapsed += dt;
@@ -139,7 +153,7 @@ export class CombatRenderer {
                 (dmgTxt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
                 this.floatingTextRenderer.addText(dmgTxt, b.targetHpY);
             }
-            return;
+            return false;
         }
 
         if (b.elapsed < b.duration) {
@@ -147,11 +161,12 @@ export class CombatRenderer {
             const ease = easeInOut(Math.min(progress, 1));
             b.sprite.x = b.toX + (b.fromX - b.toX) * ease;
             b.sprite.y = b.toY + (b.fromY - b.toY) * ease;
-            return;
+            return false;
         }
 
         if (b.sprite.parent) b.sprite.parent.removeChild(b.sprite);
         b.sprite.destroy();
         this.combatBounce = null;
+        return true;
     }
 }

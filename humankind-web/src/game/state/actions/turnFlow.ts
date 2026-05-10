@@ -119,6 +119,7 @@ export const createTurnFlowActions = ({
             turn: prepared.turn,
             phase: 'spinning',
             lastEffects: [],
+            counterDisplayOverrides: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
@@ -183,7 +184,7 @@ export const createTurnFlowActions = ({
             tGold: number,
             toAdd: number[],
             toSpawn: number[],
-            effects: Array<{ x: number; y: number; food: number; gold: number; knowledge: number }>,
+            effects: GameState['lastEffects'],
         ) => {
             const stateAtFinish = get();
             get().appendEventLog({
@@ -291,6 +292,7 @@ export const createTurnFlowActions = ({
                         knowledge: prog.newKnowledge,
                         level: prog.newLevel,
                         runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                        counterDisplayOverrides: [],
                         activeSlot: null,
                         activeContributors: [],
                         pendingContributors: [],
@@ -407,7 +409,7 @@ export const createTurnFlowActions = ({
                     unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
                 });
 
-                set({ activeSlot: null, activeContributors: [], pendingContributors: [] });
+                set({ activeSlot: null, activeContributors: [], pendingContributors: [], counterDisplayOverrides: [] });
                 set({
                     lastEffects: [...slotPipeline.accumulatedEffects],
                     runningTotals: { ...slotPipeline.totals },
@@ -463,6 +465,9 @@ export const createTurnFlowActions = ({
                 activeContributors: [],
                 pendingContributors: result.contributors ?? [],
                 effectPhase: 1,
+                counterDisplayOverrides: result.counterDelta
+                    ? [{ x, y, text: result.counterDisplayTextBefore ?? null }]
+                    : [],
             });
 
             const showPhase2 = () => {
@@ -471,7 +476,6 @@ export const createTurnFlowActions = ({
             };
             const applyEffectsAndContinue = () => {
                 if (!turnRun.isActive()) return;
-                set({ effectPhase: 3, effectPhase3ReachedThisRun: true });
                 applySlotEffectResult(slotPipeline, { x, y }, result);
 
                 if (result.bonusXpPerTurnDelta) {
@@ -490,6 +494,9 @@ export const createTurnFlowActions = ({
                 }
 
                 set({
+                    effectPhase: 3,
+                    effectPhase3ReachedThisRun: true,
+                    counterDisplayOverrides: [],
                     lastEffects: [...slotPipeline.accumulatedEffects],
                     runningTotals: { ...slotPipeline.totals },
                 });

@@ -37,6 +37,8 @@ export interface FloatingEffect {
 
 export interface CombatBounce {
     sprite: PIXI.Container;
+    attackerX: number;
+    attackerY: number;
     fromX: number; fromY: number;
     toX: number; toY: number;
     elapsed: number;

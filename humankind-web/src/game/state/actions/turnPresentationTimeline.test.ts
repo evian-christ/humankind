@@ -28,4 +28,11 @@ describe('turnPresentationTimeline', () => {
             initialEffectDelayMs: 0,
         });
     });
+
+    it('keeps combat attack cadence aligned with the effect iteration delay', () => {
+        expect(buildCombatPresentationPlan('1x')).toMatchObject({
+            bounceDurationMs: 300,
+            stepDelayMs: 800,
+        });
+    });
 });

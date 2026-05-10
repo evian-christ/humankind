@@ -45,6 +45,7 @@ const makeState = (): GameState => {
         relicChoices: [null, null, null],
         relicHalfPriceRelicId: null,
         lastEffects: [],
+        counterDisplayOverrides: [],
         runningTotals: { food: 0, gold: 0, knowledge: 0 },
         activeSlot: null,
         activeContributors: [],

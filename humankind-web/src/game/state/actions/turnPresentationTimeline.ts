@@ -50,7 +50,7 @@ export function buildCombatPresentationPlan(effectSpeed: EffectSpeed): CombatPre
     const baseInitialEffectDelayMs = EFFECT_SPEED_DELAY[effectSpeed];
     return {
         bounceDurationMs,
-        stepDelayMs: bounceDurationMs + 40,
+        stepDelayMs: bounceDurationMs + baseInitialEffectDelayMs,
         removalDelayMs: Math.max(bounceDurationMs * 2, 200),
         initialEffectDelayMs:
             baseInitialEffectDelayMs === 0 ? 0 : Math.max(baseInitialEffectDelayMs, 300),

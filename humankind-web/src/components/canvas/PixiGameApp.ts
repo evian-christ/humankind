@@ -31,6 +31,7 @@ import {
 } from './renderers/rendererShared';
 
 const SPIN_AUDIO_ESTIMATE_TICK_MS = 1000 / 60;
+const CONTRIBUTOR_WOBBLE_SECOND_SOUND_MS = 140;
 
 const clampPlaybackRate = (value: number) => Math.min(4, Math.max(0.25, value));
 
@@ -131,6 +132,7 @@ export class PixiGameApp {
 
     private cellLayout: CellLayout | null = null;
     private contributorWobbleTime: number = 0;
+    private contributorWobbleSoundCount = 0;
 
     /** renderBoard가 히트영역을 갈아엎어도 포인터는 그대로일 수 있어, 마지막 호버를 저장 후 재동기화 */
     private symbolHoverCell: { x: number; y: number } | null = null;
@@ -285,20 +287,36 @@ export class PixiGameApp {
         const dt = ticker.deltaMS;
 
         this.floatingTextRenderer.tick(dt);
-        this.combatRenderer.tick(dt);
+        const combatBounceFinished = this.combatRenderer.tick(dt);
         this.hudRenderer.tickFoodDemandShake();
 
         // Contributor wobble: phase 2일 때만 타이머 증가·렌더 (phase 3 진입 시 두 번째 wobble 방지)
         const state = useGameStore.getState();
         if (state.phase === 'processing' && state.effectPhase === 2 && state.activeContributors?.length > 0) {
+            if (this.contributorWobbleSoundCount === 0) {
+                void audioManager.play('symbol_interact');
+                this.contributorWobbleSoundCount = 1;
+            }
             this.contributorWobbleTime += dt;
+            if (
+                this.contributorWobbleSoundCount === 1 &&
+                this.contributorWobbleTime >= CONTRIBUTOR_WOBBLE_SECOND_SOUND_MS
+            ) {
+                void audioManager.play('symbol_interact');
+                this.contributorWobbleSoundCount = 2;
+            }
             this.renderBoard(state, useSettingsStore.getState());
         } else {
             this.contributorWobbleTime = 0;
+            this.contributorWobbleSoundCount = 0;
         }
 
         // Pre-combat shake (e.g., Clovis relic): 흔들림은 시간 기반이므로 매 프레임 렌더가 필요
         if (state.preCombatShakeTarget || state.preCombatShakeRelicDefId) {
+            this.renderBoard(state, useSettingsStore.getState());
+        }
+
+        if (combatBounceFinished) {
             this.renderBoard(state, useSettingsStore.getState());
         }
 
@@ -348,6 +366,8 @@ export class PixiGameApp {
                     reel.scrollY += reel.speed * dt;
                     if (reel.scrollY >= reel.targetScrollY) {
                         reel.scrollY = reel.targetScrollY;
+                        reel.speed = 0;
+                        reel.stopped = true;
                     }
                 }
 
@@ -534,7 +554,7 @@ export class PixiGameApp {
                 const symbol = state.board[x][y];
                 if (!symbol) continue;
 
-                if (state.combatAnimation && state.combatAnimation.ax === x && state.combatAnimation.ay === y) continue;
+                if (this.combatRenderer.isAnimatingAttacker(x, y)) continue;
 
                 const isShakingDeath = state.combatShaking && symbol.is_marked_for_destruction;
                 const drawTarget = isShakingDeath ? this.combatContainer : this.boardContainer;
@@ -685,6 +705,7 @@ export class PixiGameApp {
                 const isProcessing = state.phase === 'processing';
                 const isActive = isProcessing && !!(state.activeSlot && state.activeSlot.x === x && state.activeSlot.y === y);
                 const isContrib = isProcessing && state.activeContributors.some(c => c.x === x && c.y === y);
+                const counterOverride = state.counterDisplayOverrides.find((o) => o.x === x && o.y === y);
                 const liftY = isActive ? -cellHeight * 0.14 : 0;
                 // phase 2일 때만 contributor 위아래 2회 왔다갔다 (phase 3에서는 wobble 없음)
                 const wobbleY = isContrib && state.effectPhase === 2 ? Math.sin(this.contributorWobbleTime * (4 * Math.PI / 280)) * 10 : 0;
@@ -749,7 +770,9 @@ export class PixiGameApp {
                     symDef.base_hp === undefined
                         ? String(symbol.effect_counter)
                         : '';
-                const boardCounterOverlay = bananaCounterText || genericCounterText;
+                const boardCounterOverlay = counterOverride
+                    ? (counterOverride.text ?? '')
+                    : bananaCounterText || genericCounterText;
                 if (boardCounterOverlay) {
                     const counterText = new PIXI.Text({
                         text: boardCounterOverlay,
@@ -804,14 +827,19 @@ export class PixiGameApp {
                 }
 
                 if (symDef.id === S.barbarian_camp) { // Barbarian Camp
-                    const campCounterText = new PIXI.Text({
-                        text: String(BARBARIAN_CAMP_SPAWN_INTERVAL - symbol.effect_counter),
-                        style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
-                    });
-                    campCounterText.anchor.set(0.5, 0.5);
-                    campCounterText.x = cellX + 25;
-                    campCounterText.y = cellY + cellHeight - 24 + liftY + wobbleY;
-                    drawTarget.addChild(campCounterText);
+                    const campCounterOverlay = counterOverride
+                        ? counterOverride.text
+                        : String(BARBARIAN_CAMP_SPAWN_INTERVAL - symbol.effect_counter);
+                    if (campCounterOverlay != null && campCounterOverlay !== '') {
+                        const campCounterText = new PIXI.Text({
+                            text: campCounterOverlay,
+                            style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                        });
+                        campCounterText.anchor.set(0.5, 0.5);
+                        campCounterText.x = cellX + 25;
+                        campCounterText.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                        drawTarget.addChild(campCounterText);
+                    }
                 }
 
                 // 파괴 X: phase 3 시작 시 생성. 이 셀이 지금 active/contributor/pending으로 wobble 중이면 숨김.
@@ -891,5 +919,6 @@ export class PixiGameApp {
 
     public triggerCombatAnimation(anim: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number }) {
         this.combatRenderer.trigger(anim, this.cellLayout);
+        this.renderBoard(useGameStore.getState(), useSettingsStore.getState());
     }
 }

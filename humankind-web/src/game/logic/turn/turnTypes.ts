@@ -15,6 +15,14 @@ export interface ResourceDelta {
     knowledge: number;
 }
 
+export type BoardCounterFloatAnchor = 'bottom-right' | 'bottom-left';
+
+export interface BoardEffectDelta extends BoardCoord, ResourceDelta {
+    counter?: number;
+    counterAnchor?: BoardCounterFloatAnchor;
+    counterDisplayTextBefore?: string | null;
+}
+
 export interface TurnThreatState {
     barbarianSymbolThreat: number;
     barbarianCampThreat: number;
@@ -69,6 +77,6 @@ export interface PhaseResolutionOutput {
     board: BoardGrid;
     playerSymbols: PlayerSymbolInstance[];
     runningTotals: ResourceDelta;
-    lastEffects: Array<BoardCoord & ResourceDelta>;
+    lastEffects: BoardEffectDelta[];
     symbolChoices?: SymbolDefinition[];
 }

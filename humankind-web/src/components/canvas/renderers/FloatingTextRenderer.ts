@@ -1,10 +1,12 @@
 import * as PIXI from 'pixi.js';
+import { audioManager } from '../../../audio/audioManager';
 import { useGameStore } from '../../../game/state/gameStore';
 import type { GameState } from '../../../game/state/gameStore';
 import type { CellLayout, FloatingEffect } from '../types';
 
 const FLOAT_DURATION = 800;
 const FLOAT_DISTANCE = 30;
+const COUNTER_FLOAT_COLOR = '#8b7355';
 
 const THREAT_FLOAT_DRIFT_MS = 220;
 export const THREAT_FLOAT_TOTAL_MS = 1800;
@@ -73,33 +75,76 @@ export class FloatingTextRenderer {
         const rowGap = 0;
         for (const effect of newEffects) {
             const effectFontSize = Math.max(24, cellHeight * 0.22);
-            const baseX = startX + gridOffsetX + effect.x * (cellWidth + colGap) + cellWidth / 2;
-            const baseY = startY + gridOffsetY + effect.y * (cellHeight + rowGap) + 8 * scale;
+            const cellX = startX + gridOffsetX + effect.x * (cellWidth + colGap);
+            const cellY = startY + gridOffsetY + effect.y * (cellHeight + rowGap);
+            const baseX = cellX + cellWidth / 2;
+            const baseY = cellY + 8 * scale;
+            const hasPositiveFoodFloat = effect.food > 0;
+            const hasPositiveGoldFloat = effect.gold > 0;
+            const hasPositiveKnowledgeFloat = effect.knowledge > 0;
 
             const lines = [];
             if (effect.food !== 0) lines.push({ text: `${effect.food > 0 ? '+' : ''}${effect.food}`, color: effect.food > 0 ? '#4ade80' : '#ef4444' });
             if (effect.gold !== 0) lines.push({ text: `${effect.gold > 0 ? '+' : ''}${effect.gold}`, color: effect.gold > 0 ? '#fbbf24' : '#ef4444' });
             if (effect.knowledge !== 0) lines.push({ text: `${effect.knowledge > 0 ? '+' : ''}${effect.knowledge}`, color: effect.knowledge > 0 ? '#60a5fa' : '#ef4444' });
 
-            const gapText = 6 * scale;
-            const tempTexts = lines.map((line) => {
-                const txt = new PIXI.Text({
-                    text: line.text,
-                    style: new PIXI.TextStyle({ fill: line.color, fontSize: effectFontSize, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 3 } }),
+            if (lines.length > 0) {
+                const gapText = 6 * scale;
+                const tempTexts = lines.map((line) => {
+                    const txt = new PIXI.Text({
+                        text: line.text,
+                        style: new PIXI.TextStyle({ fill: line.color, fontSize: effectFontSize, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 3 } }),
+                    });
+                    txt.anchor.set(0, 0);
+                    return txt;
                 });
-                txt.anchor.set(0, 0);
-                return txt;
-            });
-            const totalW = tempTexts.reduce((sum, t) => sum + t.width, 0) + gapText * (tempTexts.length - 1);
-            let curX = baseX - totalW / 2;
+                const totalW = tempTexts.reduce((sum, t) => sum + t.width, 0) + gapText * (tempTexts.length - 1);
+                let curX = baseX - totalW / 2;
 
-            for (const txt of tempTexts) {
-                txt.x = curX;
-                txt.y = baseY;
-                (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                curX += txt.width + gapText;
+                for (const txt of tempTexts) {
+                    txt.x = curX;
+                    txt.y = baseY;
+                    (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                    curX += txt.width + gapText;
+                }
+                this.addTextGroup(tempTexts, baseY);
             }
-            this.addTextGroup(tempTexts, baseY);
+
+            if (effect.counter) {
+                const isActiveSlot =
+                    state.phase === 'processing' &&
+                    state.activeSlot?.x === effect.x &&
+                    state.activeSlot.y === effect.y;
+                const liftY = isActiveSlot ? -cellHeight * 0.14 : 0;
+                const counterX = effect.counterAnchor === 'bottom-left'
+                    ? cellX + 25
+                    : cellX + cellWidth - 21;
+                const counterY = cellY + cellHeight - 24 + liftY;
+                const txt = new PIXI.Text({
+                    text: `${effect.counter > 0 ? '+' : ''}${effect.counter}`,
+                    style: new PIXI.TextStyle({
+                        fill: COUNTER_FLOAT_COLOR,
+                        fontSize: effectFontSize,
+                        fontWeight: 'bold',
+                        fontFamily: 'Mulmaru',
+                        stroke: { color: '#000000', width: 3 },
+                    }),
+                });
+                txt.anchor.set(0.5, 0.5);
+                txt.x = counterX;
+                txt.y = counterY;
+                (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                this.addText(txt, counterY);
+            }
+            if (hasPositiveFoodFloat) {
+                void audioManager.play('resource_food');
+            }
+            if (hasPositiveGoldFloat) {
+                void audioManager.play('resource_gold');
+            }
+            if (hasPositiveKnowledgeFloat) {
+                void audioManager.play('resource_knowledge');
+            }
         }
     }
 

@@ -1,9 +1,14 @@
 import type { PlayerSymbolInstance } from '../../types';
+import type { BoardCounterFloatAnchor } from '../turn/turnTypes';
 
 export interface EffectResult {
     food: number;
     knowledge: number;
     gold: number;
+    /** Board counter display delta for floating text, when this effect changes a visible counter. */
+    counterDelta?: number;
+    counterAnchor?: BoardCounterFloatAnchor;
+    counterDisplayTextBefore?: string | null;
     /** 이번 턴에서 컬렉션에 추가할 심볼 ID 목록 */
     addSymbolIds?: number[];
     /** 이번 턴에서 보드에 추가할 심볼 ID 목록 (빈 슬롯에 배치) */

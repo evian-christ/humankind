@@ -1,9 +1,13 @@
 import { RELIGION_DOCTRINE_IDS, S, SymbolType } from '../../data/symbolDefinitions';
 import { GUILD_UPGRADE_ID, THEOCRACY_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { isCorner } from '../symbolEffects/core';
-import type { BoardGrid, BoardCoord, ResourceDelta } from './turnTypes';
+import type { BoardCounterFloatAnchor, BoardGrid, BoardCoord, ResourceDelta } from './turnTypes';
 
-export type SlotEffect = BoardCoord & ResourceDelta;
+export type SlotEffect = BoardCoord & ResourceDelta & {
+    counter?: number;
+    counterAnchor?: BoardCounterFloatAnchor;
+    counterDisplayTextBefore?: string | null;
+};
 
 export interface DeferredReligionSlot extends BoardCoord {
     id: number;
