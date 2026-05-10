@@ -62,9 +62,13 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.tab.gameplay': 'Gameplay',
         'settings.tab.graphics': 'Graphics',
         'settings.tab.general': 'General',
+        'settings.tab.audio': 'Audio',
         'settings.fullscreen': 'Fullscreen',
         'settings.fullscreen.on': 'On',
         'settings.fullscreen.off': 'Off',
+        'settings.masterVolume': 'Master Volume',
+        'settings.musicVolume': 'Music Volume',
+        'settings.effectVolume': 'SFX Volume',
 
         // Game UI
         'game.spin': 'SPIN',
@@ -733,9 +737,13 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.tab.gameplay': '게임플레이',
         'settings.tab.graphics': '그래픽',
         'settings.tab.general': '일반',
+        'settings.tab.audio': '오디오',
         'settings.fullscreen': '전체화면',
         'settings.fullscreen.on': '켜짐',
         'settings.fullscreen.off': '꺼짐',
+        'settings.masterVolume': '마스터 볼륨',
+        'settings.musicVolume': '음악 볼륨',
+        'settings.effectVolume': '효과음 볼륨',
 
         // Game UI (스핀 = 보드 돌리기 버튼, 턴 = 게임 턴 개념)
         'game.spin': '스핀',

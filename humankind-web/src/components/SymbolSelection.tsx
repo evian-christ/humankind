@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { getRerollCost } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
@@ -7,6 +7,7 @@ import { useRelicStore } from '../game/state/relicStore';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
+import { audioManager } from '../audio/audioManager';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -45,14 +46,14 @@ const SymbolCard = ({
             className="selection-card-frame"
             style={{
                 '--card-glow': `${eraColor}cc`,
-                '--selection-card-bg': `url("${ASSET_BASE_URL}assets/ui/cards_ancient_300x500.png")`,
-            } as React.CSSProperties}
+                '--selection-era-color': eraColor,
+            } as CSSProperties}
         >
             <button
                 type="button"
                 className="selection-card"
+                data-audio-click="symbol_choice"
                 onClick={onClick}
-                style={{ background: `url("${ASSET_BASE_URL}assets/ui/cards_ancient_300x500.png") no-repeat center / 400px 667px` }}
             >
                 {/* 시대 — 스프라이트 위 */}
                 <div className="selection-card-rarity" style={{
@@ -63,8 +64,6 @@ const SymbolCard = ({
                     textShadow: `-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 12px ${eraColor}b3`,
                     marginBottom: '8px',
                     display: 'inline-block',
-                    transform: 'scaleX(1.4)',
-                    transformOrigin: 'center'
                 }}>
                     {eraName}
                 </div>
@@ -86,9 +85,9 @@ const SymbolCard = ({
                 {/* 이름 */}
                 <div className="selection-card-name">{symName}</div>
                 {(symbol.base_attack !== undefined || displayHp !== undefined) && (
-                    <div className="selection-card-stats" style={{ display: 'flex', gap: '16px', fontSize: '24px', margin: '8px 0', fontWeight: 'bold', color: '#1a1a1a' }}>
-                        {symbol.base_attack !== undefined && <span>⚔ {symbol.base_attack}</span>}
-                        {displayHp !== undefined && <span>♥ {displayHp}</span>}
+                    <div className="selection-card-stats">
+                        {symbol.base_attack !== undefined && <span>ATK {symbol.base_attack}</span>}
+                        {displayHp !== undefined && <span>HP {displayHp}</span>}
                     </div>
                 )}
                 <div className="selection-card-desc">
@@ -117,10 +116,18 @@ const SymbolSelection = () => {
     const relics = useRelicStore((s) => s.relics);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
     const [isPeeked, setIsPeeked] = useState(false);
+    const prevPhaseRef = useRef(phase);
 
     /** 선택 패널이 보드를 가릴 때만 툴팁 억제; 본게임 ▼ 보드 보기(peek) 중에는 보드 전면으로 간주 */
     const blockBoardTooltipsForSelectionUi = phase === 'selection' && !isPeeked;
     useRegisterBoardTooltipBlock('symbol-selection-overlay', blockBoardTooltipsForSelectionUi);
+
+    useEffect(() => {
+        if (phase === 'selection' && prevPhaseRef.current !== 'selection') {
+            void audioManager.play('selection_open');
+        }
+        prevPhaseRef.current = phase;
+    }, [phase]);
 
     if (phase !== 'selection') return null;
 
@@ -140,7 +147,17 @@ const SymbolSelection = () => {
             : null;
 
     const handleCardClick = (symbolId: number) => {
+        void audioManager.play('symbol_choice_chose');
         selectSymbol(symbolId);
+    };
+
+    const handleRerollClick = () => {
+        if (!canReroll) {
+            void audioManager.play('denied');
+            return;
+        }
+        void audioManager.play('symbol_choice_reroll');
+        rerollSymbols();
     };
 
     return (
@@ -177,9 +194,17 @@ const SymbolSelection = () => {
                         {!hideRerollFromRelicSource && (
                             <button
                                 className="selection-reroll-btn"
-                                onClick={rerollSymbols}
-                                disabled={!canReroll}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                data-audio-click="symbol_choice_reroll"
+                                onClick={handleRerollClick}
+                                aria-disabled={!canReroll}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    opacity: canReroll ? 1 : 0.55,
+                                    cursor: canReroll ? 'pointer' : 'not-allowed',
+                                }}
                             >
                                 <span>{t('game.reroll', language)}</span>
                                 <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>

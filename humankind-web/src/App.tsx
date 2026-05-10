@@ -22,6 +22,8 @@ import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
 import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
+import { audioManager } from './audio/audioManager';
+import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
 
 const CustomCursor = () => {
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,86 @@ function App() {
   const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
   const gameAreaRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    audioManager.registerCue('button_hover', DEFAULT_AUDIO_CUES.button_hover);
+    audioManager.registerCue('button_click', DEFAULT_AUDIO_CUES.button_click);
+    audioManager.registerCue('denied', DEFAULT_AUDIO_CUES.denied);
+    audioManager.registerCue('relic_buy', DEFAULT_AUDIO_CUES.relic_buy);
+    audioManager.registerCue('symbol_interact', DEFAULT_AUDIO_CUES.symbol_interact);
+    audioManager.registerCue('attack_melee', DEFAULT_AUDIO_CUES.attack_melee);
+    audioManager.registerCue('attack_ranged', DEFAULT_AUDIO_CUES.attack_ranged);
+    audioManager.registerCue('symbol_choice_chose', DEFAULT_AUDIO_CUES.symbol_choice_chose);
+    audioManager.registerCue('symbol_choice_reroll', DEFAULT_AUDIO_CUES.symbol_choice_reroll);
+    audioManager.registerCue('resource_food', DEFAULT_AUDIO_CUES.resource_food);
+    audioManager.registerCue('resource_gold', DEFAULT_AUDIO_CUES.resource_gold);
+    audioManager.registerCue('resource_knowledge', DEFAULT_AUDIO_CUES.resource_knowledge);
+    audioManager.registerCue('knowledge_upgraded_1', DEFAULT_AUDIO_CUES.knowledge_upgraded_1);
+    audioManager.registerCue('knowledge_upgraded_2', DEFAULT_AUDIO_CUES.knowledge_upgraded_2);
+    audioManager.registerCue('selection_open', DEFAULT_AUDIO_CUES.selection_open);
+  }, []);
+
+  useEffect(() => {
+    const root = document.getElementById('root');
+    if (!root) return;
+
+    let hoveredControl: Element | null = null;
+    const selector = 'button:not(:disabled), [role="button"], .cursor-pointer, a[href]';
+
+    const handlePointerOver = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const control = target?.closest(selector) ?? null;
+      if (!control || !root.contains(control) || control === hoveredControl) return;
+
+      hoveredControl = control;
+      void audioManager.play('button_hover');
+    };
+
+    const handlePointerOut = (event: PointerEvent) => {
+      if (!hoveredControl) return;
+      const nextTarget = event.relatedTarget instanceof Element ? event.relatedTarget : null;
+      if (nextTarget && hoveredControl.contains(nextTarget)) return;
+      hoveredControl = null;
+    };
+
+    const playButtonClick = () => {
+      void audioManager.unlock().then(() => audioManager.play('button_click'));
+    };
+
+    const shouldSkipGenericClickSound = (control: Element) =>
+      control instanceof HTMLElement && control.dataset.audioClick !== undefined;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!event.isPrimary || event.button !== 0) return;
+      const target = event.target instanceof Element ? event.target : null;
+      const control = target?.closest(selector) ?? null;
+      if (!control || !root.contains(control)) return;
+      if (shouldSkipGenericClickSound(control)) return;
+
+      playButtonClick();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== 'Enter' && event.code !== 'Space') return;
+      const target = event.target instanceof Element ? event.target : null;
+      const control = target?.closest(selector) ?? null;
+      if (!control || !root.contains(control)) return;
+      if (shouldSkipGenericClickSound(control)) return;
+
+      playButtonClick();
+    };
+
+    root.addEventListener('pointerover', handlePointerOver);
+    root.addEventListener('pointerout', handlePointerOut);
+    root.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    root.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => {
+      root.removeEventListener('pointerover', handlePointerOver);
+      root.removeEventListener('pointerout', handlePointerOut);
+      root.removeEventListener('pointerdown', handlePointerDown, { capture: true });
+      root.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
+  }, []);
+
   const handleCanvasReady = useCallback(() => {
     setGameCanvasReady(true);
   }, []);
@@ -119,6 +201,15 @@ function App() {
     }
   }, [isRelicShopOpen, hasNewRelicShopStock, clearRelicShopStockBadge]);
 
+  const handleSpinBoard = useCallback(() => {
+    const st = useGameStore.getState();
+    const canSpin = st.phase === 'idle' && (st.levelUpResearchPoints ?? 0) === 0;
+    if (!canSpin) return;
+
+    void audioManager.unlock();
+    spinBoard();
+  }, [spinBoard]);
+
   // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -130,11 +221,11 @@ function App() {
       const canSpin = st.phase === 'idle' && rp === 0;
       if (!canSpin) return;
       e.preventDefault();
-      spinBoard();
+      handleSpinBoard();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [phase, spinBoard, levelUpResearchPoints]);
+  }, [phase, handleSpinBoard, levelUpResearchPoints]);
 
   const boardIsForegroundForTooltips =
     phase !== 'destroy_selection' &&
@@ -341,7 +432,7 @@ function App() {
           <button
             type="button"
             className="spin-btn"
-            onClick={spinBoard}
+            onClick={handleSpinBoard}
             disabled={!canPressSpin}
             aria-label={t('game.spin', language)}
             title={t('game.spin', language)}

@@ -4,6 +4,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
+import { audioManager } from '../audio/audioManager';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -51,6 +52,15 @@ const RelicSelection = () => {
 
     const isGoldenTradeDiscount = (relic: { id: number; cost: number }) =>
         hasGoldenTrade && relicHalfPriceRelicId === relic.id;
+
+    const handleBuyRelic = (relic: { id: number; cost: number }) => {
+        if (gold < getEffectiveRelicCost(relic)) {
+            void audioManager.play('denied');
+            return;
+        }
+        void audioManager.play('relic_buy');
+        buyRelic(relic.id);
+    };
 
     return (
         <div className="selection-overlay selection-overlay--relic">
@@ -130,7 +140,8 @@ const RelicSelection = () => {
                                 <button
                                     type="button"
                                     className="relic-card-buy-btn"
-                                    onClick={() => buyRelic(relic.id)}
+                                    data-audio-click="relic_buy"
+                                    onClick={() => handleBuyRelic(relic)}
                                     aria-label={
                                         isGoldenTradeDiscount(relic)
                                             ? t('game.relicShopBuyDiscountAria', language)

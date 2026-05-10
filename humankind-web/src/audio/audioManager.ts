@@ -1,11 +1,21 @@
 export const AUDIO_CUE_IDS = [
-    'spin_start',
     'spin_loop',
     'reel_stop',
+    'button_hover',
+    'button_click',
+    'denied',
+    'relic_buy',
+    'symbol_interact',
+    'attack_melee',
+    'attack_ranged',
+    'symbol_choice_chose',
+    'symbol_choice_reroll',
     'symbol_activate',
     'resource_food',
     'resource_gold',
     'resource_knowledge',
+    'knowledge_upgraded_1',
+    'knowledge_upgraded_2',
     'combat_hit',
     'symbol_destroy',
     'era_transition',
@@ -54,6 +64,7 @@ export class AudioManager {
     private decodedBuffers = new Map<string, AudioBuffer>();
     private loadingBuffers = new Map<string, Promise<AudioBuffer>>();
     private masterVolume = 1;
+    private effectVolume = 1;
     private muted = false;
     private unlocked = false;
 
@@ -135,7 +146,7 @@ export class AudioManager {
                 source.buffer = buffer;
                 source.loop = options.loop ?? definition.loop ?? false;
                 source.playbackRate.value = Math.max(0.01, options.playbackRate ?? 1);
-                gain.gain.value = clamp01(this.masterVolume * cueVolume * playVolume);
+                gain.gain.value = clamp01(this.masterVolume * this.effectVolume * cueVolume * playVolume);
 
                 source.connect(gain);
                 gain.connect(context.destination);
@@ -161,6 +172,10 @@ export class AudioManager {
 
     public setMasterVolume(volume: number) {
         this.masterVolume = clamp01(volume);
+    }
+
+    public setEffectVolume(volume: number) {
+        this.effectVolume = clamp01(volume);
     }
 
     public setMuted(muted: boolean) {

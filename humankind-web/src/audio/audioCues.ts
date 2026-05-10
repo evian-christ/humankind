@@ -15,17 +15,13 @@ export interface AudioCueMetadata {
 }
 
 const AUDIO_ASSET_BASE_URL = `${import.meta.env.BASE_URL}audio/`;
+const AUDIO_ASSET_VERSION = '20260510-1';
 
-const audioUrl = (fileName: string) => `${AUDIO_ASSET_BASE_URL}${fileName}`;
+const audioUrl = (fileName: string) => `${AUDIO_ASSET_BASE_URL}${fileName}?v=${AUDIO_ASSET_VERSION}`;
 
 export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
-    spin_start: {
-        src: audioUrl('spin_start.wav'),
-        volume: 0.7,
-        preload: true,
-    },
     spin_loop: {
-        src: audioUrl('spin_loop.wav'),
+        src: audioUrl('board_screen/spin_loop.wav'),
         volume: 0.35,
         preload: true,
     },
@@ -34,21 +30,79 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         volume: 0.45,
         preload: true,
     },
+    button_hover: {
+        src: audioUrl('board_screen/button_hover.wav'),
+        volume: 0.35,
+        preload: true,
+    },
+    button_click: {
+        src: audioUrl('board_screen/button_click.wav'),
+        volume: 0.45,
+        preload: true,
+    },
+    denied: {
+        src: audioUrl('board_screen/denied.wav'),
+        volume: 0.55,
+        preload: true,
+    },
+    relic_buy: {
+        src: audioUrl('board_screen/relic_buy.wav'),
+        volume: 0.65,
+        preload: true,
+    },
+    symbol_interact: {
+        src: audioUrl('board_screen/symbol_interact.wav'),
+        volume: 0.55,
+        preload: true,
+    },
+    attack_melee: {
+        src: audioUrl('board_screen/attack_melee.wav'),
+        volume: 0.65,
+        preload: true,
+    },
+    attack_ranged: {
+        src: audioUrl('board_screen/attack_ranged.wav'),
+        volume: 0.65,
+        preload: true,
+    },
+    symbol_choice_chose: {
+        src: audioUrl('board_screen/symbol_choice_chose.wav'),
+        volume: 0.6,
+        preload: true,
+    },
+    symbol_choice_reroll: {
+        src: audioUrl('board_screen/symbol_choice_reroll.wav'),
+        volume: 0.6,
+        preload: true,
+    },
     symbol_activate: {
         src: audioUrl('symbol_activate.wav'),
         volume: 0.55,
     },
     resource_food: {
-        src: audioUrl('resource_food.wav'),
+        src: audioUrl('board_screen/food_add.wav'),
         volume: 0.55,
+        preload: true,
     },
     resource_gold: {
-        src: audioUrl('resource_gold.wav'),
+        src: audioUrl('board_screen/gold_add.wav'),
         volume: 0.55,
+        preload: true,
     },
     resource_knowledge: {
-        src: audioUrl('resource_knowledge.wav'),
+        src: audioUrl('board_screen/knowledge_add.wav'),
         volume: 0.55,
+        preload: true,
+    },
+    knowledge_upgraded_1: {
+        src: audioUrl('board_screen/knowledge_upgraded_1.wav'),
+        volume: 0.7,
+        preload: true,
+    },
+    knowledge_upgraded_2: {
+        src: audioUrl('board_screen/knowledge_upgraded_2.wav'),
+        volume: 0.7,
+        preload: true,
     },
     combat_hit: {
         src: audioUrl('combat_hit.wav'),
@@ -63,8 +117,9 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         volume: 0.85,
     },
     selection_open: {
-        src: audioUrl('selection_open.wav'),
+        src: audioUrl('board_screen/symbol_choice_open.wav'),
         volume: 0.5,
+        preload: true,
     },
     game_over: {
         src: audioUrl('game_over.wav'),
@@ -77,11 +132,6 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
 };
 
 export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
-    spin_start: {
-        id: 'spin_start',
-        layer: 'gameplay',
-        description: 'Board spin begins after the player starts a turn.',
-    },
     spin_loop: {
         id: 'spin_loop',
         layer: 'gameplay',
@@ -91,6 +141,51 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         id: 'reel_stop',
         layer: 'gameplay',
         description: 'A slot reel column settles into its final board position.',
+    },
+    button_hover: {
+        id: 'button_hover',
+        layer: 'ui',
+        description: 'A button or button-like control is hovered.',
+    },
+    button_click: {
+        id: 'button_click',
+        layer: 'ui',
+        description: 'A button or button-like control is clicked.',
+    },
+    denied: {
+        id: 'denied',
+        layer: 'ui',
+        description: 'A command is rejected because its requirements are not met.',
+    },
+    relic_buy: {
+        id: 'relic_buy',
+        layer: 'ui',
+        description: 'A relic is purchased from the relic shop.',
+    },
+    symbol_interact: {
+        id: 'symbol_interact',
+        layer: 'gameplay',
+        description: 'A contributing symbol bounces during an interaction effect.',
+    },
+    attack_melee: {
+        id: 'attack_melee',
+        layer: 'combat',
+        description: 'A melee unit starts a combat attack animation.',
+    },
+    attack_ranged: {
+        id: 'attack_ranged',
+        layer: 'combat',
+        description: 'A ranged unit starts a combat attack animation.',
+    },
+    symbol_choice_chose: {
+        id: 'symbol_choice_chose',
+        layer: 'ui',
+        description: 'A symbol choice card is selected.',
+    },
+    symbol_choice_reroll: {
+        id: 'symbol_choice_reroll',
+        layer: 'ui',
+        description: 'The symbol choice options are rerolled.',
     },
     symbol_activate: {
         id: 'symbol_activate',
@@ -111,6 +206,16 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         id: 'resource_knowledge',
         layer: 'gameplay',
         description: 'A resolved symbol or passive effect grants Knowledge.',
+    },
+    knowledge_upgraded_1: {
+        id: 'knowledge_upgraded_1',
+        layer: 'ui',
+        description: 'The first part of a successful knowledge upgrade confirmation.',
+    },
+    knowledge_upgraded_2: {
+        id: 'knowledge_upgraded_2',
+        layer: 'ui',
+        description: 'The second part of a successful knowledge upgrade confirmation.',
     },
     combat_hit: {
         id: 'combat_hit',

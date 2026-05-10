@@ -84,6 +84,7 @@ import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { UpgradeCardDescSymbols } from './KnowledgeUpgradeCardWidgets';
 import { resolveUpgradeSprite } from './knowledgeUpgradeSprites';
+import { audioManager } from '../audio/audioManager';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -530,19 +531,43 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             !(activeConnectionIds.has(line.from) && activeConnectionIds.has(line.to)),
     }));
 
+    const playKnowledgeUpgradeSound = () => {
+        void audioManager.play('knowledge_upgraded_1');
+        void audioManager.getCueDurationMs('knowledge_upgraded_1')
+            .then((durationMs) => {
+                window.setTimeout(() => {
+                    void audioManager.play('knowledge_upgraded_2');
+                }, Math.max(0, durationMs ?? 0));
+            });
+    };
+
     const handleUnlock = (e: ReactMouseEvent<HTMLButtonElement>) => {
-        if (!selectedId || selectedUnlocked || unmetSelectedPrereqs.length > 0 || needsHigherLevel) return;
+        if (!selectedId || selectedUnlocked || unmetSelectedPrereqs.length > 0 || needsHigherLevel) {
+            void audioManager.play('denied');
+            return;
+        }
         if (!hasResearchPoints) {
+            void audioManager.play('denied');
             researchHintIdRef.current += 1;
             const id = researchHintIdRef.current;
             setResearchPointsMouseHints((prev) => [...prev, { id, x: e.clientX, y: e.clientY }]);
             return;
         }
-        if (!canResearchSelected) return;
+        if (!canResearchSelected) {
+            void audioManager.play('denied');
+            return;
+        }
         const st = useGameStore.getState();
-        if ((st.levelUpResearchPoints ?? 0) <= 0) return;
+        if ((st.levelUpResearchPoints ?? 0) <= 0) {
+            void audioManager.play('denied');
+            return;
+        }
         const choice = KNOWLEDGE_UPGRADES[selectedId];
-        if (!choice) return;
+        if (!choice) {
+            void audioManager.play('denied');
+            return;
+        }
+        playKnowledgeUpgradeSound();
         useGameStore.setState({
             returnPhaseAfterDevKnowledgeUpgrade: phase,
         });
@@ -1026,7 +1051,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             <button
                                 className="bottom-right-btn"
                                 onClick={handleUnlock}
-                                disabled={researchButtonDisabled}
+                                data-audio-click="knowledge_upgrade"
+                                aria-disabled={researchButtonDisabled}
                                 style={{
                                     width: '100%',
                                     maxWidth: '280px',

@@ -495,38 +495,58 @@ button.spin-btn:disabled:active {
   pointer-events: auto;
 }
 
-/* Peek handle ??at top when normal, at bottom when peeked */
+/* Peek handle at top when normal, at bottom when peeked */
 .selection-peek-handle {
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  padding: 10px 40px;
-  background: rgba(30, 30, 30, 0.92);
-  border: 1px solid rgba(120, 120, 120, 0.5);
+  box-sizing: border-box;
+  min-height: 46px;
+  padding: 10px 38px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.025) 100%),
+    rgba(0, 0, 0, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.62);
   border-top: none;
-  border-radius: 0 0 12px 12px;
-  color: rgba(200, 200, 200, 0.8);
+  border-radius: 0;
+  color: rgba(255, 255, 255, 0.82);
   font-family: 'Mulmaru', sans-serif;
   font-size: 20px;
-  letter-spacing: 2px;
+  font-weight: 800;
+  letter-spacing: 1px;
   z-index: 510;
-  transition: background 0.15s ease, color 0.15s ease, opacity 0.45s ease;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease,
+    opacity 0.45s ease;
   white-space: nowrap;
 }
 
 .selection-peek-handle:hover {
-  background: rgba(60, 60, 60, 0.98);
+  transform: translate(-50%, -2px);
+  background-color: rgba(0, 0, 0, 0.96);
+  border-color: #ffffff;
   color: #ffffff;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* When peeked: handle goes to bottom edge, flat bottom + rounded top */
+/* When peeked: handle goes to bottom edge */
 .selection-overlay--peeked .selection-peek-handle {
   top: auto;
   bottom: 0;
-  border-radius: 12px 12px 0 0;
-  border: 1px solid rgba(120, 120, 120, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.62);
   border-bottom: none;
+  border-radius: 0;
 }
 
 /* Content wrapper ??slides down when peeked */
@@ -682,29 +702,55 @@ button.spin-btn:disabled:active {
 }
 
 .selection-relic-source-banner {
-  font-family: 'Mulmaru', sans-serif;
-  font-size: 20px;
-  font-weight: 700;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 9px 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.025) 100%),
+    rgba(0, 0, 0, 0.86);
+  border: 2px solid rgba(251, 191, 36, 0.54);
   color: rgba(255, 220, 170, 0.95);
-  letter-spacing: 4px;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
   text-align: center;
   margin-top: 12px;
   margin-bottom: 0;
-  text-shadow: 0 0 24px rgba(255, 200, 120, 0.35);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.34),
+    0 0 18px rgba(251, 191, 36, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
 }
 
 .selection-title {
+  box-sizing: border-box;
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.025) 100%),
+    rgba(0, 0, 0, 0.82);
+  border: 2px solid rgba(255, 255, 255, 0.46);
+  color: rgba(255, 255, 255, 0.82);
   font-family: 'Mulmaru', sans-serif;
-  font-size: 28px;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: 2px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 1px;
   margin-top: 16px;
-  margin-bottom: 48px;
+  margin-bottom: 38px;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
 }
 
 .selection-cards {
   display: flex;
-  gap: 30px;
+  gap: 28px;
   margin-bottom: 48px;
   overflow: visible;
 }
@@ -724,89 +770,125 @@ button.spin-btn:disabled:active {
 }
 
 .selection-card-frame {
-  width: 400px;
-  height: 667px;
+  width: 360px;
+  height: 560px;
   position: relative;
   flex: 0 0 auto;
   overflow: visible;
-  transition: transform 0.15s ease;
+  transition: transform 140ms ease;
 }
 
 .selection-card-frame:hover {
-  transform: translateY(-8px);
-}
-
-.selection-card-frame::before {
-  content: '';
-  position: absolute;
-  inset: -48px;
-  z-index: 0;
-  pointer-events: none;
-  background: var(--selection-card-bg) no-repeat center / 400px 667px;
-  filter:
-    drop-shadow(0 0 20px rgba(255, 255, 255, 0.44))
-    drop-shadow(0 0 34px rgba(255, 255, 255, 0.18));
-  opacity: 1;
-  transition: filter 0.15s ease;
-}
-
-.selection-card-frame:hover::before {
-  filter:
-    drop-shadow(0 0 26px rgba(255, 255, 255, 0.56))
-    drop-shadow(0 0 42px rgba(255, 255, 255, 0.22));
+  transform: translateY(-6px);
 }
 
 .selection-card {
   position: relative;
   z-index: 1;
-  width: 400px;
-  height: 667px;
-  border: none;
+  width: 360px;
+  height: 560px;
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 255, 255, 0.72);
   border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 120px 24px 24px;
-  gap: 10px;
-  transition: transform 0.15s ease;
+  justify-content: flex-start;
+  padding: 30px 28px 28px;
+  gap: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.025) 42%, rgba(0, 0, 0, 0.16) 100%),
+    rgba(0, 0, 0, 0.88);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
   font-family: 'Mulmaru', sans-serif;
-  color: #1a1a1a;
-  image-rendering: pixelated;
+  color: #ffffff;
   animation: none;
   overflow: hidden;
+  cursor: var(--app-cursor-pointer);
+}
+
+.selection-card:hover,
+.selection-card:focus-visible {
+  background-color: rgba(0, 0, 0, 0.96);
+  border-color: #ffffff;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  outline: none;
+}
+
+.selection-card:active {
+  transform: translateY(4px);
+  background-color: #000000;
 }
 
 .selection-card-sprite {
-  width: 120px;
-  height: 120px;
+  width: 118px;
+  height: 118px;
   object-fit: contain;
   image-rendering: pixelated;
+  flex-shrink: 0;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  filter:
+    drop-shadow(0 10px 0 rgba(0, 0, 0, 0.22))
+    drop-shadow(0 0 18px color-mix(in srgb, var(--selection-era-color, #ffffff) 52%, transparent))
+    drop-shadow(0 0 34px color-mix(in srgb, var(--selection-era-color, #ffffff) 34%, transparent));
 }
 
 .selection-card-sprite-placeholder {
-  width: 120px;
-  height: 120px;
+  width: 118px;
+  height: 118px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  color: #888;
-  border: 1px dashed #999;
-  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  border: 2px dashed rgba(255, 255, 255, 0.28);
+  border-radius: 0;
   text-align: center;
-  padding: 4px;
+  padding: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .selection-card-name {
-  font-size: 32px;
-  color: #1a1a1a;
-  letter-spacing: 0px;
-  margin-top: 8px;
+  width: 100%;
+  font-size: 30px;
+  color: #ffffff;
+  letter-spacing: 0;
+  line-height: 1.1;
+  margin-top: 0;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
 }
 
 .selection-card-rarity {
-  font-size: 28px;
-  letter-spacing: 1px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.selection-card-stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin-top: -2px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.78);
 }
 
 .selection-card-desc {
@@ -814,54 +896,97 @@ button.spin-btn:disabled:active {
   flex-direction: column;
   gap: 4px;
   text-align: center;
-  padding: 0 32px;
+  padding: 14px 4px 0;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .selection-card-desc-line {
-  font-size: 22px;
-  color: #1a1a1a;
-  line-height: 1.4;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.84);
+  line-height: 1.35;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.78);
 }
 
 .selection-actions {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
 }
 
 .selection-reroll-btn,
 .selection-skip-btn {
+  min-width: 132px;
+  min-height: 56px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: 'Mulmaru', sans-serif;
-  font-size: 24px;
-  padding: 10px 28px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-  letter-spacing: 1px;
+  font-size: 22px;
+  font-weight: 800;
+  padding: 10px 26px;
+  border-radius: 0;
+  letter-spacing: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.025) 100%),
+    rgba(0, 0, 0, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.58);
+  color: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
 }
 
 .selection-reroll-btn {
-  background: rgba(251, 191, 36, 0.2);
-  border: 2px solid #fbbf24;
+  border-color: rgba(251, 191, 36, 0.68);
   color: #fbbf24;
 }
 
 .selection-reroll-btn:hover:not(:disabled) {
-  background: rgba(251, 191, 36, 0.35);
+  transform: translateY(-2px);
+  background-color: rgba(0, 0, 0, 0.96);
+  border-color: #fbbf24;
+  color: #ffd766;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(251, 191, 36, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .selection-reroll-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.32;
   cursor: default;
+  transform: none;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .selection-skip-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid #555;
-  color: #888;
+  border-color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.58);
 }
 
 .selection-skip-btn:hover {
-  border-color: #888;
-  color: #bbb;
+  transform: translateY(-2px);
+  background-color: rgba(0, 0, 0, 0.96);
+  border-color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    0 0 18px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* ===== RELIC MUSEUM SHOP ===== */
@@ -3040,6 +3165,10 @@ button.relic-shop-btn--knowledge {
   z-index: 900;
 }
 
+.pause-overlay--settings {
+  background: rgba(0, 0, 0, 0.92);
+}
+
 .pause-panel {
   display: flex;
   flex-direction: column;
@@ -3091,10 +3220,12 @@ button.relic-shop-btn--knowledge {
 .settings-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 24px;
-  width: 640px;
-  max-height: 900px;
+  align-items: stretch;
+  gap: 28px;
+  width: 100%;
+  height: 100%;
+  padding: 52px 72px 48px;
+  box-sizing: border-box;
 }
 
 .settings-title {
@@ -3104,6 +3235,7 @@ button.relic-shop-btn--knowledge {
   letter-spacing: 4px;
   text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   flex-shrink: 0;
+  text-align: center;
 }
 
 /* ?€?€ Tab Bar ?€?€ */
@@ -3143,11 +3275,14 @@ button.relic-shop-btn--knowledge {
   display: flex;
   flex-direction: column;
   gap: 28px;
-  width: 100%;
+  width: min(920px, 100%);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #555 transparent;
   min-height: 160px;
+  align-self: center;
+  flex: 1;
+  padding-top: 24px;
 }
 
 /* ?€?€ Setting Row (label left, controls right) ?€?€ */
@@ -3172,6 +3307,26 @@ button.relic-shop-btn--knowledge {
   display: flex;
   gap: 0;
   align-items: center;
+}
+
+.settings-row-controls--volume {
+  gap: 18px;
+  min-width: 420px;
+}
+
+.settings-volume-slider {
+  width: 320px;
+  accent-color: #ffffff;
+  cursor: var(--app-cursor-pointer);
+}
+
+.settings-volume-value {
+  min-width: 64px;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 24px;
+  color: #ddd;
+  letter-spacing: 1px;
+  text-align: right;
 }
 
 /* ?€?€ Segmented Button Group (for speed options) ?€?€ */
@@ -3270,6 +3425,7 @@ button.relic-shop-btn--knowledge {
   cursor: var(--app-cursor-pointer);
   transition: all 0.15s ease;
   flex-shrink: 0;
+  align-self: center;
 }
 
 .settings-back-btn:hover {

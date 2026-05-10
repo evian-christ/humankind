@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { audioManager } from '../../audio/audioManager';
 
 export type Language = 'en' | 'ko';
 export type EffectSpeed = '1x' | '2x' | '4x' | 'instant';
@@ -14,9 +15,9 @@ export const EFFECT_SPEED_DELAY: Record<EffectSpeed, number> = {
 
 /** 전투 바운스 애니메이션 지속시간(ms) — 효과 속도에 비례 */
 export const COMBAT_BOUNCE_DURATION: Record<EffectSpeed, number> = {
-    '1x': 220,
+    '1x': 300,
     '2x': 150,
-    '4x': 80,
+    '4x': 75,
     'instant': 0,
 };
 
@@ -64,11 +65,17 @@ export interface SettingsState {
     language: Language;
     effectSpeed: EffectSpeed;
     spinSpeed: SpinSpeed;
+    masterVolume: number;
+    musicVolume: number;
+    effectVolume: number;
 
     setResolution: (width: number, height: number) => void;
     setLanguage: (lang: Language) => void;
     setEffectSpeed: (speed: EffectSpeed) => void;
     setSpinSpeed: (speed: SpinSpeed) => void;
+    setMasterVolume: (volume: number) => void;
+    setMusicVolume: (volume: number) => void;
+    setEffectVolume: (volume: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -77,6 +84,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     language: 'ko',
     effectSpeed: '2x',
     spinSpeed: '4x',
+    masterVolume: 1,
+    musicVolume: 1,
+    effectVolume: 1,
 
     setResolution: (width, height) => {
         set({ resolutionWidth: width, resolutionHeight: height });
@@ -95,7 +105,27 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     setSpinSpeed: (speed) => {
         set({ spinSpeed: speed });
     },
+
+    setMasterVolume: (volume) => {
+        const clamped = clampVolume(volume);
+        set({ masterVolume: clamped });
+        audioManager.setMasterVolume(clamped);
+    },
+
+    setMusicVolume: (volume) => {
+        set({ musicVolume: clampVolume(volume) });
+    },
+
+    setEffectVolume: (volume) => {
+        const clamped = clampVolume(volume);
+        set({ effectVolume: clamped });
+        audioManager.setEffectVolume(clamped);
+    },
 }));
+
+function clampVolume(value: number) {
+    return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
+}
 
 // ─── 전체화면 상태 추적 ───
 let _isFullscreen = false;

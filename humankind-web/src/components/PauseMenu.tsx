@@ -25,7 +25,7 @@ const SPIN_SPEED_OPTIONS: { value: SpinSpeed; label: string }[] = [
     { value: 'instant', label: 'Instant' },
 ];
 
-type SettingsTab = 'gameplay' | 'graphics' | 'general';
+type SettingsTab = 'general' | 'gameplay' | 'graphics' | 'audio';
 
 interface PauseMenuProps {
     isOpen: boolean;
@@ -34,9 +34,25 @@ interface PauseMenuProps {
 
 const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
     const [screen, setScreen] = useState<'main' | 'settings'>('main');
-    const [activeTab, setActiveTab] = useState<SettingsTab>('gameplay');
+    const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const { resolutionWidth, resolutionHeight, language, effectSpeed, spinSpeed, setResolution, setLanguage, setEffectSpeed, setSpinSpeed } = useSettingsStore();
+    const {
+        resolutionWidth,
+        resolutionHeight,
+        language,
+        effectSpeed,
+        spinSpeed,
+        masterVolume,
+        musicVolume,
+        effectVolume,
+        setResolution,
+        setLanguage,
+        setEffectSpeed,
+        setSpinSpeed,
+        setMasterVolume,
+        setMusicVolume,
+        setEffectVolume,
+    } = useSettingsStore();
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
     const initializeGame = useGameStore((s) => s.initializeGame);
     const resetRelics = useRelicStore((s) => s.resetRelics);
@@ -134,13 +150,33 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
     };
 
     const tabs: { key: SettingsTab; labelKey: string }[] = [
+        { key: 'general', labelKey: 'settings.tab.general' },
         { key: 'gameplay', labelKey: 'settings.tab.gameplay' },
         { key: 'graphics', labelKey: 'settings.tab.graphics' },
-        { key: 'general', labelKey: 'settings.tab.general' },
+        { key: 'audio', labelKey: 'settings.tab.audio' },
     ];
 
+    const renderVolumeRow = (labelKey: string, value: number, onChange: (volume: number) => void) => (
+        <div className="settings-row">
+            <div className="settings-row-label">{t(labelKey, language)}</div>
+            <div className="settings-row-controls settings-row-controls--volume">
+                <input
+                    className="settings-volume-slider"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={Math.round(value * 100)}
+                    onChange={(e) => onChange(Number(e.target.value) / 100)}
+                    aria-label={t(labelKey, language)}
+                />
+                <div className="settings-volume-value">{Math.round(value * 100)}%</div>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="pause-overlay">
+        <div className={`pause-overlay ${screen === 'settings' ? 'pause-overlay--settings' : ''}`}>
             {screen === 'main' && (
                 <div className="pause-panel">
                     <div className="pause-title">{t('pause.title', language)}</div>
@@ -280,6 +316,14 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
                                         </div>
                                     </div>
                                 </div>
+                            </>
+                        )}
+
+                        {activeTab === 'audio' && (
+                            <>
+                                {renderVolumeRow('settings.masterVolume', masterVolume, setMasterVolume)}
+                                {renderVolumeRow('settings.musicVolume', musicVolume, setMusicVolume)}
+                                {renderVolumeRow('settings.effectVolume', effectVolume, setEffectVolume)}
                             </>
                         )}
                     </div>
