@@ -1,6 +1,7 @@
 import { SYMBOLS, EDICT_SYMBOL_ID, S, SymbolType } from '../../data/symbolDefinitions';
 import {
     AGI_PROJECT_UPGRADE_ID,
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
@@ -9,6 +10,7 @@ import {
     MECHANICS_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
+    THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
@@ -231,10 +233,10 @@ export const createSelectionFlowActions = ({
         }
 
         let religionUnlocked = state.religionUnlocked;
-        if (uid === 4) religionUnlocked = true;
+        if (uid === THEOLOGY_UPGRADE_ID) religionUnlocked = true;
 
         let bonusXpDelta = 0;
-        if (uid === 1) bonusXpDelta = 2;
+        if (uid === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) bonusXpDelta = 2;
 
         const newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];

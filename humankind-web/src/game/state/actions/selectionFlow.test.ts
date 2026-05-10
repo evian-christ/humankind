@@ -8,8 +8,12 @@ import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import {
     AGI_PROJECT_UPGRADE_ID,
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     ARCHERY_UPGRADE_ID,
+    FISHERIES_UPGRADE_ID,
+    IRON_WORKING_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
 const makeState = (): GameState => {
@@ -33,6 +37,7 @@ const makeState = (): GameState => {
         relicChoices: [null, null, null],
         relicHalfPriceRelicId: null,
         lastEffects: [],
+        counterDisplayOverrides: [],
         runningTotals: { food: 0, gold: 0, knowledge: 0 },
         activeSlot: null,
         activeContributors: [],
@@ -178,12 +183,36 @@ describe('selectionFlow actions', () => {
             level: 5,
         });
 
-        harness.actions.selectUpgrade(1);
+        harness.actions.selectUpgrade(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
 
         expect(harness.get().phase).toBe('selection');
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(1);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
         expect(harness.get().bonusXpPerTurn).toBe(2);
         expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('unlocks religion only when Theology is researched', () => {
+        const fisheriesHarness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 5,
+        });
+
+        fisheriesHarness.actions.selectUpgrade(FISHERIES_UPGRADE_ID);
+
+        expect(fisheriesHarness.get().unlockedKnowledgeUpgrades).toContain(FISHERIES_UPGRADE_ID);
+        expect(fisheriesHarness.get().religionUnlocked).toBe(false);
+
+        const theologyHarness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 5,
+        });
+
+        theologyHarness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
+
+        expect(theologyHarness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
+        expect(theologyHarness.get().religionUnlocked).toBe(true);
     });
 
     it('upgrades warriors into knights when iron working is researched', () => {
@@ -199,9 +228,9 @@ describe('selectionFlow actions', () => {
             unlockedKnowledgeUpgrades: [ARCHERY_UPGRADE_ID],
         });
 
-        harness.actions.selectUpgrade(2);
+        harness.actions.selectUpgrade(IRON_WORKING_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(2);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(IRON_WORKING_UPGRADE_ID);
         expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.knight);
         expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.knight);
     });

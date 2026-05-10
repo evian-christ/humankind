@@ -7,6 +7,7 @@ import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
+    EDUCATION_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
@@ -668,7 +669,7 @@ describe('symbolEffectResolution', () => {
         board[2][2] = createInstance(Sym.stone, 'stone');
 
         const baseResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [] });
-        const educationResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [16] });
+        const educationResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [EDUCATION_UPGRADE_ID] });
 
         expect(baseResult.knowledge).toBe(3);
         expect(baseResult.contributors).toEqual([{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 2, y: 2 }]);
@@ -685,7 +686,7 @@ describe('symbolEffectResolution', () => {
         board[2][2] = createInstance(Sym.stone, 'stone');
         board[4][3] = createInstance(Sym.fish, 'fish');
 
-        const result = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [16, SCIENTIFIC_THEORY_UPGRADE_ID] });
+        const result = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [EDUCATION_UPGRADE_ID, SCIENTIFIC_THEORY_UPGRADE_ID] });
 
         expect(result.knowledge).toBe(10);
         expect(result.contributors).toEqual([

@@ -292,12 +292,12 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         expect(isUpgradeLegalForKnowledgePick(
             COMPASS_UPGRADE_ID,
             [],
-            9,
+            12,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             COMPASS_UPGRADE_ID,
             [FISHERIES_UPGRADE_ID],
-            9,
+            12,
         )).toBe(true);
     });
 
