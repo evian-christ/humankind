@@ -89,7 +89,7 @@ export default function DemoStartScreen() {
         onClick={handleQuit}
         aria-label="나가기"
       >
-        →]
+        ×
       </button>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
