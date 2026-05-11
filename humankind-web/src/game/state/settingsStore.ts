@@ -5,6 +5,9 @@ export type Language = 'en' | 'ko';
 export type EffectSpeed = '1x' | '2x' | '4x' | 'instant';
 export type SpinSpeed = '1x' | '2x' | '4x' | 'instant';
 
+const SETTINGS_KEY = 'humankind.settings.v1';
+const SETTINGS_VERSION = 1;
+
 /** 효과 속도별 슬롯 간 딜레이(ms) */
 export const EFFECT_SPEED_DELAY: Record<EffectSpeed, number> = {
     '1x': 300,
@@ -78,7 +81,25 @@ export interface SettingsState {
     setEffectVolume: (volume: number) => void;
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
+type PersistedSettings = Pick<
+    SettingsState,
+    | 'resolutionWidth'
+    | 'resolutionHeight'
+    | 'language'
+    | 'effectSpeed'
+    | 'spinSpeed'
+    | 'masterVolume'
+    | 'musicVolume'
+    | 'effectVolume'
+>;
+
+interface SavedSettings {
+    version: typeof SETTINGS_VERSION;
+    savedAt: number;
+    settings: PersistedSettings;
+}
+
+const defaultSettings: PersistedSettings = {
     resolutionWidth: _initW,
     resolutionHeight: _initH,
     language: 'ko',
@@ -87,38 +108,135 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     masterVolume: 1,
     musicVolume: 1,
     effectVolume: 1,
+};
+
+const storage = (): Storage | null => {
+    try {
+        return globalThis.localStorage ?? null;
+    } catch {
+        return null;
+    }
+};
+
+const isLanguage = (value: unknown): value is Language => value === 'en' || value === 'ko';
+const isEffectSpeed = (value: unknown): value is EffectSpeed =>
+    value === '1x' || value === '2x' || value === '4x' || value === 'instant';
+const isSpinSpeed = (value: unknown): value is SpinSpeed =>
+    value === '1x' || value === '2x' || value === '4x' || value === 'instant';
+
+const sanitizeDimension = (value: unknown, fallback: number) =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.round(value) : fallback;
+
+function loadSettings(): PersistedSettings {
+    const raw = storage()?.getItem(SETTINGS_KEY);
+    if (!raw) return defaultSettings;
+
+    try {
+        const save = JSON.parse(raw) as Partial<SavedSettings>;
+        if (save.version !== SETTINGS_VERSION || save.settings == null) return defaultSettings;
+
+        return {
+            resolutionWidth: sanitizeDimension(save.settings.resolutionWidth, defaultSettings.resolutionWidth),
+            resolutionHeight: sanitizeDimension(save.settings.resolutionHeight, defaultSettings.resolutionHeight),
+            language: isLanguage(save.settings.language) ? save.settings.language : defaultSettings.language,
+            effectSpeed: isEffectSpeed(save.settings.effectSpeed) ? save.settings.effectSpeed : defaultSettings.effectSpeed,
+            spinSpeed: isSpinSpeed(save.settings.spinSpeed) ? save.settings.spinSpeed : defaultSettings.spinSpeed,
+            masterVolume: clampVolume(save.settings.masterVolume),
+            musicVolume: clampVolume(save.settings.musicVolume),
+            effectVolume: clampVolume(save.settings.effectVolume),
+        };
+    } catch {
+        return defaultSettings;
+    }
+}
+
+function saveSettings(state: PersistedSettings): void {
+    const store = storage();
+    if (!store) return;
+
+    const save: SavedSettings = {
+        version: SETTINGS_VERSION,
+        savedAt: Date.now(),
+        settings: {
+            resolutionWidth: state.resolutionWidth,
+            resolutionHeight: state.resolutionHeight,
+            language: state.language,
+            effectSpeed: state.effectSpeed,
+            spinSpeed: state.spinSpeed,
+            masterVolume: state.masterVolume,
+            musicVolume: state.musicVolume,
+            effectVolume: state.effectVolume,
+        },
+    };
+
+    store.setItem(SETTINGS_KEY, JSON.stringify(save));
+}
+
+const initialSettings = loadSettings();
+
+export const useSettingsStore = create<SettingsState>((set) => ({
+    ...initialSettings,
 
     setResolution: (width, height) => {
-        set({ resolutionWidth: width, resolutionHeight: height });
+        set((state) => {
+            const next = { ...state, resolutionWidth: width, resolutionHeight: height };
+            saveSettings(next);
+            return { resolutionWidth: width, resolutionHeight: height };
+        });
         applyResolutionToDOM(width, height);
     },
 
     setLanguage: (lang) => {
-        set({ language: lang });
+        set((state) => {
+            const next = { ...state, language: lang };
+            saveSettings(next);
+            return { language: lang };
+        });
         applyLanguageToDOM(lang);
     },
 
     setEffectSpeed: (speed) => {
-        set({ effectSpeed: speed });
+        set((state) => {
+            const next = { ...state, effectSpeed: speed };
+            saveSettings(next);
+            return { effectSpeed: speed };
+        });
     },
 
     setSpinSpeed: (speed) => {
-        set({ spinSpeed: speed });
+        set((state) => {
+            const next = { ...state, spinSpeed: speed };
+            saveSettings(next);
+            return { spinSpeed: speed };
+        });
     },
 
     setMasterVolume: (volume) => {
         const clamped = clampVolume(volume);
-        set({ masterVolume: clamped });
+        set((state) => {
+            const next = { ...state, masterVolume: clamped };
+            saveSettings(next);
+            return { masterVolume: clamped };
+        });
         audioManager.setMasterVolume(clamped);
     },
 
     setMusicVolume: (volume) => {
-        set({ musicVolume: clampVolume(volume) });
+        const clamped = clampVolume(volume);
+        set((state) => {
+            const next = { ...state, musicVolume: clamped };
+            saveSettings(next);
+            return { musicVolume: clamped };
+        });
     },
 
     setEffectVolume: (volume) => {
         const clamped = clampVolume(volume);
-        set({ effectVolume: clamped });
+        set((state) => {
+            const next = { ...state, effectVolume: clamped };
+            saveSettings(next);
+            return { effectVolume: clamped };
+        });
         audioManager.setEffectVolume(clamped);
     },
 }));
@@ -216,7 +334,7 @@ function applyResolutionToDOM(width: number, height: number) {
         }
     }).catch(console.error);
 
-    requestAnimationFrame(() => applyRootScale());
+    scheduleFrame(() => applyRootScale());
 }
 
 /** #root에 data-lang 속성 설정 (CSS 폰트 전환용) */
@@ -225,3 +343,18 @@ function applyLanguageToDOM(lang: Language) {
     if (!root) return;
     root.setAttribute('data-lang', lang);
 }
+
+function scheduleFrame(callback: () => void) {
+    if (typeof globalThis.requestAnimationFrame === 'function') {
+        globalThis.requestAnimationFrame(callback);
+        return;
+    }
+    callback();
+}
+
+audioManager.setMasterVolume(initialSettings.masterVolume);
+audioManager.setEffectVolume(initialSettings.effectVolume);
+scheduleFrame(() => {
+    applyLanguageToDOM(initialSettings.language);
+    applyResolutionToDOM(initialSettings.resolutionWidth, initialSettings.resolutionHeight);
+});
