@@ -48,7 +48,7 @@ interface SavedGame {
         symbolSelectionRelicSourceId: number | null;
         relicChoices: Array<number | null>;
         relicHalfPriceRelicId: number | null;
-        lastEffects: GameState['lastEffects'];
+        lastEffects?: GameState['lastEffects'];
         prevBoard: SerializedBoard;
         religionUnlocked: boolean;
         unlockedKnowledgeUpgrades: number[];
@@ -186,7 +186,7 @@ export function saveGameState(state: GameState): void {
             symbolSelectionRelicSourceId: state.symbolSelectionRelicSourceId,
             relicChoices: state.relicChoices.map((relic) => relic?.id ?? null),
             relicHalfPriceRelicId: state.relicHalfPriceRelicId,
-            lastEffects: state.lastEffects,
+            lastEffects: [],
             prevBoard: serializeBoard(state.prevBoard),
             religionUnlocked: state.religionUnlocked,
             unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
@@ -248,7 +248,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             symbolSelectionRelicSourceId: save.state.symbolSelectionRelicSourceId,
             relicChoices: save.state.relicChoices.map((id) => (id == null ? null : RELICS[id] ?? null)),
             relicHalfPriceRelicId: save.state.relicHalfPriceRelicId,
-            lastEffects: save.state.lastEffects,
+            lastEffects: [],
             counterDisplayOverrides: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
