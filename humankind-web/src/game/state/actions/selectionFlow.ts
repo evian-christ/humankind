@@ -45,8 +45,7 @@ interface SelectionFlowDeps {
     get: GameStoreGet;
     set: GameStoreSet;
     createInstance: (typeof import('../gameStoreHelpers'))['createInstance'];
-    phaseAfterTurnFlowComplete: (level: number, demoVictoryLevel: number) => GamePhase;
-    demoVictoryLevel: number;
+    phaseAfterTurnFlowComplete: () => GamePhase;
 }
 
 const UNIT_TRANSFORM_UPGRADE_IDS = new Set<number>([
@@ -88,7 +87,6 @@ export const createSelectionFlowActions = ({
     set,
     createInstance,
     phaseAfterTurnFlowComplete,
-    demoVictoryLevel,
 }: SelectionFlowDeps) => ({
     selectSymbol: (symbolId: number) => {
         const state = get();
@@ -119,7 +117,7 @@ export const createSelectionFlowActions = ({
                 symbolChoices: nextChoices,
                 symbolSelectionRelicSourceId: null,
                 forceTerrainInNextSymbolChoices: nextForceTerrain,
-                phase: q.length > 0 ? 'selection' : phaseAfterTurnFlowComplete(state.level, demoVictoryLevel),
+                phase: q.length > 0 ? 'selection' : phaseAfterTurnFlowComplete(),
             });
             saveGameState(get());
             return;
@@ -127,7 +125,7 @@ export const createSelectionFlowActions = ({
 
         set({
             playerSymbols: newSymbols,
-            phase: phaseAfterTurnFlowComplete(state.level, demoVictoryLevel),
+            phase: phaseAfterTurnFlowComplete(),
             symbolChoices: [],
             symbolSelectionRelicSourceId: null,
         });
@@ -150,7 +148,7 @@ export const createSelectionFlowActions = ({
                 : (state.relicFloats ?? []);
 
         set({
-            phase: phaseAfterTurnFlowComplete(state.level, demoVictoryLevel),
+            phase: phaseAfterTurnFlowComplete(),
             symbolChoices: [],
             symbolSelectionRelicSourceId: null,
             bonusSelectionQueue: (state.bonusSelectionQueue?.length ?? 0) > 0 ? [] : state.bonusSelectionQueue,
@@ -448,7 +446,7 @@ export const createSelectionFlowActions = ({
             return;
         }
         set({
-            phase: phaseAfterTurnFlowComplete(state.level, demoVictoryLevel),
+            phase: phaseAfterTurnFlowComplete(),
             pendingDestroySource: null,
             destroySelectionMaxSymbols: 3,
         });
@@ -496,7 +494,7 @@ export const createSelectionFlowActions = ({
             ...rewardPatch(state),
             board: newBoard,
             playerSymbols: newSymbols,
-            phase: phaseAfterTurnFlowComplete(state.level, demoVictoryLevel),
+            phase: phaseAfterTurnFlowComplete(),
             pendingOblivionFurnaceRelicId: null,
             destroySelectionMaxSymbols: 3,
         });
@@ -507,7 +505,7 @@ export const createSelectionFlowActions = ({
         const state = get();
         if (state.phase !== 'oblivion_furnace_board') return;
         set({
-            phase: phaseAfterTurnFlowComplete(state.level, demoVictoryLevel),
+            phase: phaseAfterTurnFlowComplete(),
             pendingOblivionFurnaceRelicId: null,
             destroySelectionMaxSymbols: 3,
         });

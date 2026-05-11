@@ -16,7 +16,7 @@ export const STARTING_WILD_SEED_ANCHORS = [{ x: 1, y: 2 }, { x: 3, y: 2 }] as co
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
 
-export const phaseAfterTurnFlowComplete = (_level: number, _demoVictoryLevel: number): GamePhase => 'idle';
+export const phaseAfterTurnFlowComplete = (): GamePhase => 'idle';
 
 export const ensureOralTraditionOwned = (playerSymbols: PlayerSymbolInstance[]): PlayerSymbolInstance[] => {
     if (playerSymbols.some((s) => s.definition.id === S.oral_tradition)) return playerSymbols;

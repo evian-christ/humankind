@@ -12,15 +12,13 @@ export type GameStoreGet = () => GameState;
 interface RelicActivationDeps {
     get: GameStoreGet;
     set: GameStoreSet;
-    phaseAfterTurnFlowComplete: (level: number, demoVictoryLevel: number) => GameState['phase'];
-    demoVictoryLevel: number;
+    phaseAfterTurnFlowComplete: () => GameState['phase'];
 }
 
 export const createRelicActivationActions = ({
     get,
     set,
     phaseAfterTurnFlowComplete,
-    demoVictoryLevel,
 }: RelicActivationDeps) => ({
     activateClickableRelic: (instanceId: string) => {
         const state = get();
@@ -108,6 +106,6 @@ export const createRelicActivationActions = ({
             return;
         }
 
-        set({ phase: phaseAfterTurnFlowComplete(state.level, demoVictoryLevel) });
+        set({ phase: phaseAfterTurnFlowComplete() });
     },
 });

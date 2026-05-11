@@ -407,7 +407,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         set,
         createInstance,
         phaseAfterTurnFlowComplete,
-        demoVictoryLevel: 15,
     }),
 
     toggleRelicShop: () => {
@@ -447,7 +446,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         get,
         set,
         phaseAfterTurnFlowComplete,
-        demoVictoryLevel: 15,
     }),
 
     ...createGameLifecycleActions({

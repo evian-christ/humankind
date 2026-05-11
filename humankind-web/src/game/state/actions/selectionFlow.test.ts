@@ -124,7 +124,6 @@ const createHarness = (overrides: Partial<GameState> = {}) => {
             set,
             createInstance,
             phaseAfterTurnFlowComplete: () => 'idle',
-            demoVictoryLevel: 15,
         }),
     };
 };
