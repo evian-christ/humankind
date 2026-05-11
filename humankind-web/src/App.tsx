@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore } from './game/state/settingsStore';
@@ -76,6 +76,39 @@ const ERA_NAME_KEYS: Record<number, string> = {
   3: 'era.modern',
 };
 
+/** 하단 유물/지식 버튼 HUD 툴팁: 뷰포트 왼쪽 밖으로 나가지 않도록 translateX 보정 */
+const BOTTOM_HUD_TIP_VIEWPORT_PAD = 20;
+
+function useViewportClampedBottomHudTooltip() {
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+  const [shiftPx, setShiftPx] = useState(0);
+
+  const reclamp = useCallback(() => {
+    const el = tooltipRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      const need = Math.ceil(BOTTOM_HUD_TIP_VIEWPORT_PAD - rect.left);
+      setShiftPx(need > 0 ? need : 0);
+    };
+    requestAnimationFrame(() => requestAnimationFrame(measure));
+  }, []);
+
+  const resetShift = useCallback(() => setShiftPx(0), []);
+
+  const bindButtonHoverHandlers = useMemo(
+    () => ({
+      onMouseEnter: reclamp,
+      onMouseLeave: resetShift,
+      onFocus: reclamp,
+      onBlur: resetShift,
+    }),
+    [reclamp, resetShift],
+  );
+
+  return { tooltipRef, shiftPx, bindButtonHoverHandlers };
+}
+
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
   const returnToLeaderSelect = usePreGameStore((s) => s.returnToLeaderSelect);
@@ -100,6 +133,8 @@ function App() {
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
   const gameAreaRef = useRef<HTMLDivElement>(null);
+  const relicHudTooltip = useViewportClampedBottomHudTooltip();
+  const knowledgeHudTooltip = useViewportClampedBottomHudTooltip();
 
   useEffect(() => {
     audioManager.registerCue('button_hover', DEFAULT_AUDIO_CUES.button_hover);
@@ -213,6 +248,14 @@ function App() {
   // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.code === 'F12') {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+        e.preventDefault();
+        setIsLogOpen((open) => !open);
+        return;
+      }
+
       if (e.code !== 'Space') return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
@@ -380,6 +423,7 @@ function App() {
         <div className="bottom-action-bar-left">
           <button
             className="relic-shop-btn"
+            {...relicHudTooltip.bindButtonHoverHandlers}
             onClick={toggleRelicShop}
             title={
               hasNewRelicShopStock
@@ -392,7 +436,25 @@ function App() {
                 : t('game.relicShopTitleShort', language)
             }
           >
-            <img src={RELIC_PANEL_TITLE_ICON_URL} alt="" style={{ width: 44, height: 44, imageRendering: 'pixelated' }} />
+            <span className="relic-shop-btn-icon-layer" aria-hidden="true">
+              <img src={RELIC_PANEL_TITLE_ICON_URL} alt="" style={{ imageRendering: 'pixelated' }} />
+            </span>
+            <span
+              ref={relicHudTooltip.tooltipRef}
+              className="bottom-action-hud-tooltip"
+              aria-hidden="true"
+              style={
+                {
+                  '--bottom-hud-tooltip-shift': `${relicHudTooltip.shiftPx}px`,
+                } as React.CSSProperties
+              }
+            >
+              <span className="hud-stat-tooltip">
+                <span className="hud-stat-tooltip-inner">
+                  <span style={{ color: '#e5e5e5' }}>{t('game.relicShopTitleShort', language)}</span>
+                </span>
+              </span>
+            </span>
             {hasNewRelicShopStock && (
               <span className="hud-new-stock-tab" aria-hidden="true">
                 {t('game.knowledgeHudPendingTab', language)}
@@ -418,6 +480,7 @@ function App() {
                   )
                 : t('game.knowledgeUpgradeTreeTitle', language)
             }
+            {...knowledgeHudTooltip.bindButtonHoverHandlers}
             onClick={() => setIsKnowledgeOpen(true)}
           >
             {levelUpResearchPoints > 0 && (
@@ -425,7 +488,25 @@ function App() {
                 {t('game.knowledgeHudPendingTab', language)}
               </span>
             )}
-            <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" draggable={false} style={{ width: 54, height: 54, imageRendering: 'pixelated' }} />
+            <span className="relic-shop-btn-icon-layer" aria-hidden="true">
+              <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" draggable={false} style={{ imageRendering: 'pixelated' }} />
+            </span>
+            <span
+              ref={knowledgeHudTooltip.tooltipRef}
+              className="bottom-action-hud-tooltip"
+              aria-hidden="true"
+              style={
+                {
+                  '--bottom-hud-tooltip-shift': `${knowledgeHudTooltip.shiftPx}px`,
+                } as React.CSSProperties
+              }
+            >
+              <span className="hud-stat-tooltip">
+                <span className="hud-stat-tooltip-inner">
+                  <span style={{ color: '#e5e5e5' }}>{t('game.knowledgeUpgradeTreeTitle', language)}</span>
+                </span>
+              </span>
+            </span>
           </button>
         </div>
         <div className="spin-area">
@@ -437,17 +518,10 @@ function App() {
             aria-label={t('game.spin', language)}
             title={t('game.spin', language)}
           >
-            <span style={{ display: 'inline-block', transform: 'scaleX(1.8)', fontSize: '48px', fontWeight: 600, letterSpacing: '8px' }}>SPIN</span>
+            <span style={{ display: 'inline-block', transform: 'scaleX(1.8)', fontSize: '56px', fontWeight: 600, letterSpacing: '8px' }}>SPIN</span>
           </button>
         </div>
         <div className="bottom-action-bar-right">
-          <button
-            className="bottom-right-btn"
-            onClick={() => setIsLogOpen(true)}
-            title="이벤트 로그"
-          >
-            📋
-          </button>
           <button
             className="bottom-right-btn"
             onClick={() => setOwnedSymbolsOpen(true)}
@@ -498,19 +572,19 @@ function App() {
       {/* ===== DATA BROWSER (F2) ===== */}
       <DataBrowser />
 
-      {/* ===== SYMBOL POOL PROBABILITY (F4) ===== */}
+      {/* ===== SYMBOL POOL PROBABILITY (F3) ===== */}
       <SymbolPoolModal />
 
       {/* ===== OWNED SYMBOLS LIST (button ⋯) ===== */}
       <OwnedSymbolsModal open={ownedSymbolsOpen} onClose={() => setOwnedSymbolsOpen(false)} />
 
-      {/* ===== EFFECT / EVENT LOG (F11/Button) ===== */}
+      {/* ===== EFFECT / EVENT LOG (F12) ===== */}
       <EffectLogOverlay isOpen={isLogOpen} onClose={() => setIsLogOpen(false)} />
 
       {/* ===== KNOWLEDGE UPGRADES OVERLAY ===== */}
       <KnowledgeUpgradesOverlay isOpen={isKnowledgeOpen} onClose={() => setIsKnowledgeOpen(false)} />
 
-      {/* ===== BALANCE SIMULATOR (F6) ===== */}
+      {/* ===== BALANCE SIMULATOR (F4) ===== */}
       <BalanceSimulatorOverlay />
     </div>
   );
