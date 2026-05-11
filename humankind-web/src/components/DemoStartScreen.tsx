@@ -13,6 +13,23 @@ export default function DemoStartScreen() {
   const canContinue = hasSavedGame();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const handleQuit = () => {
+    void (async () => {
+      try {
+        const { isTauri } = await import('@tauri-apps/api/core');
+        if (isTauri()) {
+          const { getCurrentWindow } = await import('@tauri-apps/api/window');
+          await getCurrentWindow().close();
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to close app window:', error);
+      }
+
+      window.close();
+    })();
+  };
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'KeyS') return;
@@ -66,6 +83,14 @@ export default function DemoStartScreen() {
           </button>
         </nav>
       </main>
+      <button
+        type="button"
+        className="main-menu-exit-button"
+        onClick={handleQuit}
+        aria-label="나가기"
+      >
+        →]
+      </button>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
   );
