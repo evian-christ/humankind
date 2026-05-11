@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { usePreGameStore } from '../game/state/preGameStore';
 import { t } from '../i18n';
+import PauseMenu from './PauseMenu';
 
 export default function DemoStartScreen() {
   const language = useSettingsStore((s) => s.language);
@@ -10,6 +11,7 @@ export default function DemoStartScreen() {
   const continueSavedGame = usePreGameStore((s) => s.continueSavedGame);
   const hasSavedGame = usePreGameStore((s) => s.hasSavedGame);
   const canContinue = hasSavedGame();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -54,11 +56,17 @@ export default function DemoStartScreen() {
           <button type="button" className="main-menu-button" aria-label={t('mainMenu.achievements', language)}>
             {t('mainMenu.achievements', language)}
           </button>
-          <button type="button" className="main-menu-button" aria-label={t('mainMenu.settings', language)}>
+          <button
+            type="button"
+            className="main-menu-button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label={t('mainMenu.settings', language)}
+          >
             {t('mainMenu.settings', language)}
           </button>
         </nav>
       </main>
+      <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
   );
 }

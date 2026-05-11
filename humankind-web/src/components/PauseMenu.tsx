@@ -30,10 +30,11 @@ type SettingsTab = 'general' | 'gameplay' | 'graphics' | 'audio';
 interface PauseMenuProps {
     isOpen: boolean;
     onClose: () => void;
+    initialScreen?: 'main' | 'settings';
 }
 
-const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
-    const [screen, setScreen] = useState<'main' | 'settings'>('main');
+const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) => {
+    const [screen, setScreen] = useState<'main' | 'settings'>(initialScreen);
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [isFullscreen, setIsFullscreen] = useState(false);
     const {
@@ -56,6 +57,10 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
     const initializeGame = useGameStore((s) => s.initializeGame);
     const resetRelics = useRelicStore((s) => s.resetRelics);
+
+    useEffect(() => {
+        if (isOpen) setScreen(initialScreen);
+    }, [initialScreen, isOpen]);
 
     useEffect(() => {
         import('@tauri-apps/api/core').then(({ isTauri }) => {
@@ -137,6 +142,10 @@ const PauseMenu = ({ isOpen, onClose }: PauseMenuProps) => {
     };
 
     const handleSettingsBack = () => {
+        if (initialScreen === 'settings') {
+            onClose();
+            return;
+        }
         setScreen('main');
     };
 
