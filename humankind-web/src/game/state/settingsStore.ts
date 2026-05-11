@@ -71,6 +71,7 @@ export interface SettingsState {
     masterVolume: number;
     musicVolume: number;
     effectVolume: number;
+    developerMode: boolean;
 
     setResolution: (width: number, height: number) => void;
     setLanguage: (lang: Language) => void;
@@ -79,6 +80,7 @@ export interface SettingsState {
     setMasterVolume: (volume: number) => void;
     setMusicVolume: (volume: number) => void;
     setEffectVolume: (volume: number) => void;
+    setDeveloperMode: (enabled: boolean) => void;
 }
 
 type PersistedSettings = Pick<
@@ -91,6 +93,7 @@ type PersistedSettings = Pick<
     | 'masterVolume'
     | 'musicVolume'
     | 'effectVolume'
+    | 'developerMode'
 >;
 
 interface SavedSettings {
@@ -108,6 +111,7 @@ const defaultSettings: PersistedSettings = {
     masterVolume: 1,
     musicVolume: 1,
     effectVolume: 1,
+    developerMode: false,
 };
 
 const storage = (): Storage | null => {
@@ -144,6 +148,9 @@ function loadSettings(): PersistedSettings {
             masterVolume: clampVolume(save.settings.masterVolume),
             musicVolume: clampVolume(save.settings.musicVolume),
             effectVolume: clampVolume(save.settings.effectVolume),
+            developerMode: typeof save.settings.developerMode === 'boolean'
+                ? save.settings.developerMode
+                : defaultSettings.developerMode,
         };
     } catch {
         return defaultSettings;
@@ -166,6 +173,7 @@ function saveSettings(state: PersistedSettings): void {
             masterVolume: state.masterVolume,
             musicVolume: state.musicVolume,
             effectVolume: state.effectVolume,
+            developerMode: state.developerMode,
         },
     };
 
@@ -238,6 +246,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             return { effectVolume: clamped };
         });
         audioManager.setEffectVolume(clamped);
+    },
+
+    setDeveloperMode: (enabled) => {
+        set((state) => {
+            const next = { ...state, developerMode: enabled };
+            saveSettings(next);
+            return { developerMode: enabled };
+        });
     },
 }));
 

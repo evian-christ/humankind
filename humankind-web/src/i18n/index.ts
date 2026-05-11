@@ -69,6 +69,9 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.masterVolume': 'Master Volume',
         'settings.musicVolume': 'Music Volume',
         'settings.effectVolume': 'SFX Volume',
+        'settings.developerMode': 'Developer Mode',
+        'settings.developerMode.on': 'On',
+        'settings.developerMode.off': 'Off',
 
         // Game UI
         'game.spin': 'SPIN',
@@ -744,6 +747,9 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.masterVolume': '마스터 볼륨',
         'settings.musicVolume': '음악 볼륨',
         'settings.effectVolume': '효과음 볼륨',
+        'settings.developerMode': '개발자 모드',
+        'settings.developerMode.on': '켜짐',
+        'settings.developerMode.off': '꺼짐',
 
         // Game UI (스핀 = 보드 돌리기 버튼, 턴 = 게임 턴 개념)
         'game.spin': '스핀',

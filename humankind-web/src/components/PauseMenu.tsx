@@ -46,6 +46,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         masterVolume,
         musicVolume,
         effectVolume,
+        developerMode,
         setResolution,
         setLanguage,
         setEffectSpeed,
@@ -53,6 +54,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         setMasterVolume,
         setMusicVolume,
         setEffectVolume,
+        setDeveloperMode,
     } = useSettingsStore();
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
     const initializeGame = useGameStore((s) => s.initializeGame);
@@ -323,6 +325,24 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                                                 ))}
                                             </select>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="settings-row">
+                                    <div className="settings-row-label">{t('settings.developerMode', language)}</div>
+                                    <div className="settings-row-controls">
+                                        <button
+                                            className={`settings-seg-btn ${!developerMode ? 'active' : ''}`}
+                                            onClick={() => setDeveloperMode(false)}
+                                        >
+                                            {t('settings.developerMode.off', language)}
+                                        </button>
+                                        <button
+                                            className={`settings-seg-btn ${developerMode ? 'active' : ''}`}
+                                            onClick={() => setDeveloperMode(true)}
+                                        >
+                                            {t('settings.developerMode.on', language)}
+                                        </button>
                                     </div>
                                 </div>
                             </>
