@@ -9,6 +9,7 @@ import {
     RELIC_PANEL_TITLE_ICON_URL,
 } from '../../uiAssetUrls';
 import { hasUpgradeSprite, resolveUpgradeSpriteFile } from '../knowledgeUpgradeSprites';
+import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -29,8 +30,8 @@ export const loadGameAssets = async () => {
     if (assetsLoaded) return;
 
     const symbolPaths = Object.values(SYMBOLS)
-        .filter(s => s.sprite && s.sprite !== '-' && s.sprite !== '-.png')
-        .map(s => `${ASSET_BASE_URL}assets/symbols/${s.sprite}`);
+        .map(getSymbolSpriteUrl)
+        .filter(Boolean) as string[];
     const relicPaths = Object.values(RELICS)
         .filter(r => r.sprite && r.sprite !== '-' && r.sprite !== '-.png')
         .map(r => `${ASSET_BASE_URL}assets/relics/${r.sprite}`);

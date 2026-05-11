@@ -10,8 +10,8 @@ import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { EffectText } from './EffectText';
 import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
+import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
 const BASE_W = 1920;
 const BASE_H = 1080;
 const SPRITE_PX = 32;
@@ -231,6 +231,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                         >
                             {playerSymbols.map((sym, idx) => {
                                 const def = sym.definition;
+                                const spriteUrl = getSymbolSpriteUrl(def);
 
                                 return (
                                     <div
@@ -248,9 +249,9 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                             cursor: 'help',
                                         }}
                                     >
-                                        {def.sprite && def.sprite !== '-' && def.sprite !== '-.png' ? (
+                                        {spriteUrl ? (
                                             <img
-                                                src={`${ASSET_BASE_URL}assets/symbols/${def.sprite}`}
+                                                src={spriteUrl}
                                                 alt={t(`symbol.${def.key}.name`, language)}
                                                 style={{
                                                     width: metrics.spriteSize,

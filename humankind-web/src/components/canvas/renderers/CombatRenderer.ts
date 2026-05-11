@@ -5,8 +5,8 @@ import { getSymbolColor } from '../../../game/data/symbolDefinitions';
 import { t } from '../../../i18n';
 import { audioManager } from '../../../audio/audioManager';
 import type { CellLayout, CombatBounce } from '../types';
-import { ASSET_BASE_URL } from './rendererShared';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
+import { getSymbolSpriteUrl } from '../../../game/data/symbolSpritePaths';
 
 const RANGED_ATTACKER_KEYS = new Set(['archer', 'tracker_archer', 'crossbowman', 'cannon']);
 
@@ -71,9 +71,10 @@ export class CombatRenderer {
         }
         let bounceSprite: PIXI.Container;
 
-        if (attackerDef?.sprite && attackerDef.sprite !== '-' && attackerDef.sprite !== '-.png') {
+        const attackerSpriteUrl = attackerDef ? getSymbolSpriteUrl(attackerDef) : null;
+        if (attackerSpriteUrl) {
             const spriteSize = 32 * Math.max(1, Math.floor((Math.min(cellWidth - 6, cellHeight) * 0.85) / 32));
-            const sp = PIXI.Sprite.from(`${ASSET_BASE_URL}assets/symbols/${attackerDef.sprite}`);
+            const sp = PIXI.Sprite.from(attackerSpriteUrl);
             sp.anchor.set(0.5);
             sp.width = spriteSize;
             sp.height = spriteSize;

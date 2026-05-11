@@ -8,6 +8,7 @@ import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { audioManager } from '../audio/audioManager';
+import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -18,8 +19,6 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
-
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 /** gameStore RELIC_ID: 고대 유물 잔해 / 고대 부족 합류 — 심볼 선택 UI 전용 표시·리롤 숨김 */
 const RELIC_ANCIENT_DEBRIS = 13;
@@ -40,6 +39,7 @@ const SymbolCard = ({
     const symName = t(`symbol.${symbol.key}.name`, language);
     const symDesc = getBoardSymbolTooltipDesc(symbol.key, language, unlockedKnowledgeUpgrades);
     const displayHp = symbol.base_hp;
+    const spriteUrl = getSymbolSpriteUrl(symbol);
 
     return (
         <div
@@ -69,9 +69,9 @@ const SymbolCard = ({
                 </div>
 
                 {/* 스프라이트 */}
-                {symbol.sprite && symbol.sprite !== '-' && symbol.sprite !== '-.png' ? (
+                {spriteUrl ? (
                     <img
-                        src={`${ASSET_BASE_URL}assets/symbols/${symbol.sprite}`}
+                        src={spriteUrl}
                         alt={symName}
                         className="selection-card-sprite"
                         style={{ imageRendering: 'pixelated' }}

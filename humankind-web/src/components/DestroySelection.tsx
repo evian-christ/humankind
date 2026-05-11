@@ -8,8 +8,7 @@ import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
-
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
+import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 
 const SYMBOL_TYPE_ERA_KEY: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -145,41 +144,45 @@ const DestroySelection = () => {
                     </div>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center', maxHeight: '50vh', overflowY: 'auto', overflowX: 'visible', marginBottom: '30px', padding: '10px' }}>
-                        {playerSymbols.map((sym, i) => (
-                            <div
-                                key={`${sym.instanceId}-${i}`}
-                                role="button"
-                                tabIndex={0}
-                                style={{
-                                    width: `${CELL_PX}px`,
-                                    height: `${CELL_PX}px`,
-                                    border: selectedInstanceIds.includes(sym.instanceId) ? '3px solid #ef4444' : '2px solid #555',
-                                    borderRadius: '8px',
-                                    background: selectedInstanceIds.includes(sym.instanceId) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(30, 30, 30, 0.8)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.1s ease',
-                                    position: 'relative',
-                                    zIndex: hoverTip?.instanceId === sym.instanceId ? 10051 : 'auto',
-                                }}
-                                onClick={() => toggleSymbol(sym.instanceId)}
-                                onMouseEnter={(e) => updateTipPos(e, sym.instanceId, sym.definition)}
-                                onMouseLeave={clearTip}
-                            >
-                                {sym.definition.sprite && sym.definition.sprite !== '-' && sym.definition.sprite !== '-.png' ? (
-                                    <img
-                                        src={`${ASSET_BASE_URL}assets/symbols/${sym.definition.sprite}`}
-                                        alt={t(`symbol.${sym.definition.key}.name`, language)}
-                                        style={{ width: `${IMG_PX}px`, height: `${IMG_PX}px`, objectFit: 'contain', imageRendering: 'pixelated' }}
-                                        draggable={false}
-                                    />
-                                ) : (
-                                    <span style={{ fontSize: '24px', opacity: 0.5 }}>?</span>
-                                )}
-                                <SymbolCellBoardOverlays sym={sym} cellWidth={CELL_PX} cellHeight={CELL_PX} />
-                            </div>
-                        ))}
+                        {playerSymbols.map((sym, i) => {
+                            const spriteUrl = getSymbolSpriteUrl(sym.definition);
+
+                            return (
+                                <div
+                                    key={`${sym.instanceId}-${i}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    style={{
+                                        width: `${CELL_PX}px`,
+                                        height: `${CELL_PX}px`,
+                                        border: selectedInstanceIds.includes(sym.instanceId) ? '3px solid #ef4444' : '2px solid #555',
+                                        borderRadius: '8px',
+                                        background: selectedInstanceIds.includes(sym.instanceId) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(30, 30, 30, 0.8)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.1s ease',
+                                        position: 'relative',
+                                        zIndex: hoverTip?.instanceId === sym.instanceId ? 10051 : 'auto',
+                                    }}
+                                    onClick={() => toggleSymbol(sym.instanceId)}
+                                    onMouseEnter={(e) => updateTipPos(e, sym.instanceId, sym.definition)}
+                                    onMouseLeave={clearTip}
+                                >
+                                    {spriteUrl ? (
+                                        <img
+                                            src={spriteUrl}
+                                            alt={t(`symbol.${sym.definition.key}.name`, language)}
+                                            style={{ width: `${IMG_PX}px`, height: `${IMG_PX}px`, objectFit: 'contain', imageRendering: 'pixelated' }}
+                                            draggable={false}
+                                        />
+                                    ) : (
+                                        <span style={{ fontSize: '24px', opacity: 0.5 }}>?</span>
+                                    )}
+                                    <SymbolCellBoardOverlays sym={sym} cellWidth={CELL_PX} cellHeight={CELL_PX} />
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>

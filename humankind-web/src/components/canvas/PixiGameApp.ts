@@ -21,7 +21,6 @@ import { UpgradeRenderer } from './renderers/UpgradeRenderer';
 import { audioManager, type AudioPlaybackHandle } from '../../audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from '../../audio/audioCues';
 import {
-    ASSET_BASE_URL,
     GAME_CURSOR_POINTER,
     boardHasAdjacentPlains,
     boardHasDestroyableAdjacentSymbol,
@@ -29,6 +28,7 @@ import {
     boardHasTrainableAdjacentRanged,
     isOpenableLoot,
 } from './renderers/rendererShared';
+import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
 
 const SPIN_AUDIO_ESTIMATE_TICK_MS = 1000 / 60;
 const CONTRIBUTOR_WOBBLE_SECOND_SOUND_MS = 140;
@@ -502,8 +502,8 @@ export class PixiGameApp {
                     const group = new PIXI.Container();
                     group.x = colX;
                     group.y = yPos;
-                    if (def && def.sprite && def.sprite !== '-' && def.sprite !== '-.png') {
-                        const spritePath = `${ASSET_BASE_URL}assets/symbols/${def.sprite}`;
+                    const spritePath = def ? getSymbolSpriteUrl(def) : null;
+                    if (spritePath) {
                         const SPRITE_PX = 32;
                         const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
                         const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
@@ -726,8 +726,8 @@ export class PixiGameApp {
                     this.effectsContainer.addChild(arrowG);
                 }
 
-                if (symDef.sprite && symDef.sprite !== '-' && symDef.sprite !== '-.png') {
-                    const spritePath = `${ASSET_BASE_URL}assets/symbols/${symDef.sprite}`;
+                const spritePath = getSymbolSpriteUrl(symDef);
+                if (spritePath) {
                     const SPRITE_PX = 32;
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));

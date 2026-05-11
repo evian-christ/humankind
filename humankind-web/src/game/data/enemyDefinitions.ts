@@ -11,7 +11,7 @@ export const ENEMIES: Record<number, SymbolDefinition> = {
         name: Sym.warrior.name,
         type: SymbolType.ENEMY,
         description: "Enemy Warrior. Assigned a random penalty on spawn.",
-        sprite: "036.png",
+        sprite: Sym.warrior.sprite,
     },
 };
 

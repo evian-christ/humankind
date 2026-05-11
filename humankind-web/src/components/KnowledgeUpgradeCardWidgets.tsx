@@ -11,6 +11,7 @@ import {
 import { useGameStore } from '../game/state/gameStore';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
+import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 
 const RELATION_BADGE: Record<KnowledgeUpgradeSymbolRelation, string> = {
     pool_add: '+',
@@ -59,18 +60,18 @@ function upgradeCompareUnlocks(upgradeId: number, includeUpgrade: boolean): numb
 
 /** 풀에서 제거된 심볼 — 업그레이드 칩·툴팁만 (i18n symbol.* 유지) */
 const DESC_ONLY_SYMBOL_VISUAL: Partial<
-    Record<KnowledgeUpgradeDescSymbolKey, Pick<SymbolDefinition, 'key' | 'sprite' | 'type'>>
+    Record<KnowledgeUpgradeDescSymbolKey, Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> & { spriteUrl?: string }>
 > = {
-    aqueduct: { key: 'aqueduct', sprite: '056.png', type: SymbolType.NORMAL },
-    rye: { key: 'rye', sprite: '057.png', type: SymbolType.NORMAL },
-    hay: { key: 'hay', sprite: '051.png', type: SymbolType.NORMAL },
+    aqueduct: { key: 'aqueduct', sprite: 'outdated/056.png', type: SymbolType.NORMAL, spriteUrl: `${ASSET_BASE_URL}assets/symbols/outdated/056.png` },
+    rye: { key: 'rye', sprite: 'outdated/057.png', type: SymbolType.NORMAL, spriteUrl: `${ASSET_BASE_URL}assets/symbols/outdated/057.png` },
+    hay: { key: 'hay', sprite: 'outdated/051.png', type: SymbolType.NORMAL, spriteUrl: `${ASSET_BASE_URL}assets/symbols/outdated/051.png` },
 };
 
 function resolveUpgradeDescSymbolVisual(
     symbolKey: KnowledgeUpgradeDescSymbolKey,
-): Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> | null {
+): (Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> & { spriteUrl?: string }) | SymbolDefinition | null {
     const live = SYMBOLS_BY_KEY[symbolKey as SymbolKey];
-    if (live) return { key: live.key, sprite: live.sprite, type: live.type };
+    if (live) return live;
     return DESC_ONLY_SYMBOL_VISUAL[symbolKey] ?? null;
 }
 
@@ -239,10 +240,7 @@ export const UpgradeCardDescSymbols = ({
                                 {group.map(({ symbolKey, relation }) => {
                                     const def = resolveUpgradeDescSymbolVisual(symbolKey);
                                     if (!def) return null;
-                                    const src =
-                                        def.sprite && def.sprite !== '-' && def.sprite !== '-.png'
-                                            ? `${ASSET_BASE_URL}assets/symbols/${def.sprite}`
-                                            : undefined;
+                                    const src = 'id' in def ? getSymbolSpriteUrl(def) : def.spriteUrl;
                                     const symName = t(`symbol.${symbolKey}.name`, language);
                                     return (
                                         <button
