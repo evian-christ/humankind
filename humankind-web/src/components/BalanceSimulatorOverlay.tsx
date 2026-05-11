@@ -5,6 +5,7 @@ import {
     type BalanceSimulationSummary,
     type BalanceUpgradeStrategy,
 } from '../game/simulation/balanceSimulator';
+import { useSettingsStore } from '../game/state/settingsStore';
 
 const panelStyle: CSSProperties = {
     position: 'fixed',
@@ -58,10 +59,14 @@ const BalanceSimulatorOverlay = () => {
     const [running, setRunning] = useState(false);
     const [runNumber, setRunNumber] = useState(0);
     const [lastSeed, setLastSeed] = useState<number | null>(null);
+    const developerMode = useSettingsStore((s) => s.developerMode);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (e.code === 'F6') {
+            if (e.code === 'F4') {
+                if (!useSettingsStore.getState().developerMode) return;
+                const target = e.target as HTMLElement;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
                 e.preventDefault();
                 setOpen((value) => !value);
                 return;
@@ -73,6 +78,10 @@ const BalanceSimulatorOverlay = () => {
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
+
+    useEffect(() => {
+        if (!developerMode) setOpen(false);
+    }, [developerMode]);
 
     const topPicked = useMemo(() => summary?.topPickedSymbols.slice(0, 12) ?? [], [summary]);
 
@@ -111,7 +120,7 @@ const BalanceSimulatorOverlay = () => {
                     <div>
                         <div style={{ fontSize: '20px', fontWeight: 700 }}>밸런스 시뮬레이터</div>
                         <div style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>
-                            F6으로 열고 닫기 · RUN을 누를 때마다 새 seed로 다시 실행
+                            F4로 열고 닫기 · RUN을 누를 때마다 새 seed로 다시 실행
                         </div>
                     </div>
                     <button

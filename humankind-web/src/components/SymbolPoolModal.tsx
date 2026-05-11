@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useGameStore, getSymbolPoolProbabilities } from '../game/state/gameStore';
 import { SymbolType, SYMBOLS } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
@@ -20,8 +20,26 @@ const SymbolPoolModal = () => {
     const [open, setOpen] = useState(false);
     const { era, religionUnlocked } = useGameStore();
     const language = useSettingsStore(s => s.language);
+    const developerMode = useSettingsStore(s => s.developerMode);
 
     useRegisterBoardTooltipBlock('symbol-pool-modal', open);
+
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.code !== 'F3') return;
+            if (!useSettingsStore.getState().developerMode) return;
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+            e.preventDefault();
+            setOpen((value) => !value);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
+
+    useEffect(() => {
+        if (!developerMode) setOpen(false);
+    }, [developerMode]);
 
     const probabilities = useMemo(() => {
         if (!open) return [];
@@ -94,7 +112,7 @@ const SymbolPoolModal = () => {
                 }}>
                     <div>
                         <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#f9fafb' }}>
-                            📊 심볼 풀 확률 (F4)
+                            📊 심볼 풀 확률 (F3)
                         </span>
                         <span style={{ marginLeft: '12px', fontSize: '12px', color: '#9ca3af' }}>
                             시대 {era} · {religionUnlocked ? '종교 해금' : '종교 미해금'} · 총 {totalPool}개
@@ -235,7 +253,7 @@ const SymbolPoolModal = () => {
                     background: '#1f2937',
                     flexShrink: 0,
                 }}>
-                    균등 확률 = 1 ÷ 풀 총 심볼 수 · 한 슬롯 기준 · F4로 닫기
+                    균등 확률 = 1 ÷ 풀 총 심볼 수 · 한 슬롯 기준 · F3으로 닫기
                 </div>
             </div>
         </div>

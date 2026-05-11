@@ -64,6 +64,7 @@ const DataBrowser = () => {
 
     const [search, setSearch] = useState('');
     const language = useSettingsStore((s) => s.language);
+    const developerMode = useSettingsStore((s) => s.developerMode);
     const { devAddSymbol } = useGameStore();
 
     // Per-tab sort state
@@ -93,12 +94,19 @@ const DataBrowser = () => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.code !== 'F2') return;
+            if (!useSettingsStore.getState().developerMode) return;
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
             e.preventDefault();
             setOpen((o) => !o);
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
+
+    useEffect(() => {
+        if (!developerMode) setOpen(false);
+    }, [developerMode]);
 
     // 심볼 슬롯 뷰 모드: 필터/검색/정렬이 없을 때 현재 정의된 최대 ID까지 전체 슬롯 표시
     const SYMBOL_SLOT_MIN = 1;
