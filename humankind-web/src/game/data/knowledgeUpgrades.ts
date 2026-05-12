@@ -598,7 +598,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Compass',
         type: SymbolType.MEDIEVAL,
         description: 'Compass is added to the symbol selection pool.',
-        sprite: '-',
+        sprite: '031.png',
         descSymbols: [{ symbolKey: 'compass', relation: 'pool_add' }],
     },
     [SHIPBUILDING_UPGRADE_ID]: {
@@ -614,7 +614,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Fishery Guild',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Fish and Crab.',
-        sprite: '-',
+        sprite: '027.png',
         descSymbols: [
             { symbolKey: 'fish', relation: 'effect_modify' },
             { symbolKey: 'crab', relation: 'effect_modify' },
@@ -679,7 +679,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Three-field System',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Wheat, Rice, and Grassland.',
-        sprite: '-',
+        sprite: '028.png',
         descSymbols: [
             { symbolKey: 'wheat', relation: 'effect_modify' },
             { symbolKey: 'rice', relation: 'effect_modify' },
