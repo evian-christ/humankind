@@ -102,6 +102,8 @@ const ERA_NAME_KEYS: Record<number, string> = {
 interface Props {
     isOpen: boolean;
     onClose: () => void;
+    tutorialStep?: number;
+    onTutorialStepChange?: (step: number) => void;
 }
 
 type ResearchPointsMouseHint = { id: number; x: number; y: number };
@@ -317,7 +319,7 @@ function KnowledgeConnectorSegment({ seg }: { seg: KnowledgeConnectorRenderLine 
     );
 }
 
-const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
+const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialStepChange }: Props) => {
     useRegisterBoardTooltipBlock('knowledge-upgrades-overlay', isOpen);
 
     const unlockedUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades);
@@ -340,7 +342,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     const selectedUpgrade = selectedId != null ? KNOWLEDGE_UPGRADES[selectedId] : null;
     const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
     const selectedTierLevel = getTierLevelForUpgrade(selectedId);
-    const activeFocusId = hoveredId ?? selectedId;
+    const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 17 && tutorialStep <= 21;
+    const activeFocusId = tutorialRestrictsHover
+        ? selectedId
+        : hoveredId ?? selectedId;
     const activeConnectionIds = collectConnectedUpgradeIds(activeFocusId);
     const selectedDirectPrereqs = selectedId != null ? [...getKnowledgeUpgradeDirectPrerequisites(selectedId)] : [];
     const selectedDirectDependents = selectedId != null ? [...getKnowledgeUpgradeDirectDependents(selectedId)] : [];
@@ -355,11 +360,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
         isUpgradeLegalForKnowledgePick(selectedId, unlockedUpgrades, currentLevel);
     const canResearchSelected = hasResearchPoints && !selectedUnlocked && unmetSelectedPrereqs.length === 0 && canResearchWithCurrentPick;
     const needsHigherLevel = selectedId != null && currentLevel < selectedTierLevel;
+    const tutorialResearchLocked = tutorialStep === 19;
     const researchButtonDisabled =
         selectedId == null ||
         selectedUnlocked ||
         unmetSelectedPrereqs.length > 0 ||
         needsHigherLevel ||
+        tutorialResearchLocked ||
         (hasResearchPoints && !canResearchWithCurrentPick);
 
     const updateKnowledgeTreeConnectors = useCallback(() => {
@@ -542,6 +549,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     };
 
     const handleUnlock = (e: ReactMouseEvent<HTMLButtonElement>) => {
+        if (tutorialResearchLocked) {
+            void audioManager.play('denied');
+            return;
+        }
         if (!selectedId || selectedUnlocked || unmetSelectedPrereqs.length > 0 || needsHigherLevel) {
             void audioManager.play('denied');
             return;
@@ -572,6 +583,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
             returnPhaseAfterDevKnowledgeUpgrade: phase,
         });
         useGameStore.getState().selectUpgrade(selectedId);
+        if (tutorialStep === 20 && selectedId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+            setSelectedId(null);
+            onTutorialStepChange?.(21);
+        }
         // Stay on tree overlay; close only if upgrade opens destroy-selection flow.
         const ph = useGameStore.getState().phase;
         if (ph === 'destroy_selection' || ph === 'oblivion_furnace_board') {
@@ -582,6 +597,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
     return (
         <div
             ref={overlayRef}
+            className="knowledge-upgrades-overlay"
             style={{
                 position: 'fixed',
                 inset: 0,
@@ -602,6 +618,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 }}
             >
                 <button
+                    className="knowledge-upgrades-back-btn"
                     type="button"
                     onClick={onClose}
                     style={{
@@ -808,11 +825,22 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                                                     <button
                                                         key={id}
                                                         type="button"
-                                                        className="knowledge-upgrade-chip"
+                                                        className={[
+                                                            'knowledge-upgrade-chip',
+                                                            id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
+                                                        ].filter(Boolean).join(' ')}
                                                         title={name}
                                                         data-knowledge-upgrade-id={id}
-                                                        onClick={() => setSelectedId(isSelected ? null : id)}
-                                                        onMouseEnter={() => setHoveredId(id)}
+                                                        onClick={() => {
+                                                            setSelectedId(isSelected ? null : id);
+                                                            if (tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+                                                                onTutorialStepChange?.(19);
+                                                            }
+                                                        }}
+                                                        onMouseEnter={() => {
+                                                            if (tutorialRestrictsHover) return;
+                                                            setHoveredId(id);
+                                                        }}
                                                         onMouseLeave={() => setHoveredId((prev) => (prev === id ? null : prev))}
                                                         style={{
                                                             width: `${KNOWLEDGE_TREE_CHIP}px`,
@@ -937,7 +965,11 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                 {selectedUpgrade && tooltipPosition && (
                     <div
                         ref={tooltipRef}
-                        className={`knowledge-upgrade-tooltip knowledge-upgrade-tooltip--${tooltipPosition.placement}`}
+                        className={[
+                            'knowledge-upgrade-tooltip',
+                            `knowledge-upgrade-tooltip--${tooltipPosition.placement}`,
+                            selectedId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-tooltip--ancient-era' : '',
+                        ].filter(Boolean).join(' ')}
                         style={{
                             left: tooltipPosition.left,
                             top: tooltipPosition.top,
@@ -1032,6 +1064,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
                             </div>
                             {selectedUpgrade.descSymbols && selectedUpgrade.descSymbols.length > 0 && (
                                 <div
+                                    className="knowledge-upgrade-desc-symbols-area"
                                     style={{
                                         marginTop: '6px',
                                         paddingTop: '6px',
@@ -1049,7 +1082,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose }: Props) => {
 
                         <div className="knowledge-upgrade-tooltip-actions" style={{ display: 'flex', justifyContent: 'center' }}>
                             <button
-                                className="bottom-right-btn"
+                                className="bottom-right-btn knowledge-upgrade-research-btn"
                                 onClick={handleUnlock}
                                 data-audio-click="knowledge_upgrade"
                                 aria-disabled={researchButtonDisabled}

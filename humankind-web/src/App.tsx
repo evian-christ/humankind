@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore } from './game/state/settingsStore';
@@ -21,9 +21,10 @@ import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
 import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
-import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 import { audioManager } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
+import { boardCellLocalRect, computeBoardPixelLayout } from './game/layout/boardPixelLayout';
 
 const CustomCursor = () => {
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -76,6 +77,241 @@ const ERA_NAME_KEYS: Record<number, string> = {
   3: 'era.modern',
 };
 
+const TUTORIAL_DIALOG_STEPS = [
+  [
+    '튜토리얼에 오신 것을 환영합니다.',
+    '여기서는 게임 진행에 필요한 기본 규칙을 배웁니다.',
+  ],
+  [
+    '목표는 문명을 생존시키고 발전시켜 승리에 도달하는 것입니다.',
+  ],
+  [
+    '백성이 곧 식량을 요구하네요!',
+  ],
+  [
+    '현재 식량이 0이라 서둘러 식량을 생산해봅시다.',
+  ],
+  [
+    '우선 옥수수 심볼 두 개를 드리겠습니다.',
+  ],
+  [
+    '각 옥수수는 보드에 배치 시 식량 2를 제공합니다.',
+    '옥수수에 마우스를 올려 정보를 확인해보세요.',
+  ],
+  [
+    '스핀 버튼을 눌러 턴을 진행합시다.',
+  ],
+  [
+    '매 스핀 후 심볼들이 배치되며 각 효과가 발동됩니다.',
+  ],
+  [
+    '옥수수 두개가 각각 식량 2씩 생산하여 식량 4가 모였습니다!',
+    '열심히 식량을 모아야 생존할 수 있겠네요.',
+  ],
+  [
+    '매 스핀 이후엔 무작위 심볼 세 가지 중 하나를 선택할 수 있습니다.',
+  ],
+  [
+    '기념비를 선택하세요.',
+  ],
+  [
+    '현재 보유 심볼을 확인해봅시다.',
+  ],
+  [
+    '기념비는 지식을 생산합니다.',
+  ],
+  [
+    '이전 화면으로 돌아가세요.',
+  ],
+  [
+    '스핀 버튼을 눌러 턴을 진행하세요.',
+  ],
+  [
+    '지식이 모여 레벨 2가 되었습니다!',
+  ],
+  [
+    '지식 업그레이드 창을 열어보세요.',
+  ],
+  [
+    '레벨 업을 할 때마다 이 곳에서 지식 업그레이드를 하나 연구할 수 있습니다.',
+  ],
+  [
+    '고대시대 업그레이드를 눌러보세요.',
+  ],
+  [
+    '고대시대를 연구하면 각종 고대시대 심볼들이 해금되어 심볼 풀에 추가됩니다.',
+  ],
+  [
+    '고대시대를 연구하세요.',
+  ],
+  [
+    '이전 화면으로 돌아가세요.',
+  ],
+  [
+    '유물 상점을 열어보세요.',
+  ],
+  [
+    '유물은 다양하고 강력한 효과를 가지고 있어 승리에 큰 도움이 됩니다.',
+  ],
+  [
+    '유물은 골드를 통해서 구매하니 골드를 많이 모아보세요.',
+  ],
+  [
+    '기본적인 튜토리얼은 이것으로 끝입니다.',
+    '당신의 문명을 승리로 이끄세요!',
+  ],
+];
+
+const TUTORIAL_CORN_CELLS = [
+  { x: 1, y: 1 },
+  { x: 3, y: 1 },
+];
+
+const TUTORIAL_LEFT_CORN_CELL = [{ x: 1, y: 1 }];
+
+type TutorialBoardHighlightsProps = {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  cells: Array<{ x: number; y: number }>;
+  accentCells?: Array<{ x: number; y: number }>;
+  highlightBoard?: boolean;
+};
+
+type TutorialElementHighlightProps = {
+  selectors: string[];
+  className: string;
+  pad?: number;
+  padX?: number;
+  padY?: number;
+};
+
+function TutorialElementHighlight({ selectors, className, pad = 0, padX = pad, padY = pad }: TutorialElementHighlightProps) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  const measure = useCallback(() => {
+    const elements = selectors
+      .flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)));
+    if (elements.length === 0) {
+      setRect(null);
+      return;
+    }
+
+    const rects = elements.map((el) => el.getBoundingClientRect());
+    const left = Math.min(...rects.map((r) => r.left));
+    const top = Math.min(...rects.map((r) => r.top));
+    const right = Math.max(...rects.map((r) => r.right));
+    const bottom = Math.max(...rects.map((r) => r.bottom));
+    setRect(new DOMRect(left - padX, top - padY, right - left + padX * 2, bottom - top + padY * 2));
+  }, [padX, padY, selectors]);
+
+  useLayoutEffect(() => {
+    measure();
+    const ro = new ResizeObserver(measure);
+    selectors.forEach((selector) => {
+      const el = document.querySelector<HTMLElement>(selector);
+      if (el) ro.observe(el);
+    });
+    const raf = requestAnimationFrame(measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [measure, selectors]);
+
+  if (!rect) return null;
+
+  return (
+    <div
+      className={className}
+      aria-hidden="true"
+      style={{
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      }}
+    />
+  );
+}
+
+function TutorialBoardHighlights({ anchorRef, cells, accentCells = [], highlightBoard = false }: TutorialBoardHighlightsProps) {
+  const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
+
+  const measure = useCallback(() => {
+    const el = anchorRef.current;
+    if (!el) return;
+    setViewSize({ w: el.clientWidth, h: el.clientHeight });
+  }, [anchorRef]);
+
+  useLayoutEffect(() => {
+    measure();
+    const el = anchorRef.current;
+    const ro = new ResizeObserver(() => measure());
+    if (el) ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [anchorRef, measure]);
+
+  if (viewSize.w <= 0 || viewSize.h <= 0) return null;
+
+  const layout = computeBoardPixelLayout(viewSize.w, viewSize.h);
+  if (highlightBoard) {
+    return (
+      <div className="tutorial-board-highlights" aria-hidden="true">
+        <div
+          className="tutorial-board-highlight-cell tutorial-board-highlight-cell--board"
+          style={{
+            left: layout.startX,
+            top: layout.startY,
+            width: layout.boardW,
+            height: layout.boardH,
+          }}
+        />
+      </div>
+    );
+  }
+
+  const rects = cells.map((cell) => boardCellLocalRect(layout, cell.x, cell.y));
+  const highlightLeft = Math.min(...rects.map((rect) => rect.left));
+  const highlightTop = Math.min(...rects.map((rect) => rect.top));
+  const highlightRight = Math.max(...rects.map((rect) => rect.left + rect.width));
+  const highlightBottom = Math.max(...rects.map((rect) => rect.top + rect.height));
+  const highlightPad = 12 * layout.scale;
+
+  return (
+    <div className="tutorial-board-highlights" aria-hidden="true">
+      <div
+        className="tutorial-board-highlight-cell"
+        style={{
+          left: highlightLeft - highlightPad,
+          top: highlightTop - highlightPad,
+          width: highlightRight - highlightLeft + highlightPad * 2,
+          height: highlightBottom - highlightTop + highlightPad * 2,
+        }}
+      />
+      {accentCells.map((cell) => {
+        const rect = boardCellLocalRect(layout, cell.x, cell.y);
+        return (
+          <div
+            key={`accent-${cell.x}-${cell.y}`}
+            className="tutorial-board-highlight-accent-cell"
+            style={{
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 /** 하단 유물/지식 버튼 HUD 툴팁: 뷰포트 왼쪽 밖으로 나가지 않도록 translateX 보정 */
 const BOTTOM_HUD_TIP_VIEWPORT_PAD = 20;
 
@@ -88,8 +324,19 @@ function useViewportClampedBottomHudTooltip() {
     if (!el) return;
     const measure = () => {
       const rect = el.getBoundingClientRect();
-      const need = Math.ceil(BOTTOM_HUD_TIP_VIEWPORT_PAD - rect.left);
-      setShiftPx(need > 0 ? need : 0);
+      const root = document.getElementById('root');
+      const rootRect = root?.getBoundingClientRect();
+      const rootScale = root && rootRect && root.clientWidth > 0 ? rootRect.width / root.clientWidth : 1;
+      const visualPxToLocalPx = (px: number) => px / Math.max(rootScale, 0.001);
+      const leftNeed = Math.ceil(BOTTOM_HUD_TIP_VIEWPORT_PAD - rect.left);
+      const rightNeed = Math.ceil(rect.right - (window.innerWidth - BOTTOM_HUD_TIP_VIEWPORT_PAD));
+      if (leftNeed > 0) {
+        setShiftPx(visualPxToLocalPx(leftNeed));
+      } else if (rightNeed > 0) {
+        setShiftPx(-visualPxToLocalPx(rightNeed));
+      } else {
+        setShiftPx(0);
+      }
     };
     requestAnimationFrame(() => requestAnimationFrame(measure));
   }, []);
@@ -112,9 +359,17 @@ function useViewportClampedBottomHudTooltip() {
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
   const returnToLeaderSelect = usePreGameStore((s) => s.returnToLeaderSelect);
+  const returnToIntro = usePreGameStore((s) => s.returnToIntro);
+  const completeTutorial = usePreGameStore((s) => s.completeTutorial);
   const {
     phase,
     turn,
+    isTutorialMode,
+    tutorialSpinStep,
+    setupTutorialCornStep,
+    spinTutorialCornStep,
+    setupTutorialSelectionStep,
+    spinTutorialMonumentStep,
     spinBoard,
     toggleRelicShop,
     isRelicShopOpen,
@@ -129,12 +384,14 @@ function App() {
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
+  const [tutorialDialogStep, setTutorialDialogStep] = useState(0);
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const relicHudTooltip = useViewportClampedBottomHudTooltip();
   const knowledgeHudTooltip = useViewportClampedBottomHudTooltip();
+  const ownedSymbolsHudTooltip = useViewportClampedBottomHudTooltip();
 
   useEffect(() => {
     audioManager.registerCue('button_hover', DEFAULT_AUDIO_CUES.button_hover);
@@ -225,6 +482,55 @@ function App() {
     if (preGameScreen !== null) setGameCanvasReady(false);
   }, [preGameScreen]);
 
+  useEffect(() => {
+    if (isTutorialMode) {
+      setTutorialDialogStep(0);
+    }
+  }, [isTutorialMode]);
+
+  useEffect(() => {
+    if (isTutorialMode && tutorialDialogStep === 4) setupTutorialCornStep();
+  }, [isTutorialMode, setupTutorialCornStep, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (isTutorialMode && tutorialDialogStep === 9) setupTutorialSelectionStep();
+  }, [isTutorialMode, setupTutorialSelectionStep, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 10 || phase === 'selection') return;
+    setTutorialDialogStep(11);
+  }, [isTutorialMode, phase, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 11 || !ownedSymbolsOpen) return;
+    setTutorialDialogStep(12);
+  }, [isTutorialMode, ownedSymbolsOpen, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 13 || ownedSymbolsOpen) return;
+    setTutorialDialogStep(14);
+  }, [isTutorialMode, ownedSymbolsOpen, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 14 || tutorialSpinStep !== 'monument_processing') return;
+    setTutorialDialogStep(15);
+  }, [isTutorialMode, tutorialDialogStep, tutorialSpinStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 16 || !isKnowledgeOpen) return;
+    setTutorialDialogStep(17);
+  }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 21 || isKnowledgeOpen) return;
+    setTutorialDialogStep(22);
+  }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 22 || !isRelicShopOpen) return;
+    setTutorialDialogStep(23);
+  }, [isRelicShopOpen, isTutorialMode, tutorialDialogStep]);
+
   // 앱 최초 로드 시 저장된 해상도를 DOM에 적용
   useEffect(() => {
     setResolution(resolutionWidth, resolutionHeight);
@@ -237,13 +543,63 @@ function App() {
   }, [isRelicShopOpen, hasNewRelicShopStock, clearRelicShopStockBadge]);
 
   const handleSpinBoard = useCallback(() => {
+    if (isTutorialMode && tutorialDialogStep === 6) {
+      setTutorialDialogStep(7);
+      spinTutorialCornStep();
+      return;
+    }
+
+    if (isTutorialMode && tutorialDialogStep === 14) {
+      spinTutorialMonumentStep();
+      return;
+    }
+
     const st = useGameStore.getState();
     const canSpin = st.phase === 'idle' && (st.levelUpResearchPoints ?? 0) === 0;
     if (!canSpin) return;
 
     void audioManager.unlock();
     spinBoard();
-  }, [spinBoard]);
+  }, [isTutorialMode, spinBoard, spinTutorialCornStep, spinTutorialMonumentStep, tutorialDialogStep]);
+
+  const isTutorialInteractionAllowed = useCallback((target: EventTarget | null) => {
+    if (!isTutorialMode) return true;
+    if (!(target instanceof Element)) return false;
+    if (target.closest('.pause-btn-top')) return true;
+    if (target.closest('.pause-overlay')) return true;
+    if (target.closest('.owned-symbols-modal')) return true;
+    if (target.closest('.tutorial-dialog-next')) return true;
+    if ((tutorialDialogStep === 6 || tutorialDialogStep === 14) && target.closest('.spin-btn')) return true;
+    if (tutorialDialogStep === 10 && target.closest('.selection-card-frame:first-child .selection-card')) return true;
+    if (tutorialDialogStep === 11 && target.closest('.relic-shop-btn--owned-symbols')) return true;
+    if (tutorialDialogStep === 16 && target.closest('.relic-shop-btn--knowledge')) return true;
+    if (tutorialDialogStep === 18 && target.closest('.knowledge-upgrade-chip--ancient-era')) return true;
+    if (tutorialDialogStep === 20 && target.closest('.knowledge-upgrade-research-btn')) return true;
+    if (tutorialDialogStep === 21 && target.closest('.knowledge-upgrades-back-btn')) return true;
+    if (tutorialDialogStep === 22 && target.closest('.relic-shop-btn--relic')) return true;
+    return false;
+  }, [isTutorialMode, tutorialDialogStep]);
+
+  const blockUnhandledTutorialInteraction = useCallback((event: React.SyntheticEvent) => {
+    if (isTutorialInteractionAllowed(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }, [isTutorialInteractionAllowed]);
+
+  const handleTutorialNext = useCallback(() => {
+    if (tutorialDialogStep === 24) {
+      if (isRelicShopOpen) toggleRelicShop();
+      setTutorialDialogStep(25);
+      return;
+    }
+    setTutorialDialogStep((step) => Math.min(step + 1, TUTORIAL_DIALOG_STEPS.length - 1));
+  }, [isRelicShopOpen, toggleRelicShop, tutorialDialogStep]);
+
+  const handleTutorialFinish = useCallback(() => {
+    if (isRelicShopOpen) toggleRelicShop();
+    completeTutorial();
+    returnToIntro();
+  }, [completeTutorial, isRelicShopOpen, returnToIntro, toggleRelicShop]);
 
   // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
   useEffect(() => {
@@ -259,6 +615,7 @@ function App() {
       if (e.code !== 'Space') return;
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (isTutorialMode && tutorialDialogStep !== 6 && tutorialDialogStep !== 14) return;
       const st = useGameStore.getState();
       const rp = st.levelUpResearchPoints ?? 0;
       const canSpin = st.phase === 'idle' && rp === 0;
@@ -268,7 +625,7 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [phase, handleSpinBoard, levelUpResearchPoints]);
+  }, [phase, handleSpinBoard, isTutorialMode, levelUpResearchPoints, tutorialDialogStep]);
 
   const boardIsForegroundForTooltips =
     phase !== 'destroy_selection' &&
@@ -351,7 +708,37 @@ function App() {
   };
 
   return (
-    <div className="game-screen">
+    <div
+      className={[
+        'game-screen',
+        isTutorialMode && tutorialDialogStep === 2 ? 'tutorial-highlight-food-demand' : '',
+        isTutorialMode && tutorialDialogStep === 3 ? 'tutorial-highlight-food-resource' : '',
+        isTutorialMode && tutorialDialogStep === 4 ? 'tutorial-highlight-corn-symbols' : '',
+        isTutorialMode && tutorialDialogStep === 5 ? 'tutorial-highlight-left-corn' : '',
+        isTutorialMode && tutorialDialogStep === 6 ? 'tutorial-highlight-spin-button' : '',
+        isTutorialMode && tutorialDialogStep === 7 ? 'tutorial-highlight-board' : '',
+        isTutorialMode && tutorialDialogStep === 8 ? 'tutorial-highlight-food-resource' : '',
+        isTutorialMode && tutorialDialogStep === 9 ? 'tutorial-highlight-selection-cards' : '',
+        isTutorialMode && tutorialDialogStep === 10 ? 'tutorial-highlight-monument-card' : '',
+        isTutorialMode && tutorialDialogStep === 11 ? 'tutorial-highlight-owned-symbols-button' : '',
+        isTutorialMode && tutorialDialogStep === 12 ? 'tutorial-highlight-owned-monument' : '',
+        isTutorialMode && tutorialDialogStep === 13 ? 'tutorial-highlight-owned-close' : '',
+        isTutorialMode && tutorialDialogStep === 14 ? 'tutorial-highlight-spin-button' : '',
+        isTutorialMode && tutorialDialogStep === 15 ? 'tutorial-highlight-knowledge-status' : '',
+        isTutorialMode && tutorialDialogStep === 16 ? 'tutorial-highlight-knowledge-button' : '',
+        isTutorialMode && tutorialDialogStep === 17 ? 'tutorial-highlight-knowledge-intro' : '',
+        isTutorialMode && tutorialDialogStep === 18 ? 'tutorial-highlight-ancient-chip' : '',
+        isTutorialMode && tutorialDialogStep === 19 ? 'tutorial-highlight-ancient-detail' : '',
+        isTutorialMode && tutorialDialogStep === 20 ? 'tutorial-highlight-ancient-research' : '',
+        isTutorialMode && tutorialDialogStep === 21 ? 'tutorial-highlight-knowledge-back' : '',
+        isTutorialMode && tutorialDialogStep === 22 ? 'tutorial-highlight-relic-shop-button' : '',
+        isTutorialMode && tutorialDialogStep === 23 ? 'tutorial-highlight-relics' : '',
+        isTutorialMode && tutorialDialogStep === 24 ? 'tutorial-highlight-relic-buy' : '',
+        isTutorialMode && tutorialDialogStep === 25 ? 'tutorial-highlight-finish' : '',
+      ].filter(Boolean).join(' ')}
+      onPointerDownCapture={blockUnhandledTutorialInteraction}
+      onClickCapture={blockUnhandledTutorialInteraction}
+    >
       <CustomCursor />
       <div className="hud-top">
         <div className="hud-top-left">
@@ -368,7 +755,7 @@ function App() {
             </div>
             {renderTooltip('knowledge')}
           </div>
-          <div className="resource-group" onMouseEnter={() => setHoveredStat('food')} onMouseLeave={() => setHoveredStat(null)}>
+          <div className="resource-group resource-group--food" onMouseEnter={() => setHoveredStat('food')} onMouseLeave={() => setHoveredStat(null)}>
             <img src={FOOD_RESOURCE_ICON_URL} alt="Food" className="resource-icon" />
             <span className="resource-value">
               {food}
@@ -422,7 +809,7 @@ function App() {
       <div className="bottom-action-bar">
         <div className="bottom-action-bar-left">
           <button
-            className="relic-shop-btn"
+            className="relic-shop-btn relic-shop-btn--relic"
             {...relicHudTooltip.bindButtonHoverHandlers}
             onClick={toggleRelicShop}
             title={
@@ -508,6 +895,34 @@ function App() {
               </span>
             </span>
           </button>
+          <button
+            className="relic-shop-btn relic-shop-btn--owned-symbols"
+            type="button"
+            aria-label={t('ownedSymbols.title', language)}
+            title={t('ownedSymbols.title', language)}
+            {...ownedSymbolsHudTooltip.bindButtonHoverHandlers}
+            onClick={() => setOwnedSymbolsOpen(true)}
+          >
+            <span className="relic-shop-btn-icon-layer" aria-hidden="true">
+              <img src={INVENTORY_ICON_URL} alt="" draggable={false} style={{ imageRendering: 'pixelated' }} />
+            </span>
+            <span
+              ref={ownedSymbolsHudTooltip.tooltipRef}
+              className="bottom-action-hud-tooltip"
+              aria-hidden="true"
+              style={
+                {
+                  '--bottom-hud-tooltip-shift': `${ownedSymbolsHudTooltip.shiftPx}px`,
+                } as React.CSSProperties
+              }
+            >
+              <span className="hud-stat-tooltip">
+                <span className="hud-stat-tooltip-inner">
+                  <span style={{ color: '#e5e5e5' }}>{t('ownedSymbols.title', language)}</span>
+                </span>
+              </span>
+            </span>
+          </button>
         </div>
         <div className="spin-area">
           <button
@@ -518,16 +933,7 @@ function App() {
             aria-label={t('game.spin', language)}
             title={t('game.spin', language)}
           >
-            <span style={{ display: 'inline-block', transform: 'scaleX(1.8)', fontSize: '56px', fontWeight: 600, letterSpacing: '8px' }}>SPIN</span>
-          </button>
-        </div>
-        <div className="bottom-action-bar-right">
-          <button
-            className="bottom-right-btn"
-            onClick={() => setOwnedSymbolsOpen(true)}
-            title="보유 심볼 목록"
-          >
-            ▦
+            <span>SPIN</span>
           </button>
         </div>
       </div>
@@ -582,10 +988,106 @@ function App() {
       <EffectLogOverlay isOpen={isLogOpen} onClose={() => setIsLogOpen(false)} />
 
       {/* ===== KNOWLEDGE UPGRADES OVERLAY ===== */}
-      <KnowledgeUpgradesOverlay isOpen={isKnowledgeOpen} onClose={() => setIsKnowledgeOpen(false)} />
+      <KnowledgeUpgradesOverlay
+        isOpen={isKnowledgeOpen}
+        onClose={() => setIsKnowledgeOpen(false)}
+        tutorialStep={isTutorialMode ? tutorialDialogStep : undefined}
+        onTutorialStepChange={setTutorialDialogStep}
+      />
 
       {/* ===== BALANCE SIMULATOR (F4) ===== */}
       <BalanceSimulatorOverlay />
+
+      {isTutorialMode && tutorialDialogStep === 4 && (
+        <TutorialBoardHighlights anchorRef={gameAreaRef} cells={TUTORIAL_CORN_CELLS} />
+      )}
+      {isTutorialMode && tutorialDialogStep === 5 && (
+        <TutorialBoardHighlights
+          anchorRef={gameAreaRef}
+          cells={TUTORIAL_CORN_CELLS}
+          accentCells={TUTORIAL_LEFT_CORN_CELL}
+        />
+      )}
+      {isTutorialMode && tutorialDialogStep === 7 && (
+        <TutorialBoardHighlights anchorRef={gameAreaRef} cells={[]} highlightBoard />
+      )}
+      {isTutorialMode && tutorialDialogStep === 23 && (
+        <TutorialElementHighlight
+          selectors={['.relic-sprite-in-case']}
+          className="tutorial-relic-display-highlight"
+          padX={64}
+          padY={28}
+        />
+      )}
+
+      {isTutorialMode && !(tutorialDialogStep === 15 && tutorialSpinStep !== 'monument_done') && (
+        <div
+          className={[
+            'tutorial-dialog-overlay',
+            tutorialDialogStep === 2 ? 'tutorial-dialog-overlay--food-demand' : '',
+            tutorialDialogStep === 3 ? 'tutorial-dialog-overlay--food-resource' : '',
+            tutorialDialogStep === 4 ? 'tutorial-dialog-overlay--corn-symbols' : '',
+            tutorialDialogStep === 5 ? 'tutorial-dialog-overlay--left-corn' : '',
+            tutorialDialogStep === 6 ? 'tutorial-dialog-overlay--spin-button' : '',
+            tutorialDialogStep === 7 ? 'tutorial-dialog-overlay--board' : '',
+            tutorialDialogStep === 8 ? 'tutorial-dialog-overlay--food-resource' : '',
+            tutorialDialogStep === 9 ? 'tutorial-dialog-overlay--selection-cards' : '',
+            tutorialDialogStep === 10 ? 'tutorial-dialog-overlay--monument-card' : '',
+            tutorialDialogStep === 11 ? 'tutorial-dialog-overlay--owned-symbols-button' : '',
+            tutorialDialogStep === 12 ? 'tutorial-dialog-overlay--owned-monument' : '',
+            tutorialDialogStep === 13 ? 'tutorial-dialog-overlay--owned-close' : '',
+            tutorialDialogStep === 14 ? 'tutorial-dialog-overlay--spin-button' : '',
+            tutorialDialogStep === 15 ? 'tutorial-dialog-overlay--knowledge-status' : '',
+            tutorialDialogStep === 16 ? 'tutorial-dialog-overlay--knowledge-button' : '',
+            tutorialDialogStep === 17 ? 'tutorial-dialog-overlay--knowledge-intro' : '',
+            tutorialDialogStep === 18 ? 'tutorial-dialog-overlay--ancient-chip' : '',
+            tutorialDialogStep === 19 ? 'tutorial-dialog-overlay--ancient-detail' : '',
+            tutorialDialogStep === 20 ? 'tutorial-dialog-overlay--ancient-research' : '',
+            tutorialDialogStep === 21 ? 'tutorial-dialog-overlay--knowledge-back' : '',
+            tutorialDialogStep === 22 ? 'tutorial-dialog-overlay--relic-shop-button' : '',
+            tutorialDialogStep === 23 ? 'tutorial-dialog-overlay--relics' : '',
+            tutorialDialogStep === 24 ? 'tutorial-dialog-overlay--relic-buy' : '',
+            tutorialDialogStep === 25 ? 'tutorial-dialog-overlay--finish' : '',
+          ].filter(Boolean).join(' ')}
+          role="dialog"
+          aria-modal="true"
+          aria-label="튜토리얼 안내"
+        >
+          <div className="tutorial-dialog-text">
+            {tutorialDialogStep === 12 ? (
+              <>
+                <p>기념비를 획득했습니다!</p>
+                <p className="tutorial-dialog-inline-resource">
+                  기념비는
+                  <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" />
+                  지식을 생산합니다.
+                </p>
+              </>
+            ) : (
+              TUTORIAL_DIALOG_STEPS[tutorialDialogStep].map((line) => (
+                <p key={line}>{line}</p>
+              ))
+            )}
+            {tutorialDialogStep === 25 ? (
+              <button
+                type="button"
+                className="tutorial-dialog-next tutorial-dialog-finish"
+                onClick={handleTutorialFinish}
+              >
+                종료
+              </button>
+            ) : ![6, 10, 11, 13, 14, 16, 18, 20, 21, 22].includes(tutorialDialogStep) && (
+              <button
+                type="button"
+                className="tutorial-dialog-next"
+                onClick={handleTutorialNext}
+              >
+                다음 →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

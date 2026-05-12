@@ -37,8 +37,9 @@ type Props = {
 type HoveredOwnedSymbol = {
     symbolId: number;
     symbolType: number;
-    x: number;
-    y: number;
+    left: number;
+    right: number;
+    top: number;
 } | null;
 
 function computeBoardMetrics(resW: number, resH: number) {
@@ -100,27 +101,30 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
         const panel = panelRef.current;
         if (!panel) return;
 
-        const rect = panel.getBoundingClientRect();
-        const scaleX = panel.clientWidth / rect.width;
-        const scaleY = panel.clientHeight / rect.height;
+        const panelRect = panel.getBoundingClientRect();
+        const itemRect = e.currentTarget.getBoundingClientRect();
+        const scaleX = panel.clientWidth / panelRect.width;
+        const scaleY = panel.clientHeight / panelRect.height;
 
         setHoveredSymbol({
             symbolId,
             symbolType,
-            x: (e.clientX - rect.left) * scaleX,
-            y: (e.clientY - rect.top) * scaleY,
+            left: (itemRect.left - panelRect.left) * scaleX,
+            right: (itemRect.right - panelRect.left) * scaleX,
+            top: (itemRect.top - panelRect.top) * scaleY,
         });
     }, []);
 
     const getTooltipStyle = (hoveredItem: HoveredOwnedSymbol): React.CSSProperties => {
         if (!hoveredItem || panelSize.w <= 0 || panelSize.h <= 0) return { display: 'none' };
 
-        let left = hoveredItem.x + TOOLTIP_MARGIN;
-        let top = hoveredItem.y;
+        let left = hoveredItem.right + TOOLTIP_MARGIN;
+        let top = hoveredItem.top;
         const panelWidth = panelSize.w;
         const panelHeight = panelSize.h;
 
-        if (left + TOOLTIP_W > panelWidth) left = hoveredItem.x - TOOLTIP_W - TOOLTIP_MARGIN;
+        if (left + TOOLTIP_W > panelWidth) left = hoveredItem.left - TOOLTIP_W - TOOLTIP_MARGIN;
+        if (left < TOOLTIP_MARGIN) left = TOOLTIP_MARGIN;
         if (top + TOOLTIP_H > panelHeight) top = panelHeight - TOOLTIP_H - TOOLTIP_MARGIN;
         if (top < 0) top = 0;
 
@@ -137,6 +141,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
 
     return (
         <div
+            className="owned-symbols-modal"
             style={{
                 position: 'fixed',
                 inset: 0,
@@ -186,6 +191,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                         {t('ownedSymbols.title', language)} ({playerSymbols.length})
                     </div>
                     <button
+                        className="owned-symbols-close-btn"
                         onClick={onClose}
                         style={{
                             background: 'rgba(255,255,255,0.04)',
@@ -236,8 +242,8 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                 return (
                                     <div
                                         key={`${sym.instanceId}-${idx}`}
+                                        className={def.key === 'monument' ? 'owned-symbol-item owned-symbol-item--monument' : 'owned-symbol-item'}
                                         onMouseEnter={(e) => updateHoveredSymbol(def.id, def.type, e)}
-                                        onMouseMove={(e) => updateHoveredSymbol(def.id, def.type, e)}
                                         onMouseLeave={() => setHoveredSymbol(null)}
                                         style={{
                                             width: metrics.cellWidth,

@@ -361,7 +361,7 @@ body {
   bottom: 0;
   display: flex;
   flex-direction: row;
-  gap: 18px;
+  gap: 16px;
   align-items: flex-end;
 }
 
@@ -379,8 +379,9 @@ body {
 
 /* Draw button (native CSS style). */
 button.spin-btn {
-  width: 620px;
+  width: 320px;
   height: 96px;
+  border-radius: 0;
   box-sizing: border-box;
   padding: 0;
   border: 2px solid rgba(255, 255, 255, 0.72);
@@ -401,6 +402,14 @@ button.spin-btn {
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+button.spin-btn span {
+  display: inline-block;
+  transform: scaleX(1.18);
+  font-size: 64px;
+  font-weight: 600;
+  letter-spacing: 4px;
 }
 
 button.spin-btn:hover:not(:disabled):not(:active) {
@@ -1960,6 +1969,34 @@ button.spin-btn:disabled:active {
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+.main-menu-button--tutorial-highlight {
+  position: relative;
+  isolation: isolate;
+  border-color: #fff6c9;
+  background: rgba(255, 214, 92, 0.12);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    0 0 22px rgba(255, 211, 92, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  animation: tutorial-button-aura 1.8s ease-in-out infinite;
+}
+
+@keyframes tutorial-button-aura {
+  0%,
+  100% {
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.42),
+      0 0 16px rgba(255, 211, 92, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.48),
+      0 0 34px rgba(255, 226, 132, 0.72),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+}
+
 .main-menu-exit-button {
   position: absolute;
   right: clamp(24px, 4vw, 56px);
@@ -2004,6 +2041,560 @@ button.spin-btn:disabled:active {
 .main-menu-exit-button:active {
   transform: translateY(0);
   background: rgba(255, 255, 255, 0.15);
+}
+
+.tutorial-dialog-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 620;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: clamp(28px, 5vw, 80px);
+  background: rgba(0, 0, 0, 0.64);
+  color: #ffffff;
+  font-family: 'Mulmaru', sans-serif;
+  text-align: center;
+  pointer-events: none;
+  animation: tutorial-dialog-fade-in 520ms ease-out both;
+}
+
+.tutorial-dialog-overlay--food-demand {
+  align-items: flex-start;
+  padding-top: 112px;
+}
+
+.tutorial-dialog-overlay--food-resource {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: 112px;
+  padding-left: 292px;
+}
+
+.tutorial-dialog-overlay--corn-symbols {
+  background: transparent;
+  z-index: 622;
+  align-items: center;
+  padding-top: 360px;
+}
+
+.tutorial-dialog-overlay--spin-button {
+  align-items: flex-end;
+  padding-bottom: 156px;
+}
+
+.tutorial-dialog-overlay--board {
+  background: transparent;
+  z-index: 622;
+  align-items: flex-start;
+  padding-top: 84px;
+}
+
+.tutorial-dialog-overlay--selection-cards {
+  background: transparent;
+  z-index: 622;
+  align-items: flex-start;
+  padding-top: 112px;
+}
+
+.tutorial-dialog-overlay--monument-card {
+  background: transparent;
+  z-index: 622;
+  align-items: flex-start;
+  padding-top: 112px;
+}
+
+.tutorial-dialog-overlay--owned-symbols-button {
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-left: 260px;
+  padding-bottom: 166px;
+}
+
+.tutorial-dialog-overlay--owned-monument {
+  z-index: 10002;
+  background: transparent;
+  align-items: flex-start;
+  padding-top: 250px;
+}
+
+.tutorial-dialog-overlay--owned-close {
+  z-index: 10002;
+  background: transparent;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-top: 126px;
+  padding-right: 260px;
+}
+
+.tutorial-dialog-overlay--knowledge-status {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: 96px;
+  padding-left: 40px;
+}
+
+.tutorial-dialog-overlay--knowledge-button {
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-left: 156px;
+  padding-bottom: 166px;
+}
+
+.tutorial-dialog-overlay--knowledge-intro {
+  z-index: 650;
+}
+
+.tutorial-dialog-overlay--ancient-chip {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-start;
+  padding-top: 292px;
+}
+
+.tutorial-dialog-overlay--ancient-detail {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding-right: 96px;
+  padding-bottom: 136px;
+}
+
+.tutorial-dialog-overlay--ancient-research {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding-right: 126px;
+  padding-bottom: 86px;
+}
+
+.tutorial-dialog-overlay--knowledge-back {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: 98px;
+  padding-left: 128px;
+}
+
+.tutorial-dialog-overlay--relic-shop-button {
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-left: 46px;
+  padding-bottom: 166px;
+}
+
+.tutorial-dialog-overlay--relics {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-start;
+  padding-top: 128px;
+}
+
+.tutorial-dialog-overlay--relic-buy {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-end;
+  padding-bottom: 156px;
+}
+
+.tutorial-dialog-overlay--finish {
+  z-index: 650;
+  background: rgba(0, 0, 0, 0.76);
+}
+
+.tutorial-dialog-overlay--owned-close .tutorial-dialog-text {
+  align-items: flex-end;
+}
+
+.tutorial-dialog-overlay--left-corn {
+  background: transparent;
+  z-index: 622;
+  align-items: center;
+  padding-top: 360px;
+}
+
+.tutorial-dialog-text {
+  max-width: calc(100vw - clamp(56px, 10vw, 160px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.9),
+    0 0 16px rgba(255, 255, 255, 0.18);
+}
+
+.tutorial-dialog-text p {
+  margin: 0;
+  font-size: clamp(20px, 2.1vw, 30px);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.tutorial-dialog-text p + p {
+  margin-top: 12px;
+}
+
+.tutorial-dialog-inline-resource {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.tutorial-dialog-inline-resource img {
+  width: 34px;
+  height: 34px;
+  image-rendering: pixelated;
+}
+
+.tutorial-dialog-next {
+  margin-top: 34px;
+  padding: 0 0 4px;
+  align-self: flex-end;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: 'Mulmaru', sans-serif;
+  font-size: clamp(16px, 1.7vw, 22px);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.tutorial-dialog-next:hover,
+.tutorial-dialog-next:focus-visible {
+  color: #ffffff;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.tutorial-dialog-next:active {
+  transform: translateY(0);
+}
+
+.tutorial-highlight-food-demand .hud-top {
+  z-index: 640;
+}
+
+.tutorial-highlight-food-demand .hud-top-left,
+.tutorial-highlight-food-demand .hud-top-right {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-food-resource .hud-top {
+  z-index: 640;
+}
+
+.tutorial-highlight-food-resource .level-info-mini,
+.tutorial-highlight-food-resource .hud-top-center,
+.tutorial-highlight-food-resource .hud-top-right,
+.tutorial-highlight-food-resource .resource-group:not(.resource-group--food) {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-food-demand .food-demand-mini {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.82);
+  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 12px rgba(255, 211, 92, 0.1),
+    0 0 28px rgba(255, 226, 132, 0.62),
+    0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.tutorial-highlight-food-resource .resource-group--food {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.82);
+  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 12px rgba(255, 211, 92, 0.1),
+    0 0 28px rgba(255, 226, 132, 0.62),
+    0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.tutorial-highlight-spin-button .bottom-action-bar {
+  z-index: 640;
+}
+
+.tutorial-highlight-spin-button .bottom-action-bar-left {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-spin-button .spin-btn {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 12px rgba(255, 211, 92, 0.1),
+    0 0 28px rgba(255, 226, 132, 0.62),
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.tutorial-highlight-left-corn .symbol-tooltip {
+  z-index: 700;
+}
+
+.tutorial-highlight-selection-cards .selection-overlay {
+  background: rgba(0, 0, 0, 0.76);
+}
+
+.tutorial-highlight-selection-cards .selection-title,
+.tutorial-highlight-selection-cards .selection-actions,
+.tutorial-highlight-selection-cards .selection-peek-handle {
+  opacity: 0.34;
+}
+
+.tutorial-highlight-selection-cards .selection-cards {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 18px;
+  box-shadow:
+    0 0 0 22px rgba(255, 211, 92, 0.08),
+    0 0 34px rgba(255, 226, 132, 0.66);
+}
+
+.tutorial-highlight-monument-card .selection-overlay {
+  background: rgba(0, 0, 0, 0.76);
+}
+
+.tutorial-highlight-monument-card .selection-title,
+.tutorial-highlight-monument-card .selection-actions,
+.tutorial-highlight-monument-card .selection-peek-handle,
+.tutorial-highlight-monument-card .selection-card-frame:not(:first-child) {
+  opacity: 0.34;
+}
+
+.tutorial-highlight-monument-card .selection-card-frame:first-child {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 18px;
+  box-shadow:
+    0 0 0 22px rgba(255, 211, 92, 0.08),
+    0 0 34px rgba(255, 226, 132, 0.66);
+}
+
+.tutorial-highlight-owned-symbols-button .bottom-action-bar {
+  z-index: 640;
+}
+
+.tutorial-highlight-owned-symbols-button .relic-shop-btn:not(.relic-shop-btn--owned-symbols),
+.tutorial-highlight-owned-symbols-button .spin-area {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 12px rgba(255, 211, 92, 0.1),
+    0 0 28px rgba(255, 226, 132, 0.62),
+    0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.tutorial-highlight-owned-monument .owned-symbols-modal {
+  background: rgba(0, 0, 0, 0.78) !important;
+}
+
+.tutorial-highlight-owned-monument .owned-symbol-item {
+  opacity: 0.34;
+}
+
+.tutorial-highlight-owned-monument .owned-symbol-item--monument {
+  opacity: 1;
+  z-index: 1;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 14px rgba(255, 211, 92, 0.08),
+    0 0 28px rgba(255, 226, 132, 0.66);
+}
+
+.tutorial-highlight-owned-close .owned-symbols-modal {
+  background: rgba(0, 0, 0, 0.78) !important;
+}
+
+.tutorial-highlight-owned-close .owned-symbols-close-btn {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 14px rgba(255, 211, 92, 0.08),
+    0 0 28px rgba(255, 226, 132, 0.66);
+}
+
+.tutorial-highlight-knowledge-status .hud-top {
+  z-index: 640;
+}
+
+.tutorial-highlight-knowledge-status .resource-group,
+.tutorial-highlight-knowledge-status .hud-top-center,
+.tutorial-highlight-knowledge-status .hud-top-right {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-knowledge-status .level-info-mini {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.82);
+  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 12px rgba(255, 211, 92, 0.1),
+    0 0 28px rgba(255, 226, 132, 0.62),
+    0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.tutorial-highlight-knowledge-button .bottom-action-bar {
+  z-index: 640;
+}
+
+.tutorial-highlight-knowledge-button .relic-shop-btn:not(.relic-shop-btn--knowledge),
+.tutorial-highlight-knowledge-button .spin-area {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-knowledge-button .relic-shop-btn--knowledge {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 12px rgba(255, 211, 92, 0.1),
+    0 0 28px rgba(255, 226, 132, 0.62),
+    0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.tutorial-highlight-relic-shop-button .bottom-action-bar {
+  z-index: 640;
+}
+
+.tutorial-highlight-relic-shop-button .relic-shop-btn:not(.relic-shop-btn--relic),
+.tutorial-highlight-relic-shop-button .spin-area {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-relic-shop-button .relic-shop-btn--relic {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 12px rgba(255, 211, 92, 0.1),
+    0 0 28px rgba(255, 226, 132, 0.62),
+    0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.tutorial-highlight-relics .selection-overlay--relic,
+.tutorial-highlight-relic-buy .selection-overlay--relic {
+  background: #000000;
+}
+
+.tutorial-highlight-relics .relic-shop-header,
+.tutorial-highlight-relics .relic-museum-buy-bar {
+  opacity: 0.34;
+}
+
+.tutorial-highlight-relics .relic-museum-wrapper {
+  opacity: 1;
+}
+
+.tutorial-relic-display-highlight {
+  position: fixed;
+  z-index: 641;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 3px solid rgba(255, 246, 201, 0.95);
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.58),
+    0 0 0 20px rgba(255, 211, 92, 0.08),
+    0 0 34px rgba(255, 226, 132, 0.66),
+    inset 0 0 24px rgba(255, 226, 132, 0.18);
+}
+
+.tutorial-highlight-relic-buy .relic-shop-header,
+.tutorial-highlight-relic-buy .selection-panel-wrapper--relic-shop {
+  opacity: 1;
+  filter: brightness(0.34) saturate(0.8);
+}
+
+.tutorial-highlight-relic-buy .relic-museum-buy-bar {
+  z-index: 640;
+}
+
+.tutorial-highlight-relic-buy .relic-card-buy-btn {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 14px rgba(255, 211, 92, 0.08),
+    0 0 28px rgba(255, 226, 132, 0.66),
+    0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+.tutorial-board-highlights {
+  position: fixed;
+  inset: 0;
+  z-index: 621;
+  pointer-events: none;
+}
+
+.tutorial-board-highlight-cell {
+  position: absolute;
+  border: 3px solid rgba(255, 246, 201, 0.95);
+  z-index: 1;
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.64),
+    0 0 0 10px rgba(255, 211, 92, 0.1),
+    0 0 30px rgba(255, 226, 132, 0.66),
+    inset 0 0 24px rgba(255, 226, 132, 0.22);
+}
+
+.tutorial-board-highlight-accent-cell {
+  position: absolute;
+  z-index: 2;
+  border: 3px solid rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 0 0 7px rgba(255, 246, 201, 0.16),
+    0 0 24px rgba(255, 255, 255, 0.7),
+    inset 0 0 22px rgba(255, 255, 255, 0.18);
+}
+
+.tutorial-board-highlight-cell--board {
+  border-width: 3px;
+}
+
+@keyframes tutorial-dialog-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 
@@ -3063,6 +3654,86 @@ button.spin-btn:disabled:active {
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+.tutorial-highlight-ancient-chip .knowledge-upgrades-overlay,
+.tutorial-highlight-ancient-detail .knowledge-upgrades-overlay,
+.tutorial-highlight-ancient-research .knowledge-upgrades-overlay,
+.tutorial-highlight-knowledge-back .knowledge-upgrades-overlay {
+  z-index: 640 !important;
+}
+
+.tutorial-highlight-ancient-detail .knowledge-upgrades-overlay::after,
+.tutorial-highlight-ancient-research .knowledge-upgrades-overlay::after,
+.tutorial-highlight-knowledge-back .knowledge-upgrades-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.58);
+}
+
+.tutorial-highlight-ancient-chip .knowledge-upgrade-chip {
+  opacity: 0.32;
+}
+
+.tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era {
+  opacity: 1;
+  z-index: 7;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 4px;
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.58),
+    0 0 0 10px rgba(255, 211, 92, 0.08),
+    0 0 30px rgba(255, 226, 132, 0.66);
+}
+
+.tutorial-highlight-ancient-detail .knowledge-upgrade-tooltip--ancient-era {
+  z-index: 5;
+}
+
+.tutorial-highlight-ancient-detail .knowledge-upgrade-tooltip--ancient-era .symbol-tooltip-name,
+.tutorial-highlight-ancient-detail .knowledge-upgrade-tooltip--ancient-era .symbol-tooltip-rarity,
+.tutorial-highlight-ancient-detail .knowledge-upgrade-tooltip--ancient-era .knowledge-upgrade-detail-tier,
+.tutorial-highlight-ancient-detail .knowledge-upgrade-tooltip--ancient-era > .knowledge-upgrade-tooltip-scroll > .symbol-tooltip-desc {
+  opacity: 0.34;
+}
+
+.tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area {
+  position: relative;
+  z-index: 6;
+  opacity: 1;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 12px !important;
+  padding: 14px !important;
+  background: rgba(15, 15, 15, 0.98);
+  border: 3px solid rgba(255, 246, 201, 0.95) !important;
+  box-shadow:
+    0 0 0 14px rgba(255, 211, 92, 0.08),
+    0 0 30px rgba(255, 226, 132, 0.66),
+    0 18px 40px rgba(0, 0, 0, 0.48);
+}
+
+.tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area .upgrade-card-desc-symbols {
+  min-height: 96px;
+  margin-top: 0;
+}
+
+.tutorial-highlight-ancient-research .knowledge-upgrade-tooltip--ancient-era {
+  z-index: 5;
+}
+
+.tutorial-highlight-ancient-research .knowledge-upgrade-research-btn,
+.tutorial-highlight-knowledge-back .knowledge-upgrades-back-btn {
+  position: relative;
+  z-index: 6;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 0 14px rgba(255, 211, 92, 0.08),
+    0 0 28px rgba(255, 226, 132, 0.66);
+}
+
 .pause-btn-top:active {
   transform: translateY(0);
   background: #000000;
@@ -3112,8 +3783,8 @@ button.spin-btn:disabled:active {
 
 /* ===== Top side buttons: relic shop, knowledge upgrades, and owned symbols. ===== */
 button.relic-shop-btn {
-  width: 136px;
-  height: 136px;
+  width: 104px;
+  height: 104px;
   flex-shrink: 0;
   position: relative;
   box-sizing: border-box;
@@ -3140,9 +3811,9 @@ button.relic-shop-btn .relic-shop-btn-icon-layer {
   pointer-events: none;
   transition: filter 140ms ease;
   filter:
-    drop-shadow(0 10px 0 rgba(0, 0, 0, 0.28))
-    drop-shadow(0 0 16px rgba(255, 255, 255, 0.58))
-    drop-shadow(0 0 34px rgba(255, 255, 255, 0.34));
+    drop-shadow(0 8px 0 rgba(0, 0, 0, 0.28))
+    drop-shadow(0 0 12px rgba(255, 255, 255, 0.54))
+    drop-shadow(0 0 26px rgba(255, 255, 255, 0.3));
 }
 
 .bottom-action-bar-left button.relic-shop-btn:first-child {
@@ -3154,14 +3825,14 @@ button.relic-shop-btn .relic-shop-btn-icon-layer {
 }
 
 button.relic-shop-btn:hover:not(:active) {
-  transform: translateY(-4px) scale(1.06);
+  transform: translateY(-3px) scale(1.05);
 }
 
 button.relic-shop-btn:hover:not(:active) .relic-shop-btn-icon-layer {
   filter:
-    drop-shadow(0 12px 0 rgba(0, 0, 0, 0.28))
-    drop-shadow(0 0 22px rgba(255, 255, 255, 0.72))
-    drop-shadow(0 0 44px rgba(255, 255, 255, 0.42));
+    drop-shadow(0 9px 0 rgba(0, 0, 0, 0.28))
+    drop-shadow(0 0 17px rgba(255, 255, 255, 0.68))
+    drop-shadow(0 0 34px rgba(255, 255, 255, 0.38));
 }
 
 button.relic-shop-btn:active {
@@ -3170,9 +3841,9 @@ button.relic-shop-btn:active {
 
 button.relic-shop-btn:active .relic-shop-btn-icon-layer {
   filter:
-    drop-shadow(0 7px 0 rgba(0, 0, 0, 0.3))
-    drop-shadow(0 0 14px rgba(255, 255, 255, 0.58))
-    drop-shadow(0 0 28px rgba(255, 255, 255, 0.32));
+    drop-shadow(0 5px 0 rgba(0, 0, 0, 0.3))
+    drop-shadow(0 0 11px rgba(255, 255, 255, 0.54))
+    drop-shadow(0 0 22px rgba(255, 255, 255, 0.3));
 }
 
 button.relic-shop-btn img {
@@ -3187,18 +3858,26 @@ button.relic-shop-btn img {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 10px);
-  /* JS sets --bottom-hud-tooltip-shift when the box would cross the viewport left edge */
+  /* JS sets --bottom-hud-tooltip-shift when the box would cross a viewport edge. */
   --bottom-hud-tooltip-shift: 0px;
   transform: translateX(calc(-50% + var(--bottom-hud-tooltip-shift))) translateY(4px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease, transform 120ms ease;
   z-index: 5;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .bottom-action-hud-tooltip .hud-stat-tooltip {
   vertical-align: top;
+  max-width: 520px;
+  white-space: normal;
+}
+
+.bottom-action-hud-tooltip .hud-stat-tooltip-inner {
+  max-width: 520px;
+  flex-wrap: wrap;
+  white-space: normal;
 }
 
 button.relic-shop-btn:hover .bottom-action-hud-tooltip,
