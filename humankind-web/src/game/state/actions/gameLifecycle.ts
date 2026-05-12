@@ -1,6 +1,6 @@
 import type { LeaderId } from '../../data/leaders';
 import { LEADERS, getLeaderStartingRelics, isLeaderPlayable } from '../../data/leaders';
-import { SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { S, SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { GameState } from '../gameStore';
 import {
     createEmptyBoard,
@@ -17,6 +17,7 @@ export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) =>
 
 interface GameLifecycleDeps {
     set: GameStoreSet;
+    get: () => GameState;
     createInstance: (def: SymbolDefinition, unlockedUpgrades?: readonly number[]) => ReturnType<typeof import('../gameStoreHelpers').createInstance>;
     generateRelicChoices: () => GameState['relicChoices'];
     pickRelicHalfPriceIdForGoldenTrade: (
@@ -66,10 +67,13 @@ const createCommonResetPatch = () => ({
     destroySelectionMaxSymbols: 3,
     territorialAfterEdictPending: false,
     returnPhaseAfterDevKnowledgeUpgrade: null,
+    isTutorialMode: false,
+    tutorialSpinStep: null,
 });
 
 export const createGameLifecycleActions = ({
     set,
+    get,
     createInstance,
     generateRelicChoices,
     pickRelicHalfPriceIdForGoldenTrade,
@@ -137,6 +141,108 @@ export const createGameLifecycleActions = ({
             relicHalfPriceRelicId: initialHalfPriceRelicId,
             prevBoard: placed.board.map((col) => [...col]),
             ...createCommonResetPatch(),
+        });
+    },
+
+    startTutorialGame: () => {
+        const relicStore = useRelicStore.getState();
+        relicStore.resetRelics();
+        set({
+            leaderId: null,
+            food: 0,
+            gold: 0,
+            knowledge: 45,
+            era: 1,
+            level: 0,
+            turn: 0,
+            board: createEmptyBoard(),
+            playerSymbols: [],
+            relicChoices: generateRelicChoices(),
+            relicHalfPriceRelicId: null,
+            prevBoard: createEmptyBoard(),
+            ...createCommonResetPatch(),
+            isTutorialMode: true,
+            tutorialSpinStep: null,
+        });
+    },
+
+    setupTutorialCornStep: () => {
+        const corn = SYMBOLS[S.corn];
+        if (!corn) return;
+        const cornA = createInstance(corn);
+        const cornB = createInstance(corn);
+        const board = createEmptyBoard();
+        board[1][1] = cornA;
+        board[3][1] = cornB;
+        set({
+            board,
+            prevBoard: board.map((col) => [...col]),
+            playerSymbols: [cornA, cornB],
+            tutorialSpinStep: null,
+            phase: 'idle',
+        });
+    },
+
+    spinTutorialCornStep: () => {
+        const state = get();
+        const [cornA, cornB] = state.playerSymbols;
+        if (!cornA || !cornB) return;
+        const board = createEmptyBoard();
+        board[1][0] = cornA;
+        board[4][2] = cornB;
+        set({
+            prevBoard: state.board.map((col) => [...col]),
+            board,
+            turn: 1,
+            phase: 'spinning',
+            tutorialSpinStep: 'corn_spin',
+            lastEffects: [],
+            counterDisplayOverrides: [],
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            activeSlot: null,
+            activeContributors: [],
+            pendingContributors: [],
+            effectPhase: null,
+            effectPhase3ReachedThisRun: false,
+        });
+    },
+
+    spinTutorialMonumentStep: () => {
+        const state = get();
+        const cornSymbols = state.playerSymbols.filter((symbol) => symbol.definition.id === S.corn);
+        const monument = state.playerSymbols.find((symbol) => symbol.definition.id === S.monument);
+        if (cornSymbols.length < 2 || !monument) return;
+        const board = createEmptyBoard();
+        board[1][0] = cornSymbols[0];
+        board[4][2] = cornSymbols[1];
+        board[2][1] = monument;
+        set({
+            prevBoard: state.board.map((col) => [...col]),
+            board,
+            turn: state.turn + 1,
+            phase: 'spinning',
+            tutorialSpinStep: 'monument_spin',
+            lastEffects: [],
+            counterDisplayOverrides: [],
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            activeSlot: null,
+            activeContributors: [],
+            pendingContributors: [],
+            effectPhase: null,
+            effectPhase3ReachedThisRun: false,
+        });
+    },
+
+    setupTutorialSelectionStep: () => {
+        const monument = SYMBOLS[S.monument];
+        const corn = SYMBOLS[S.corn];
+        const mountain = SYMBOLS[S.mountain];
+        if (!monument || !corn || !mountain) return;
+        set({
+            phase: 'selection',
+            symbolChoices: [monument, corn, mountain],
+            symbolSelectionRelicSourceId: null,
+            rerollsThisTurn: 0,
         });
     },
 });

@@ -112,6 +112,8 @@ export interface GameState {
     board: (PlayerSymbolInstance | null)[][];
     playerSymbols: PlayerSymbolInstance[];
     phase: GamePhase;
+    isTutorialMode?: boolean;
+    tutorialSpinStep?: 'corn_spin' | 'corn_done' | 'monument_spin' | 'monument_processing' | 'monument_done' | null;
     symbolChoices: SymbolDefinition[];
     /** 심볼 선택이 고대 유물 잔해(13)·고대 부족 합류(19) 클릭으로 열린 경우 해당 유물 정의 ID (표시·리롤 비활성) */
     symbolSelectionRelicSourceId: number | null;
@@ -215,6 +217,11 @@ export interface GameState {
 
     initializeGame: () => void;
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => void;
+    startTutorialGame: () => void;
+    setupTutorialCornStep: () => void;
+    spinTutorialCornStep: () => void;
+    setupTutorialSelectionStep: () => void;
+    spinTutorialMonumentStep: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
     devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
@@ -334,6 +341,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     board: INITIAL_STARTING_BOARD_STATE.board,
     playerSymbols: INITIAL_STARTING_BOARD_STATE.playerSymbols,
     phase: 'idle' as GamePhase,
+    isTutorialMode: false,
+    tutorialSpinStep: null,
     symbolChoices: [],
     symbolSelectionRelicSourceId: null,
     relicChoices: generateRelicChoices(),
@@ -450,6 +459,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     ...createGameLifecycleActions({
         set,
+        get,
         createInstance,
         generateRelicChoices,
         pickRelicHalfPriceIdForGoldenTrade,

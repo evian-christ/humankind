@@ -133,6 +133,9 @@ export const createTurnFlowActions = ({
 
     startProcessing: () => {
         const state = get();
+        if (state.isTutorialMode && state.tutorialSpinStep === 'monument_spin') {
+            set({ tutorialSpinStep: 'monument_processing' });
+        }
         if (state.pendingNewThreatFloats?.length) {
             set({ phase: 'showing_new_threats' });
             return;
@@ -344,6 +347,36 @@ export const createTurnFlowActions = ({
                 turnRun.schedule(600, () => {
                     const finalState = get();
                     if (finalState.phase === 'processing') {
+                        if (finalState.isTutorialMode && finalState.tutorialSpinStep === 'corn_spin') {
+                            set({
+                                phase: 'idle' as GamePhase,
+                                activeSlot: null,
+                                activeContributors: [],
+                                pendingContributors: [],
+                                effectPhase: null,
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                tutorialSpinStep: 'corn_done',
+                            });
+                            return;
+                        }
+
+                        if (finalState.isTutorialMode && finalState.tutorialSpinStep === 'monument_processing') {
+                            set({
+                                level: Math.max(finalState.level, 2),
+                                era: getEraFromLevel(Math.max(finalState.level, 2)),
+                                phase: 'idle' as GamePhase,
+                                activeSlot: null,
+                                activeContributors: [],
+                                pendingContributors: [],
+                                effectPhase: null,
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                symbolChoices: [],
+                                symbolSelectionRelicSourceId: null,
+                                tutorialSpinStep: 'monument_done',
+                            });
+                            return;
+                        }
+
                         const phaseResolution = resolveTurnEndPhase({
                             turn: finalState.turn,
                             food: finalState.food,
