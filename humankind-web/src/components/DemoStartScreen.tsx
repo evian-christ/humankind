@@ -10,8 +10,14 @@ export default function DemoStartScreen() {
   const skipIntroToDefaults = usePreGameStore((s) => s.skipIntroToDefaults);
   const continueSavedGame = usePreGameStore((s) => s.continueSavedGame);
   const hasSavedGame = usePreGameStore((s) => s.hasSavedGame);
-  const canContinue = hasSavedGame();
+  const hasCompletedTutorial = usePreGameStore((s) => s.hasCompletedTutorial);
+  const startTutorial = usePreGameStore((s) => s.startTutorial);
+  const canStartGame = hasCompletedTutorial;
+  const canContinue = hasCompletedTutorial && hasSavedGame();
+  const shouldHighlightTutorial = !hasCompletedTutorial;
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const tutorialLabel = language === 'ko' ? '튜토리얼' : 'Tutorial';
+  const quitLabel = language === 'ko' ? '나가기' : 'Quit';
 
   const handleQuit = () => {
     void (async () => {
@@ -33,6 +39,7 @@ export default function DemoStartScreen() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'KeyS') return;
+      if (!hasCompletedTutorial) return;
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       const el = e.target;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return;
@@ -41,7 +48,7 @@ export default function DemoStartScreen() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [skipIntroToDefaults]);
+  }, [hasCompletedTutorial, skipIntroToDefaults]);
 
   return (
     <div className="demo-start-root">
@@ -54,8 +61,18 @@ export default function DemoStartScreen() {
         <nav className="main-menu-actions" aria-label={t('mainMenu.actionsLabel', language)}>
           <button
             type="button"
+            className={`main-menu-button${shouldHighlightTutorial ? ' main-menu-button--tutorial-highlight' : ''}`}
+            onClick={startTutorial}
+            aria-label={tutorialLabel}
+          >
+            {tutorialLabel}
+          </button>
+          <button
+            type="button"
             className="main-menu-button"
             onClick={proceedToLeaderSelect}
+            disabled={!canStartGame}
+            aria-disabled={!canStartGame}
             aria-label={t('mainMenu.newGame', language)}
           >
             {t('mainMenu.newGame', language)}
@@ -87,7 +104,7 @@ export default function DemoStartScreen() {
         type="button"
         className="main-menu-exit-button"
         onClick={handleQuit}
-        aria-label="나가기"
+        aria-label={quitLabel}
       >
         ×
       </button>

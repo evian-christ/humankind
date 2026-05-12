@@ -165,6 +165,8 @@ export function clearSavedGame(): void {
 }
 
 export function saveGameState(state: GameState): void {
+    if (state.isTutorialMode) return;
+
     const store = storage();
     if (!store) return;
 
@@ -235,6 +237,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
 
         return {
             leaderId: save.state.leaderId,
+            isTutorialMode: false,
             food: save.state.food,
             gold: save.state.gold,
             knowledge: save.state.knowledge,

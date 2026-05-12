@@ -5,9 +5,30 @@ import { hasSavedGame as hasSavedGameInStorage, loadSavedGamePatch } from './sav
 
 export type PreGameScreen = 'intro' | 'leader' | null;
 
+const TUTORIAL_COMPLETED_KEY = 'humankind.tutorial.completed.v1';
+
+const storage = (): Storage | null => {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const loadTutorialCompleted = (): boolean => {
+  const store = storage();
+  if (!store) return hasSavedGameInStorage();
+  return store.getItem(TUTORIAL_COMPLETED_KEY) === 'true' || hasSavedGameInStorage();
+};
+
+const saveTutorialCompleted = (): void => {
+  storage()?.setItem(TUTORIAL_COMPLETED_KEY, 'true');
+};
+
 interface PreGameState {
   screen: PreGameScreen;
   selectedLeaderId: LeaderId | null;
+  hasCompletedTutorial: boolean;
 
   proceedToLeaderSelect: () => void;
   returnToIntro: () => void;
@@ -17,13 +38,17 @@ interface PreGameState {
   skipIntroToDefaults: () => void;
   hasSavedGame: () => boolean;
   continueSavedGame: () => boolean;
+  completeTutorial: () => void;
+  startTutorial: () => void;
 }
 
 export const usePreGameStore = create<PreGameState>((set, get) => ({
   screen: 'intro',
   selectedLeaderId: null,
+  hasCompletedTutorial: loadTutorialCompleted(),
 
   proceedToLeaderSelect: () => {
+    if (!get().hasCompletedTutorial) return;
     set({ screen: 'leader' });
   },
 
@@ -35,6 +60,7 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
   },
 
   selectLeader: (leaderId) => {
+    if (!get().hasCompletedTutorial) return;
     useGameStore.getState().startGameWithDraft([], leaderId);
     get().exitPreGame();
   },
@@ -54,6 +80,7 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
   },
 
   skipIntroToDefaults: () => {
+    if (!get().hasCompletedTutorial) return;
     useGameStore.getState().startGameWithDraft([], 'shihuang');
     set({
       screen: null,
@@ -64,6 +91,7 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
   hasSavedGame: () => hasSavedGameInStorage(),
 
   continueSavedGame: () => {
+    if (!get().hasCompletedTutorial) return false;
     const savedGamePatch = loadSavedGamePatch();
     if (!savedGamePatch) return false;
     useGameStore.setState(savedGamePatch);
@@ -72,5 +100,18 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
       selectedLeaderId: null,
     });
     return true;
+  },
+
+  completeTutorial: () => {
+    saveTutorialCompleted();
+    set({ hasCompletedTutorial: true });
+  },
+
+  startTutorial: () => {
+    useGameStore.getState().startTutorialGame();
+    set({
+      screen: null,
+      selectedLeaderId: null,
+    });
   },
 }));
