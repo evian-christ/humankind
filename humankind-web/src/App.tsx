@@ -483,10 +483,10 @@ function App() {
   }, [preGameScreen]);
 
   useEffect(() => {
-    if (isTutorialMode) {
+    if (preGameScreen === null && isTutorialMode) {
       setTutorialDialogStep(0);
     }
-  }, [isTutorialMode]);
+  }, [isTutorialMode, preGameScreen]);
 
   useEffect(() => {
     if (isTutorialMode && tutorialDialogStep === 4) setupTutorialCornStep();
@@ -597,6 +597,7 @@ function App() {
 
   const handleTutorialFinish = useCallback(() => {
     if (isRelicShopOpen) toggleRelicShop();
+    setTutorialDialogStep(0);
     completeTutorial();
     returnToIntro();
   }, [completeTutorial, isRelicShopOpen, returnToIntro, toggleRelicShop]);
