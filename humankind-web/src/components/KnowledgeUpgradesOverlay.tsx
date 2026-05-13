@@ -586,12 +586,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         if (tutorialStep === 20 && selectedId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
             setSelectedId(null);
             onTutorialStepChange?.(21);
+            return;
         }
-        // Stay on tree overlay; close only if upgrade opens destroy-selection flow.
-        const ph = useGameStore.getState().phase;
-        if (ph === 'destroy_selection' || ph === 'oblivion_furnace_board') {
-            onClose();
-        }
+        setSelectedId(null);
     };
 
     return (
@@ -805,14 +802,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const isSelected = selectedId === id;
                                                 const isHovered = hoveredId === id;
                                                 const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
-                                                const directPrereqs = [...getKnowledgeUpgradeDirectPrerequisites(id)];
-                                                const unmetPrereqs = directPrereqs.filter((prereqId) => !unlockedUpgrades.includes(prereqId));
-                                                const prerequisiteNames = directPrereqs.map((prereqId) =>
-                                                    t(`knowledgeUpgrade.${prereqId}.name`, language) || KNOWLEDGE_UPGRADES[prereqId]?.name || `#${prereqId}`,
-                                                );
-                                                const needsBadgeText = directPrereqs.length > 0
-                                                    ? `Needs ${prerequisiteNames.join(' / ')}`
-                                                    : null;
                                                 const isSelectionRelated =
                                                     activeFocusId == null ||
                                                     activeConnectionIds.has(id);
@@ -902,29 +891,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                                 pointerEvents: 'none',
                                                             }}
                                                         />
-                                                        {needsBadgeText && (isSelected || isHovered || directPrereqs.length > 1) && (
-                                                            <div
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    left: 6,
-                                                                    right: 6,
-                                                                    top: 6,
-                                                                    padding: '3px 5px',
-                                                                    background: unmetPrereqs.length > 0
-                                                                        ? 'rgba(127,29,29,0.92)'
-                                                                        : 'rgba(30,41,59,0.92)',
-                                                                    color: unmetPrereqs.length > 0 ? '#fecaca' : '#cbd5e1',
-                                                                    fontFamily: 'Mulmaru, sans-serif',
-                                                                    fontSize: '11px',
-                                                                    lineHeight: 1.1,
-                                                                    textAlign: 'center',
-                                                                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
-                                                                    pointerEvents: 'none',
-                                                                }}
-                                                            >
-                                                                {needsBadgeText}
-                                                            </div>
-                                                        )}
                                                     </button>
                                                 );
                                             })}
