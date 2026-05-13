@@ -256,7 +256,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Tanning',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Fur and Deer.',
-        sprite: '-',
+        sprite: '030.png',
         descSymbols: [
             { symbolKey: 'fur', relation: 'effect_modify' },
             { symbolKey: 'deer', relation: 'effect_modify' },
@@ -267,7 +267,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Forestry',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Forest.',
-        sprite: '-',
+        sprite: '046.png',
         descSymbols: [
             { symbolKey: 'forest', relation: 'effect_modify' },
         ],
@@ -277,7 +277,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Preservation',
         type: SymbolType.MODERN,
         description: 'Upgrades Deer and Mushroom.',
-        sprite: '-',
+        sprite: '057.png',
         descSymbols: [
             { symbolKey: 'deer', relation: 'effect_modify' },
             { symbolKey: 'mushroom', relation: 'effect_modify' },
@@ -314,7 +314,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Dry Storage',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Desert, Oasis, and Date.',
-        sprite: '-',
+        sprite: '032.png',
         descSymbols: [
             { symbolKey: 'desert', relation: 'effect_modify' },
             { symbolKey: 'oasis', relation: 'effect_modify' },
@@ -326,7 +326,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Caravanserai',
         type: SymbolType.MEDIEVAL,
         description: 'Unlocks Caravanserai. Upgrades Dye and Papyrus.',
-        sprite: '-',
+        sprite: '045.png',
         descSymbols: [
             { symbolKey: 'caravanserai', relation: 'pool_add' },
             { symbolKey: 'dye', relation: 'effect_modify' },
@@ -338,7 +338,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Oasis Recovery Network',
         type: SymbolType.MODERN,
         description: 'Upgrades Desert and Oasis.',
-        sprite: '-',
+        sprite: '054.png',
         descSymbols: [
             { symbolKey: 'desert', relation: 'effect_modify' },
             { symbolKey: 'oasis', relation: 'effect_modify' },
@@ -365,7 +365,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Nationalism',
         type: SymbolType.MEDIEVAL,
         description: 'Base Knowledge production +3. Upgrades Monument.',
-        sprite: '-',
+        sprite: '049.png',
         descSymbols: [{ symbolKey: 'monument', relation: 'effect_modify' }],
     },
     [EXPLORATION_UPGRADE_ID]: {
@@ -373,7 +373,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Exploration',
         type: SymbolType.MEDIEVAL,
         description: 'Base Gold production +2. Upgrades Honey.',
-        sprite: '-',
+        sprite: '038.png',
         descSymbols: [{ symbolKey: 'honey', relation: 'effect_modify' }],
     },
     [COLONIALISM_UPGRADE_ID]: {
@@ -381,7 +381,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Colonialism',
         type: SymbolType.MEDIEVAL,
         description: 'Base Gold production +3. Upgrades Spices.',
-        sprite: '-',
+        sprite: '050.png',
         descSymbols: [{ symbolKey: 'spices', relation: 'effect_modify' }],
     },
     [MILITARY_SCIENCE_UPGRADE_ID]: {
@@ -389,7 +389,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Military Science',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Horse.',
-        sprite: '-',
+        sprite: '035.png',
         descSymbols: [{ symbolKey: 'horse', relation: 'effect_modify' }],
     },
     [MECHANICS_UPGRADE_ID]: {
@@ -397,7 +397,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Mechanics',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Archer into Crossbowman.',
-        sprite: '-',
+        sprite: '033.png',
         descSymbols: [
             { symbolKey: 'archer', relation: 'effect_modify' },
             { symbolKey: 'crossbowman', relation: 'pool_add' },
@@ -408,7 +408,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Gunpowder',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Knight into Musketman.',
-        sprite: '-',
+        sprite: '048.png',
         descSymbols: [
             { symbolKey: 'knight', relation: 'effect_modify' },
             { symbolKey: 'musketman', relation: 'pool_add' },
@@ -419,7 +419,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Ballistics',
         type: SymbolType.MODERN,
         description: 'Upgrades Crossbowman into Cannon.',
-        sprite: '-',
+        sprite: '055.png',
         descSymbols: [
             { symbolKey: 'crossbowman', relation: 'effect_modify' },
             { symbolKey: 'cannon', relation: 'pool_add' },
@@ -430,7 +430,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Interchangeable Parts',
         type: SymbolType.MODERN,
         description: 'Upgrades Musketman into Infantry.',
-        sprite: '-',
+        sprite: '062.png',
         descSymbols: [
             { symbolKey: 'musketman', relation: 'effect_modify' },
             { symbolKey: 'infantry', relation: 'pool_add' },
@@ -496,28 +496,28 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Urbanization',
         type: SymbolType.MODERN,
         description: 'Base Food production +10. Base Gold production +2.',
-        sprite: '-',
+        sprite: '058.png',
     },
     [STEAM_POWER_UPGRADE_ID]: {
         id: STEAM_POWER_UPGRADE_ID,
         name: 'Steam Power',
         type: SymbolType.MODERN,
         description: 'Base Gold production +8. Base Knowledge production +4.',
-        sprite: '-',
+        sprite: '053.png',
     },
     [ELECTRICITY_UPGRADE_ID]: {
         id: ELECTRICITY_UPGRADE_ID,
         name: 'Electricity',
         type: SymbolType.MODERN,
         description: 'Base Food production +5. Base Gold production +10. Base Knowledge production +5.',
-        sprite: '-',
+        sprite: '061.png',
     },
     [FEUDAL_CORN_UPGRADE_ID]: {
         id: FEUDAL_CORN_UPGRADE_ID,
         name: 'Feudalism',
         type: SymbolType.MEDIEVAL,
         description: 'Base Food production +2. Upgrades Corn.',
-        sprite: '-',
+        sprite: '036.png',
         descSymbols: [{ symbolKey: 'corn', relation: 'effect_modify' }],
     },
     [FISHERIES_UPGRADE_ID]: {
@@ -554,7 +554,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Education',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Library.',
-        sprite: '-',
+        sprite: '040.png',
         descSymbols: [{ symbolKey: 'library', relation: 'effect_modify' }],
     },
     [THEOCRACY_UPGRADE_ID]: {
@@ -562,7 +562,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Theocracy',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Christianity, Islam, Buddhism, and Hinduism.',
-        sprite: '-',
+        sprite: '041.png',
         descSymbols: [
             { symbolKey: 'christianity', relation: 'effect_modify' },
             { symbolKey: 'islam', relation: 'effect_modify' },
@@ -575,7 +575,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Guild',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Merchant.',
-        sprite: '-',
+        sprite: '037.png',
         descSymbols: [{ symbolKey: 'merchant', relation: 'effect_modify' }],
     },
     [PRINTING_PRESS_UPGRADE_ID]: {
@@ -583,14 +583,14 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Printing Press',
         type: SymbolType.MEDIEVAL,
         description: 'Base Gold +2, Base Knowledge +2.',
-        sprite: '-',
+        sprite: '044.png',
     },
     [SCIENTIFIC_THEORY_UPGRADE_ID]: {
         id: SCIENTIFIC_THEORY_UPGRADE_ID,
         name: 'Scientific Theory',
         type: SymbolType.MODERN,
         description: 'Upgrades Library.',
-        sprite: '-',
+        sprite: '059.png',
         descSymbols: [{ symbolKey: 'library', relation: 'effect_modify' }],
     },
     [COMPASS_UPGRADE_ID]: {
@@ -606,7 +606,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Shipbuilding',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Sea.',
-        sprite: '-',
+        sprite: '039.png',
         descSymbols: [{ symbolKey: 'sea', relation: 'effect_modify' }],
     },
     [FISHERY_GUILD_UPGRADE_ID]: {
@@ -625,7 +625,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Maritime Trade',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Pearl and Sea.',
-        sprite: '-',
+        sprite: '034.png',
         descSymbols: [
             { symbolKey: 'pearl', relation: 'effect_modify' },
             { symbolKey: 'sea', relation: 'effect_modify' },
@@ -636,7 +636,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Oceanic Routes',
         type: SymbolType.MODERN,
         description: 'Upgrades Fish, Crab, Pearl, and Sea.',
-        sprite: '-',
+        sprite: '052.png',
         descSymbols: [
             { symbolKey: 'fish', relation: 'effect_modify' },
             { symbolKey: 'crab', relation: 'effect_modify' },
@@ -649,7 +649,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Plantation',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Banana and Rainforest.',
-        sprite: '-',
+        sprite: '029.png',
         descSymbols: [
             { symbolKey: 'banana', relation: 'effect_modify' },
             { symbolKey: 'rainforest', relation: 'effect_modify' },
@@ -660,7 +660,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Jungle Expedition',
         type: SymbolType.MEDIEVAL,
         description: 'Expedition is added to the symbol selection pool.',
-        sprite: '-',
+        sprite: '042.png',
         descSymbols: [{ symbolKey: 'expedition', relation: 'pool_add' }],
     },
     [TROPICAL_DEVELOPMENT_UPGRADE_ID]: {
@@ -668,7 +668,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Tropical Development',
         type: SymbolType.MODERN,
         description: 'Upgrades Rainforest and Expedition.',
-        sprite: '-',
+        sprite: '060.png',
         descSymbols: [
             { symbolKey: 'rainforest', relation: 'effect_modify' },
             { symbolKey: 'expedition', relation: 'effect_modify' },
@@ -691,7 +691,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Agricultural Surplus',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Wheat and Rice.',
-        sprite: '-',
+        sprite: '043.png',
         descSymbols: [
             { symbolKey: 'wheat', relation: 'effect_modify' },
             { symbolKey: 'rice', relation: 'effect_modify' },
@@ -702,7 +702,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Modern Agriculture',
         type: SymbolType.MODERN,
         description: 'Upgrades Wheat and Rice.',
-        sprite: '-',
+        sprite: '056.png',
         descSymbols: [
             { symbolKey: 'wheat', relation: 'effect_modify' },
             { symbolKey: 'rice', relation: 'effect_modify' },
@@ -713,7 +713,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Modern Age',
         type: SymbolType.MODERN,
         description: 'Medieval symbols no longer appear. Unlocks all Modern symbols. Terrain symbols no longer appear.',
-        sprite: '-',
+        sprite: '051.png',
         descSymbols: buildModernAgeDescSymbols(),
     },
     [AGI_PROJECT_UPGRADE_ID]: {
@@ -721,7 +721,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'AGI Project',
         type: SymbolType.MODERN,
         description: 'Gain the AGI Core.',
-        sprite: '-',
+        sprite: '063.png',
         descSymbols: [{ symbolKey: 'agi_core', relation: 'pool_add' }],
     },
     [PASTURE_MANAGEMENT_UPGRADE_ID]: {
@@ -729,7 +729,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Pasture Management',
         type: SymbolType.MEDIEVAL,
         description: 'Upgrades Plains.',
-        sprite: '-',
+        sprite: '047.png',
         descSymbols: [{ symbolKey: 'plains', relation: 'effect_modify' }],
     },
     [NOMADIC_TRADITION_UPGRADE_ID]: {
