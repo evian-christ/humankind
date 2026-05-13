@@ -270,6 +270,13 @@ const translations: Record<Language, Record<string, string>> = {
         'era.enemy': 'Enemy',
         'era.disaster': 'Disaster',
 
+        // Rarity names
+        'rarity.common': 'Common',
+        'rarity.uncommon': 'Uncommon',
+        'rarity.rare': 'Rare',
+        'rarity.epic': 'Epic',
+        'rarity.legendary': 'Legendary',
+
         // Tags
         'tag.religion': 'Religion',
         'tag.terrain': 'Terrain',
@@ -291,6 +298,7 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.combat': 'Combat',
         'dataBrowser.colName': 'Name',
         'dataBrowser.colEra': 'Type',
+        'dataBrowser.colRarity': 'Rarity',
         'dataBrowser.colBasePool': 'Base Pool',
         'dataBrowser.colType': 'Type',
         'dataBrowser.colCost': 'Cost',
@@ -942,6 +950,13 @@ const translations: Record<Language, Record<string, string>> = {
         'era.enemy': '적',
         'era.disaster': '자연재해',
 
+        // Rarity names
+        'rarity.common': '일반',
+        'rarity.uncommon': '고급',
+        'rarity.rare': '희귀',
+        'rarity.epic': '영웅',
+        'rarity.legendary': '전설',
+
         // Tags
         'tag.religion': '종교',
         'tag.terrain': '지형',
@@ -963,6 +978,7 @@ const translations: Record<Language, Record<string, string>> = {
         'dataBrowser.combat': '전투',
         'dataBrowser.colName': '이름',
         'dataBrowser.colEra': '타입',
+        'dataBrowser.colRarity': '희귀도',
         'dataBrowser.colBasePool': '기본 풀',
         'dataBrowser.colType': '타입',
         'dataBrowser.colCost': '비용',

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, Fragment } from 'react';
 import { SYMBOLS, SymbolType, getSymbolColorHex, isBasePool } from '../game/data/symbolDefinitions';
-import { RELICS } from '../game/data/relicDefinitions';
+import { getRelicRarityColorHex, RELICS, type RelicRarity } from '../game/data/relicDefinitions';
 import { ENEMIES } from '../game/data/enemyDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { LEADERS } from '../game/data/leaders';
@@ -26,6 +26,16 @@ const ERA_KEYS: Record<number, string> = {
     [SymbolType.DISASTER]: 'disaster',
     [SymbolType.SPECIAL]: 'specialSymbol',
 };
+
+const RELIC_RARITY_KEYS: Record<RelicRarity, string> = {
+    common: 'common',
+    uncommon: 'uncommon',
+    rare: 'rare',
+    epic: 'epic',
+    legendary: 'legendary',
+};
+
+const RELIC_RARITY_ORDER: RelicRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 
 
@@ -170,7 +180,7 @@ const DataBrowser = () => {
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = t(`relic.${a.id}.name`, language); vb = t(`relic.${b.id}.name`, language); break;
-                    case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
+                    case 'era': va = RELIC_RARITY_ORDER.indexOf(a.rarity); vb = RELIC_RARITY_ORDER.indexOf(b.rarity); break;
                     case 'cost': va = a.cost; vb = b.cost; break;
                     case 'desc': va = t(`relic.${a.id}.desc`, language); vb = t(`relic.${b.id}.desc`, language); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
@@ -510,7 +520,7 @@ const DataBrowser = () => {
                             <tr>
                                 <SortTh column="id" label="ID" sort={relicSort} onSort={relSortHandler} className="databrowser-th--id" />
                                 <SortTh column="name" label={t('dataBrowser.colName', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--name" />
-                                <SortTh column="era" label={t('dataBrowser.colEra', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--era" />
+                                <SortTh column="era" label={t('dataBrowser.colRarity', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--era" />
                                 <SortTh column="cost" label={t('dataBrowser.colCost', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--cost" />
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--sprite" />
@@ -523,13 +533,13 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--name">{t(`relic.${r.id}.name`, language)}</td>
                                     <td className="databrowser-cell--era">
                                         <span style={{
-                                            color: getSymbolColorHex(r.type),
+                                            color: getRelicRarityColorHex(r.rarity),
                                             fontWeight: 'bold',
                                             fontSize: '15px',
                                             letterSpacing: '1px',
-                                            textShadow: `0 0 6px ${getSymbolColorHex(r.type)}80`
+                                            textShadow: `0 0 6px ${getRelicRarityColorHex(r.rarity)}80`
                                         }}>
-                                            [{t(`era.${ERA_KEYS[r.type]}`, language)}]
+                                            [{t(`rarity.${RELIC_RARITY_KEYS[r.rarity]}`, language)}]
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>

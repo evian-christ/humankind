@@ -1,21 +1,19 @@
 import { useGameStore } from '../game/state/gameStore';
 import { getInflatedGoldCost } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
+import { getRelicRarityColorHex, type RelicRarity } from '../game/data/relicDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { audioManager } from '../audio/audioManager';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
-const ERA_NAME_KEYS: Record<number, string> = {
-    [SymbolType.RELIGION]: 'era.special',
-    [SymbolType.NORMAL]: 'era.normal',
-    [SymbolType.ANCIENT]: 'era.ancient',
-    [SymbolType.MEDIEVAL]: 'era.medieval',
-    [SymbolType.MODERN]: 'era.modern',
-    [SymbolType.TERRAIN]: 'era.terrain',
-    [SymbolType.SPECIAL]: 'era.specialSymbol',
+const RELIC_RARITY_NAME_KEYS: Record<RelicRarity, string> = {
+    common: 'rarity.common',
+    uncommon: 'rarity.uncommon',
+    rare: 'rarity.rare',
+    epic: 'rarity.epic',
+    legendary: 'rarity.legendary',
 };
 
 // Helper function inside component to render effect text
@@ -113,8 +111,14 @@ const RelicSelection = () => {
                                 <div className="relic-museum-info-slot" key={`info-${i}`}>
                                     {relic ? (
                                         <div className="relic-museum-details">
-                                            <div className="relic-card-era" style={{ color: getSymbolColorHex(relic.type), textShadow: `0 0 8px ${getSymbolColorHex(relic.type)}88` }}>
-                                                {t(ERA_NAME_KEYS[relic.type] ?? 'era.ancient', language)}
+                                            <div
+                                                className="relic-card-era"
+                                                style={{
+                                                    color: getRelicRarityColorHex(relic.rarity),
+                                                    textShadow: `0 0 8px ${getRelicRarityColorHex(relic.rarity)}88`,
+                                                }}
+                                            >
+                                                {t(RELIC_RARITY_NAME_KEYS[relic.rarity], language)}
                                             </div>
                                             <div className="relic-card-name" style={{ color: '#fff', textShadow: '0 2px 4px #000, 0 0 10px rgba(0,0,0,0.8)' }}>
                                                 {t(`relic.${relic.id}.name`, language)}
