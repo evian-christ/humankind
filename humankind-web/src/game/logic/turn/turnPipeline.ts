@@ -77,6 +77,7 @@ export interface CompleteSlotEffectsArgs {
     boardHeight: number;
     getAdjacentCoords: (x: number, y: number) => Array<{ x: number; y: number }>;
     unlockedKnowledgeUpgrades?: readonly number[];
+    relicEffects?: ActiveRelicEffects;
 }
 
 export interface ApplyGeneratedSymbolsArgs {
@@ -316,13 +317,14 @@ export function applySlotEffectResult(
 }
 
 export function completeSlotEffects(args: CompleteSlotEffectsArgs): void {
-    const { pipeline, board, boardWidth, boardHeight, getAdjacentCoords, unlockedKnowledgeUpgrades = [] } = args;
+    const { pipeline, board, boardWidth, boardHeight, getAdjacentCoords, unlockedKnowledgeUpgrades = [], relicEffects } = args;
     const religionResult = computeReligionDeferredEffects({
         board,
         religionSlots: pipeline.religionSlotsToRecalculate,
         religionEffectCache: pipeline.religionEffectCache,
         getAdjacentCoords,
         unlockedKnowledgeUpgrades,
+        allSymbolsAreCorner: relicEffects?.allSymbolsAreCorner ?? false,
     });
 
     pipeline.accumulatedEffects.push(...religionResult.effects);

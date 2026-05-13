@@ -146,6 +146,7 @@ const createHarness = (overrides: Partial<GameState> = {}) => {
                 bananaFossilBonus: false,
                 horsemansihpPastureBonus: false,
                 terraFossilDisasterFood: false,
+                allSymbolsAreCorner: false,
             }),
         }),
     };

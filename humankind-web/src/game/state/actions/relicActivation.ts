@@ -59,6 +59,44 @@ export const createRelicActivationActions = ({
             return;
         }
 
+        if (defId === RELIC_ID.TROY_GOLD_LOOT) {
+            const goldGain = 25;
+            set((s) => ({
+                gold: s.gold + goldGain,
+                relicFloats: [
+                    ...(s.relicFloats ?? []),
+                    { relicInstanceId: instanceId, text: `+${goldGain}`, color: '#fbbf24' },
+                ],
+            }));
+            setTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'relic',
+                delta: { food: 0, gold: goldGain, knowledge: 0 },
+                meta: { relicId: defId, action: 'troy_gold_cashout' },
+            });
+            return;
+        }
+
+        if (defId === RELIC_ID.EGYPTIAN_GRANARY_MODEL) {
+            const foodGain = 30;
+            set((s) => ({
+                food: s.food + foodGain,
+                relicFloats: [
+                    ...(s.relicFloats ?? []),
+                    { relicInstanceId: instanceId, text: `+${foodGain}`, color: '#4ade80' },
+                ],
+            }));
+            setTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'relic',
+                delta: { food: foodGain, gold: 0, knowledge: 0 },
+                meta: { relicId: defId, action: 'granary_food_cashout' },
+            });
+            return;
+        }
+
         if (defId === RELIC_ID.ANCIENT_RELIC_DEBRIS) {
             useRelicStore.getState().removeRelic(instanceId);
             const res = generateChoicesSelection({

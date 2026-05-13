@@ -221,6 +221,13 @@ export const createSelectionFlowActions = ({
         }
 
         const newUnlocked = [...unlockedNorm, uid];
+        const mouseionRelic = useRelicStore
+            .getState()
+            .relics.find((r) => r.definition.id === RELIC_ID.ALEXANDRIA_MOUSEION_INSCRIPTION);
+        const mouseionGold = mouseionRelic ? 3 : 0;
+        const mouseionRelicFloat = mouseionRelic
+            ? [{ relicInstanceId: mouseionRelic.instanceId, text: '+3', color: '#fbbf24' }]
+            : [];
 
         if (uid === SACRIFICIAL_RITE_UPGRADE_ID) {
             const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
@@ -283,7 +290,10 @@ export const createSelectionFlowActions = ({
             board: newBoard,
             playerSymbols: newPlayerSymbols,
             knowledge: state.knowledge,
-            gold: state.gold,
+            gold: state.gold + mouseionGold,
+            relicFloats: mouseionRelicFloat.length > 0
+                ? [...(state.relicFloats ?? []), ...mouseionRelicFloat]
+                : state.relicFloats,
             levelUpResearchPoints: nextResearchPts,
         };
 

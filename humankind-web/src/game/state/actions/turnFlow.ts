@@ -1,6 +1,6 @@
 import { t } from '../../../i18n';
 import { RELICS } from '../../data/relicDefinitions';
-import { SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { useSettingsStore } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
@@ -204,10 +204,12 @@ export const createTurnFlowActions = ({
                 boardHeight,
                 effects,
                 leaderId: stateAtFinish.leaderId,
+                currentGold: stateAtFinish.gold + tGold,
                 bonusXpPerTurn: stateAtFinish.bonusXpPerTurn ?? 0,
                 unlockedKnowledgeUpgrades: stateAtFinish.unlockedKnowledgeUpgrades || [],
                 getAdjacentCoords,
                 relics,
+                ownedSymbols: stateAtFinish.playerSymbols,
                 relicStoreApi: useRelicStore.getState(),
             });
 
@@ -393,6 +395,15 @@ export const createTurnFlowActions = ({
                             set((s) => ({ food: s.food + phaseResolution.foodDelta }));
                         }
 
+                        if (phaseResolution.isFoodPaymentTurn) {
+                            const venusRelics = useRelicStore
+                                .getState()
+                                .relics.filter((r) => r.definition.id === RELIC_ID.WILLENDORF_VENUS);
+                            for (const relic of venusRelics) {
+                                useRelicStore.getState().incrementRelicBonus(relic.instanceId, 1);
+                            }
+                        }
+
                         if (phaseResolution.shouldRefreshRelicShop) {
                             get().refreshRelicShop(true);
                         }
@@ -440,6 +451,7 @@ export const createTurnFlowActions = ({
                     boardHeight,
                     getAdjacentCoords,
                     unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
+                    relicEffects: buildActiveRelicEffects(),
                 });
 
                 set({ activeSlot: null, activeContributors: [], pendingContributors: [], counterDisplayOverrides: [] });
@@ -614,6 +626,30 @@ export const createTurnFlowActions = ({
         const startEffectPhase = () => {
             if (!turnRun.isActive()) return;
             const combatDestroyedIds = new Set(collectCombatDestroyedSymbols(get().board, boardWidth, boardHeight));
+            const combatKilledEnemies = get()
+                .board.flat()
+                .filter((s) => s?.is_marked_for_destruction && s.definition.type === SymbolType.ENEMY);
+            if (combatKilledEnemies.length > 0) {
+                const relics = useRelicStore.getState().relics;
+                const killRewardRelics = [
+                    { relic: relics.find((r) => r.definition.id === RELIC_ID.GLADIUS), goldPerKill: 3 },
+                    { relic: relics.find((r) => r.definition.id === RELIC_ID.NINEVEH_LION_RELIEF), goldPerKill: 8 },
+                ].filter((entry): entry is { relic: NonNullable<typeof entry.relic>; goldPerKill: number } => !!entry.relic);
+                const killGold = killRewardRelics.reduce((sum, entry) => sum + entry.goldPerKill * combatKilledEnemies.length, 0);
+                if (killGold > 0) {
+                    set((s) => ({
+                        gold: s.gold + killGold,
+                        relicFloats: [
+                            ...(s.relicFloats ?? []),
+                            ...killRewardRelics.map((entry) => ({
+                                relicInstanceId: entry.relic.instanceId,
+                                text: `+${entry.goldPerKill * combatKilledEnemies.length}`,
+                                color: '#fbbf24',
+                            })),
+                        ],
+                    }));
+                }
+            }
             const effectSpeed = useSettingsStore.getState().effectSpeed;
             const combatPlan = buildCombatPresentationPlan(effectSpeed);
 

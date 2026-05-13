@@ -2,7 +2,7 @@ import { S } from '../../../data/symbolDefinitions';
 import { countEmptySlots, isCorner } from '../core';
 import type { SymbolEffectHandler } from '../core';
 
-export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, adj, state }) => {
+export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, adj, state, relicEffects }) => {
     switch (symbolInstance.definition.id) {
         case S.oral_tradition:
             symbolInstance.effect_counter++;
@@ -20,7 +20,7 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.totem:
-            if (isCorner(x, y)) state.knowledge += 20;
+            if (relicEffects.allSymbolsAreCorner || isCorner(x, y)) state.knowledge += 20;
             return true;
 
         case S.omen:

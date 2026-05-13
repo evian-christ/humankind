@@ -63,8 +63,9 @@ export function computeReligionDeferredEffects(args: {
     religionEffectCache: SlotEffectCache;
     getAdjacentCoords: (x: number, y: number) => BoardCoord[];
     unlockedKnowledgeUpgrades?: readonly number[];
+    allSymbolsAreCorner?: boolean;
 }): DeferredReligionResult {
-    const { board, religionSlots, religionEffectCache, getAdjacentCoords, unlockedKnowledgeUpgrades = [] } = args;
+    const { board, religionSlots, religionEffectCache, getAdjacentCoords, unlockedKnowledgeUpgrades = [], allSymbolsAreCorner = false } = args;
     const effects: SlotEffect[] = [];
     let foodDelta = 0;
     let goldDelta = 0;
@@ -160,7 +161,7 @@ export function computeReligionDeferredEffects(args: {
                 gold = knowledgeProducerCount * (hasTheocracy ? 3 : 2);
             } else if (sym.definition.id === S.buddhism) {
                 food = emptySlotCount * (hasTheocracy ? 4 : 2);
-            } else if (sym.definition.id === S.hinduism && isCorner(slot.x, slot.y)) {
+            } else if (sym.definition.id === S.hinduism && (allSymbolsAreCorner || isCorner(slot.x, slot.y))) {
                 food = hasTheocracy ? 20 : 10;
                 knowledge = hasTheocracy ? 20 : 10;
             }

@@ -76,6 +76,7 @@ describe('turnPipeline', () => {
                 bananaFossilBonus: false,
                 horsemansihpPastureBonus: false,
                 terraFossilDisasterFood: false,
+                allSymbolsAreCorner: false,
             },
         });
 
@@ -115,6 +116,7 @@ describe('turnPipeline', () => {
                 bananaFossilBonus: false,
                 horsemansihpPastureBonus: false,
                 terraFossilDisasterFood: false,
+                allSymbolsAreCorner: false,
             },
         });
 
@@ -155,6 +157,7 @@ describe('turnPipeline', () => {
                 bananaFossilBonus: false,
                 horsemansihpPastureBonus: false,
                 terraFossilDisasterFood: false,
+                allSymbolsAreCorner: false,
             },
         });
 
@@ -194,6 +197,7 @@ describe('turnPipeline', () => {
                 bananaFossilBonus: false,
                 horsemansihpPastureBonus: false,
                 terraFossilDisasterFood: false,
+                allSymbolsAreCorner: false,
             },
         });
 

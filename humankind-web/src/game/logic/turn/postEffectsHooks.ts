@@ -27,6 +27,7 @@ export interface RelicInstanceLike {
 }
 
 export interface RelicStoreApiLike {
+    incrementRelicCounter?: (instanceId: string) => void;
     incrementRelicBonus: (instanceId: string, delta: number) => void;
     decrementRelicCounterOrRemove: (instanceId: string) => void;
 }
@@ -56,10 +57,12 @@ export function runPostEffectsHooks(args: {
     boardHeight: number;
     effects: EffectEntry[];
     leaderId: LeaderId | null;
+    currentGold?: number;
     bonusXpPerTurn: number;
     unlockedKnowledgeUpgrades: number[];
     getAdjacentCoords: (x: number, y: number) => { x: number; y: number }[];
     relics: RelicInstanceLike[];
+    ownedSymbols?: PlayerSymbolInstance[];
     relicStoreApi: RelicStoreApiLike;
 }): PostEffectsResult {
     const {
@@ -68,10 +71,12 @@ export function runPostEffectsHooks(args: {
         boardHeight,
         effects,
         leaderId,
+        currentGold = 0,
         bonusXpPerTurn,
         unlockedKnowledgeUpgrades,
         getAdjacentCoords,
         relics,
+        ownedSymbols = [],
         relicStoreApi,
     } = args;
 
@@ -96,6 +101,9 @@ export function runPostEffectsHooks(args: {
     const addSymbolIds: number[] = [];
     const relicOwnEffectFloats: RelicFloat[] = [];
     const knowledgeOwnEffectFloats: KnowledgeFloat[] = [];
+    const pushRelicFloat = (relic: RelicInstanceLike, text: string, color: string) => {
+        relicOwnEffectFloats.push({ relicInstanceId: relic.instanceId, text, color });
+    };
 
     // ── 유물 ID 9: 나일 강 비옥한 흑니 — 효과 페이즈 집계 `effects`의 식량 합만큼 추가(3턴 후 제거는 호출자에서 감소)
     const nileRelicInst = getRelicInst(RELIC_ID.NILE_SILT);
@@ -364,11 +372,212 @@ export function runPostEffectsHooks(args: {
     const andeanRelic = getRelicInst(RELIC_ID.ANDEAN_CHUNO);
     if (andeanRelic) {
         bonusFood += 2;
-        relicOwnEffectFloats.push({
-            relicInstanceId: andeanRelic.instanceId,
-            text: '+2',
-            color: '#4ade80',
-        });
+        pushRelicFloat(andeanRelic, '+2', '#4ade80');
+    }
+
+    // ── 유물 ID 20: 라스코 동굴 안료 — 매 5턴마다 무작위 자원 +5 ──
+    const lascauxRelic = getRelicInst(RELIC_ID.LASCAUX_PIGMENT);
+    if (lascauxRelic) {
+        const nextCounter = (lascauxRelic.effect_counter ?? 0) + 1;
+        relicStoreApi.incrementRelicCounter?.(lascauxRelic.instanceId);
+        if (nextCounter % 5 === 0) {
+            const roll = Math.floor(Math.random() * 3);
+            if (roll === 0) {
+                bonusFood += 5;
+                pushRelicFloat(lascauxRelic, '+5', '#4ade80');
+            } else if (roll === 1) {
+                bonusGold += 5;
+                pushRelicFloat(lascauxRelic, '+5', '#fbbf24');
+            } else {
+                bonusKnowledge += 5;
+                pushRelicFloat(lascauxRelic, '+5', '#60a5fa');
+            }
+        }
+    }
+
+    // ── 유물 ID 21: 빌렌도르프 비너스 — 식량 납부 후 다음 턴 식량 +10 ──
+    const venusRelic = getRelicInst(RELIC_ID.WILLENDORF_VENUS);
+    if (venusRelic && venusRelic.bonus_stacks > 0) {
+        const venusFood = venusRelic.bonus_stacks * 10;
+        bonusFood += venusFood;
+        pushRelicFloat(venusRelic, `+${venusFood}`, '#4ade80');
+        relicStoreApi.incrementRelicBonus(venusRelic.instanceId, -venusRelic.bonus_stacks);
+    }
+
+    // ── 유물 ID 22: 외치의 구리 도끼 — 숲이 있으면 골드 +1 ──
+    const otziRelic = getRelicInst(RELIC_ID.OTZI_COPPER_AXE);
+    if (otziRelic) {
+        let hasForest = false;
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const cell = board[x][y];
+                if (cell && !cell.is_marked_for_destruction && cell.definition.id === S.forest) hasForest = true;
+            }
+        }
+        if (hasForest) {
+            bonusGold += 1;
+            pushRelicFloat(otziRelic, '+1', '#fbbf24');
+        }
+    }
+
+    // ── 유물 ID 23: 세스테르티우스 동전 — 골드 50 이상이면 지식 +1 ──
+    const sestertiusRelic = getRelicInst(RELIC_ID.SESTERTIUS_COIN);
+    if (sestertiusRelic && currentGold >= 50) {
+        bonusKnowledge += 1;
+        pushRelicFloat(sestertiusRelic, '+1', '#60a5fa');
+    }
+
+    // ── 유물 ID 26: 이슈타르 문 황소 부조 — 소/양/말 하나당 골드 +1 ──
+    const ishtarRelic = getRelicInst(RELIC_ID.ISHTAR_BULL_RELIEF);
+    if (ishtarRelic) {
+        let animalCount = 0;
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const id = board[x][y]?.definition.id;
+                if (id === S.cattle || id === S.sheep || id === S.horse) animalCount++;
+            }
+        }
+        if (animalCount > 0) {
+            bonusGold += animalCount;
+            pushRelicFloat(ishtarRelic, `+${animalCount}`, '#fbbf24');
+        }
+    }
+
+    // ── 유물 ID 27: 백제 금동대향로 — 종교 심볼이 있으면 지식 +2 ──
+    const baekjeRelic = getRelicInst(RELIC_ID.BAEKJE_INCENSE_BURNER);
+    if (baekjeRelic) {
+        let hasReligionOnBoard = false;
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const cell = board[x][y];
+                if (cell && !cell.is_marked_for_destruction && cell.definition.type === SymbolType.RELIGION) hasReligionOnBoard = true;
+            }
+        }
+        if (hasReligionOnBoard) {
+            bonusKnowledge += 2;
+            pushRelicFloat(baekjeRelic, '+2', '#60a5fa');
+        }
+    }
+
+    // ── 유물 ID 28: 진시황 병마용 — 보유 전투 심볼 수당 골드 +2 ──
+    const terracottaRelic = getRelicInst(RELIC_ID.TERRACOTTA_ARMY);
+    if (terracottaRelic) {
+        const combatSymbolCount = ownedSymbols.filter((s) => s.definition.type === SymbolType.UNIT).length;
+        const terracottaGold = combatSymbolCount * 2;
+        if (terracottaGold > 0) {
+            bonusGold += terracottaGold;
+            pushRelicFloat(terracottaRelic, `+${terracottaGold}`, '#fbbf24');
+        }
+    }
+
+    // ── 유물 ID 29: 사양방존 청동기 — 네 구석이 모두 차 있으면 모든 자원 +1 ──
+    const fangzunRelic = getRelicInst(RELIC_ID.SIYANG_FANGZUN);
+    if (fangzunRelic) {
+        const corners = [
+            board[0]?.[0],
+            board[boardWidth - 1]?.[0],
+            board[0]?.[boardHeight - 1],
+            board[boardWidth - 1]?.[boardHeight - 1],
+        ];
+        if (corners.every((cell) => cell && !cell.is_marked_for_destruction)) {
+            bonusFood += 1;
+            bonusGold += 1;
+            bonusKnowledge += 1;
+            pushRelicFloat(fangzunRelic, '+1/+1/+1', '#e5e7eb');
+        }
+    }
+
+    // ── 유물 ID 30: 모아이 석상 — 빈 슬롯 3개당 골드 +1 ──
+    const moaiRelic = getRelicInst(RELIC_ID.MOAI_STATUE);
+    if (moaiRelic) {
+        let emptySlots = 0;
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const cell = board[x][y];
+                if (!cell || cell.is_marked_for_destruction) emptySlots++;
+            }
+        }
+        const moaiGold = Math.floor(emptySlots / 3);
+        if (moaiGold > 0) {
+            bonusGold += moaiGold;
+            pushRelicFloat(moaiRelic, `+${moaiGold}`, '#fbbf24');
+        }
+    }
+
+    // ── 유물 ID 31: 니네베의 사자 부조 — 적이 있으면 지식 +2 ──
+    const ninevehRelic = getRelicInst(RELIC_ID.NINEVEH_LION_RELIEF);
+    if (ninevehRelic) {
+        let hasEnemyOnBoard = false;
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const cell = board[x][y];
+                if (cell && !cell.is_marked_for_destruction && cell.definition.type === SymbolType.ENEMY) hasEnemyOnBoard = true;
+            }
+        }
+        if (hasEnemyOnBoard) {
+            bonusKnowledge += 2;
+            pushRelicFloat(ninevehRelic, '+2', '#60a5fa');
+        }
+    }
+
+    // ── 유물 ID 34: 헤레포드 마파문디 — 모든 지형 유형이 보드에 있으면 모든 자원 +10 ──
+    const herefordRelic = getRelicInst(RELIC_ID.HEREFORD_MAPPA_MUNDI);
+    if (herefordRelic) {
+        const terrainIdsOnBoard = new Set<number>();
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const cell = board[x][y];
+                if (cell && !cell.is_marked_for_destruction && cell.definition.type === SymbolType.TERRAIN) {
+                    terrainIdsOnBoard.add(cell.definition.id);
+                }
+            }
+        }
+        const allTerrainIds = [S.grassland, S.plains, S.sea, S.forest, S.rainforest, S.desert, S.oasis, S.mountain];
+        if (allTerrainIds.every((id) => terrainIdsOnBoard.has(id))) {
+            bonusFood += 10;
+            bonusGold += 10;
+            bonusKnowledge += 10;
+            pushRelicFloat(herefordRelic, '+10/+10/+10', '#e5e7eb');
+        }
+    }
+
+    // ── 유물 ID 35: 수메르 왕명표 — 배치된 시대 심볼당 식량 +1 ──
+    const kingListRelic = getRelicInst(RELIC_ID.SUMERIAN_KING_LIST);
+    if (kingListRelic) {
+        let eraSymbolCount = 0;
+        const eraTypes = new Set<SymbolType>([SymbolType.ANCIENT, SymbolType.MEDIEVAL, SymbolType.MODERN]);
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const cell = board[x][y];
+                if (cell && !cell.is_marked_for_destruction && eraTypes.has(cell.definition.type)) eraSymbolCount++;
+            }
+        }
+        if (eraSymbolCount > 0) {
+            bonusFood += eraSymbolCount;
+            pushRelicFloat(kingListRelic, `+${eraSymbolCount}`, '#4ade80');
+        }
+    }
+
+    // ── 유물 ID 38: 아슈르바니팔 색인 점토판 — 보드에 중복 심볼이 없으면 식량/골드 +5 ──
+    const ashurbanipalRelic = getRelicInst(RELIC_ID.ASHURBANIPAL_INDEX_TABLET);
+    if (ashurbanipalRelic) {
+        const seenIds = new Set<number>();
+        let hasDuplicate = false;
+        let symbolCount = 0;
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                const cell = board[x][y];
+                if (!cell || cell.is_marked_for_destruction) continue;
+                symbolCount++;
+                if (seenIds.has(cell.definition.id)) hasDuplicate = true;
+                seenIds.add(cell.definition.id);
+            }
+        }
+        if (symbolCount > 0 && !hasDuplicate) {
+            bonusFood += 5;
+            bonusGold += 5;
+            pushRelicFloat(ashurbanipalRelic, '+5/+5', '#e5e7eb');
+        }
     }
 
     // ── 리더/영구 보너스 ──
@@ -435,6 +644,33 @@ export function runPostEffectsHooks(args: {
             if (F <= 0) continue;
             bonusGold += F;
             effects.push({ x: tx, y: ty, food: 0, gold: F, knowledge: 0 });
+        }
+    }
+
+    // ── 유물 ID 32: 솔로몬의 인장 반지 — 1번 슬롯(0,0) 자원 효과 한 번 더 적용 ──
+    const solomonRelic = getRelicInst(RELIC_ID.SOLOMON_SEAL_RING);
+    const slotOne = board[0]?.[0];
+    if (solomonRelic && slotOne && !slotOne.is_marked_for_destruction) {
+        let extraFood = 0;
+        let extraGold = 0;
+        let extraKnowledge = 0;
+        for (const effect of effects) {
+            if (effect.x !== 0 || effect.y !== 0) continue;
+            extraFood += effect.food ?? 0;
+            extraGold += effect.gold ?? 0;
+            extraKnowledge += effect.knowledge ?? 0;
+        }
+        if (extraFood !== 0 || extraGold !== 0 || extraKnowledge !== 0) {
+            bonusFood += extraFood;
+            bonusGold += extraGold;
+            bonusKnowledge += extraKnowledge;
+            effects.push({ x: 0, y: 0, food: extraFood, gold: extraGold, knowledge: extraKnowledge });
+            const parts = [
+                extraFood ? `F${extraFood > 0 ? '+' : ''}${extraFood}` : null,
+                extraGold ? `G${extraGold > 0 ? '+' : ''}${extraGold}` : null,
+                extraKnowledge ? `K${extraKnowledge > 0 ? '+' : ''}${extraKnowledge}` : null,
+            ].filter(Boolean);
+            pushRelicFloat(solomonRelic, parts.join(' '), '#e5e7eb');
         }
     }
 

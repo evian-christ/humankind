@@ -41,6 +41,8 @@ export interface ActiveRelicEffects {
     horsemansihpPastureBonus: boolean;
     /** 유물 16 테라의 화석 포도 — 자연재해 심볼 식량 +2 */
     terraFossilDisasterFood: boolean;
+    /** 유물 33 구데아의 정초 못 — 모든 심볼을 구석에 있는 것으로 취급 */
+    allSymbolsAreCorner: boolean;
 }
 
 export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
@@ -49,6 +51,7 @@ export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
     bananaFossilBonus: false,
     horsemansihpPastureBonus: false,
     terraFossilDisasterFood: false,
+    allSymbolsAreCorner: false,
 };
 
 export interface SymbolEffectContext {
@@ -56,4 +59,3 @@ export interface SymbolEffectContext {
 }
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];
-

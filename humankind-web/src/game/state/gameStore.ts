@@ -327,6 +327,7 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
         bananaFossilBonus: hasRelic(RELIC_ID.GOANNA_BANANA),
         horsemansihpPastureBonus: upgrades.includes(HORSEMANSHIP_UPGRADE_ID),
         terraFossilDisasterFood: hasRelic(RELIC_ID.TERRA_FOSSIL_GRAPE),
+        allSymbolsAreCorner: hasRelic(RELIC_ID.GUDEA_FOUNDATION_PEG),
     };
 };
 

@@ -9,7 +9,7 @@ export const ASSET_BASE_URL = import.meta.env.BASE_URL;
 export const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, pointer`;
 export const GAME_CURSOR_HELP = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, help`;
 
-export const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19]);
+export const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19, 24, 37]);
 
 export function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
     for (let dx = -1; dx <= 1; dx++) {
