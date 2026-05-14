@@ -32,8 +32,6 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
-
 const UPGRADE_DESC_SYMBOL_TIP_W = 280;
 const UPGRADE_DESC_SYMBOL_COMPARE_TIP_W = 300;
 
@@ -62,9 +60,9 @@ function upgradeCompareUnlocks(upgradeId: number, includeUpgrade: boolean): numb
 const DESC_ONLY_SYMBOL_VISUAL: Partial<
     Record<KnowledgeUpgradeDescSymbolKey, Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> & { spriteUrl?: string }>
 > = {
-    aqueduct: { key: 'aqueduct', sprite: 'outdated/056.png', type: SymbolType.NORMAL, spriteUrl: `${ASSET_BASE_URL}assets/symbols/outdated/056.png` },
-    rye: { key: 'rye', sprite: 'outdated/057.png', type: SymbolType.NORMAL, spriteUrl: `${ASSET_BASE_URL}assets/symbols/outdated/057.png` },
-    hay: { key: 'hay', sprite: 'outdated/051.png', type: SymbolType.NORMAL, spriteUrl: `${ASSET_BASE_URL}assets/symbols/outdated/051.png` },
+    aqueduct: { key: 'aqueduct', sprite: '-', type: SymbolType.NORMAL },
+    rye: { key: 'rye', sprite: '-', type: SymbolType.NORMAL },
+    hay: { key: 'hay', sprite: '-', type: SymbolType.NORMAL },
 };
 
 function resolveUpgradeDescSymbolVisual(

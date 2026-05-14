@@ -60,7 +60,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         name: "Wool",
         type: SymbolType.NORMAL,
         description: "Destroyed after 3 turns; on destroy: +5 Gold.",
-        sprite: "-",
+        sprite: "014.png",
     }),
     def('horse', { name: "Horse", type: SymbolType.NORMAL, description: "+1 Food, +1 Gold; when adjacent to Plains: +2 additional Food. When adjacent to a melee unit: Cavalry training opportunity.", sprite: "015.png" }),
 
@@ -68,7 +68,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('fish', { name: "Fish", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +1 Food; 2+ Seas: +2 Food; 3+ Seas: +4 Food.", sprite: "016.png" }),
     def('crab', { name: "Crab", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +1 Food, +1 Gold; 2+ Seas: +2 Food, +2 Gold.", sprite: "017.png" }),
     def('pearl', { name: "Pearl", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +2 Gold; 2+ Seas: +3 Gold; 3+ Seas: +5 Gold.", sprite: "018.png" }),
-    def('compass', { name: "Compass", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +5 Knowledge; 2+ Seas: +10 Knowledge; 3+ Seas: +15 Knowledge.", sprite: "-" }),
+    def('compass', { name: "Compass", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +5 Knowledge; 2+ Seas: +10 Knowledge; 3+ Seas: +15 Knowledge.", sprite: "019.png" }),
 
     // Normal: forest deck
     def('deer', { name: "Deer", type: SymbolType.NORMAL, description: "+1 Food per adjacent Forest.", sprite: "020.png" }),
@@ -78,7 +78,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         description: "+2 Food, +2 Knowledge; destroyed if not adjacent to Forest.",
         sprite: "021.png",
     }),
-    def('fur', { name: "Fur", type: SymbolType.NORMAL, description: "+2 Gold per 2 Forests placed on the board.", sprite: "-" }),
+    def('fur', { name: "Fur", type: SymbolType.NORMAL, description: "+2 Gold per 2 Forests placed on the board.", sprite: "022.png" }),
 
     // Normal: rainforest deck
     def('banana', { name: "Banana", type: SymbolType.NORMAL, description: "+1 Food; every 10 turns adjacent to Rainforest: +1 additional Food production.", sprite: "023.png" }),
@@ -86,7 +86,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         name: "Expedition",
         type: SymbolType.NORMAL,
         description: "When adjacent to Rainforest: produces a random 1-10 Food, Gold, or Knowledge.",
-        sprite: "-",
+        sprite: "024.png",
     }),
 
     // Normal: desert deck
@@ -95,19 +95,19 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         name: "Dye",
         type: SymbolType.NORMAL,
         description: "+1 Gold; on destroy: +10 Gold.",
-        sprite: "-",
+        sprite: "026.png",
     }),
     def('papyrus', {
         name: "Papyrus",
         type: SymbolType.NORMAL,
         description: "+1 Knowledge; on destroy: +10 Knowledge.",
-        sprite: "-",
+        sprite: "027.png",
     }),
     def('caravanserai', {
         name: "Caravanserai",
         type: SymbolType.NORMAL,
         description: "+10 per symbol destroyed this turn; matches the destroyed symbol's production type.",
-        sprite: "-",
+        sprite: "028.png",
     }),
 
     // Normal: mountain / special position
@@ -183,7 +183,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         name: "AGI Core",
         type: SymbolType.SPECIAL,
         description: "Absorbs the Knowledge production of all symbols on the board. When absorbed Knowledge reaches 500, you win the game.",
-        sprite: "-",
+        sprite: "059.png",
     }),
 
     // Special reward
@@ -191,19 +191,19 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         name: "Loot",
         type: SymbolType.SPECIAL,
         description: "Open to gain a small reward. When adjacent to Loot: absorb it and upgrade into Greater Loot.",
-        sprite: "-",
+        sprite: "060.png",
     }),
     def('greater_loot', {
         name: "Greater Loot",
         type: SymbolType.SPECIAL,
         description: "Open to gain a reward. When adjacent to Greater Loot: absorb it and upgrade into Radiant Loot.",
-        sprite: "-",
+        sprite: "061.png",
     }),
     def('radiant_loot', {
         name: "Radiant Loot",
         type: SymbolType.SPECIAL,
         description: "Open to gain a large reward.",
-        sprite: "-",
+        sprite: "062.png",
     }),
 
     // Religion
