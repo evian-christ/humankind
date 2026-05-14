@@ -216,7 +216,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 12,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "020.png",
     },
     21: {
         id: 21,
@@ -225,7 +225,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 14,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "021.png",
     },
     22: {
         id: 22,
@@ -234,7 +234,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 16,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "022.png",
     },
     23: {
         id: 23,
@@ -243,7 +243,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 16,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "023.png",
     },
     24: {
         id: 24,
@@ -252,7 +252,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 16,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "024.png",
     },
     25: {
         id: 25,
@@ -261,7 +261,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 18,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "025.png",
     },
     26: {
         id: 26,
@@ -270,7 +270,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 20,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "026.png",
     },
     27: {
         id: 27,
@@ -279,7 +279,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 22,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "027.png",
     },
     28: {
         id: 28,
@@ -288,7 +288,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 24,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "028.png",
     },
     29: {
         id: 29,
@@ -297,7 +297,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 24,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "029.png",
     },
     30: {
         id: 30,
@@ -306,7 +306,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 26,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "030.png",
     },
     31: {
         id: 31,
@@ -315,7 +315,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 35,
         rarity: "rare",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "031.png",
     },
     32: {
         id: 32,
@@ -324,7 +324,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 60,
         rarity: "legendary",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "032.png",
     },
     33: {
         id: 33,
@@ -333,7 +333,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 24,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "033.png",
     },
     34: {
         id: 34,
@@ -342,7 +342,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 55,
         rarity: "legendary",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "034.png",
     },
     35: {
         id: 35,
@@ -351,7 +351,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 24,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "035.png",
     },
     36: {
         id: 36,
@@ -360,7 +360,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 16,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "036.png",
     },
     37: {
         id: 37,
@@ -369,7 +369,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 14,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "037.png",
     },
     38: {
         id: 38,
@@ -378,7 +378,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 26,
         rarity: "uncommon",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "038.png",
     },
 };
 
