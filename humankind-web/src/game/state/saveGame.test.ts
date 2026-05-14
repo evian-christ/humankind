@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { SYMBOLS, S } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import type { GameState } from './gameStore';
-import { loadSavedGamePatch, saveGameState } from './saveGame';
+import { hasSavedGame, loadSavedGamePatch, saveGameState } from './saveGame';
 
 const createLocalStorageMock = () => {
     const data = new Map<string, string>();
@@ -105,6 +105,25 @@ describe('saveGameState', () => {
 
         const patch = loadSavedGamePatch();
         expect(patch?.lastEffects).toEqual([]);
+
+        vi.unstubAllGlobals();
+    });
+
+    it.each(['game_over', 'victory'] as const)('clears terminal %s saves instead of continuing them', (phase) => {
+        const localStorage = createLocalStorageMock();
+        vi.stubGlobal('localStorage', localStorage);
+
+        saveGameState(createSerializableState());
+        expect(hasSavedGame()).toBe(true);
+
+        saveGameState({
+            ...createSerializableState(),
+            phase,
+        });
+
+        expect(localStorage.getItem('humankind.save.v1')).toBeNull();
+        expect(hasSavedGame()).toBe(false);
+        expect(loadSavedGamePatch()).toBeNull();
 
         vi.unstubAllGlobals();
     });

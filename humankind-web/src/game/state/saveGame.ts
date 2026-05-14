@@ -154,7 +154,10 @@ export function hasSavedGame(): boolean {
     if (!raw) return false;
     try {
         const save = JSON.parse(raw) as Partial<SavedGame>;
-        return save.version === SAVE_VERSION && save.state != null;
+        return save.version === SAVE_VERSION
+            && save.state != null
+            && save.state.phase !== 'game_over'
+            && save.state.phase !== 'victory';
     } catch {
         return false;
     }
@@ -166,6 +169,10 @@ export function clearSavedGame(): void {
 
 export function saveGameState(state: GameState): void {
     if (state.isTutorialMode) return;
+    if (state.phase === 'game_over' || state.phase === 'victory') {
+        clearSavedGame();
+        return;
+    }
 
     const store = storage();
     if (!store) return;
@@ -225,6 +232,10 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
     try {
         const save = JSON.parse(raw) as SavedGame;
         if (save.version !== SAVE_VERSION) return null;
+        if (save.state.phase === 'game_over' || save.state.phase === 'victory') {
+            clearSavedGame();
+            return null;
+        }
 
         const playerSymbols = save.state.playerSymbols
             .map(deserializeSymbol)

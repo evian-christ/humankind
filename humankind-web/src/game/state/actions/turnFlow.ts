@@ -39,7 +39,7 @@ import {
     buildSlotEffectPresentationPlan,
 } from './turnPresentationTimeline';
 import { createTurnRunScheduler } from './turnRunScheduler';
-import { saveGameState } from '../saveGame';
+import { clearSavedGame, saveGameState } from '../saveGame';
 import {
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
@@ -347,7 +347,7 @@ export const createTurnFlowActions = ({
                 }
 
                 if (get().phase === 'victory') {
-                    saveGameState(get());
+                    clearSavedGame();
                     return;
                 }
 
@@ -392,7 +392,7 @@ export const createTurnFlowActions = ({
 
                         if (phaseResolution.nextPhase === 'game_over') {
                             set({ phase: 'game_over' as GamePhase });
-                            saveGameState(get());
+                            clearSavedGame();
                             return;
                         }
 
