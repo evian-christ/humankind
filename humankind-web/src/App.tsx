@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
-import { useSettingsStore } from './game/state/settingsStore';
+import { useSettingsStore, type Language } from './game/state/settingsStore';
 import { usePreGameStore } from './game/state/preGameStore';
 import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
@@ -77,7 +77,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
   3: 'era.modern',
 };
 
-const TUTORIAL_DIALOG_STEPS = [
+const TUTORIAL_DIALOG_STEPS_KO = [
   [
     '튜토리얼에 오신 것을 환영합니다.',
     '여기서는 게임 진행에 필요한 기본 규칙을 배웁니다.',
@@ -162,6 +162,95 @@ const TUTORIAL_DIALOG_STEPS = [
   ],
 ];
 
+const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
+  [
+    'Welcome to the tutorial.',
+    'Here you will learn the basic rules you need to play.',
+  ],
+  [
+    'Your goal is to help your civilization survive, develop, and reach prosperity.',
+  ],
+  [
+    'Your people demand Food every few turns.',
+  ],
+  [
+    'Your Food is currently 0, so first we need to produce some Food.',
+  ],
+  [
+    'Here are two Corn symbols for you.',
+  ],
+  [
+    'Each Corn gives 2 Food when it is placed on the board.',
+    'Hover over Corn to check its details.',
+  ],
+  [
+    'Press the SPIN button to advance the turn.',
+  ],
+  [
+    'Each spin places your symbols on the board and triggers their effects.',
+  ],
+  [
+    'Two Corn symbols produced 2 Food each, so you gained 4 Food.',
+    'Collect Food like this to survive.',
+  ],
+  [
+    'After each spin, you can choose one of three random symbols.',
+  ],
+  [
+    'Choose the Monument.',
+  ],
+  [
+    'Let us check your owned symbols.',
+  ],
+  [
+    'Monument produces Knowledge.',
+  ],
+  [
+    'Return to the previous screen.',
+  ],
+  [
+    'Press the SPIN button to advance the turn.',
+  ],
+  [
+    'You have gathered enough Knowledge to reach level 2.',
+  ],
+  [
+    'Open the Knowledge Upgrade window.',
+  ],
+  [
+    'Each time you gain a level, you can research one Knowledge Upgrade here.',
+  ],
+  [
+    'Click the Ancient Era upgrade.',
+  ],
+  [
+    'Researching Ancient Era unlocks various ancient symbols and adds them to the symbol pool.',
+  ],
+  [
+    'Research Ancient Era.',
+  ],
+  [
+    'Return to the previous screen.',
+  ],
+  [
+    'Open the Relic Shop.',
+  ],
+  [
+    'Relics have many powerful effects that help you reach prosperity.',
+  ],
+  [
+    'Relics are purchased with Gold, so try to collect plenty of Gold.',
+  ],
+  [
+    'That is the end of the basic tutorial.',
+    'Now lead your civilization to prosperity!',
+  ],
+];
+
+const getTutorialDialogSteps = (language: Language) => (
+  language === 'ko' ? TUTORIAL_DIALOG_STEPS_KO : TUTORIAL_DIALOG_STEPS_EN
+);
+
 const TUTORIAL_CORN_CELLS = [
   { x: 1, y: 1 },
   { x: 3, y: 1 },
@@ -200,16 +289,37 @@ function TutorialElementHighlight({ selectors, className, pad = 0, padX = pad, p
     const top = Math.min(...rects.map((r) => r.top));
     const right = Math.max(...rects.map((r) => r.right));
     const bottom = Math.max(...rects.map((r) => r.bottom));
-    setRect(new DOMRect(left - padX, top - padY, right - left + padX * 2, bottom - top + padY * 2));
+    const root = document.getElementById('root');
+    const rootRect = root?.getBoundingClientRect();
+    if (!root || !rootRect || root.clientWidth <= 0 || root.clientHeight <= 0) {
+      setRect(new DOMRect(left - padX, top - padY, right - left + padX * 2, bottom - top + padY * 2));
+      return;
+    }
+
+    const scaleX = rootRect.width / root.clientWidth;
+    const scaleY = rootRect.height / root.clientHeight;
+    const safeScaleX = Math.max(scaleX, 0.001);
+    const safeScaleY = Math.max(scaleY, 0.001);
+    const localLeft = (left - rootRect.left) / safeScaleX;
+    const localTop = (top - rootRect.top) / safeScaleY;
+    const localWidth = (right - left) / safeScaleX;
+    const localHeight = (bottom - top) / safeScaleY;
+    setRect(new DOMRect(
+      localLeft - padX,
+      localTop - padY,
+      localWidth + padX * 2,
+      localHeight + padY * 2,
+    ));
   }, [padX, padY, selectors]);
 
   useLayoutEffect(() => {
     measure();
     const ro = new ResizeObserver(measure);
     selectors.forEach((selector) => {
-      const el = document.querySelector<HTMLElement>(selector);
-      if (el) ro.observe(el);
+      document.querySelectorAll<HTMLElement>(selector).forEach((el) => ro.observe(el));
     });
+    const root = document.getElementById('root');
+    if (root) ro.observe(root);
     const raf = requestAnimationFrame(measure);
     window.addEventListener('resize', measure);
     return () => {
@@ -380,6 +490,13 @@ function App() {
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
+  const tutorialDialogSteps = useMemo(() => getTutorialDialogSteps(language), [language]);
+  const tutorialDialogLabel = language === 'ko' ? '튜토리얼 안내' : 'Tutorial guide';
+  const tutorialMonumentGainedText = language === 'ko' ? '기념비를 획득했습니다!' : 'You gained a Monument!';
+  const tutorialMonumentProducesPrefix = language === 'ko' ? '기념비는' : 'Monument produces';
+  const tutorialMonumentProducesSuffix = language === 'ko' ? '지식을 생산합니다.' : 'Knowledge.';
+  const tutorialFinishLabel = language === 'ko' ? '종료' : 'Finish';
+  const tutorialNextLabel = language === 'ko' ? '다음 >>' : 'Next >>';
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -592,8 +709,8 @@ function App() {
       setTutorialDialogStep(25);
       return;
     }
-    setTutorialDialogStep((step) => Math.min(step + 1, TUTORIAL_DIALOG_STEPS.length - 1));
-  }, [isRelicShopOpen, toggleRelicShop, tutorialDialogStep]);
+    setTutorialDialogStep((step) => Math.min(step + 1, tutorialDialogSteps.length - 1));
+  }, [isRelicShopOpen, toggleRelicShop, tutorialDialogStep, tutorialDialogSteps.length]);
 
   const handleTutorialFinish = useCallback(() => {
     if (isRelicShopOpen) toggleRelicShop();
@@ -1054,20 +1171,20 @@ function App() {
           ].filter(Boolean).join(' ')}
           role="dialog"
           aria-modal="true"
-          aria-label="튜토리얼 안내"
+          aria-label={tutorialDialogLabel}
         >
           <div className="tutorial-dialog-text">
             {tutorialDialogStep === 12 ? (
               <>
-                <p>기념비를 획득했습니다!</p>
+                <p>{tutorialMonumentGainedText}</p>
                 <p className="tutorial-dialog-inline-resource">
-                  기념비는
+                  {tutorialMonumentProducesPrefix}
                   <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" />
-                  지식을 생산합니다.
+                  {tutorialMonumentProducesSuffix}
                 </p>
               </>
             ) : (
-              TUTORIAL_DIALOG_STEPS[tutorialDialogStep].map((line) => (
+              tutorialDialogSteps[tutorialDialogStep].map((line) => (
                 <p key={line}>{line}</p>
               ))
             )}
@@ -1077,7 +1194,7 @@ function App() {
                 className="tutorial-dialog-next tutorial-dialog-finish"
                 onClick={handleTutorialFinish}
               >
-                종료
+                {tutorialFinishLabel}
               </button>
             ) : ![6, 10, 11, 13, 14, 16, 18, 20, 21, 22].includes(tutorialDialogStep) && (
               <button
@@ -1085,7 +1202,7 @@ function App() {
                 className="tutorial-dialog-next"
                 onClick={handleTutorialNext}
               >
-                다음 →
+                {tutorialNextLabel}
               </button>
             )}
           </div>

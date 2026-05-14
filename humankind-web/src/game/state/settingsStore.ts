@@ -105,9 +105,9 @@ interface SavedSettings {
 const defaultSettings: PersistedSettings = {
     resolutionWidth: _initW,
     resolutionHeight: _initH,
-    language: 'ko',
-    effectSpeed: '2x',
-    spinSpeed: '4x',
+    language: 'en',
+    effectSpeed: '1x',
+    spinSpeed: '2x',
     masterVolume: 1,
     musicVolume: 1,
     effectVolume: 1,

@@ -15,6 +15,7 @@ const DIFFICULTY_OPTIONS = ['NORMAL', 'HARD', 'PRO'] as const;
 
 type LeaderPortraitVariant = 'full' | 'mini';
 type DifficultyOption = (typeof DIFFICULTY_OPTIONS)[number];
+const ENABLED_DIFFICULTIES: ReadonlySet<DifficultyOption> = new Set(['NORMAL']);
 
 function leaderPortraitSrc(id: LeaderId, variant: LeaderPortraitVariant = 'full'): string | null {
   if (id === 'ramesses') return `${ASSET_BASE_URL}assets/leaders/001_${variant}.png`;
@@ -218,18 +219,25 @@ export default function LeaderSelectScreen() {
                 <div className="leader-difficulty-buttons">
                   {DIFFICULTY_OPTIONS.map((difficulty) => {
                     const selected = selectedDifficulty === difficulty;
+                    const enabled = ENABLED_DIFFICULTIES.has(difficulty);
                     return (
                       <button
                         key={difficulty}
                         type="button"
+                        disabled={!enabled}
+                        aria-disabled={!enabled}
                         className={[
                           'leader-difficulty-button',
                           selected ? 'leader-difficulty-button--selected' : '',
+                          !enabled ? 'leader-difficulty-button--disabled' : '',
                         ]
                           .filter(Boolean)
                           .join(' ')}
                         aria-pressed={selected}
-                        onClick={() => setSelectedDifficulty(difficulty)}
+                        onClick={() => {
+                          if (!enabled) return;
+                          setSelectedDifficulty(difficulty);
+                        }}
                       >
                         {difficulty}
                       </button>

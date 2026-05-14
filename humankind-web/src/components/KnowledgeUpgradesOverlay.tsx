@@ -963,7 +963,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                 {t(ERA_NAME_KEYS[selectedUpgrade.type], language)}
                             </div>
                             <div className="knowledge-upgrade-detail-tier">
-                                Lv.{selectedTierLevel} 해금
+                                {t('knowledgeUpgrade.detail.unlockLevel', language).replace('{level}', String(selectedTierLevel))}
                             </div>
                             {(selectedDirectPrereqs.length > 0 || selectedDirectDependents.length > 0) && (
                                 <div
@@ -993,7 +993,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             fontSize: '12px',
                                                         }}
                                                     >
-                                                        {unlocked ? '선행 완료' : '선행 필요'}: {prereqName}
+                                                        {unlocked
+                                                            ? t('knowledgeUpgrade.detail.prereqComplete', language)
+                                                            : t('knowledgeUpgrade.detail.prereqRequired', language)}: {prereqName}
                                                     </span>
                                                 );
                                             })}
@@ -1012,7 +1014,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                         fontSize: '12px',
                                                     }}
                                                 >
-                                                    후속: {t(`knowledgeUpgrade.${dependentId}.name`, language) || KNOWLEDGE_UPGRADES[dependentId]?.name || `#${dependentId}`}
+                                                    {t('knowledgeUpgrade.detail.dependent', language)}: {t(`knowledgeUpgrade.${dependentId}.name`, language) || KNOWLEDGE_UPGRADES[dependentId]?.name || `#${dependentId}`}
                                                 </span>
                                             ))}
                                         </div>
@@ -1073,11 +1075,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                 }}
                             >
                                 {selectedUnlocked
-                                    ? '이미 연구됨'
+                                    ? t('knowledgeUpgrade.detail.alreadyResearched', language)
                                     : unmetSelectedPrereqNames.length > 0
-                                        ? `선행: ${unmetSelectedPrereqNames.join(' / ')}`
+                                        ? t('knowledgeUpgrade.detail.prerequisiteButton', language)
+                                            .replace('{names}', unmetSelectedPrereqNames.join(' / '))
                                         : needsHigherLevel
-                                            ? `Lv.${selectedTierLevel} 필요`
+                                            ? t('knowledgeUpgrade.detail.levelRequired', language)
+                                                .replace('{level}', String(selectedTierLevel))
                                             : hasResearchPoints &&
                                                 selectedId != null &&
                                                 !isUpgradeLegalForKnowledgePick(
@@ -1085,8 +1089,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                     unlockedUpgrades,
                                                     currentLevel,
                                                 )
-                                              ? '이번 연구로 선택 불가'
-                                              : '연구하기'}
+                                              ? t('knowledgeUpgrade.detail.unavailableThisPick', language)
+                                              : t('knowledgeUpgrade.detail.research', language)}
                             </button>
                         </div>
                     </div>

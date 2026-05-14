@@ -167,9 +167,9 @@ const SymbolSelection = () => {
             <button
                 className="selection-peek-handle"
                 onClick={() => setIsPeeked((v) => !v)}
-                title={isPeeked ? 'Show selection panel' : 'Peek at board'}
+                title={isPeeked ? t('game.returnToSelection', language) : t('game.peekBoard', language)}
             >
-                {isPeeked ? '▲ 돌아오기' : '▼ 보드 보기'}
+                {isPeeked ? `▲ ${t('game.returnToSelection', language)}` : `▼ ${t('game.peekBoard', language)}`}
             </button>
 
             <div className="selection-panel-wrapper">

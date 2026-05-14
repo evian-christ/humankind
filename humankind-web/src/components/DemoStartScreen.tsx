@@ -56,6 +56,7 @@ export default function DemoStartScreen() {
         <h1 className="main-menu-title">
           <span className="main-menu-title-main">Humankind</span>
           <span className="main-menu-title-sub">in a nutshell</span>
+          <span className="main-menu-title-demo">DEMO</span>
         </h1>
 
         <nav className="main-menu-actions" aria-label={t('mainMenu.actionsLabel', language)}>
@@ -87,7 +88,13 @@ export default function DemoStartScreen() {
           >
             {t('mainMenu.continue', language)}
           </button>
-          <button type="button" className="main-menu-button" aria-label={t('mainMenu.achievements', language)}>
+          <button
+            type="button"
+            className="main-menu-button"
+            disabled
+            aria-disabled="true"
+            aria-label={t('mainMenu.achievements', language)}
+          >
             {t('mainMenu.achievements', language)}
           </button>
           <button
@@ -108,6 +115,9 @@ export default function DemoStartScreen() {
       >
         ×
       </button>
+      <div className="main-menu-version" aria-label="alpha version">
+        a0.1.0
+      </div>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
   );

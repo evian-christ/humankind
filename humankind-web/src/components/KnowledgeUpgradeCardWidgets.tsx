@@ -224,10 +224,10 @@ export const UpgradeCardDescSymbols = ({
                     const group = entries.filter(e => e.relation === rel);
                     if (group.length === 0) return null;
                     const relInfo = rel === 'pool_add'
-                        ? { prefix: '+', color: '#4ade80', text: '추가되는 심볼' }
+                        ? { prefix: '+', color: '#4ade80', text: t('knowledgeUpgrade.symbolRelation.pool_add', language) }
                         : rel === 'effect_modify'
-                        ? { prefix: '~', color: '#facc15', text: '변경되는 심볼' }
-                        : { prefix: '-', color: '#f87171', text: '제거되는 심볼' };
+                        ? { prefix: '~', color: '#facc15', text: t('knowledgeUpgrade.symbolRelation.effect_modify', language) }
+                        : { prefix: '-', color: '#f87171', text: t('knowledgeUpgrade.symbolRelation.pool_remove', language) };
                     return (
                         <div key={rel} style={{ display: 'flex', flexDirection: 'column', gap: groupRowGap }}>
                             <div style={{ fontSize: relLabelFontPx, color: '#94a3b8', fontFamily: 'Mulmaru, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
