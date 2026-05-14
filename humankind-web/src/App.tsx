@@ -746,11 +746,13 @@ function App() {
           <div className="level-info-mini" style={{ cursor: 'help' }} onMouseEnter={() => setHoveredStat('knowledge')} onMouseLeave={() => setHoveredStat(null)}>
             <span className="lv-text">Lv.{level}</span>
             <span className="era-text">{eraName}</span>
-            <div className="exp-bar-mini">
-              <div className="exp-bar-mini-fill" style={{ width: `${knowledgeRatio * 100}%` }} />
-              <div className="exp-bar-mini-text">
-                <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="XP" style={{ width: 22, height: 22, imageRendering: 'pixelated' }} />
-                <span>{knowledge}/{knowledgeRequired}</span>
+            <div className="exp-bar-mini-wrap">
+              <div className="exp-bar-mini">
+                <div className="exp-bar-mini-fill" style={{ width: `${knowledgeRatio * 100}%` }} />
+                <div className="exp-bar-mini-text">
+                  <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="XP" style={{ width: 22, height: 22, imageRendering: 'pixelated' }} />
+                  <span>{knowledge}/{knowledgeRequired}</span>
+                </div>
               </div>
               {renderRunningTotal('knowledge')}
             </div>

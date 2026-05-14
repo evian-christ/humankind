@@ -255,11 +255,16 @@ export const createTurnFlowActions = ({
 
                 set((prev) => {
                     const finishUpgrades = prev.unlockedKnowledgeUpgrades || [];
+                    const finalRunningTotals = {
+                        food: tFood + bonusFood,
+                        gold: tGold + bonusGold,
+                        knowledge: tKnowledge + bonusKnowledge,
+                    };
                     const prog = applyKnowledgeAndLevelUps(
                         {
                             level: prev.level,
                             knowledge: prev.knowledge,
-                            deltaKnowledge: tKnowledge + bonusKnowledge,
+                            deltaKnowledge: finalRunningTotals.knowledge,
                             getEraFromLevel,
                         },
                         getKnowledgeRequiredForLevel,
@@ -292,11 +297,11 @@ export const createTurnFlowActions = ({
                     const nextPhase: GamePhase = agiVictory ? 'victory' : 'processing';
 
                     return {
-                        food: prev.food + tFood + bonusFood,
-                        gold: prev.gold + tGold + bonusGold,
+                        food: prev.food + finalRunningTotals.food,
+                        gold: prev.gold + finalRunningTotals.gold,
                         knowledge: prog.newKnowledge,
                         level: prog.newLevel,
-                        runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                        runningTotals: finalRunningTotals,
                         counterDisplayOverrides: [],
                         activeSlot: null,
                         activeContributors: [],
