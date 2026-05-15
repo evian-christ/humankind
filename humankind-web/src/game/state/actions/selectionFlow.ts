@@ -14,6 +14,7 @@ import {
 } from '../../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
+import { GAME_EVENTS } from '../../data/eventDefinitions';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import {
     generateChoices as generateChoicesSelection,
@@ -62,6 +63,7 @@ const resolveStandardChoices = (state: GameState): ChoiceResolution => {
         religionUnlocked: state.religionUnlocked,
         upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
         ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+        ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
         forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
     });
 
@@ -82,6 +84,39 @@ const resolveTerrainChoices = (state: GameState) =>
         ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
     });
 
+const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () => GamePhase) => {
+    const q = [...(state.bonusSelectionQueue || [])];
+    if (q.length > 0) {
+        q.shift();
+        const nextType = q[0];
+        const standard = nextType === 'terrain' || q.length === 0 ? null : resolveStandardChoices(state);
+        const nextChoices =
+            q.length === 0
+                ? []
+                : nextType === 'terrain'
+                  ? resolveTerrainChoices(state)
+                  : standard!.choices;
+        const nextForceTerrain =
+            q.length === 0 || nextType === 'terrain'
+                ? state.forceTerrainInNextSymbolChoices
+                : standard!.forceTerrainInNextSymbolChoices;
+
+        return {
+            bonusSelectionQueue: q,
+            symbolChoices: nextChoices,
+            symbolSelectionRelicSourceId: null,
+            forceTerrainInNextSymbolChoices: nextForceTerrain,
+            phase: q.length > 0 ? 'selection' as GamePhase : phaseAfterTurnFlowComplete(),
+        };
+    }
+
+    return {
+        phase: phaseAfterTurnFlowComplete(),
+        symbolChoices: [],
+        symbolSelectionRelicSourceId: null,
+    };
+};
+
 export const createSelectionFlowActions = ({
     get,
     set,
@@ -95,39 +130,46 @@ export const createSelectionFlowActions = ({
         const def = SYMBOLS[symbolId];
         if (!def) return;
 
-        const newSymbols = [...state.playerSymbols, createInstance(def, state.unlockedKnowledgeUpgrades || [])];
-        const q = [...(state.bonusSelectionQueue || [])];
-        if (q.length > 0) {
-            q.shift();
-            const nextType = q[0];
-            const nextChoices =
-                q.length === 0
-                    ? []
-                    : nextType === 'terrain'
-                      ? resolveTerrainChoices(state)
-                      : resolveStandardChoices(state).choices;
-            const nextForceTerrain =
-                q.length === 0 || nextType === 'terrain'
-                    ? state.forceTerrainInNextSymbolChoices
-                    : resolveStandardChoices(state).forceTerrainInNextSymbolChoices;
+        set({
+            playerSymbols: [...state.playerSymbols, createInstance(def, state.unlockedKnowledgeUpgrades || [])],
+            ...resolveAfterSelection(state, phaseAfterTurnFlowComplete),
+        });
+        saveGameState(get());
+    },
 
-            set({
-                playerSymbols: newSymbols,
-                bonusSelectionQueue: q,
-                symbolChoices: nextChoices,
-                symbolSelectionRelicSourceId: null,
-                forceTerrainInNextSymbolChoices: nextForceTerrain,
-                phase: q.length > 0 ? 'selection' : phaseAfterTurnFlowComplete(),
+    selectEvent: (eventId: number) => {
+        const state = get();
+        if (state.phase !== 'selection') return;
+
+        const event = GAME_EVENTS[eventId];
+        if (!event) return;
+
+        const patch: Partial<GameState> = {};
+        if (event.key === 'grain_tribute') {
+            patch.food = state.food + 12;
+        } else if (event.key === 'merchant_patronage') {
+            patch.gold = state.gold + 10;
+        } else if (event.key === 'artifact_market_refresh') {
+            queueMicrotask(() => {
+                get().refreshRelicShop(true);
+                saveGameState(get());
             });
-            saveGameState(get());
-            return;
+        } else if (event.key === 'border_raid') {
+            const def = SYMBOLS[S.enemy_warrior];
+            if (def) {
+                patch.playerSymbols = [...state.playerSymbols, createInstance(def, state.unlockedKnowledgeUpgrades || [])];
+            }
+        } else if (event.key === 'grassland_festival') {
+            patch.food = state.food + 8;
+            patch.knowledge = state.knowledge + 4;
         }
 
         set({
-            playerSymbols: newSymbols,
-            phase: phaseAfterTurnFlowComplete(),
-            symbolChoices: [],
-            symbolSelectionRelicSourceId: null,
+            ...patch,
+            ...resolveAfterSelection({
+                ...state,
+                ...patch,
+            }, phaseAfterTurnFlowComplete),
         });
         saveGameState(get());
     },

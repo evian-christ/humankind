@@ -1,5 +1,6 @@
 import { RELICS } from '../data/relicDefinitions';
 import { SYMBOLS, type SymbolDefinition } from '../data/symbolDefinitions';
+import { GAME_EVENTS, isGameEventDefinition } from '../data/eventDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import type { GamePhase, GameState, GameEventLogEntry } from './gameStore';
 import { createEmptyBoard } from './gameStoreHelpers';
@@ -146,8 +147,18 @@ const deserializeRelic = (saved: SerializedRelic): RelicInstance | null => {
     };
 };
 
-const mapSymbolDefinitions = (ids: number[]): SymbolDefinition[] =>
-    ids.map((id) => SYMBOLS[id]).filter((symbol): symbol is SymbolDefinition => symbol != null);
+const EVENT_CHOICE_SAVE_OFFSET = 10000;
+
+const serializeSelectionChoiceId = (choice: GameState['symbolChoices'][number]): number =>
+    isGameEventDefinition(choice) ? EVENT_CHOICE_SAVE_OFFSET + choice.id : choice.id;
+
+const mapSelectionChoices = (ids: number[]): GameState['symbolChoices'] =>
+    ids
+        .map((id) => {
+            if (id >= EVENT_CHOICE_SAVE_OFFSET) return GAME_EVENTS[id - EVENT_CHOICE_SAVE_OFFSET] ?? null;
+            return SYMBOLS[id] ?? null;
+        })
+        .filter((choice): choice is GameState['symbolChoices'][number] => choice != null);
 
 export function hasSavedGame(): boolean {
     const raw = storage()?.getItem(SAVE_KEY);
@@ -191,7 +202,7 @@ export function saveGameState(state: GameState): void {
             phase: state.phase,
             board: serializeBoard(state.board),
             playerSymbols: state.playerSymbols.map(serializeSymbol),
-            symbolChoices: state.symbolChoices.map((symbol) => symbol.id),
+            symbolChoices: state.symbolChoices.map(serializeSelectionChoiceId),
             symbolSelectionRelicSourceId: state.symbolSelectionRelicSourceId,
             relicChoices: state.relicChoices.map((relic) => relic?.id ?? null),
             relicHalfPriceRelicId: state.relicHalfPriceRelicId,
@@ -258,7 +269,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             phase: save.state.phase,
             board: deserializeBoard(save.state.board, symbolByInstanceId),
             playerSymbols,
-            symbolChoices: mapSymbolDefinitions(save.state.symbolChoices),
+            symbolChoices: mapSelectionChoices(save.state.symbolChoices),
             symbolSelectionRelicSourceId: save.state.symbolSelectionRelicSourceId,
             relicChoices: save.state.relicChoices.map((id) => (id == null ? null : RELICS[id] ?? null)),
             relicHalfPriceRelicId: save.state.relicHalfPriceRelicId,

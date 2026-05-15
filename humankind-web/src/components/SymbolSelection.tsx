@@ -3,6 +3,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { getRerollCost } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { isGameEventDefinition, type GameEventDefinition } from '../game/data/eventDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
@@ -100,6 +101,49 @@ const SymbolCard = ({
     );
 };
 
+const EventCard = ({
+    event,
+    onClick,
+}: {
+    event: GameEventDefinition;
+    onClick: () => void;
+}) => {
+    const language = useSettingsStore((s) => s.language);
+    const eventColor = '#fbbf24';
+    const eventName = t(`event.${event.key}.name`, language);
+    const eventDesc = t(`event.${event.key}.desc`, language);
+
+    return (
+        <div
+            className="selection-card-frame selection-event-card-frame"
+            style={{
+                '--card-glow': `${eventColor}cc`,
+                '--selection-era-color': eventColor,
+            } as CSSProperties}
+        >
+            <button
+                type="button"
+                className="selection-card selection-event-card"
+                data-audio-click="symbol_choice"
+                onClick={onClick}
+            >
+                <div className="selection-card-rarity selection-event-card-label">
+                    {t('game.event', language)}
+                </div>
+                <div className="selection-event-card-mark" aria-hidden="true">
+                    <span>!</span>
+                </div>
+                <div className="selection-card-name">{eventName}</div>
+                <div className="selection-card-desc">
+                    {eventDesc.split('\n').map((line, i) => (
+                        <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
+                    ))}
+                </div>
+            </button>
+        </div>
+    );
+};
+
 const SymbolSelection = () => {
     const {
         phase,
@@ -108,6 +152,7 @@ const SymbolSelection = () => {
         rerollsThisTurn,
         level,
         selectSymbol,
+        selectEvent,
         skipSelection,
         rerollSymbols,
         symbolSelectionRelicSourceId,
@@ -151,6 +196,11 @@ const SymbolSelection = () => {
         selectSymbol(symbolId);
     };
 
+    const handleEventCardClick = (eventId: number) => {
+        void audioManager.play('symbol_choice_chose');
+        selectEvent(eventId);
+    };
+
     const handleRerollClick = () => {
         if (!canReroll) {
             void audioManager.play('denied');
@@ -181,13 +231,21 @@ const SymbolSelection = () => {
                         {t('game.chooseSymbol', language)}
                     </div>
                     <div className="selection-cards">
-                        {symbolChoices.map((sym, i) => (
-                            <SymbolCard
-                                key={`${sym.id}-${i}`}
-                                symbol={sym}
-                                unlockedKnowledgeUpgrades={unlockedKnowledgeUpgrades}
-                                onClick={() => handleCardClick(sym.id)}
-                            />
+                        {symbolChoices.map((choice, i) => (
+                            isGameEventDefinition(choice) ? (
+                                <EventCard
+                                    key={`event-${choice.id}-${i}`}
+                                    event={choice}
+                                    onClick={() => handleEventCardClick(choice.id)}
+                                />
+                            ) : (
+                                <SymbolCard
+                                    key={`${choice.id}-${i}`}
+                                    symbol={choice}
+                                    unlockedKnowledgeUpgrades={unlockedKnowledgeUpgrades}
+                                    onClick={() => handleCardClick(choice.id)}
+                                />
+                            )
                         ))}
                     </div>
                     <div className="selection-actions">

@@ -1,5 +1,6 @@
 import type { SymbolDefinition } from '../../data/symbolDefinitions';
 import { SYMBOLS, SymbolType, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, S, Sym } from '../../data/symbolDefinitions';
+import { GAME_EVENTS, type GameEventDefinition } from '../../data/eventDefinitions';
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
@@ -22,8 +23,38 @@ export interface SelectionContext {
     religionUnlocked: boolean;
     upgrades: number[];
     ownedRelicDefIds: number[];
+    ownedSymbolDefIds?: number[];
     /** 개척자(68): 다음 선택지에 지형 1칸 이상 강제 */
     forceTerrainInNextSymbolChoices: boolean;
+}
+
+export type SelectionChoice = SymbolDefinition | GameEventDefinition;
+
+const EVENT_REPLACE_CHANCE_PER_CARD = 0.1;
+
+function getEligibleEvents(ctx: Pick<SelectionContext, 'ownedSymbolDefIds'>): GameEventDefinition[] {
+    const ownedSymbolDefIds = ctx.ownedSymbolDefIds ?? [];
+    const grasslandCount = ownedSymbolDefIds.filter((id) => id === S.grassland).length;
+
+    return Object.values(GAME_EVENTS).filter((event) => {
+        if (event.category === 'leader') return false;
+        if (event.category === 'conditional') {
+            return event.id === 5 && grasslandCount >= 3;
+        }
+        return true;
+    });
+}
+
+function maybeReplaceChoicesWithEvents(choices: SymbolDefinition[], ctx: SelectionContext): SelectionChoice[] {
+    const events = getEligibleEvents(ctx);
+    if (events.length === 0 || choices.length === 0) {
+        return choices;
+    }
+
+    return choices.map((choice) => {
+        if (Math.random() >= EVENT_REPLACE_CHANCE_PER_CARD) return choice;
+        return events[Math.floor(Math.random() * events.length)]!;
+    });
 }
 
 /** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
@@ -147,7 +178,7 @@ export function generateTerrainOnlyChoices(ctx: Pick<SelectionContext, 'era' | '
 }
 
 export interface GenerateChoicesResult {
-    choices: SymbolDefinition[];
+    choices: SelectionChoice[];
     consumedForceTerrain: boolean;
 }
 
@@ -180,12 +211,12 @@ export function generateChoices(ctx: SelectionContext): GenerateChoicesResult {
                 : otherSyms[Math.floor(Math.random() * otherSyms.length)] ?? Sym.grassland;
         choices.push(tPick);
         while (choices.length < 3) choices.push(pickOne());
-        return { choices, consumedForceTerrain: true };
+        return { choices: maybeReplaceChoicesWithEvents(choices, ctx), consumedForceTerrain: true };
     }
 
     const choices: SymbolDefinition[] = [];
     for (let i = 0; i < 3; i++) choices.push(pickOne());
-    return { choices, consumedForceTerrain: false };
+    return { choices: maybeReplaceChoicesWithEvents(choices, ctx), consumedForceTerrain: false };
 }
 
 /** 개발자용: 현재 상태에서 각 심볼이 한 번 픽될 확률(%) 반환 (균등) */

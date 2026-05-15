@@ -86,6 +86,7 @@ const makeState = (): GameState => {
         startProcessing: () => {},
         continueProcessingAfterNewThreatFloats: () => {},
         selectSymbol: () => {},
+        selectEvent: () => {},
         skipSelection: () => {},
         rerollSymbols: () => {},
         toggleRelicShop: () => {},

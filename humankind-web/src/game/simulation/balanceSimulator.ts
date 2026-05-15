@@ -1,4 +1,5 @@
 import { SYMBOLS, SymbolType, type SymbolDefinition, S } from '../data/symbolDefinitions';
+import { isGameEventDefinition } from '../data/eventDefinitions';
 import {
     AGI_PROJECT_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
@@ -713,6 +714,7 @@ const simulateTurn = (
             religionUnlocked: state.religionUnlocked,
             upgrades: state.unlockedKnowledgeUpgrades,
             ownedRelicDefIds: [],
+            ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
         }),
     );
@@ -721,7 +723,8 @@ const simulateTurn = (
             ? false
             : state.forceTerrainInNextSymbolChoices;
 
-    const selected = chooseSymbol(state, choiceResult.choices, config.pickStrategy, rng);
+    const symbolChoices = choiceResult.choices.filter((choice): choice is SymbolDefinition => !isGameEventDefinition(choice));
+    const selected = chooseSymbol(state, symbolChoices, config.pickStrategy, rng);
     if (selected) {
         state.playerSymbols.push(createSimulationInstance(selected, state.unlockedKnowledgeUpgrades));
         pickedSymbolIds.push(selected.id);

@@ -289,6 +289,7 @@ export const createTurnFlowActions = ({
                         religionUnlocked: prev.religionUnlocked,
                         upgrades: (prev.unlockedKnowledgeUpgrades || []).map(Number),
                         ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+                        ownedSymbolDefIds: prev.playerSymbols.map((s) => s.definition.id),
                         forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices,
                     };
                     const nextChoiceRes = prev.edictRemovalPending

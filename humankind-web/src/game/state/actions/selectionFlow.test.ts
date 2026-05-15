@@ -78,6 +78,7 @@ const makeState = (): GameState => {
         startProcessing: () => {},
         continueProcessingAfterNewThreatFloats: () => {},
         selectSymbol: () => {},
+        selectEvent: () => {},
         skipSelection: () => {},
         rerollSymbols: () => {},
         toggleRelicShop: () => {},
@@ -164,6 +165,30 @@ describe('selectionFlow actions', () => {
         expect(harness.get().gold).toBe(7);
         expect(harness.get().freeSelectionRerolls).toBe(0);
         expect(harness.get().symbolChoices).toHaveLength(3);
+    });
+
+    it('summons an enemy warrior when selecting Barbarian Suppression event', () => {
+        const harness = createHarness();
+
+        harness.actions.selectEvent(4);
+
+        expect(harness.get().phase).toBe('idle');
+        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(true);
+    });
+
+    it('refreshes the relic shop when selecting Relic Caravan event', async () => {
+        let refreshed = false;
+        const harness = createHarness({
+            refreshRelicShop: (force?: boolean) => {
+                refreshed = force === true;
+            },
+        });
+
+        harness.actions.selectEvent(3);
+        await Promise.resolve();
+
+        expect(harness.get().phase).toBe('idle');
+        expect(refreshed).toBe(true);
     });
 
     it('charges the inflated reroll cost by knowledge level', () => {

@@ -7,6 +7,7 @@ import { RELIC_ID } from '../logic/relics/relicIds';
 import {
     generateChoices as generateChoicesSelection,
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
+    type SelectionChoice,
 } from '../logic/selection/selectionLogic';
 import type { PlayerSymbolInstance } from '../types';
 import { getEraFromLevel } from './gameCalculations';
@@ -114,7 +115,7 @@ export interface GameState {
     phase: GamePhase;
     isTutorialMode?: boolean;
     tutorialSpinStep?: 'corn_spin' | 'corn_done' | 'monument_spin' | 'monument_processing' | 'monument_done' | null;
-    symbolChoices: SymbolDefinition[];
+    symbolChoices: SelectionChoice[];
     /** 심볼 선택이 고대 유물 잔해(13)·고대 부족 합류(19) 클릭으로 열린 경우 해당 유물 정의 ID (표시·리롤 비활성) */
     symbolSelectionRelicSourceId: number | null;
     /** 유물 상점에 표시되는 유물 목록 (3개) */
@@ -206,6 +207,7 @@ export interface GameState {
     /** 플로팅 표시 후 실제 processing 시작 (뷰에서 호출) */
     continueProcessingAfterNewThreatFloats: () => void;
     selectSymbol: (symbolId: number) => void;
+    selectEvent: (eventId: number) => void;
     skipSelection: () => void;
     rerollSymbols: () => void;
 
@@ -510,6 +512,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 religionUnlocked: state.religionUnlocked,
                 upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
                 ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+                ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
             });
             const choices = res.choices;
