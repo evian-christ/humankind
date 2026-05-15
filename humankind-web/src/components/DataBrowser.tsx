@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect, Fragment } from 'react';
 import { SYMBOLS, SymbolType, getSymbolColorHex, isBasePool } from '../game/data/symbolDefinitions';
 import { getRelicRarityColorHex, RELICS, type RelicRarity } from '../game/data/relicDefinitions';
 import { ENEMIES } from '../game/data/enemyDefinitions';
+import { GAME_EVENT_CATEGORY_ORDER, GAME_EVENTS } from '../game/data/eventDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { LEADERS } from '../game/data/leaders';
 import { useSettingsStore } from '../game/state/settingsStore';
@@ -10,7 +11,7 @@ import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
-type Tab = 'symbols' | 'relics' | 'knowledgeUpgrades' | 'enemies' | 'leaders';
+type Tab = 'symbols' | 'relics' | 'knowledgeUpgrades' | 'events' | 'enemies' | 'leaders';
 type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
@@ -81,6 +82,7 @@ const DataBrowser = () => {
     const [symbolSort, setSymbolSort] = useState<SortState | null>(null);
     const [relicSort, setRelicSort] = useState<SortState | null>(null);
     const [knowledgeUpgradeSort, setKnowledgeUpgradeSort] = useState<SortState | null>(null);
+    const [eventSort, setEventSort] = useState<SortState | null>(null);
     const [enemySort, setEnemySort] = useState<SortState | null>(null);
     const [leaderSort, setLeaderSort] = useState<SortState | null>(null);
 
@@ -273,6 +275,46 @@ const DataBrowser = () => {
         return list;
     }, [eraFilter, search, knowledgeUpgradeSort, tl]);
 
+    const filteredEvents = useMemo(() => {
+        let list = Object.values(GAME_EVENTS);
+
+        if (search.trim()) {
+            const q = search.toLowerCase();
+            list = list.filter(event => {
+                const name = tl(`event.${event.key}.name`, event.key).toLowerCase();
+                const desc = tl(`event.${event.key}.desc`, event.description).toLowerCase();
+                const availability = tl(`event.${event.key}.availability`, event.availability).toLowerCase();
+                const category = t(`eventCategory.${event.category}`, language).toLowerCase();
+                return name.includes(q) ||
+                    desc.includes(q) ||
+                    availability.includes(q) ||
+                    category.includes(q) ||
+                    String(event.id).includes(q);
+            });
+        }
+
+        if (eventSort) {
+            const { column, dir } = eventSort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'name': va = tl(`event.${a.key}.name`, a.key); vb = tl(`event.${b.key}.name`, b.key); break;
+                    case 'category': va = GAME_EVENT_CATEGORY_ORDER.indexOf(a.category); vb = GAME_EVENT_CATEGORY_ORDER.indexOf(b.category); break;
+                    case 'availability': va = tl(`event.${a.key}.availability`, a.availability); vb = tl(`event.${b.key}.availability`, b.availability); break;
+                    case 'desc': va = tl(`event.${a.key}.desc`, a.description); vb = tl(`event.${b.key}.desc`, b.description); break;
+                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        } else {
+            list.sort((a, b) => a.id - b.id);
+        }
+
+        return list;
+    }, [search, eventSort, language, tl]);
+
     // 지도자 목록
     const filteredLeaders = useMemo(() => {
         let list = Object.values(LEADERS);
@@ -324,6 +366,7 @@ const DataBrowser = () => {
     const symSortHandler = toggleSort(setSymbolSort);
     const relSortHandler = toggleSort(setRelicSort);
     const kuSortHandler = toggleSort(setKnowledgeUpgradeSort);
+    const eventSortHandler = toggleSort(setEventSort);
     const enSortHandler = toggleSort(setEnemySort);
     const leaderSortHandler = toggleSort(setLeaderSort);
 
@@ -357,6 +400,12 @@ const DataBrowser = () => {
                     onClick={() => setTab('knowledgeUpgrades')}
                 >
                     {t('dataBrowser.knowledgeUpgrades', language)} ({Object.keys(KNOWLEDGE_UPGRADES).length})
+                </button>
+                <button
+                    className={`databrowser-tab ${tab === 'events' ? 'databrowser-tab--active' : ''}`}
+                    onClick={() => setTab('events')}
+                >
+                    {t('dataBrowser.events', language)} ({Object.keys(GAME_EVENTS).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'enemies' ? 'databrowser-tab--active' : ''}`}
@@ -657,6 +706,37 @@ const DataBrowser = () => {
                     </table>
                 )}
 
+                {tab === 'events' && (
+                    <table className="databrowser-table">
+                        <thead>
+                            <tr>
+                                <SortTh column="id" label="ID" sort={eventSort} onSort={eventSortHandler} className="databrowser-th--id" />
+                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={eventSort} onSort={eventSortHandler} className="databrowser-th--name" />
+                                <SortTh column="category" label={t('dataBrowser.colCategory', language)} sort={eventSort} onSort={eventSortHandler} className="databrowser-th--era" />
+                                <SortTh column="availability" label={t('dataBrowser.colAvailability', language)} sort={eventSort} onSort={eventSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={eventSort} onSort={eventSortHandler} className="databrowser-th--desc" />
+                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={eventSort} onSort={eventSortHandler} className="databrowser-th--sprite" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredEvents.map(event => (
+                                <tr key={event.id} className="databrowser-row">
+                                    <td className="databrowser-cell--id">{event.id}</td>
+                                    <td className="databrowser-cell--name">{tl(`event.${event.key}.name`, event.key)}</td>
+                                    <td className="databrowser-cell--type">{t(`eventCategory.${event.category}`, language)}</td>
+                                    <td className="databrowser-cell--desc">
+                                        {event.category === 'conditional'
+                                            ? <EffectText text={tl(`event.${event.key}.availability`, event.availability)} />
+                                            : '-'}
+                                    </td>
+                                    <td className="databrowser-cell--desc"><EffectText text={tl(`event.${event.key}.desc`, event.description)} /></td>
+                                    <td className="databrowser-cell--sprite">{event.sprite || '-'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+
                 {tab === 'knowledgeUpgrades' && (
                     <table className="databrowser-table">
                         <thead>
@@ -708,6 +788,7 @@ const DataBrowser = () => {
                 {((tab === 'symbols' && filteredSymbols.length === 0) ||
                     (tab === 'relics' && filteredRelics.length === 0) ||
                     (tab === 'knowledgeUpgrades' && filteredKnowledgeUpgrades.length === 0) ||
+                    (tab === 'events' && filteredEvents.length === 0) ||
                     (tab === 'enemies' && filteredEnemies.length === 0)) && (
                         <div className="databrowser-empty">{t('dataBrowser.noResults', language)}</div>
                     )}
