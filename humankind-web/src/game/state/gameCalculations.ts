@@ -73,7 +73,7 @@ export const calculateFoodCost = (turn: number): number => {
 
     let extra = 0;
     for (let k = 1; k <= nth - 1; k++) {
-        extra += (40 + 10 * k) * k;
+        extra += (20 + 5 * k) * k;
     }
     return base + extra;
 };
