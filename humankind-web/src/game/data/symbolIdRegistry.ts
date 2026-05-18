@@ -3,7 +3,7 @@
  * ID를 바꿀 때는 이 파일의 값만 수정하면 되며,
  * 게임 로직에서는 `SYMBOL_NUMERIC_ID`(숫자 비교) 또는 `definition.key`(문자 식별)를 사용합니다.
  *
- * 배치 규칙: 지형(1–8) → 일반(9–38) → 고대(39–46) → 중세(47–54) → 종교(55–58) → 현대 특수(59) → 특수 보상(60–62) → 전투 전용(63–72) → 적(73–74) → 재해(75–77)
+ * 배치 규칙: 지형(1–8) → 일반(9–38) → 고대(39–46) → 중세(47–54) → 종교(55–58) → 현대 특수(59) → 특수 보상(60–62) → 전투 전용(63–72) → 적(74, 78–86) → 재해(75–77)
  */
 export const SYMBOL_NUMERIC_ID = {
     // ── Terrain (1–8): 초원→평원→바다→숲→열대우림→사막→오아시스→산 ──
@@ -112,9 +112,17 @@ export const SYMBOL_NUMERIC_ID = {
     crossbowman: 71,
     cannon: 72,
 
-    // ── Enemy (73–74) ──
-    barbarian_camp: 73,
+    // ── Enemy (74, 78–86) ──
     enemy_warrior: 74,
+    enemy_cavalry: 78,
+    enemy_knight: 79,
+    enemy_cavalry_corps: 80,
+    enemy_musketman: 81,
+    enemy_infantry: 82,
+    enemy_archer: 83,
+    enemy_tracker_archer: 84,
+    enemy_crossbowman: 85,
+    enemy_cannon: 86,
 
     // ── Disaster (75–77) ──
     flood: 75,

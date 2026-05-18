@@ -38,6 +38,7 @@ const createCommonResetPatch = () => ({
     pendingContributors: [],
     effectPhase: null,
     effectPhase3ReachedThisRun: false,
+    lootMergeFx: null,
     eventLog: [],
     combatAnimation: null,
     combatShaking: false,
@@ -204,6 +205,7 @@ export const createGameLifecycleActions = ({
             pendingContributors: [],
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
+            lootMergeFx: null,
         });
     },
 
@@ -230,6 +232,7 @@ export const createGameLifecycleActions = ({
             pendingContributors: [],
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
+            lootMergeFx: null,
         });
     },
 

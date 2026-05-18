@@ -12,5 +12,5 @@ export const getSymbolSpriteUrl = (
     symbol: Pick<SymbolDefinition, 'id' | 'sprite'>,
 ): string | null => {
     if (!hasSymbolSprite(symbol.sprite)) return null;
-    return `${ASSET_BASE_URL}assets/symbols/${getSymbolSpriteFileName(symbol.id)}`;
+    return `${ASSET_BASE_URL}assets/symbols/${symbol.sprite}`;
 };

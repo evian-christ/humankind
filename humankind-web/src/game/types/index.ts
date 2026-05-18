@@ -13,4 +13,6 @@ export interface PlayerSymbolInstance {
     stored_gold?: number;
     /** Merchants(22)가 이번 턴 저장 계산을 effectPhase 종료 후 수행해야 하는지 */
     merchant_store_pending?: boolean;
+    /** 파괴 X 연출 숨김 (전리품 흡수 등) */
+    suppress_destroy_overlay?: boolean;
 }

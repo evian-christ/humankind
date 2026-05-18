@@ -284,8 +284,41 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         expect(isUpgradeLegalForKnowledgePick(
             CELESTIAL_NAVIGATION_UPGRADE_ID,
             [FISHERIES_UPGRADE_ID],
-            11,
+            6,
         )).toBe(true);
+    });
+
+    it('locks earlier research tiers at era transition levels', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            NOMADIC_TRADITION_UPGRADE_ID,
+            [PASTORALISM_UPGRADE_ID],
+            9,
+        )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            NOMADIC_TRADITION_UPGRADE_ID,
+            [PASTORALISM_UPGRADE_ID],
+            10,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            NATIONALISM_UPGRADE_ID,
+            [],
+            19,
+        )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            NATIONALISM_UPGRADE_ID,
+            [],
+            20,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            ELECTRICITY_UPGRADE_ID,
+            [],
+            29,
+        )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            ELECTRICITY_UPGRADE_ID,
+            [],
+            30,
+        )).toBe(false);
     });
 
     it('requires Fisheries for Compass', () => {

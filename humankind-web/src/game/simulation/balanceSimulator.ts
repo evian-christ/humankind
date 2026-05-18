@@ -55,6 +55,7 @@ import {
     applySlotEffectResult,
     collectRemovedSymbolInstanceIds,
     completeSlotEffects,
+    commitLootMerge,
     createSlotEffectPipeline,
     removeMarkedSymbolsFromBoard,
     resolveSlotEffect,
@@ -64,6 +65,7 @@ import {
 import {
     collectCombatDestroyedSymbols,
     collectCombatEvents,
+    collectCombatKilledEnemies,
     resolveCombatStep,
 } from '../logic/turn/combatResolution';
 import { runPostEffectsHooks } from '../logic/turn/postEffectsHooks';
@@ -551,9 +553,16 @@ const resolveCombat = (state: SimulationState) => {
     }
 
     const destroyedIds = new Set(collectCombatDestroyedSymbols(state.board, BOARD_WIDTH, BOARD_HEIGHT));
+    const killedEnemyCount = collectCombatKilledEnemies(state.board, BOARD_WIDTH, BOARD_HEIGHT).length;
     if (destroyedIds.size === 0) return;
     state.board = state.board.map((col) => col.map((s) => (s?.is_marked_for_destruction ? null : s)));
     state.playerSymbols = state.playerSymbols.filter((s) => !destroyedIds.has(s.instanceId));
+    const lootDef = SYMBOLS[S.loot];
+    if (lootDef) {
+        for (let i = 0; i < killedEnemyCount; i++) {
+            state.playerSymbols.push(createSimulationInstance(lootDef, state.unlockedKnowledgeUpgrades));
+        }
+    }
 };
 
 const simulateTurn = (
@@ -613,7 +622,7 @@ const simulateTurn = (
 
     for (const slot of pipeline.slotOrder) {
         const symbol = state.board[slot.x][slot.y];
-        if (!symbol) continue;
+        if (!symbol || symbol.is_marked_for_destruction) continue;
         const result = resolveSlotEffect({
             pipeline,
             deps,
@@ -625,6 +634,7 @@ const simulateTurn = (
             relicEffects: DEFAULT_RELIC_EFFECTS,
         });
         applySlotEffectResult(pipeline, slot, result);
+        if (result.lootMerge) commitLootMerge(state.board, result.lootMerge);
         if (result.bonusXpPerTurnDelta) state.bonusXpPerTurn += result.bonusXpPerTurnDelta;
         if (result.forceTerrainInNextChoices) state.forceTerrainInNextSymbolChoices = true;
         if (result.edictRemovalPending) state.edictRemovalPending = true;

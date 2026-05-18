@@ -1,5 +1,5 @@
 import { RELICS } from '../data/relicDefinitions';
-import { SYMBOLS, type SymbolDefinition } from '../data/symbolDefinitions';
+import { SYMBOLS } from '../data/symbolDefinitions';
 import { GAME_EVENTS, isGameEventDefinition } from '../data/eventDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import type { GamePhase, GameState, GameEventLogEntry } from './gameStore';
@@ -22,6 +22,7 @@ interface SerializedSymbol {
     banana_permanent_food_bonus?: number;
     stored_gold?: number;
     merchant_store_pending?: boolean;
+    suppress_destroy_overlay?: boolean;
 }
 
 interface SerializedRelic {
@@ -94,6 +95,7 @@ const serializeSymbol = (symbol: PlayerSymbolInstance): SerializedSymbol => ({
     banana_permanent_food_bonus: symbol.banana_permanent_food_bonus,
     stored_gold: symbol.stored_gold,
     merchant_store_pending: symbol.merchant_store_pending,
+    suppress_destroy_overlay: symbol.suppress_destroy_overlay,
 });
 
 const deserializeSymbol = (saved: SerializedSymbol): PlayerSymbolInstance | null => {
@@ -109,6 +111,7 @@ const deserializeSymbol = (saved: SerializedSymbol): PlayerSymbolInstance | null
         banana_permanent_food_bonus: saved.banana_permanent_food_bonus,
         stored_gold: saved.stored_gold,
         merchant_store_pending: saved.merchant_store_pending,
+        suppress_destroy_overlay: saved.suppress_destroy_overlay,
     };
 };
 
@@ -281,6 +284,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             pendingContributors: [],
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
+            lootMergeFx: null,
             eventLog: save.state.eventLog ?? [],
             prevBoard: deserializeBoard(save.state.prevBoard, symbolByInstanceId),
             combatAnimation: null,

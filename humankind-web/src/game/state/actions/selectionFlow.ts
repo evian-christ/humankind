@@ -4,17 +4,37 @@ import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
+    INQUISITION_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
     MECHANICS_UPGRADE_ID,
+    RESTRUCTURING_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
-import { GAME_EVENTS } from '../../data/eventDefinitions';
+import { getEnemyPoolForEra } from '../../data/enemyPools';
+import {
+    CAPITAL_RELOCATION_DESTROY_COUNT,
+    CAPITAL_RELOCATION_FOOD_REWARD,
+    CAPITAL_RELOCATION_KNOWLEDGE_REWARD,
+    BORDER_RAID_REWARD,
+    DESERT_CARAVAN_FOOD,
+    EVERY_TERRAIN_BOUNTY_EACH,
+    MILITARY_DRAFT_FOOD,
+    FOREST_HARVEST_FOOD,
+    GAME_EVENTS,
+    GRASSLAND_FESTIVAL_FOOD,
+    MARITIME_TRADE_PER_SEA,
+    MOUNTAIN_LOOKOUT_PER_MOUNTAIN,
+    OASIS_BLESSING_PER_EMPTY,
+    PLAINS_PASTURE_PER_CATTLE,
+    PLAINS_PASTURE_PER_SHEEP,
+    eraScaleIndex,
+} from '../../data/eventDefinitions';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import {
     generateChoices as generateChoicesSelection,
@@ -56,6 +76,11 @@ const UNIT_TRANSFORM_UPGRADE_IDS = new Set<number>([
     BALLISTICS_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
 ]);
+const OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
+    SACRIFICIAL_RITE_UPGRADE_ID,
+    INQUISITION_UPGRADE_ID,
+    RESTRUCTURING_UPGRADE_ID,
+]);
 
 const resolveStandardChoices = (state: GameState): ChoiceResolution => {
     const res = generateChoicesSelection({
@@ -83,6 +108,64 @@ const resolveTerrainChoices = (state: GameState) =>
         upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
         ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
     });
+
+const countBoardSymbols = (board: GameState['board'], symbolId: number): number => {
+    let count = 0;
+    for (const col of board) {
+        for (const cell of col) {
+            if (cell?.definition.id === symbolId) count++;
+        }
+    }
+    return count;
+};
+
+const countBoardEmptySlots = (board: GameState['board']): number => {
+    let count = 0;
+    for (const col of board) {
+        for (const cell of col) {
+            if (cell == null) count++;
+        }
+    }
+    return count;
+};
+
+const countOwnedSymbols = (playerSymbols: PlayerSymbolInstance[], symbolId: number): number =>
+    playerSymbols.reduce((acc, s) => (s.definition.id === symbolId ? acc + 1 : acc), 0);
+
+/** 보드 위 모든 바나나의 현재 식량 생산(1 + permanent bonus)을 즉시 한 번 더 적용 */
+const triggerBananaEffectsOnce = (board: GameState['board']): number => {
+    let foodGain = 0;
+    for (const col of board) {
+        for (const cell of col) {
+            if (cell?.definition.id === S.banana) {
+                const perm = cell.banana_permanent_food_bonus ?? 0;
+                foodGain += 1 + perm;
+            }
+        }
+    }
+    return foodGain;
+};
+
+const pickRandomSymbols = (symbols: PlayerSymbolInstance[], count: number): PlayerSymbolInstance[] => {
+    const pool = [...symbols];
+    const picked: PlayerSymbolInstance[] = [];
+    const limit = Math.min(count, pool.length);
+    for (let i = 0; i < limit; i++) {
+        const index = Math.floor(Math.random() * pool.length);
+        const [symbol] = pool.splice(index, 1);
+        if (symbol) picked.push(symbol);
+    }
+    return picked;
+};
+
+const removeSymbolsFromBoard = (
+    board: GameState['board'],
+    removedIds: ReadonlySet<string>,
+): GameState['board'] =>
+    board.map((col) => col.map((cell) => (cell && removedIds.has(cell.instanceId) ? null : cell)));
+
+const isBoardDestroyBlockedType = (type: SymbolType) =>
+    type === SymbolType.ENEMY || type === SymbolType.DISASTER;
 
 const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () => GamePhase) => {
     const q = [...(state.bonusSelectionQueue || [])];
@@ -145,24 +228,103 @@ export const createSelectionFlowActions = ({
         if (!event) return;
 
         const patch: Partial<GameState> = {};
-        if (event.key === 'grain_tribute') {
-            patch.food = state.food + 12;
-        } else if (event.key === 'merchant_patronage') {
-            patch.gold = state.gold + 10;
+        const eraIdx = eraScaleIndex(state.era);
+        let foodDelta = 0;
+        let goldDelta = 0;
+        let knowledgeDelta = 0;
+
+        if (event.reward) {
+            foodDelta += event.reward.food ?? 0;
+            goldDelta += event.reward.gold ?? 0;
+            knowledgeDelta += event.reward.knowledge ?? 0;
         } else if (event.key === 'artifact_market_refresh') {
             queueMicrotask(() => {
                 get().refreshRelicShop(true);
                 saveGameState(get());
             });
         } else if (event.key === 'border_raid') {
+            foodDelta += BORDER_RAID_REWARD[eraIdx];
+            goldDelta += BORDER_RAID_REWARD[eraIdx];
+            const enemyPool = getEnemyPoolForEra(state.era);
+            const enemySymbols = Array.from({ length: 3 }, () => {
+                const enemyId = enemyPool[Math.floor(Math.random() * enemyPool.length)]!;
+                const def = SYMBOLS[enemyId];
+                return def ? createInstance(def, state.unlockedKnowledgeUpgrades || []) : null;
+            }).filter((sym): sym is PlayerSymbolInstance => sym != null);
+            patch.playerSymbols = [...state.playerSymbols, ...enemySymbols];
+        } else if (event.key === 'grassland_festival') {
+            foodDelta += GRASSLAND_FESTIVAL_FOOD[eraIdx];
+        } else if (event.key === 'plains_pasture') {
+            const cattleCount = countBoardSymbols(state.board, S.cattle);
+            const sheepCount = countBoardSymbols(state.board, S.sheep);
+            foodDelta += cattleCount * PLAINS_PASTURE_PER_CATTLE[eraIdx];
+            goldDelta += sheepCount * PLAINS_PASTURE_PER_SHEEP[eraIdx];
+        } else if (event.key === 'maritime_trade') {
+            const seaCount = countBoardSymbols(state.board, S.sea);
+            const perSea = MARITIME_TRADE_PER_SEA[eraIdx];
+            foodDelta += seaCount * perSea;
+            goldDelta += seaCount * perSea;
+        } else if (event.key === 'forest_harvest') {
+            foodDelta += FOREST_HARVEST_FOOD[eraIdx];
+            const forestDef = SYMBOLS[S.forest];
+            if (forestDef) {
+                patch.playerSymbols = [
+                    ...state.playerSymbols,
+                    createInstance(forestDef, state.unlockedKnowledgeUpgrades || []),
+                ];
+            }
+        } else if (event.key === 'jungle_expedition') {
+            foodDelta += triggerBananaEffectsOnce(state.board);
+        } else if (event.key === 'desert_caravan') {
+            foodDelta += DESERT_CARAVAN_FOOD[eraIdx];
+        } else if (event.key === 'mountain_lookout') {
+            const mountainCount = countOwnedSymbols(state.playerSymbols, S.mountain);
+            const per = MOUNTAIN_LOOKOUT_PER_MOUNTAIN[eraIdx];
+            foodDelta += mountainCount * per;
+            goldDelta += mountainCount * per;
+            knowledgeDelta += mountainCount * per;
+        } else if (event.key === 'oasis_blessing') {
+            const emptySlots = countBoardEmptySlots(state.board);
+            foodDelta += emptySlots * OASIS_BLESSING_PER_EMPTY[eraIdx];
+        } else if (event.key === 'military_draft') {
+            foodDelta += MILITARY_DRAFT_FOOD[eraIdx];
             const def = SYMBOLS[S.enemy_warrior];
             if (def) {
-                patch.playerSymbols = [...state.playerSymbols, createInstance(def, state.unlockedKnowledgeUpgrades || [])];
+                patch.playerSymbols = [
+                    ...(patch.playerSymbols ?? state.playerSymbols),
+                    createInstance(def, state.unlockedKnowledgeUpgrades || []),
+                ];
             }
-        } else if (event.key === 'grassland_festival') {
-            patch.food = state.food + 8;
-            patch.knowledge = state.knowledge + 4;
+        } else if (event.key === 'every_terrain_bounty') {
+            const bounty = EVERY_TERRAIN_BOUNTY_EACH[eraIdx];
+            foodDelta += bounty;
+            goldDelta += bounty;
+            knowledgeDelta += bounty;
+        } else if (event.key === 'capital_relocation') {
+            const removed = pickRandomSymbols(state.playerSymbols, CAPITAL_RELOCATION_DESTROY_COUNT);
+            const removedIds = new Set(removed.map((symbol) => symbol.instanceId));
+            const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
+            const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
+            const baseFiltered = state.playerSymbols.filter((symbol) => !removedIds.has(symbol.instanceId));
+            patch.playerSymbols = appendSymbolDefIdsToPlayer(
+                baseFiltered,
+                symAgg.addSymbolDefIds,
+                state.unlockedKnowledgeUpgrades || [],
+            );
+            patch.board = removeSymbolsFromBoard(state.board, removedIds);
+            foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food;
+            goldDelta += symAgg.gold + shBonus.gold;
+            knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge;
+            patch.bonusXpPerTurn = state.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta;
+            patch.forceTerrainInNextSymbolChoices = state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices;
+            patch.freeSelectionRerolls = (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls;
+            patch.isRelicShopOpen = state.isRelicShopOpen || symAgg.openRelicShop;
+            if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         }
+
+        if (foodDelta !== 0) patch.food = state.food + foodDelta;
+        if (goldDelta !== 0) patch.gold = state.gold + goldDelta;
+        if (knowledgeDelta !== 0) patch.knowledge = state.knowledge + knowledgeDelta;
 
         set({
             ...patch,
@@ -271,11 +433,11 @@ export const createSelectionFlowActions = ({
             ? [{ relicInstanceId: mouseionRelic.instanceId, text: '+3', color: '#fbbf24' }]
             : [];
 
-        if (uid === SACRIFICIAL_RITE_UPGRADE_ID) {
+        if (OBLIVION_FURNACE_GRANT_UPGRADE_IDS.has(uid)) {
             const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
             if (oblDef) {
                 const rs = useRelicStore.getState();
-                for (let i = 0; i < 3; i++) rs.addRelic(oblDef);
+                for (let i = 0; i < 2; i++) rs.addRelic(oblDef);
             }
         }
 
@@ -512,6 +674,7 @@ export const createSelectionFlowActions = ({
         if (x < 0 || x >= state.board.length || y < 0 || y >= state.board[0]!.length) return;
         const sym = state.board[x][y];
         if (!sym) return;
+        if (isBoardDestroyBlockedType(sym.definition.type)) return;
 
         const instanceIds = [sym.instanceId];
         const removed = [sym];

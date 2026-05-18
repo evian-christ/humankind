@@ -1,6 +1,5 @@
 import type { PlayerSymbolInstance } from '../game/types';
 import {
-    BARBARIAN_CAMP_SPAWN_INTERVAL,
     SymbolType,
     S,
 } from '../game/data/symbolDefinitions';
@@ -25,16 +24,13 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const fs = Math.max(18, Math.round(27 * sx));
     const fsIcon = Math.max(22, Math.round(34 * sx));
 
-    const bananaStatText =
-        def.id === S.banana
-            ? (() => {
-                  const perm = sym.banana_permanent_food_bonus ?? 0;
-                  const pr = sym.effect_counter || 0;
-                  const parts: string[] = [];
-                  if (perm > 0) parts.push(`+${perm}`);
-                  if (pr > 0) parts.push(`${pr}/10`);
-                  return parts.length ? parts.join(' ') : null;
-              })()
+    const bananaPermanentFoodText =
+        def.id === S.banana && (sym.banana_permanent_food_bonus ?? 0) > 0
+            ? `+${sym.banana_permanent_food_bonus}`
+            : null;
+    const bananaProgressText =
+        def.id === S.banana && (sym.effect_counter ?? 0) > 0
+            ? String(sym.effect_counter)
             : null;
     const showCounter =
         def.id !== S.banana &&
@@ -44,14 +40,30 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const showAtk = def.base_attack !== undefined && def.base_attack > 0;
     const showHp = def.base_hp !== undefined && def.base_hp > 0;
     const hpValue = sym.enemy_hp ?? def.base_hp;
-    const showCampCounter = def.id === S.barbarian_camp;
     const font = { fontFamily: 'Mulmaru, sans-serif' as const, lineHeight: 1 as const };
     const statShadow =
         '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
 
     return (
         <>
-            {bananaStatText != null && (
+            {bananaPermanentFoodText != null && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: ux(2),
+                        bottom: uy(4),
+                        fontSize: fs,
+                        ...font,
+                        color: '#8b7355',
+                        fontWeight: 700,
+                        textShadow: statShadow,
+                    }}
+                >
+                    {bananaPermanentFoodText}
+                </div>
+            )}
+
+            {bananaProgressText != null && (
                 <div
                     style={{
                         position: 'absolute',
@@ -64,7 +76,7 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
                         textShadow: statShadow,
                     }}
                 >
-                    {bananaStatText}
+                    {bananaProgressText}
                 </div>
             )}
 
@@ -154,23 +166,6 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
                     >
                         {hpValue}
                     </span>
-                </div>
-            )}
-
-            {showCampCounter && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: ux(28),
-                        bottom: uy(6),
-                        fontSize: fs,
-                        ...font,
-                        color: '#8b7355',
-                        fontWeight: 800,
-                        textShadow: statShadow,
-                    }}
-                >
-                    {BARBARIAN_CAMP_SPAWN_INTERVAL - sym.effect_counter}
                 </div>
             )}
         </>

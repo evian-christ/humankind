@@ -42,18 +42,25 @@ describe('gameStore pasture butchering', () => {
         });
     };
 
-    it('opens loot for its base reward and removes it from the board', async () => {
+    it('opens loot for chosen reward and removes it from the board', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
+        const rewardMod = await import('../data/rewardDefinitions');
+        const lootChoicesSpy = vi.spyOn(rewardMod, 'generateLootRewardChoices').mockReturnValue([
+            rewardMod.REWARDS[1]!,
+            rewardMod.REWARDS[6]!,
+            rewardMod.REWARDS[11]!,
+        ]);
+
         const board = createEmptyBoard();
         const loot = createInstance(Sym.loot, 'loot');
         board[1][1] = loot;
-        vi.spyOn(Math, 'random').mockReturnValueOnce(0.1);
 
         useGameStore.setState({
             board,
             playerSymbols: [loot],
             phase: 'idle',
+            era: 1,
             food: 0,
             gold: 0,
             knowledge: 0,
@@ -61,13 +68,16 @@ describe('gameStore pasture butchering', () => {
         });
 
         useGameStore.getState().openLootAt(1, 1);
+        expect(useGameStore.getState().phase).toBe('loot_reward_selection');
+        useGameStore.getState().selectLootReward(1);
 
         const next = useGameStore.getState();
         expect(next.board[1][1]).toBeNull();
-        expect(next.food).toBe(15);
-        expect(next.gold).toBe(5);
+        expect(next.phase).toBe('idle');
+        expect(next.food).toBe(8);
+        expect(next.gold).toBe(0);
         expect(next.knowledge).toBe(0);
-        vi.restoreAllMocks();
+        lootChoicesSpy.mockRestore();
     });
 
     it('increments adjacent plains counters when Pasture Management is researched', async () => {
@@ -213,21 +223,27 @@ describe('gameStore pasture butchering', () => {
         expect(next.playerSymbols.find((sym) => sym.instanceId === 'archer')?.definition.id).toBe(Sym.tracker_archer.id);
     });
 
-    it('opens radiant loot and can grant a relic', async () => {
+    it('opens radiant loot choice and can grant a relic reward', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
+        const rewardMod = await import('../data/rewardDefinitions');
+        const lootChoicesSpy = vi.spyOn(rewardMod, 'generateLootRewardChoices').mockReturnValue([
+            rewardMod.REWARDS[16]!,
+            rewardMod.REWARDS[7]!,
+            rewardMod.REWARDS[12]!,
+        ]);
+
         useRelicStore.getState().resetRelics();
         const board = createEmptyBoard();
         const loot = createInstance(Sym.radiant_loot, 'radiant_loot');
         board[1][1] = loot;
-        vi.spyOn(Math, 'random')
-            .mockReturnValueOnce(0.95)
-            .mockReturnValueOnce(0);
+        vi.spyOn(Math, 'random').mockReturnValue(0);
 
         useGameStore.setState({
             board,
             playerSymbols: [loot],
             phase: 'idle',
+            era: 1,
             food: 0,
             gold: 0,
             knowledge: 0,
@@ -235,11 +251,16 @@ describe('gameStore pasture butchering', () => {
         });
 
         useGameStore.getState().openLootAt(1, 1);
+        expect(useGameStore.getState().phase).toBe('loot_reward_selection');
+        useGameStore.getState().selectLootReward(16);
 
         const next = useGameStore.getState();
-        expect(next.food).toBe(50);
-        expect(next.gold).toBe(20);
+        expect(next.board[1][1]).toBeNull();
+        expect(next.phase).toBe('idle');
+        expect(next.food).toBe(0);
+        expect(next.gold).toBe(0);
         expect(useRelicStore.getState().relics).toHaveLength(1);
+        lootChoicesSpy.mockRestore();
         vi.restoreAllMocks();
     });
 

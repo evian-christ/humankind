@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
+import { processSingleSymbolEffects } from '../symbolEffects';
 import type { EffectResult } from '../symbolEffects/types';
 import {
     applyGeneratedSymbols,
     applySlotEffectResult,
     buildSlotOrder,
     collectRemovedSymbolInstanceIds,
+    commitLootMerge,
     computeTurnStartBaseTotals,
     createSlotEffectPipeline,
+    type ProcessSlotArgs,
     removeMarkedSymbolsFromBoard,
     resolveSlotEffect,
     shouldDeferReligionEffect,
@@ -202,7 +205,71 @@ describe('turnPipeline', () => {
         });
 
         expect(result.counterDelta).toBe(2);
-        expect(result.counterDisplayTextBefore).toBe('9/10');
+        expect(result.counterAnchor).toBe('bottom-right');
+        expect(result.counterDisplayTextBefore).toBe('9');
+    });
+
+    it('does not let a loot already absorbed this turn absorb another loot', () => {
+        const board = createEmptyBoard();
+        const lootA = createInstance(Sym.loot, 'loot_a');
+        const lootB = createInstance(Sym.loot, 'loot_b');
+        const lootC = createInstance(Sym.loot, 'loot_c');
+        board[0][0] = lootA;
+        board[0][1] = lootB;
+        board[0][2] = lootC;
+        const pipeline = createSlotEffectPipeline({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            baseTotals: { food: 0, gold: 0, knowledge: 0 },
+        });
+        const deps = {
+            processSingleSymbolEffects: (args: ProcessSlotArgs) =>
+                processSingleSymbolEffects(
+                    args.symbol,
+                    args.board,
+                    args.x,
+                    args.y,
+                    args.effectCtx,
+                    args.relicEffects,
+                    args.disabledTerrainCoords,
+                ),
+        };
+        const relicEffects = {
+            relicCount: 0,
+            quarryEmptyGold: false,
+            bananaFossilBonus: false,
+            horsemansihpPastureBonus: false,
+            terraFossilDisasterFood: false,
+            allSymbolsAreCorner: false,
+        };
+
+        const firstResult = resolveSlotEffect({
+            pipeline,
+            deps,
+            symbol: lootA,
+            board,
+            x: 0,
+            y: 0,
+            effectCtx: { upgrades: [] },
+            relicEffects,
+        });
+        commitLootMerge(board, firstResult.lootMerge!);
+
+        const absorbedSlotResult = resolveSlotEffect({
+            pipeline,
+            deps,
+            symbol: lootB,
+            board,
+            x: 0,
+            y: 1,
+            effectCtx: { upgrades: [] },
+            relicEffects,
+        });
+
+        expect(lootB.is_marked_for_destruction).toBe(true);
+        expect(absorbedSlotResult).toEqual({ food: 0, knowledge: 0, gold: 0 });
+        expect(lootC.is_marked_for_destruction).toBe(false);
     });
 
     it('applies immediate slot effects to totals and accumulated effects', () => {

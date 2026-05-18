@@ -220,22 +220,8 @@ export function runPostEffectsHooks(args: {
             const s = board[x][y];
             if (!s || s.definition.id !== S.earthquake || !s.is_marked_for_destruction) continue;
 
-            const candidates: { x: number; y: number }[] = [];
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    const nx = x + dx,
-                        ny = y + dy;
-                    if (nx < 0 || nx >= boardWidth || ny < 0 || ny >= boardHeight) continue;
-                    const nb = board[nx][ny];
-                    if (!nb || nb.is_marked_for_destruction) continue;
-                    candidates.push({ x: nx, y: ny });
-                }
-            }
-
-            if (candidates.length > 0) {
-                const pick = candidates[Math.floor(Math.random() * candidates.length)];
-                const target = board[pick.x][pick.y];
+            for (let cy = 0; cy < boardHeight; cy++) {
+                const target = board[x][cy];
                 if (target) target.is_marked_for_destruction = true;
             }
         }

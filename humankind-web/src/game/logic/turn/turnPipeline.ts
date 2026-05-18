@@ -1,7 +1,7 @@
 import { PLANTATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import { BARBARIAN_CAMP_SPAWN_INTERVAL, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { S, SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
-import type { ActiveRelicEffects, EffectResult, SymbolEffectContext } from '../symbolEffects/types';
+import type { ActiveRelicEffects, EffectResult, LootMergeResolution, SymbolEffectContext } from '../symbolEffects/types';
 import {
     buildFoodBySlotKey,
     collectDisabledTerrainCoords,
@@ -15,6 +15,17 @@ import {
 import type { BoardCounterFloatAnchor, BoardGrid, CreateSymbolInstance } from './turnTypes';
 
 export type { BoardGrid } from './turnTypes';
+
+/** 타임라인 페이즈 3 직전 — 전리품 합류를 보드에 반영 */
+export function commitLootMerge(board: BoardGrid, merge: LootMergeResolution): void {
+    const absorbed = board[merge.absorbed.x]?.[merge.absorbed.y];
+    const receiver = board[merge.receiver.x]?.[merge.receiver.y];
+    const nextDef = SYMBOLS[merge.nextDefinitionId];
+    if (!absorbed || !receiver || !nextDef) return;
+    absorbed.is_marked_for_destruction = true;
+    absorbed.suppress_destroy_overlay = true;
+    receiver.definition = nextDef;
+}
 
 export interface ProcessSlotArgs {
     symbol: PlayerSymbolInstance;
@@ -102,9 +113,6 @@ interface CounterFloatConfig {
 
 function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolEffectContext): CounterFloatConfig | null {
     const def = symbol.definition;
-    if (def.id === S.barbarian_camp) {
-        return { anchor: 'bottom-left', mode: 'display-countdown', wrapThreshold: BARBARIAN_CAMP_SPAWN_INTERVAL };
-    }
     if (def.id === S.flood || def.id === S.drought) return { anchor: 'bottom-right', mode: 'direct-countdown' };
     if (def.id === S.wheat) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 10 };
     if (def.id === S.rice) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 20 };
@@ -121,22 +129,13 @@ function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolE
     return null;
 }
 
-function getCounterDisplayValue(symbol: PlayerSymbolInstance, rawValue: number): number {
-    return symbol.definition.id === S.barbarian_camp
-        ? BARBARIAN_CAMP_SPAWN_INTERVAL - rawValue
-        : rawValue;
+function getCounterDisplayValue(rawValue: number): number {
+    return rawValue;
 }
 
 function getCounterDisplayText(symbol: PlayerSymbolInstance, rawValue: number): string | null {
-    if (symbol.definition.id === S.barbarian_camp) {
-        return String(BARBARIAN_CAMP_SPAWN_INTERVAL - rawValue);
-    }
     if (symbol.definition.id === S.banana) {
-        const perm = symbol.banana_permanent_food_bonus ?? 0;
-        const parts: string[] = [];
-        if (perm > 0) parts.push(`+${perm}`);
-        if (rawValue > 0) parts.push(`${rawValue}/10`);
-        return parts.length ? parts.join(' ') : null;
+        return rawValue > 0 ? String(rawValue) : null;
     }
     return rawValue > 0 ? String(rawValue) : null;
 }
@@ -147,7 +146,7 @@ function createCounterMutationTracker(symbol: PlayerSymbolInstance, effectCtx: S
 
     let currentValue = symbol.effect_counter || 0;
     const initialValue = currentValue;
-    const initialDisplayValue = getCounterDisplayValue(symbol, initialValue);
+    const initialDisplayValue = getCounterDisplayValue(initialValue);
     const textBefore = getCounterDisplayText(symbol, initialValue);
     let positiveDelta = 0;
     let negativeDelta = 0;
@@ -159,8 +158,8 @@ function createCounterMutationTracker(symbol: PlayerSymbolInstance, effectCtx: S
         get: () => currentValue,
         set: (nextValue) => {
             const normalizedValue = Number(nextValue) || 0;
-            const beforeDisplayValue = getCounterDisplayValue(symbol, currentValue);
-            const afterDisplayValue = getCounterDisplayValue(symbol, normalizedValue);
+            const beforeDisplayValue = getCounterDisplayValue(currentValue);
+            const afterDisplayValue = getCounterDisplayValue(normalizedValue);
             const delta = afterDisplayValue - beforeDisplayValue;
             if (delta > 0) positiveDelta += delta;
             if (delta < 0) negativeDelta += delta;
@@ -184,7 +183,7 @@ function createCounterMutationTracker(symbol: PlayerSymbolInstance, effectCtx: S
                 });
             }
 
-            const finalDisplayValue = getCounterDisplayValue(symbol, currentValue);
+            const finalDisplayValue = getCounterDisplayValue(currentValue);
             let counterDelta = 0;
             if (config.mode === 'direct-countdown') {
                 counterDelta = negativeDelta || positiveDelta;
@@ -254,6 +253,10 @@ export function shouldDeferReligionEffect(symbolId: number): boolean {
 
 export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
     const { pipeline, deps, symbol, board, x, y, effectCtx, relicEffects } = args;
+
+    if (symbol.is_marked_for_destruction) {
+        return { food: 0, knowledge: 0, gold: 0 };
+    }
 
     if (shouldDeferReligionEffect(symbol.definition.id)) {
         pipeline.religionSlotsToRecalculate.push({ x, y, id: symbol.definition.id });

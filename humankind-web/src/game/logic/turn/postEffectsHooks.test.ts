@@ -113,6 +113,40 @@ describe('postEffectsHooks', () => {
         expect(result.addSymbolIds.every((id) => SYMBOLS[id]?.type === SymbolType.NORMAL)).toBe(true);
     });
 
+    it('makes earthquake destroy every symbol in the same column', () => {
+        const board = createEmptyBoard();
+        const earthquake = createInstance(SYMBOLS[S.earthquake]!, 'earthquake');
+        const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
+        const fish = createInstance(SYMBOLS[S.fish]!, 'fish');
+        const rice = createInstance(SYMBOLS[S.rice]!, 'rice');
+        earthquake.is_marked_for_destruction = true;
+        board[2][0] = wheat;
+        board[2][1] = earthquake;
+        board[2][3] = fish;
+        board[3][1] = rice;
+
+        runPostEffectsHooks({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            effects: [],
+            leaderId: null,
+            bonusXpPerTurn: 0,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: () => [],
+            relics: [],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        });
+
+        expect(wheat.is_marked_for_destruction).toBe(true);
+        expect(earthquake.is_marked_for_destruction).toBe(true);
+        expect(fish.is_marked_for_destruction).toBe(true);
+        expect(rice.is_marked_for_destruction).toBe(false);
+    });
+
     it('lets tax produce gold without reducing food', () => {
         const board = createEmptyBoard();
         const tax = createInstance(SYMBOLS[S.tax]!, 'tax');

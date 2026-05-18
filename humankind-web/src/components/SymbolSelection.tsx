@@ -5,7 +5,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { isGameEventDefinition, type GameEventDefinition } from '../game/data/eventDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
-import { getBoardSymbolTooltipDesc, t } from '../i18n';
+import { getBoardSymbolTooltipDesc, getEventDescription, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { audioManager } from '../audio/audioManager';
@@ -19,6 +19,8 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
+    [SymbolType.UNIT]: 'era.unit',
+    [SymbolType.ENEMY]: 'era.enemy',
 };
 
 /** gameStore RELIC_ID: 고대 유물 잔해 / 고대 부족 합류 — 심볼 선택 UI 전용 표시·리롤 숨김 */
@@ -109,9 +111,11 @@ const EventCard = ({
     onClick: () => void;
 }) => {
     const language = useSettingsStore((s) => s.language);
+    const era = useGameStore((s) => s.era);
     const eventColor = '#fbbf24';
     const eventName = t(`event.${event.key}.name`, language);
-    const eventDesc = t(`event.${event.key}.desc`, language);
+    const eventDesc = getEventDescription(event.key, era, language);
+    const eventCondition = t(`event.${event.key}.availability`, language);
 
     return (
         <div
@@ -139,6 +143,11 @@ const EventCard = ({
                         <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>
                     ))}
                 </div>
+                {event.category === 'conditional' && eventCondition !== '-' && (
+                    <div className="selection-event-card-condition">
+                        <span>{t('game.condition', language)}:</span> {eventCondition}
+                    </div>
+                )}
             </button>
         </div>
     );

@@ -76,7 +76,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, barbarianCampThreat, naturalDisasterThreat } = useGameStore();
+    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, naturalDisasterThreat } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
     const developerMode = useSettingsStore(s => s.developerMode);
@@ -235,10 +235,6 @@ const DevOverlay = () => {
                         <span>{barbarianSymbolThreat}%</span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span>야만인 주둔지</span>
-                        <span>{barbarianCampThreat}%</span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span>자연재해</span>
                         <span>{naturalDisasterThreat}%</span>
                     </div>
@@ -383,7 +379,7 @@ const DevOverlay = () => {
                                         (
                                         {[
                                             (sym.banana_permanent_food_bonus ?? 0) > 0 ? `+${sym.banana_permanent_food_bonus}` : '',
-                                            (sym.effect_counter ?? 0) > 0 ? `${sym.effect_counter}/10` : '',
+                                            (sym.effect_counter ?? 0) > 0 ? `${sym.effect_counter}` : '',
                                         ]
                                             .filter(Boolean)
                                             .join(' ')}

@@ -300,23 +300,35 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
         }
 
         case S.loot: {
-            const adjacentLoot = adj.find((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.loot && !boardGrid[pos.x][pos.y]?.is_marked_for_destruction);
+            const adjacentLoot = adj.find(
+                (pos) =>
+                    boardGrid[pos.x][pos.y]?.definition.id === S.loot &&
+                    !boardGrid[pos.x][pos.y]?.is_marked_for_destruction,
+            );
             if (adjacentLoot) {
-                const absorbed = boardGrid[adjacentLoot.x][adjacentLoot.y];
-                if (absorbed) absorbed.is_marked_for_destruction = true;
-                symbolInstance.definition = SYMBOLS[S.greater_loot]!;
                 state.contributors.push(adjacentLoot);
+                state.lootMerge = {
+                    absorbed: adjacentLoot,
+                    receiver: { x, y },
+                    nextDefinitionId: S.greater_loot,
+                };
             }
             return true;
         }
 
         case S.greater_loot: {
-            const adjacentGreaterLoot = adj.find((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.greater_loot && !boardGrid[pos.x][pos.y]?.is_marked_for_destruction);
+            const adjacentGreaterLoot = adj.find(
+                (pos) =>
+                    boardGrid[pos.x][pos.y]?.definition.id === S.greater_loot &&
+                    !boardGrid[pos.x][pos.y]?.is_marked_for_destruction,
+            );
             if (adjacentGreaterLoot) {
-                const absorbed = boardGrid[adjacentGreaterLoot.x][adjacentGreaterLoot.y];
-                if (absorbed) absorbed.is_marked_for_destruction = true;
-                symbolInstance.definition = SYMBOLS[S.radiant_loot]!;
                 state.contributors.push(adjacentGreaterLoot);
+                state.lootMerge = {
+                    absorbed: adjacentGreaterLoot,
+                    receiver: { x, y },
+                    nextDefinitionId: S.radiant_loot,
+                };
             }
             return true;
         }

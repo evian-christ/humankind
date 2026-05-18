@@ -1,4 +1,5 @@
-import { S, Sym, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
+import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
+import { getEnemyPoolForEra } from '../../data/enemyPools';
 import type { BoardGrid, BoardCoord, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
 
 const createEmptyBoard = (width: number, height: number): BoardGrid => {
@@ -71,9 +72,8 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         getThreatLabel,
     } = input;
 
-    let {
+    const {
         barbarianSymbolThreat,
-        barbarianCampThreat,
         naturalDisasterThreat,
     } = threatState;
 
@@ -81,11 +81,11 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     const spinUpgrades = unlockedKnowledgeUpgrades || [];
     const newThreats: { instanceId: string; label: string }[] = [];
 
-    if (era === 1 && turn > 0) {
-        barbarianSymbolThreat += 1;
-        if (rng.next() * 100 < barbarianSymbolThreat) {
-            barbarianSymbolThreat = 0;
-            const enemyDef = Sym.enemy_warrior;
+    if (turn > 0) {
+        if (rng.next() * 100 < 3) {
+            const pool = getEnemyPoolForEra(era);
+            const enemyId = rng.pick(pool);
+            const enemyDef = SYMBOLS[enemyId];
             if (enemyDef) {
                 const inst = createSymbolInstance(enemyDef, spinUpgrades);
                 newPlayerSymbols.push(inst);
@@ -93,20 +93,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
             }
         }
 
-        barbarianCampThreat += 0.2;
-        if (rng.next() * 100 < barbarianCampThreat) {
-            barbarianCampThreat = 0;
-            const campDef = Sym.barbarian_camp;
-            if (campDef) {
-                const inst = createSymbolInstance(campDef, spinUpgrades);
-                newPlayerSymbols.push(inst);
-                newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel('threat.barbarian_camp') });
-            }
-        }
-
-        naturalDisasterThreat += 0.5;
-        if (rng.next() * 100 < naturalDisasterThreat) {
-            naturalDisasterThreat = 0;
+        if (rng.next() * 100 < 2) {
             const floodId = S.flood;
             const earthquakeId = S.earthquake;
             const droughtId = S.drought;
@@ -184,9 +171,9 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     return {
         playerSymbols: anchoredSymbols,
         threatState: {
-            barbarianSymbolThreat,
-            barbarianCampThreat,
-            naturalDisasterThreat,
+            barbarianSymbolThreat: turn > 0 ? 3 : barbarianSymbolThreat,
+            barbarianCampThreat: 0,
+            naturalDisasterThreat: turn > 0 ? 2 : naturalDisasterThreat,
         },
         pendingNewThreatFloats,
         prevBoard: board,

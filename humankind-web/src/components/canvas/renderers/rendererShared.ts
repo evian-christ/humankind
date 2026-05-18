@@ -1,5 +1,5 @@
 import { BOARD_HEIGHT, BOARD_WIDTH } from '../../../game/state/gameStore';
-import { S } from '../../../game/data/symbolDefinitions';
+import { S, SymbolType } from '../../../game/data/symbolDefinitions';
 import { isMeleeUnit, isRangedUnit } from '../../../game/data/unitUpgrades';
 import { MILITARY_SCIENCE_UPGRADE_ID, TRACKING_UPGRADE_ID } from '../../../game/data/knowledgeUpgrades';
 import type { PlayerSymbolInstance } from '../../../game/types';
@@ -80,7 +80,12 @@ export function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance |
             const ny = y + dy;
             if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
             const candidate = board[nx][ny];
-            if (candidate && !candidate.is_marked_for_destruction) return true;
+            if (
+                candidate &&
+                !candidate.is_marked_for_destruction &&
+                candidate.definition.type !== SymbolType.ENEMY &&
+                candidate.definition.type !== SymbolType.DISASTER
+            ) return true;
         }
     }
     return false;

@@ -34,6 +34,7 @@ import {
 } from '../../data/knowledgeUpgrades';
 import type { PlayerSymbolInstance } from '../../types';
 import { processSingleSymbolEffects } from '../symbolEffects';
+import { commitLootMerge } from './turnPipeline';
 import {
     buildFoodBySlotKey,
     collectDisabledTerrainCoords,
@@ -80,6 +81,37 @@ describe('symbolEffectResolution', () => {
         expect(flood.effect_counter).toBe(3);
         expect(disabled.has(slotKey(0, 0))).toBe(true);
         expect(disabled.has(slotKey(2, 2))).toBe(false);
+    });
+
+    it('lets flood disable terrain production without blocking adjacency-based terrain checks', () => {
+        const board = createEmptyBoard();
+        const salt = createInstance(Sym.salt, 'salt');
+        const grassland = createInstance(Sym.grassland, 'grassland');
+        board[1][1] = salt;
+        board[0][1] = grassland;
+        const disabled = new Set([slotKey(0, 1)]);
+
+        const terrainResult = processSingleSymbolEffects(
+            grassland,
+            board,
+            0,
+            1,
+            { upgrades: [] },
+            undefined,
+            disabled,
+        );
+        const saltResult = processSingleSymbolEffects(
+            salt,
+            board,
+            1,
+            1,
+            { upgrades: [] },
+            undefined,
+            disabled,
+        );
+
+        expect(terrainResult).toEqual({ food: 0, gold: 0, knowledge: 0 });
+        expect(saltResult.food).toBe(1);
     });
 
     it('computes deferred Christianity, Islam, Buddhism, and Hinduism effects from board state', () => {
@@ -1198,7 +1230,7 @@ describe('symbolEffectResolution', () => {
         board[1][1] = lootA;
         board[2][1] = lootB;
 
-        processSingleSymbolEffects(
+        const result = processSingleSymbolEffects(
             lootA,
             board,
             1,
@@ -1206,8 +1238,15 @@ describe('symbolEffectResolution', () => {
             { upgrades: [] },
         );
 
+        expect(result.lootMerge).toEqual({
+            absorbed: { x: 2, y: 1 },
+            receiver: { x: 1, y: 1 },
+            nextDefinitionId: Sym.greater_loot.id,
+        });
+        commitLootMerge(board, result.lootMerge!);
         expect(lootA.definition.id).toBe(Sym.greater_loot.id);
         expect(lootB.is_marked_for_destruction).toBe(true);
+        expect(lootB.suppress_destroy_overlay).toBe(true);
     });
 
     it('upgrades Greater Loot into Radiant Loot when adjacent to another Greater Loot', () => {
@@ -1217,7 +1256,7 @@ describe('symbolEffectResolution', () => {
         board[1][1] = lootA;
         board[2][1] = lootB;
 
-        processSingleSymbolEffects(
+        const result = processSingleSymbolEffects(
             lootA,
             board,
             1,
@@ -1225,8 +1264,16 @@ describe('symbolEffectResolution', () => {
             { upgrades: [] },
         );
 
+        expect(result.lootMerge).toEqual({
+            absorbed: { x: 2, y: 1 },
+            receiver: { x: 1, y: 1 },
+            nextDefinitionId: Sym.radiant_loot.id,
+        });
+        commitLootMerge(board, result.lootMerge!);
+
         expect(lootA.definition.id).toBe(Sym.radiant_loot.id);
         expect(lootB.is_marked_for_destruction).toBe(true);
+        expect(lootB.suppress_destroy_overlay).toBe(true);
     });
 
     it('lets Honey pay out when five of the same terrain are on the board', () => {

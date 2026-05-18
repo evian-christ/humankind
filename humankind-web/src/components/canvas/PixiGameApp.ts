@@ -8,7 +8,7 @@ import type { GameState } from '../../game/state/gameStore';
 import { SPIN_SPEED_CONFIG, useSettingsStore } from '../../game/state/settingsStore';
 import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
-import { getSymbolColor, SymbolType, BARBARIAN_CAMP_SPAWN_INTERVAL, S } from '../../game/data/symbolDefinitions';
+import { getSymbolColor, SymbolType, S } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, CellLayout, ReelState } from './types';
 import { loadGameAssets } from './AssetLoader';
@@ -556,6 +556,27 @@ export class PixiGameApp {
 
                 if (this.combatRenderer.isAnimatingAttacker(x, y)) continue;
 
+                const lm = state.lootMergeFx;
+                const lootMergeFlying =
+                    lm &&
+                    state.phase === 'processing' &&
+                    (state.effectPhase === 1 || state.effectPhase === 2);
+                if (
+                    lootMergeFlying &&
+                    lm!.absorbed.x === x &&
+                    lm!.absorbed.y === y
+                ) {
+                    continue;
+                }
+                if (
+                    state.phase === 'processing' &&
+                    symbol.is_marked_for_destruction &&
+                    symbol.suppress_destroy_overlay &&
+                    (state.effectPhase === 3 || state.effectPhase3ReachedThisRun)
+                ) {
+                    continue;
+                }
+
                 const isShakingDeath = state.combatShaking && symbol.is_marked_for_destruction;
                 const drawTarget = isShakingDeath ? this.combatContainer : this.boardContainer;
 
@@ -704,6 +725,10 @@ export class PixiGameApp {
                 // Processing highlight: 1) 본체만 lift, 2) contributors는 밝은 초록 틴트 + 위아래 흔들림
                 const isProcessing = state.phase === 'processing';
                 const isActive = isProcessing && !!(state.activeSlot && state.activeSlot.x === x && state.activeSlot.y === y);
+                const isDestroyBlockedInBoardPick =
+                    state.phase === 'oblivion_furnace_board' &&
+                    (symDef.type === SymbolType.ENEMY || symDef.type === SymbolType.DISASTER);
+                const symbolAlpha = isDestroyBlockedInBoardPick ? 0.48 : 1;
                 const isContrib = isProcessing && state.activeContributors.some(c => c.x === x && c.y === y);
                 const counterOverride = state.counterDisplayOverrides.find((o) => o.x === x && o.y === y);
                 const liftY = isActive ? -cellHeight * 0.14 : 0;
@@ -737,6 +762,7 @@ export class PixiGameApp {
                     sprite.anchor.set(0.5);
                     sprite.width = spriteSize;
                     sprite.height = spriteSize;
+                    sprite.alpha = symbolAlpha;
                     if (isContrib) sprite.tint = contribGreenTint;
                     drawTarget.addChild(sprite);
                 } else {
@@ -749,22 +775,26 @@ export class PixiGameApp {
                     nameText.anchor.set(0.5);
                     nameText.x = cellX + cellWidth / 2 + preShakeX;
                     nameText.y = cellY + cellHeight / 2 + liftY + wobbleY + preShakeY;
+                    nameText.alpha = symbolAlpha;
                     drawTarget.addChild(nameText);
                 }
 
-                const bananaCounterText =
-                    symDef.id === S.banana
-                        ? (() => {
-                              const perm = symbol.banana_permanent_food_bonus ?? 0;
-                              const pr = symbol.effect_counter || 0;
-                              const parts: string[] = [];
-                              if (perm > 0) parts.push(`+${perm}`);
-                              if (pr > 0) parts.push(`${pr}/10`);
-                              return parts.length ? parts.join(' ') : '';
-                          })()
-                        : '';
+                // 바나나 영구 식량 보너스: 좌하단 별도 표시
+                if (symDef.id === S.banana) {
+                    const perm = symbol.banana_permanent_food_bonus ?? 0;
+                    if (perm > 0) {
+                        const permText = new PIXI.Text({
+                            text: `+${perm}`,
+                            style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                        });
+                        permText.anchor.set(0.5, 0.5);
+                        permText.x = cellX + 25;
+                        permText.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                        drawTarget.addChild(permText);
+                    }
+                }
+                // 우하단 카운터: 바나나는 열대우림 인접 카운터만 숫자로 표시
                 const genericCounterText =
-                    symDef.id !== S.banana &&
                     symbol.effect_counter > 0 &&
                     symDef.type !== SymbolType.ENEMY &&
                     symDef.base_hp === undefined
@@ -772,7 +802,7 @@ export class PixiGameApp {
                         : '';
                 const boardCounterOverlay = counterOverride
                     ? (counterOverride.text ?? '')
-                    : bananaCounterText || genericCounterText;
+                    : genericCounterText;
                 if (boardCounterOverlay) {
                     const counterText = new PIXI.Text({
                         text: boardCounterOverlay,
@@ -826,27 +856,16 @@ export class PixiGameApp {
                     drawTarget.addChild(hpText);
                 }
 
-                if (symDef.id === S.barbarian_camp) { // Barbarian Camp
-                    const campCounterOverlay = counterOverride
-                        ? counterOverride.text
-                        : String(BARBARIAN_CAMP_SPAWN_INTERVAL - symbol.effect_counter);
-                    if (campCounterOverlay != null && campCounterOverlay !== '') {
-                        const campCounterText = new PIXI.Text({
-                            text: campCounterOverlay,
-                            style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
-                        });
-                        campCounterText.anchor.set(0.5, 0.5);
-                        campCounterText.x = cellX + 25;
-                        campCounterText.y = cellY + cellHeight - 24 + liftY + wobbleY;
-                        drawTarget.addChild(campCounterText);
-                    }
-                }
-
                 // 파괴 X: phase 3 시작 시 생성. 이 셀이 지금 active/contributor/pending으로 wobble 중이면 숨김.
                 // contributor/pending만 wobble로 간주. active(자기 차례)는 lift만 하므로 X 유지
                 const isPending = isProcessing && state.pendingContributors.some(c => c.x === x && c.y === y);
                 const isWobblingThisSlot = (state.effectPhase === 1 || state.effectPhase === 2) && (isContrib || isPending);
-                const showDestroyX = state.phase === 'processing' && symbol.is_marked_for_destruction && (state.effectPhase === 3 || state.effectPhase3ReachedThisRun) && !isWobblingThisSlot;
+                const showDestroyX =
+                    state.phase === 'processing' &&
+                    symbol.is_marked_for_destruction &&
+                    !symbol.suppress_destroy_overlay &&
+                    (state.effectPhase === 3 || state.effectPhase3ReachedThisRun) &&
+                    !isWobblingThisSlot;
                 if (showDestroyX) {
                     const destroyOverlay = new PIXI.Graphics();
                     const m = Math.min(cellWidth, cellHeight) * 0.22;
@@ -861,6 +880,59 @@ export class PixiGameApp {
                     destroyOverlay.lineTo(cx - m, cy + m);
                     destroyOverlay.stroke(strokeOpt);
                     drawTarget.addChild(destroyOverlay);
+                }
+            }
+        }
+
+        // 인접 전리품 합류: 원본 칸은 숨기고 스프라이트가 receiver 쪽으로 이동하는 연출
+        const lmDraw = state.lootMergeFx;
+        if (
+            lmDraw &&
+            state.phase === 'processing' &&
+            (state.effectPhase === 1 || state.effectPhase === 2)
+        ) {
+            const ax = lmDraw.absorbed.x;
+            const ay = lmDraw.absorbed.y;
+            const rx = lmDraw.receiver.x;
+            const ry = lmDraw.receiver.y;
+            const absorbedInst = state.board[ax]?.[ay];
+            if (absorbedInst) {
+                const defFly = absorbedInst.definition;
+                const path = getSymbolSpriteUrl(defFly);
+                if (path) {
+                    const SPRITE_PX = 32;
+                    const innerW = cellWidth - 6;
+                    const rawSize = Math.min(innerW, cellHeight) * 0.85;
+                    const spriteSizeBase = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
+                    const fromCX =
+                        startX + gridOffsetX + ax * (cellWidth + colGap) + cellWidth / 2;
+                    const fromCY =
+                        startY + gridOffsetY + ay * (cellHeight + rowGap) + cellHeight / 2;
+                    const recvActive =
+                        state.activeSlot?.x === rx && state.activeSlot?.y === ry;
+                    const recvLiftY = recvActive ? -cellHeight * 0.14 : 0;
+                    const toCX =
+                        startX + gridOffsetX + rx * (cellWidth + colGap) + cellWidth / 2;
+                    const toCY =
+                        startY + gridOffsetY + ry * (cellHeight + rowGap) + cellHeight / 2 + recvLiftY;
+                    const nowPerf =
+                        typeof globalThis.performance !== 'undefined'
+                            ? globalThis.performance.now()
+                            : Date.now();
+                    const rawT = Math.max(
+                        0,
+                        Math.min(1, (nowPerf - lmDraw.startedAtPerfMs) / lmDraw.durationMs),
+                    );
+                    const e = rawT * rawT * (3 - 2 * rawT); // smoothstep
+                    const fly = PIXI.Sprite.from(path);
+                    fly.anchor.set(0.5);
+                    const shrinking = spriteSizeBase * (1 - 0.08 * rawT);
+                    fly.width = shrinking;
+                    fly.height = shrinking;
+                    fly.x = fromCX + (toCX - fromCX) * e;
+                    fly.y = fromCY + (toCY - fromCY) * e;
+                    fly.alpha = 0.94 + 0.06 * e;
+                    this.effectsContainer.addChild(fly);
                 }
             }
         }

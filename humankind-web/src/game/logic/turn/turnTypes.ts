@@ -39,7 +39,7 @@ export type CreateSymbolInstance = (
 ) => PlayerSymbolInstance;
 
 export type ThreatLabelResolver = (
-    key: 'threat.barbarian_invasion' | 'threat.barbarian_camp' | 'threat.flood' | 'threat.earthquake' | 'threat.drought',
+    key: 'threat.barbarian_invasion' | 'threat.flood' | 'threat.earthquake' | 'threat.drought',
 ) => string;
 
 export interface TurnPreparationInput {

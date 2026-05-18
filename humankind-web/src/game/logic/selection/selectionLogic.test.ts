@@ -1,9 +1,23 @@
-import { describe, expect, it } from 'vitest';
-import { CARAVANSERAI_UPGRADE_ID, COMPASS_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID, FEUDALISM_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID, MODERN_AGE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isGameEventDefinition } from '../../data/eventDefinitions';
+import {
+    CARAVANSERAI_UPGRADE_ID,
+    COMPASS_UPGRADE_ID,
+    DRY_STORAGE_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
+    JUNGLE_EXPEDITION_UPGRADE_ID,
+    MASS_MEDIA_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
+    PUBLIC_ADMINISTRATION_UPGRADE_ID,
+} from '../../data/knowledgeUpgrades';
 import { S, SymbolType } from '../../data/symbolDefinitions';
-import { buildFlatPool } from './selectionLogic';
+import { buildFlatPool, generateChoices } from './selectionLogic';
 
 describe('selectionLogic', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('does not include Compass in the pool before the upgrade is unlocked', () => {
         const pool = buildFlatPool({
             era: 2,
@@ -83,5 +97,93 @@ describe('selectionLogic', () => {
 
         expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
         expect(pool.some((sym) => sym.type === SymbolType.TERRAIN)).toBe(false);
+    });
+
+    it('only offers immediate resource events for the current era', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+
+        const result = generateChoices({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            forceTerrainInNextSymbolChoices: false,
+        });
+
+        const events = result.choices.filter(isGameEventDefinition);
+        expect(events).toHaveLength(3);
+        expect(events.every((event) => event.era == null || event.era === 2)).toBe(true);
+        expect(events[0]?.key).toBe('medieval_food_cache');
+    });
+
+    it('increases each card event chance with Public Administration and Mass Media', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0.12);
+
+        const baseResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(baseResult.choices.some(isGameEventDefinition)).toBe(false);
+
+        const publicAdminResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [PUBLIC_ADMINISTRATION_UPGRADE_ID],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(publicAdminResult.choices.every(isGameEventDefinition)).toBe(true);
+    });
+
+    it('stacks Mass Media multiplicatively with Public Administration', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0.25);
+
+        const massMediaOnlyResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [MASS_MEDIA_UPGRADE_ID],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(massMediaOnlyResult.choices.some(isGameEventDefinition)).toBe(false);
+
+        const stackedResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [PUBLIC_ADMINISTRATION_UPGRADE_ID, MASS_MEDIA_UPGRADE_ID],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(stackedResult.choices.every(isGameEventDefinition)).toBe(true);
+    });
+
+    it('offers Capital Relocation only after owning enough symbols', () => {
+        const randomValues = [
+            0, 0, 0, 0, 0, 0,
+            0.05, 0.99,
+            0.05, 0.99,
+            0.05, 0.99,
+        ];
+        let call = 0;
+        vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
+
+        const result = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [S.oral_tradition, S.wild_seeds, S.wild_seeds, S.wheat, S.rice],
+            forceTerrainInNextSymbolChoices: false,
+        });
+
+        expect(result.choices.filter(isGameEventDefinition).some((event) => event.key === 'capital_relocation')).toBe(true);
     });
 });

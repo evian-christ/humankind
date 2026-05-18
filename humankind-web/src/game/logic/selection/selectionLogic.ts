@@ -1,6 +1,10 @@
 import type { SymbolDefinition } from '../../data/symbolDefinitions';
 import { SYMBOLS, SymbolType, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, S, Sym } from '../../data/symbolDefinitions';
-import { GAME_EVENTS, type GameEventDefinition } from '../../data/eventDefinitions';
+import {
+    CAPITAL_RELOCATION_MIN_SYMBOLS,
+    GAME_EVENTS,
+    type GameEventDefinition,
+} from '../../data/eventDefinitions';
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
@@ -14,7 +18,9 @@ import {
     HORSEMANSHIP_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
+    MASS_MEDIA_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    PUBLIC_ADMINISTRATION_UPGRADE_ID,
     WRITING_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
@@ -31,18 +37,74 @@ export interface SelectionContext {
 export type SelectionChoice = SymbolDefinition | GameEventDefinition;
 
 const EVENT_REPLACE_CHANCE_PER_CARD = 0.1;
+const PUBLIC_ADMINISTRATION_EVENT_CHANCE_MULTIPLIER = 1.5;
+const MASS_MEDIA_EVENT_CHANCE_MULTIPLIER = 2;
 
-function getEligibleEvents(ctx: Pick<SelectionContext, 'ownedSymbolDefIds'>): GameEventDefinition[] {
+/** 지형 보유 임계값으로 활성화되는 조건부 이벤트 룩업 — 키 추가만으로 풀이 확장됨 */
+const TERRAIN_EVENT_REQUIREMENTS: Record<string, { symbolId: number; threshold: number }> = {
+    grassland_festival: { symbolId: S.grassland, threshold: 3 },
+    plains_pasture: { symbolId: S.plains, threshold: 2 },
+    maritime_trade: { symbolId: S.sea, threshold: 3 },
+    forest_harvest: { symbolId: S.forest, threshold: 3 },
+    jungle_expedition: { symbolId: S.rainforest, threshold: 2 },
+    desert_caravan: { symbolId: S.desert, threshold: 1 },
+    mountain_lookout: { symbolId: S.mountain, threshold: 1 },
+    oasis_blessing: { symbolId: S.oasis, threshold: 1 },
+};
+
+/** every_terrain_bounty 조건 — 8종 지형 모두 1개 이상 */
+const EVERY_TERRAIN_REQUIRED_IDS: readonly number[] = [
+    S.grassland,
+    S.plains,
+    S.sea,
+    S.forest,
+    S.rainforest,
+    S.desert,
+    S.oasis,
+    S.mountain,
+];
+
+function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds'>): GameEventDefinition[] {
     const ownedSymbolDefIds = ctx.ownedSymbolDefIds ?? [];
-    const grasslandCount = ownedSymbolDefIds.filter((id) => id === S.grassland).length;
 
     return Object.values(GAME_EVENTS).filter((event) => {
         if (event.category === 'leader') return false;
-        if (event.category === 'conditional') {
-            return event.id === 5 && grasslandCount >= 3;
+        if (event.era != null && event.era !== ctx.era) return false;
+        if (event.category !== 'conditional') return true;
+
+        if (event.key === 'capital_relocation') {
+            return ownedSymbolDefIds.length >= CAPITAL_RELOCATION_MIN_SYMBOLS;
         }
-        return true;
+
+        if (event.key === 'every_terrain_bounty') {
+            const owned = new Set(ownedSymbolDefIds);
+            return EVERY_TERRAIN_REQUIRED_IDS.every((id) => owned.has(id));
+        }
+
+        if (event.key === 'military_draft') {
+            const unitCount = ownedSymbolDefIds.filter((id) => SYMBOLS[id]?.type === SymbolType.UNIT).length;
+            return unitCount >= 3;
+        }
+
+        const req = TERRAIN_EVENT_REQUIREMENTS[event.key];
+        if (req) {
+            const count = ownedSymbolDefIds.reduce((acc, id) => (id === req.symbolId ? acc + 1 : acc), 0);
+            return count >= req.threshold;
+        }
+
+        return false;
     });
+}
+
+function getEventReplaceChancePerCard(upgrades: readonly number[]): number {
+    let multiplier = 1;
+    if (upgrades.includes(PUBLIC_ADMINISTRATION_UPGRADE_ID)) {
+        multiplier *= PUBLIC_ADMINISTRATION_EVENT_CHANCE_MULTIPLIER;
+    }
+    if (upgrades.includes(MASS_MEDIA_UPGRADE_ID)) {
+        multiplier *= MASS_MEDIA_EVENT_CHANCE_MULTIPLIER;
+    }
+    return Math.min(1, EVENT_REPLACE_CHANCE_PER_CARD * multiplier);
 }
 
 function maybeReplaceChoicesWithEvents(choices: SymbolDefinition[], ctx: SelectionContext): SelectionChoice[] {
@@ -51,8 +113,9 @@ function maybeReplaceChoicesWithEvents(choices: SymbolDefinition[], ctx: Selecti
         return choices;
     }
 
+    const eventReplaceChance = getEventReplaceChancePerCard(ctx.upgrades ?? []);
     return choices.map((choice) => {
-        if (Math.random() >= EVENT_REPLACE_CHANCE_PER_CARD) return choice;
+        if (Math.random() >= eventReplaceChance) return choice;
         return events[Math.floor(Math.random() * events.length)]!;
     });
 }

@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSelectionFlowActions } from './selectionFlow';
 import type { GameState } from '../gameStore';
 import { useRelicStore } from '../relicStore';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
+import { getEnemyPoolForEra } from '../../data/enemyPools';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
@@ -139,6 +140,10 @@ describe('selectionFlow actions', () => {
         useRelicStore.getState().resetRelics();
     });
 
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('consumes bonus selection queue and stays in selection until queue ends', () => {
         const harness = createHarness({
             bonusSelectionQueue: ['terrain', 'any'],
@@ -167,13 +172,22 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
-    it('summons an enemy warrior when selecting Barbarian Suppression event', () => {
-        const harness = createHarness();
+    it('grants resources and summons 3 random current-era enemies when selecting Barbarian Suppression event', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const harness = createHarness({
+            era: 3,
+            food: 5,
+            gold: 7,
+        });
 
-        harness.actions.selectEvent(4);
+        harness.actions.selectEvent(11);
 
         expect(harness.get().phase).toBe('idle');
-        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(true);
+        expect(harness.get().food).toBe(45);
+        expect(harness.get().gold).toBe(47);
+        expect(harness.get().playerSymbols.filter((sym) => sym.definition.id === S.enemy_infantry)).toHaveLength(3);
+        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(false);
+        expect(getEnemyPoolForEra(1)).toContain(S.enemy_warrior);
     });
 
     it('refreshes the relic shop when selecting Relic Caravan event', async () => {
@@ -184,11 +198,63 @@ describe('selectionFlow actions', () => {
             },
         });
 
-        harness.actions.selectEvent(3);
+        harness.actions.selectEvent(10);
         await Promise.resolve();
 
         expect(harness.get().phase).toBe('idle');
         expect(refreshed).toBe(true);
+    });
+
+    it('applies era-scaled immediate resource event rewards from event data', () => {
+        const harness = createHarness({
+            era: 3,
+            food: 5,
+            gold: 7,
+            knowledge: 11,
+        });
+
+        harness.actions.selectEvent(9);
+
+        expect(harness.get().food).toBe(5);
+        expect(harness.get().gold).toBe(7);
+        expect(harness.get().knowledge).toBe(51);
+    });
+
+    it('destroys random owned symbols and grants resources for Capital Relocation event', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const symbols = [
+            createInstance(SYMBOLS[S.oral_tradition]!, []),
+            createInstance(SYMBOLS[S.wild_seeds]!, []),
+            createInstance(SYMBOLS[S.wheat]!, []),
+            createInstance(SYMBOLS[S.rice]!, []),
+            createInstance(SYMBOLS[S.stone]!, []),
+        ];
+        const board = createEmptyBoard();
+        board[0][0] = symbols[0]!;
+        board[1][0] = symbols[1]!;
+        board[2][0] = symbols[2]!;
+
+        const harness = createHarness({
+            food: 3,
+            knowledge: 4,
+            playerSymbols: symbols,
+            board,
+        });
+
+        harness.actions.selectEvent(13);
+
+        expect(harness.get().phase).toBe('idle');
+        expect(harness.get().food).toBe(28);
+        expect(harness.get().knowledge).toBe(19);
+        expect(harness.get().playerSymbols).toHaveLength(3);
+        expect(harness.get().playerSymbols.map((symbol) => symbol.instanceId)).toEqual([
+            symbols[2]!.instanceId,
+            symbols[3]!.instanceId,
+            symbols[4]!.instanceId,
+        ]);
+        expect(harness.get().board[0]?.[0]).toBeNull();
+        expect(harness.get().board[1]?.[0]).toBeNull();
+        expect(harness.get().board[2]?.[0]?.instanceId).toBe(symbols[2]!.instanceId);
     });
 
     it('charges the inflated reroll cost by knowledge level', () => {

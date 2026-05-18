@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type RefObject } from 'react';
 import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT } from '../game/state/gameStore';
+import { SymbolType } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
 import { computeBoardPixelLayout, boardCellLocalRect } from '../game/layout/boardPixelLayout';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 type Props = { anchorRef: RefObject<HTMLElement | null> };
+
+const isBoardDestroyBlockedType = (type: SymbolType) =>
+    type === SymbolType.ENEMY || type === SymbolType.DISASTER;
 
 /** 망각의 화로: 보드 위 호버 시 셀 중앙 제거 버튼 */
 const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
@@ -101,10 +105,10 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     const sc = layout.scale;
     /** 보드 뒤에서 떠 있는 느낌 — 바깥으로 강한 그림자 + 아주 약한 안쪽 깊이 */
     const boardBackShadow = [
-        `0 ${Math.round(28 * sc)}px ${Math.round(100 * sc)}px rgba(0,0,0,0.72)`,
-        `0 ${Math.round(14 * sc)}px ${Math.round(48 * sc)}px rgba(0,0,0,0.58)`,
-        `0 0 ${Math.round(120 * sc)}px ${Math.round(32 * sc)}px rgba(0,0,0,0.42)`,
-        `inset 0 ${Math.round(-36 * sc)}px ${Math.round(72 * sc)}px rgba(0,0,0,0.22)`,
+        `0 ${Math.round(28 * sc)}px ${Math.round(100 * sc)}px rgba(96, 8, 12, 0.78)`,
+        `0 ${Math.round(14 * sc)}px ${Math.round(48 * sc)}px rgba(127, 18, 18, 0.64)`,
+        `0 0 ${Math.round(120 * sc)}px ${Math.round(32 * sc)}px rgba(88, 10, 14, 0.52)`,
+        `inset 0 ${Math.round(-36 * sc)}px ${Math.round(72 * sc)}px rgba(76, 5, 10, 0.3)`,
     ].join(', ');
     const isEdictMode = pendingEdictSource != null;
     const titleKey = isEdictMode ? 'edictBoard.title' : 'oblivionBoard.title';
@@ -193,6 +197,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                 if (!cell) return null;
                 const r = boardCellLocalRect(layout, x, y);
                 const isHover = hovered?.x === x && hovered?.y === y;
+                const isDestroyBlocked = isBoardDestroyBlockedType(cell.definition.type);
                 const btnFs = Math.max(15, 18 * layout.scale);
 
                 return (
@@ -212,7 +217,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                             setHovered((h) => (h?.x === x && h?.y === y ? null : h))
                         }
                     >
-                        {isHover && (
+                        {isHover && !isDestroyBlocked && (
                             <button
                                 type="button"
                                 aria-label={t(actionKey, language)}

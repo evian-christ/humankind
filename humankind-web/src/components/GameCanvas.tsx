@@ -21,6 +21,8 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
+    [SymbolType.UNIT]: 'era.unit',
+    [SymbolType.ENEMY]: 'era.enemy',
 };
 
 interface GameCanvasProps {

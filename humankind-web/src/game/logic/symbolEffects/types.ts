@@ -1,6 +1,16 @@
 import type { PlayerSymbolInstance } from '../../types';
 import type { BoardCounterFloatAnchor } from '../turn/turnTypes';
 
+/** 보드 업데이트는 턴 타임라인에서 페이즈 3 시작 시 적용 (연출 후) */
+export interface LootMergeResolution {
+    /** 흡수당하는 칸 */
+    absorbed: { x: number; y: number };
+    /** 흡수하는 칸(효과 처리 중인 슬롯) */
+    receiver: { x: number; y: number };
+    /** 병합 후 receiver의 심볼 정의 ID */
+    nextDefinitionId: number;
+}
+
 export interface EffectResult {
     food: number;
     knowledge: number;
@@ -27,6 +37,8 @@ export interface EffectResult {
     edictRemovalPending?: boolean;
     /** 다음 심볼 선택 단계에서 소비할 무료 리롤 횟수 */
     freeSelectionRerolls?: number;
+    /** 인접 전리품 합류 — 보드 변경은 타임라인에서 지연 적용 */
+    lootMerge?: LootMergeResolution;
 }
 
 /** 현재 보유 유물의 활성 효과 플래그 (`relicDefinitions` 1–19 + 지식 업그레이드 일부, gameStore에서 조합) */

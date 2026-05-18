@@ -1,3 +1,4 @@
+import { SymbolType } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import {
     applyFixedDamageToEnemy,
@@ -99,6 +100,19 @@ export function collectCombatDestroyedSymbols(board: BoardGrid, width: number, h
         }
     }
     return destroyedIds;
+}
+
+export function collectCombatKilledEnemies(board: BoardGrid, width: number, height: number): PlayerSymbolInstance[] {
+    const killedEnemies: PlayerSymbolInstance[] = [];
+    for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+            const sym = board[x][y];
+            if (sym?.is_marked_for_destruction && sym.definition.type === SymbolType.ENEMY) {
+                killedEnemies.push(sym);
+            }
+        }
+    }
+    return killedEnemies;
 }
 
 export function pickClovisPreDamageTarget(board: BoardGrid, width: number, height: number): CombatCoord | null {

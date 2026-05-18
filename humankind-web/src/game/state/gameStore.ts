@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SYMBOLS, type SymbolDefinition, EDICT_SYMBOL_ID, S } from '../data/symbolDefinitions';
+import { SYMBOLS, EDICT_SYMBOL_ID, S } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
@@ -9,6 +9,7 @@ import {
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
     type SelectionChoice,
 } from '../logic/selection/selectionLogic';
+import type { RewardDefinition } from '../data/rewardDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import { getEraFromLevel } from './gameCalculations';
 import {
@@ -71,6 +72,7 @@ export type GamePhase =
     | 'showing_new_threats'
     | 'processing'
     | 'selection'
+    | 'loot_reward_selection'
     | 'destroy_selection'
     | 'oblivion_furnace_board'
     | 'game_over'
@@ -136,6 +138,13 @@ export interface GameState {
     effectPhase: 1 | 2 | 3 | null;
     /** 이번 processing에서 phase 3을 한 번이라도 거쳤으면 true → 파괴 X를 계속 표시 */
     effectPhase3ReachedThisRun: boolean;
+    /** 인접 전리품 합류: 흡수 스프라이트 이동 연출 타임링 (Pixi 렌더용) */
+    lootMergeFx: {
+        absorbed: { x: number; y: number };
+        receiver: { x: number; y: number };
+        durationMs: number;
+        startedAtPerfMs: number;
+    } | null;
     /** F12 로그 오버레이용 이벤트 로그 (시간순 누적) */
     eventLog: GameEventLogEntry[];
     /** spinning 시작 직전의 보드 (릴 시작점용) */
@@ -248,8 +257,14 @@ export interface GameState {
     trainHorseUnitAt: (x: number, y: number) => void;
     /** 사슴: 추적술 연구 후 원거리 유닛 인접·idle 시 소모하여 해당 유닛을 추적궁병으로 훈련 */
     trainDeerUnitAt: (x: number, y: number) => void;
-    /** 전리품: idle 시 개봉하여 보상 획득 */
+    /** 전리품: idle 시 개봉 — 보상 선택지 3개 표시 */
     openLootAt: (x: number, y: number) => void;
+    /** 전리품 보상 선택지 목록 (loot_reward_selection phase) */
+    lootRewardChoices: RewardDefinition[];
+    /** 개봉 중인 전리품의 위치와 심볼 ID */
+    pendingLootSlot: { x: number; y: number; symbolId: number } | null;
+    /** 전리품 보상 선택 확정 */
+    selectLootReward: (rewardId: number) => void;
 
     /** F12 로그 오버레이용 */
     appendEventLog: (entry: Omit<GameEventLogEntry, 'id' | 'ts'> & { ts?: number; id?: string }) => void;
@@ -358,6 +373,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     pendingContributors: [],
     effectPhase: null,
     effectPhase3ReachedThisRun: false,
+    lootMergeFx: null,
     eventLog: [],
     prevBoard: createEmptyBoard(),
     combatAnimation: null,
@@ -390,6 +406,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     freeSelectionRerolls: 0,
     destroySelectionMaxSymbols: 3,
     territorialAfterEdictPending: false,
+    lootRewardChoices: [],
+    pendingLootSlot: null,
 
     appendEventLog: (entry) => {
         const MAX = 2000;

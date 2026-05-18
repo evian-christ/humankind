@@ -1,6 +1,12 @@
 import type { PlayerSymbolInstance } from '../../types';
 import { S, SYMBOLS, EXCLUDED_FROM_BASE_POOL, SymbolType } from '../../data/symbolDefinitions';
-import type { ActiveRelicEffects, BoardGrid, EffectResult, SymbolEffectContext } from './types';
+import type {
+    ActiveRelicEffects,
+    BoardGrid,
+    EffectResult,
+    LootMergeResolution,
+    SymbolEffectContext,
+} from './types';
 
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
@@ -20,6 +26,7 @@ export interface EffectState {
     forceTerrainInNextChoices: boolean;
     edictRemovalPendingFlag: boolean;
     freeSelectionRerollsAcc: number;
+    lootMerge: LootMergeResolution | null;
 }
 
 export interface SymbolEffectHandlerContext {
@@ -49,6 +56,7 @@ export const createEffectState = (): EffectState => ({
     forceTerrainInNextChoices: false,
     edictRemovalPendingFlag: false,
     freeSelectionRerollsAcc: 0,
+    lootMerge: null,
 });
 
 export const buildEffectResult = (state: EffectState): EffectResult => {
@@ -66,6 +74,7 @@ export const buildEffectResult = (state: EffectState): EffectResult => {
     if (state.forceTerrainInNextChoices) result.forceTerrainInNextChoices = true;
     if (state.edictRemovalPendingFlag) result.edictRemovalPending = true;
     if (state.freeSelectionRerollsAcc > 0) result.freeSelectionRerolls = state.freeSelectionRerollsAcc;
+    if (state.lootMerge) result.lootMerge = state.lootMerge;
     return result;
 };
 

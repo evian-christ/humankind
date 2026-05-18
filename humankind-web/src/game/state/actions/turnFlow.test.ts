@@ -23,6 +23,7 @@ vi.mock('../../logic/turn/turnPreparation', () => ({
 import { createTurnFlowActions } from './turnFlow';
 
 const mockedPrepareTurn = vi.mocked(prepareTurn);
+type TurnFlowDeps = Parameters<typeof createTurnFlowActions>[0];
 
 const makeState = (): GameState => {
     const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
@@ -52,6 +53,7 @@ const makeState = (): GameState => {
         pendingContributors: [],
         effectPhase: null,
         effectPhase3ReachedThisRun: false,
+        lootMergeFx: null,
         eventLog: [],
         prevBoard: createEmptyBoard(),
         combatAnimation: null,
@@ -117,12 +119,34 @@ const makeState = (): GameState => {
         trainHorseUnitAt: () => {},
         trainDeerUnitAt: () => {},
         openLootAt: () => {},
+        lootRewardChoices: [],
+        pendingLootSlot: null,
+        selectLootReward: () => {},
         appendEventLog: () => {},
         clearEventLog: () => {},
     };
 };
 
-const createHarness = (overrides: Partial<GameState> = {}) => {
+const getAdjacentCoords = (x: number, y: number) => {
+    const adj: { x: number; y: number }[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx >= 0 && nx < 5 && ny >= 0 && ny < 4) adj.push({ x: nx, y: ny });
+        }
+    }
+    return adj;
+};
+
+const createHarness = (
+    overrides: Partial<GameState> = {},
+    deps: {
+        processSingleSymbolEffects?: TurnFlowDeps['processSingleSymbolEffects'];
+        getAdjacentCoords?: (x: number, y: number) => { x: number; y: number }[];
+    } = {},
+) => {
     let state: GameState = { ...makeState(), ...overrides };
     const set = (partial: Partial<GameState> | ((current: GameState) => Partial<GameState>)) => {
         const next = typeof partial === 'function' ? partial(state) : partial;
@@ -138,9 +162,15 @@ const createHarness = (overrides: Partial<GameState> = {}) => {
             set,
             boardWidth: 5,
             boardHeight: 4,
-            processSingleSymbolEffects: vi.fn(),
+            processSingleSymbolEffects:
+                deps.processSingleSymbolEffects ??
+                (() => ({
+                    food: 0,
+                    gold: 0,
+                    knowledge: 0,
+                })),
             createInstance,
-            getAdjacentCoords: () => [],
+            getAdjacentCoords: deps.getAdjacentCoords ?? (() => []),
             buildActiveRelicEffects: () => ({
                 relicCount: 0,
                 quarryEmptyGold: false,
@@ -209,5 +239,36 @@ describe('turnFlow actions', () => {
 
         expect(harness.get().pendingNewThreatFloats).toEqual([]);
         expect(startProcessing).toHaveBeenCalledTimes(1);
+    });
+
+    it('adds loot to owned symbols when combat defeats an enemy', () => {
+        vi.useFakeTimers();
+        try {
+            const board = createEmptyBoard();
+            const warrior = createInstance(SYMBOLS[S.warrior]!, []);
+            const enemy = createInstance(SYMBOLS[S.enemy_archer]!, []);
+            enemy.enemy_hp = 1;
+            board[0][0] = warrior;
+            board[1][0] = enemy;
+
+            const harness = createHarness(
+                {
+                    phase: 'spinning',
+                    board,
+                    playerSymbols: [warrior, enemy],
+                    turn: 1,
+                },
+                { getAdjacentCoords },
+            );
+
+            harness.actions.startProcessing();
+
+            expect(harness.get().board[1][0]).toBeNull();
+            expect(harness.get().playerSymbols.some((s) => s.instanceId === enemy.instanceId)).toBe(false);
+            expect(harness.get().playerSymbols.filter((s) => s.definition.id === S.loot)).toHaveLength(1);
+        } finally {
+            vi.clearAllTimers();
+            vi.useRealTimers();
+        }
     });
 });

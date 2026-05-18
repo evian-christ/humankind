@@ -1,5 +1,5 @@
 import { MILITARY_SCIENCE_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, TRACKING_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import { S, SYMBOLS } from '../../data/symbolDefinitions';
+import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
 import { isMeleeUnit, isRangedUnit } from '../../data/unitUpgrades';
 import type { GameState } from '../gameStore';
 import { RELICS } from '../../data/relicDefinitions';
@@ -9,6 +9,12 @@ import {
     scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import { useRelicStore } from '../relicStore';
+import {
+    generateLootRewardChoices,
+    getRewardAmounts,
+    REWARDS,
+    type LootTier,
+} from '../../data/rewardDefinitions';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -21,25 +27,14 @@ interface BoardInteractionDeps {
 
 const LOOT_IDS = new Set<number>([S.loot, S.greater_loot, S.radiant_loot]);
 
-const rollLootReward = (symbolId: number): { food: number; gold: number; knowledge: number; relicId?: number } => {
-    const r = Math.random();
-    if (symbolId === S.loot) {
-        if (r < 0.45) return { food: 15, gold: 5, knowledge: 0 };
-        if (r < 0.8) return { food: 10, gold: 8, knowledge: 0 };
-        return { food: 10, gold: 5, knowledge: 3 };
-    }
-    if (symbolId === S.greater_loot) {
-        if (r < 0.45) return { food: 30, gold: 10, knowledge: 0 };
-        if (r < 0.8) return { food: 20, gold: 16, knowledge: 0 };
-        return { food: 20, gold: 10, knowledge: 8 };
-    }
-    if (r < 0.35) return { food: 65, gold: 20, knowledge: 0 };
-    if (r < 0.65) return { food: 50, gold: 32, knowledge: 0 };
-    if (r < 0.9) return { food: 50, gold: 20, knowledge: 15 };
-    const relicPool = Object.values(RELICS);
-    const relicDef = relicPool[Math.floor(Math.random() * relicPool.length)];
-    return { food: 50, gold: 20, knowledge: 0, relicId: relicDef?.id };
+const LOOT_TIER_MAP: Record<number, LootTier> = {
+    [S.loot]: 'small',
+    [S.greater_loot]: 'medium',
+    [S.radiant_loot]: 'large',
 };
+
+const isBoardDestroyBlockedType = (type: SymbolType) =>
+    type === SymbolType.ENEMY || type === SymbolType.DISASTER;
 
 export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: BoardInteractionDeps) => ({
     butcherPastureAnimalAt: (x: number, y: number) => {
@@ -230,22 +225,50 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const sid = loot?.definition.id;
         if (!loot || loot.is_marked_for_destruction || !LOOT_IDS.has(sid ?? -1)) return;
 
-        const reward = rollLootReward(sid!);
+        const tier = LOOT_TIER_MAP[sid!]!;
+        const choices = generateLootRewardChoices(tier);
+
+        set({
+            phase: 'loot_reward_selection',
+            lootRewardChoices: choices,
+            pendingLootSlot: { x, y, symbolId: sid! },
+        });
+    },
+    selectLootReward: (rewardId: number) => {
+        const prev = get();
+        if (prev.phase !== 'loot_reward_selection' || !prev.pendingLootSlot) return;
+
+        const { x, y, symbolId } = prev.pendingLootSlot;
+        const loot = prev.board[x]?.[y];
+        if (!loot) {
+            set({ phase: 'idle', lootRewardChoices: [], pendingLootSlot: null });
+            return;
+        }
+
+        const reward = REWARDS[rewardId];
+        if (!reward) return;
+
+        const { food, gold, knowledge } = getRewardAmounts(reward, prev.era);
+
         const newBoard = prev.board.map((col) => [...col]);
         newBoard[x][y] = null;
-        const newPlayerSymbols = prev.playerSymbols.filter((symbol) => symbol.instanceId !== loot.instanceId);
+        const newPlayerSymbols = prev.playerSymbols.filter((s) => s.instanceId !== loot.instanceId);
 
         set({
             board: newBoard,
             playerSymbols: newPlayerSymbols,
-            food: prev.food + reward.food,
-            gold: prev.gold + reward.gold,
-            knowledge: prev.knowledge + reward.knowledge,
-            lastEffects: [...prev.lastEffects, { x, y, food: reward.food, gold: reward.gold, knowledge: reward.knowledge }],
+            food: prev.food + food,
+            gold: prev.gold + gold,
+            knowledge: prev.knowledge + knowledge,
+            lastEffects: [...prev.lastEffects, { x, y, food, gold, knowledge }],
+            phase: 'idle',
+            lootRewardChoices: [],
+            pendingLootSlot: null,
         });
 
-        if (reward.relicId) {
-            const relicDef = RELICS[reward.relicId];
+        if (reward.grantsRelic) {
+            const relicPool = Object.values(RELICS);
+            const relicDef = relicPool[Math.floor(Math.random() * relicPool.length)];
             if (relicDef) useRelicStore.getState().addRelic(relicDef);
         }
 
@@ -253,12 +276,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             turn: prev.turn,
             kind: 'system',
             slot: { x, y },
-            symbolId: sid,
-            delta: { food: reward.food, gold: reward.gold, knowledge: reward.knowledge },
-            meta: {
-                action: 'loot_open',
-                relicId: reward.relicId ?? null,
-            },
+            symbolId,
+            delta: { food, gold, knowledge },
+            meta: { action: 'loot_open', rewardKey: reward.key },
         });
     },
     activateEdictAt: (x: number, y: number) => {
@@ -269,7 +289,12 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         const hasAdjacentTarget = getAdjacentCoords(x, y).some(({ x: ax, y: ay }) => {
             const cell = prev.board[ax]?.[ay];
-            return !!cell && !cell.is_marked_for_destruction && cell.instanceId !== edict.instanceId;
+            return (
+                !!cell &&
+                !cell.is_marked_for_destruction &&
+                cell.instanceId !== edict.instanceId &&
+                !isBoardDestroyBlockedType(cell.definition.type)
+            );
         });
         if (!hasAdjacentTarget) return;
 
@@ -289,6 +314,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const target = state.board[x][y];
         const edict = state.board[pending.x]?.[pending.y];
         if (!target || !edict || edict.instanceId !== pending.instanceId) return;
+        if (isBoardDestroyBlockedType(target.definition.type)) return;
         if (target.instanceId === edict.instanceId) return;
 
         const isAdjacent = getAdjacentCoords(pending.x, pending.y).some((pos) => pos.x === x && pos.y === y);

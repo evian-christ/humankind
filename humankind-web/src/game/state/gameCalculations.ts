@@ -19,6 +19,7 @@ import {
     URBANIZATION_UPGRADE_ID,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../data/knowledgeUpgrades';
+import { isKnowledgeUpgradeLockedByResearchCutoff } from '../data/knowledgeUpgradeTiers';
 import { SymbolType } from '../data/symbolDefinitions';
 
 const KNOWLEDGE_LEVELUP_BASE = 50;
@@ -73,7 +74,7 @@ export const calculateFoodCost = (turn: number): number => {
 
     let extra = 0;
     for (let k = 1; k <= nth - 1; k++) {
-        extra += (20 + 5 * k) * k;
+        extra += 25 + 25 * k;
     }
     return base + extra;
 };
@@ -134,6 +135,7 @@ export function isUpgradeLegalForKnowledgePick(
     const upgrade = KNOWLEDGE_UPGRADES[uid];
     if (!upgrade) return false;
     if (have.has(uid)) return false;
+    if (isKnowledgeUpgradeLockedByResearchCutoff(uid, level)) return false;
 
     const upgradeEra = upgradeEraBySymbolType(upgrade.type);
     if (upgradeEra == null) return false;

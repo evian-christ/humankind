@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import {
-    collectCombatDestroyedSymbols,
     collectCombatEvents,
+    collectCombatKilledEnemies,
     resolveCombatStep,
 } from './combatResolution';
 import type { BoardGrid } from './turnTypes';
@@ -86,14 +86,15 @@ describe('combatResolution', () => {
         expect(result.animation).toEqual({ ax: 4, ay: 3, tx: 0, ty: 0, atkDmg: 4, counterDmg: 0 });
     });
 
-    it('collects destroyed ids', () => {
+    it('collects only defeated enemy symbols for loot rewards', () => {
         const board = createEmptyBoard();
-        const camp = createInstance(Sym.barbarian_camp, 'camp');
-        camp.is_marked_for_destruction = true;
-        board[0][0] = camp;
+        const enemy = createInstance(Sym.enemy_warrior, 'enemy');
+        const unit = createInstance(Sym.warrior, 'unit');
+        enemy.is_marked_for_destruction = true;
+        unit.is_marked_for_destruction = true;
+        board[0][0] = enemy;
+        board[1][0] = unit;
 
-        const destroyedIds = new Set(collectCombatDestroyedSymbols(board, 5, 4));
-
-        expect(destroyedIds.has('camp')).toBe(true);
+        expect(collectCombatKilledEnemies(board, 5, 4).map((s) => s.instanceId)).toEqual(['enemy']);
     });
 });

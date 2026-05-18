@@ -21,6 +21,19 @@ function def(key: SymbolKey, body: DefBody): SymbolDefinition {
     return { key, id: SYMBOL_NUMERIC_ID[key], ...body };
 }
 
+const UNIT_COMBAT_STATS = {
+    warrior: { base_attack: 3, base_hp: 10 },
+    cavalry: { base_attack: 4, base_hp: 15 },
+    knight: { base_attack: 5, base_hp: 20 },
+    cavalry_corps: { base_attack: 7, base_hp: 30 },
+    musketman: { base_attack: 10, base_hp: 40 },
+    infantry: { base_attack: 20, base_hp: 80 },
+    archer: { base_attack: 2, base_hp: 4 },
+    tracker_archer: { base_attack: 2, base_hp: 8 },
+    crossbowman: { base_attack: 4, base_hp: 8 },
+    cannon: { base_attack: 10, base_hp: 20 },
+} as const;
+
 /**
  * 심볼 메타데이터(이름·설명·타입·스프라이트)는 여기서 관리합니다.
  * **숫자 ID만** 바꿀 때는 `symbolIdRegistry.ts`의 `SYMBOL_NUMERIC_ID`만 수정하세요.
@@ -213,24 +226,32 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If placed in a corner: +10 Food and +10 Knowledge. Destroyed if another Religion symbol is on the board.", sprite: "058.png" }),
 
     // Unit
-    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Primitive melee unit.", base_attack: 3, base_hp: 10, sprite: "063.png" }),
-    def('cavalry', { name: "Cavalry", type: SymbolType.UNIT, description: "Ancient melee unit.", base_attack: 4, base_hp: 15, sprite: "064.png" }),
-    def('knight', { name: "Knight", type: SymbolType.UNIT, description: "Ancient melee unit.", base_attack: 5, base_hp: 20, sprite: "065.png" }),
-    def('cavalry_corps', { name: "Cavalry Corps", type: SymbolType.UNIT, description: "Medieval melee unit.", base_attack: 7, base_hp: 30, sprite: "066.png" }),
-    def('musketman', { name: "Musketman", type: SymbolType.UNIT, description: "Medieval melee unit.", base_attack: 10, base_hp: 40, sprite: "067.png" }),
-    def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Modern melee unit.", base_attack: 20, base_hp: 80, sprite: "068.png" }),
-    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Ancient ranged unit.", base_attack: 2, base_hp: 4, sprite: "069.png" }),
-    def('tracker_archer', { name: "Tracker Archer", type: SymbolType.UNIT, description: "Ancient ranged unit. When adjacent to Forest: +1 Food.", base_attack: 2, base_hp: 8, sprite: "070.png" }),
-    def('crossbowman', { name: "Crossbowman", type: SymbolType.UNIT, description: "Medieval ranged unit.", base_attack: 4, base_hp: 8, sprite: "071.png" }),
-    def('cannon', { name: "Cannon", type: SymbolType.UNIT, description: "Modern ranged unit.", base_attack: 10, base_hp: 20, sprite: "072.png" }),
+    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Primitive melee unit.", ...UNIT_COMBAT_STATS.warrior, sprite: "063.png" }),
+    def('cavalry', { name: "Cavalry", type: SymbolType.UNIT, description: "Ancient melee unit.", ...UNIT_COMBAT_STATS.cavalry, sprite: "064.png" }),
+    def('knight', { name: "Knight", type: SymbolType.UNIT, description: "Ancient melee unit.", ...UNIT_COMBAT_STATS.knight, sprite: "065.png" }),
+    def('cavalry_corps', { name: "Cavalry Corps", type: SymbolType.UNIT, description: "Medieval melee unit.", ...UNIT_COMBAT_STATS.cavalry_corps, sprite: "066.png" }),
+    def('musketman', { name: "Musketman", type: SymbolType.UNIT, description: "Medieval melee unit.", ...UNIT_COMBAT_STATS.musketman, sprite: "067.png" }),
+    def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Modern melee unit.", ...UNIT_COMBAT_STATS.infantry, sprite: "068.png" }),
+    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Ancient ranged unit.", ...UNIT_COMBAT_STATS.archer, sprite: "069.png" }),
+    def('tracker_archer', { name: "Tracker Archer", type: SymbolType.UNIT, description: "Ancient ranged unit. When adjacent to Forest: +1 Food.", ...UNIT_COMBAT_STATS.tracker_archer, sprite: "070.png" }),
+    def('crossbowman', { name: "Crossbowman", type: SymbolType.UNIT, description: "Medieval ranged unit.", ...UNIT_COMBAT_STATS.crossbowman, sprite: "071.png" }),
+    def('cannon', { name: "Cannon", type: SymbolType.UNIT, description: "Modern ranged unit.", ...UNIT_COMBAT_STATS.cannon, sprite: "072.png" }),
 
     // Enemy
-    def('barbarian_camp', { name: "Barbarian Camp", type: SymbolType.ENEMY, description: "Every 8 turns: adds 1 random current era enemy combat unit.", base_hp: 20, sprite: "073.png" }),
-    def('enemy_warrior', { name: "Enemy Warrior", type: SymbolType.ENEMY, description: "-5 Food.", base_attack: 5, base_hp: 10, sprite: "074.png" }),
+    def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.warrior, sprite: "074.png" }),
+    def('enemy_cavalry', { name: "Cavalry", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.cavalry, sprite: "078.png" }),
+    def('enemy_knight', { name: "Knight", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.knight, sprite: "079.png" }),
+    def('enemy_cavalry_corps', { name: "Cavalry Corps", type: SymbolType.ENEMY, description: "-6 Food.", ...UNIT_COMBAT_STATS.cavalry_corps, sprite: "080.png" }),
+    def('enemy_musketman', { name: "Musketman", type: SymbolType.ENEMY, description: "-6 Food.", ...UNIT_COMBAT_STATS.musketman, sprite: "081.png" }),
+    def('enemy_infantry', { name: "Infantry", type: SymbolType.ENEMY, description: "-12 Food.", ...UNIT_COMBAT_STATS.infantry, sprite: "082.png" }),
+    def('enemy_archer', { name: "Archer", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.archer, sprite: "083.png" }),
+    def('enemy_tracker_archer', { name: "Tracker Archer", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.tracker_archer, sprite: "084.png" }),
+    def('enemy_crossbowman', { name: "Crossbowman", type: SymbolType.ENEMY, description: "-6 Food.", ...UNIT_COMBAT_STATS.crossbowman, sprite: "085.png" }),
+    def('enemy_cannon', { name: "Cannon", type: SymbolType.ENEMY, description: "-12 Food.", ...UNIT_COMBAT_STATS.cannon, sprite: "086.png" }),
 
     // Disaster
-    def('flood', { name: "Flood", type: SymbolType.DISASTER, description: "Disables all adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "075.png" }),
-    def('earthquake', { name: "Earthquake", type: SymbolType.DISASTER, description: "Destroyed. On destroy: destroy 1 random adjacent symbol.", sprite: "076.png" }),
+    def('flood', { name: "Flood", type: SymbolType.DISASTER, description: "Disables production from adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "075.png" }),
+    def('earthquake', { name: "Earthquake", type: SymbolType.DISASTER, description: "Destroyed. On destroy: destroy every symbol in the same column.", sprite: "076.png" }),
     def('drought', { name: "Drought", type: SymbolType.DISASTER, description: "When counter reaches 0: Destroy.", sprite: "077.png" }),
 ];
 
@@ -250,9 +271,6 @@ export const TAX_SYMBOL_ID = S.tax;
 
 /** 칙령: 파괴 후 보유 심볼 1개 제거 UI */
 export const EDICT_SYMBOL_ID = S.edict;
-
-/** 야만인 주둔지: 이 턴 수마다 무작위 적 전투 유닛 1기 추가 */
-export const BARBARIAN_CAMP_SPAWN_INTERVAL = 8;
 
 const RELIGION_DOCTRINE_KEYS: readonly SymbolKey[] = ['christianity', 'islam', 'buddhism', 'hinduism'];
 

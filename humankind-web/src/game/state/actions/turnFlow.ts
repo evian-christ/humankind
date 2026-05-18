@@ -1,6 +1,6 @@
 import { t } from '../../../i18n';
 import { RELICS } from '../../data/relicDefinitions';
-import { SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { SYMBOLS, S, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { useSettingsStore } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
@@ -14,6 +14,7 @@ import {
     applyClovisPreDamage,
     collectCombatDestroyedSymbols,
     collectCombatEvents,
+    collectCombatKilledEnemies,
     pickClovisPreDamageTarget,
     resolveCombatStep,
 } from '../../logic/turn/combatResolution';
@@ -30,6 +31,7 @@ import {
     createSlotEffectPipeline,
     removeMarkedSymbolsFromBoard,
     resolveSlotEffect,
+    commitLootMerge,
     type ProcessSlotArgs,
 } from '../../logic/turn/turnPipeline';
 import type { PlayerSymbolInstance } from '../../types';
@@ -126,6 +128,7 @@ export const createTurnFlowActions = ({
             pendingContributors: [],
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
+            lootMergeFx: null,
             rerollsThisTurn: 0,
         });
         saveGameState(get());
@@ -152,6 +155,7 @@ export const createTurnFlowActions = ({
         set({
             phase: 'processing',
             effectPhase3ReachedThisRun: false,
+            lootMergeFx: null,
             runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge },
         });
         get().appendEventLog({
@@ -309,6 +313,7 @@ export const createTurnFlowActions = ({
                         pendingContributors: [],
                         effectPhase: null,
                         effectPhase3ReachedThisRun: false,
+                        lootMergeFx: null,
                         era: prog.newEra,
                         board: generated.board,
                         playerSymbols: filteredSymbols,
@@ -460,7 +465,7 @@ export const createTurnFlowActions = ({
                     relicEffects: buildActiveRelicEffects(),
                 });
 
-                set({ activeSlot: null, activeContributors: [], pendingContributors: [], counterDisplayOverrides: [] });
+                set({ activeSlot: null, activeContributors: [], pendingContributors: [], counterDisplayOverrides: [], lootMergeFx: null });
                 set({
                     lastEffects: [...slotPipeline.accumulatedEffects],
                     runningTotals: { ...slotPipeline.totals },
@@ -482,7 +487,7 @@ export const createTurnFlowActions = ({
             const currentState = get();
             const currentBoard = currentState.board;
             const symbol = currentBoard[x][y];
-            if (!symbol) {
+            if (!symbol || symbol.is_marked_for_destruction) {
                 processSlot(slotIdx + 1);
                 return;
             }
@@ -511,11 +516,25 @@ export const createTurnFlowActions = ({
                 contributorCount: result.contributors?.length ?? 0,
             });
 
+            const perfNow =
+                typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
+                    ? globalThis.performance.now()
+                    : Date.now();
+            const lootMergeFx = result.lootMerge
+                ? {
+                      absorbed: result.lootMerge.absorbed,
+                      receiver: result.lootMerge.receiver,
+                      durationMs: Math.max(1, timelinePlan.phase1DelayMs + timelinePlan.phase2DelayMs),
+                      startedAtPerfMs: perfNow,
+                  }
+                : null;
+
             set({
                 activeSlot: { x, y },
                 activeContributors: [],
                 pendingContributors: result.contributors ?? [],
                 effectPhase: 1,
+                lootMergeFx,
                 counterDisplayOverrides: result.counterDelta
                     ? [{ x, y, text: result.counterDisplayTextBefore ?? null }]
                     : [],
@@ -527,6 +546,9 @@ export const createTurnFlowActions = ({
             };
             const applyEffectsAndContinue = () => {
                 if (!turnRun.isActive()) return;
+                if (result.lootMerge) {
+                    commitLootMerge(get().board, result.lootMerge);
+                }
                 applySlotEffectResult(slotPipeline, { x, y }, result);
 
                 if (result.bonusXpPerTurnDelta) {
@@ -547,6 +569,7 @@ export const createTurnFlowActions = ({
                 set({
                     effectPhase: 3,
                     effectPhase3ReachedThisRun: true,
+                    lootMergeFx: null,
                     counterDisplayOverrides: [],
                     lastEffects: [...slotPipeline.accumulatedEffects],
                     runningTotals: { ...slotPipeline.totals },
@@ -632,9 +655,8 @@ export const createTurnFlowActions = ({
         const startEffectPhase = () => {
             if (!turnRun.isActive()) return;
             const combatDestroyedIds = new Set(collectCombatDestroyedSymbols(get().board, boardWidth, boardHeight));
-            const combatKilledEnemies = get()
-                .board.flat()
-                .filter((s) => s?.is_marked_for_destruction && s.definition.type === SymbolType.ENEMY);
+            const combatKilledEnemies = collectCombatKilledEnemies(get().board, boardWidth, boardHeight);
+            const combatLootCount = combatKilledEnemies.length;
             if (combatKilledEnemies.length > 0) {
                 const relics = useRelicStore.getState().relics;
                 const killRewardRelics = [
@@ -663,9 +685,18 @@ export const createTurnFlowActions = ({
                 if (!turnRun.isActive()) return;
                 if (combatDestroyedIds.size > 0) {
                     set((prev) => {
+                        const lootDef = SYMBOLS[S.loot];
+                        const lootSymbols = lootDef
+                            ? Array.from({ length: combatLootCount }, () =>
+                                  createInstance(lootDef, prev.unlockedKnowledgeUpgrades || []),
+                              )
+                            : [];
                         return {
                             board: prev.board.map((col) => col.map((s) => (s?.is_marked_for_destruction ? null : s))),
-                            playerSymbols: prev.playerSymbols.filter((s) => !combatDestroyedIds.has(s.instanceId)),
+                            playerSymbols: [
+                                ...prev.playerSymbols.filter((s) => !combatDestroyedIds.has(s.instanceId)),
+                                ...lootSymbols,
+                            ],
                             combatShaking: false,
                         };
                     });
@@ -676,6 +707,7 @@ export const createTurnFlowActions = ({
                     pendingContributors: [],
                     effectPhase: null,
                     effectPhase3ReachedThisRun: false,
+                    lootMergeFx: null,
                     combatAnimation: null,
                     combatShaking: false,
                 });
