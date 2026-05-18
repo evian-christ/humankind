@@ -12,73 +12,15 @@ import { useGameStore } from '../game/state/gameStore';
 import { isUpgradeLegalForKnowledgePick } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
-    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    ARCHERY_UPGRADE_ID,
-    AGRICULTURE_UPGRADE_ID,
-    ARCHITECTURE_UPGRADE_ID,
-    AGRICULTURAL_SURPLUS_UPGRADE_ID,
-    BALLISTICS_UPGRADE_ID,
-    CELESTIAL_NAVIGATION_UPGRADE_ID,
-    CARAVANSERAI_UPGRADE_ID,
-    CHIEFDOM_UPGRADE_ID,
-    COLONIALISM_UPGRADE_ID,
-    COMPASS_UPGRADE_ID,
-    CURRENCY_UPGRADE_ID,
-    DESERT_STORAGE_UPGRADE_ID,
-    ELECTRICITY_UPGRADE_ID,
-    EDUCATION_UPGRADE_ID,
-    FEUDAL_CORN_UPGRADE_ID,
-    DRY_STORAGE_UPGRADE_ID,
-    EXPLORATION_UPGRADE_ID,
-    FORESTRY_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    FISHERY_GUILD_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
-    GUILD_UPGRADE_ID,
-    GUNPOWDER_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
-    MILITARY_SCIENCE_UPGRADE_ID,
-    INTERCHANGEABLE_PARTS_UPGRADE_ID,
-    IRON_WORKING_UPGRADE_ID,
-    LAW_CODE_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
-    JUNGLE_EXPEDITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
-    MECHANICS_UPGRADE_ID,
-    NOMADIC_TRADITION_UPGRADE_ID,
-    NATIONALISM_UPGRADE_ID,
-    OASIS_RECOVERY_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    HORSEMANSHIP_UPGRADE_ID,
-    SEAFARING_UPGRADE_ID,
-    SHIPBUILDING_UPGRADE_ID,
-    TANNING_UPGRADE_ID,
-    THEOCRACY_UPGRADE_ID,
-    TRACKING_UPGRADE_ID,
-    FEUDALISM_UPGRADE_ID,
-    MINING_UPGRADE_ID,
-    MODERN_AGRICULTURE_UPGRADE_ID,
-    MARITIME_TRADE_UPGRADE_ID,
-    MATHEMATICS_UPGRADE_ID,
-    MODERN_AGE_UPGRADE_ID,
-    OCEANIC_ROUTES_UPGRADE_ID,
-    PASTURE_MANAGEMENT_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
-    PRINTING_PRESS_UPGRADE_ID,
-    PRESERVATION_UPGRADE_ID,
-    SCIENTIFIC_THEORY_UPGRADE_ID,
-    SACRIFICIAL_RITE_UPGRADE_ID,
-    STATE_LABOR_UPGRADE_ID,
-    STEAM_POWER_UPGRADE_ID,
-    TROPICAL_DEVELOPMENT_UPGRADE_ID,
-    THREE_FIELD_SYSTEM_UPGRADE_ID,
-    THEOLOGY_UPGRADE_ID,
-    URBANIZATION_UPGRADE_ID,
-    WRITING_SYSTEM_UPGRADE_ID,
     getKnowledgeUpgradeDirectDependents,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../game/data/knowledgeUpgrades';
+import {
+    isKnowledgeUpgradeLockedByResearchCutoff,
+    KNOWLEDGE_UPGRADE_TIER_ROWS,
+} from '../game/data/knowledgeUpgradeTiers';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
@@ -142,36 +84,10 @@ function buildCenteredTierRow(...upgradeIds: number[]): (number | null)[] {
 }
 
 const TIERS: { level: number; ids: (number | null)[] }[] = [
-    { level: 1, ids: buildCenteredTierRow(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) },
-    { level: 2, ids: buildCenteredTierRow(HUNTING_UPGRADE_ID, PASTORALISM_UPGRADE_ID, FISHERIES_UPGRADE_ID, AGRICULTURE_UPGRADE_ID, MINING_UPGRADE_ID, FOREIGN_TRADE_UPGRADE_ID) },
-    { level: 3, ids: buildCenteredTierRow(CHIEFDOM_UPGRADE_ID, ARCHERY_UPGRADE_ID, LAW_CODE_UPGRADE_ID, CURRENCY_UPGRADE_ID, SACRIFICIAL_RITE_UPGRADE_ID) },
-    { level: 4, ids: buildCenteredTierRow(HORSEMANSHIP_UPGRADE_ID, SEAFARING_UPGRADE_ID) },
-    { level: 5, ids: buildCenteredTierRow(IRRIGATION_UPGRADE_ID, WRITING_SYSTEM_UPGRADE_ID) },
-    { level: 6, ids: buildCenteredTierRow(ARCHITECTURE_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID) },
-    { level: 7, ids: buildCenteredTierRow(TRACKING_UPGRADE_ID, THEOLOGY_UPGRADE_ID) },
-    { level: 8, ids: buildCenteredTierRow(IRON_WORKING_UPGRADE_ID, MATHEMATICS_UPGRADE_ID) },
-    { level: 9, ids: buildCenteredTierRow(NOMADIC_TRADITION_UPGRADE_ID, STATE_LABOR_UPGRADE_ID) },
-    { level: 10, ids: buildCenteredTierRow(FEUDALISM_UPGRADE_ID) },
-    { level: 11, ids: buildCenteredTierRow(FISHERY_GUILD_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID, PLANTATION_UPGRADE_ID) },
-    { level: 12, ids: buildCenteredTierRow(TANNING_UPGRADE_ID, COMPASS_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID) },
-    { level: 13, ids: buildCenteredTierRow(MECHANICS_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID) },
-    { level: 14, ids: buildCenteredTierRow(MILITARY_SCIENCE_UPGRADE_ID, FEUDAL_CORN_UPGRADE_ID, GUILD_UPGRADE_ID, EXPLORATION_UPGRADE_ID) },
-    { level: 15, ids: buildCenteredTierRow(SHIPBUILDING_UPGRADE_ID, EDUCATION_UPGRADE_ID) },
-    { level: 16, ids: buildCenteredTierRow(THEOCRACY_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID) },
-    { level: 17, ids: buildCenteredTierRow(AGRICULTURAL_SURPLUS_UPGRADE_ID, PRINTING_PRESS_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID) },
-    { level: 18, ids: buildCenteredTierRow(FORESTRY_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, GUNPOWDER_UPGRADE_ID) },
-    { level: 19, ids: buildCenteredTierRow(NATIONALISM_UPGRADE_ID, COLONIALISM_UPGRADE_ID) },
-    { level: 20, ids: buildCenteredTierRow(MODERN_AGE_UPGRADE_ID) },
-    { level: 21, ids: buildCenteredTierRow(OCEANIC_ROUTES_UPGRADE_ID) },
-    { level: 22, ids: buildCenteredTierRow(STEAM_POWER_UPGRADE_ID, OASIS_RECOVERY_UPGRADE_ID) },
-    { level: 23, ids: buildCenteredTierRow(BALLISTICS_UPGRADE_ID, MODERN_AGRICULTURE_UPGRADE_ID) },
-    { level: 24, ids: buildCenteredTierRow(PRESERVATION_UPGRADE_ID, URBANIZATION_UPGRADE_ID) },
-    { level: 25, ids: buildCenteredTierRow(SCIENTIFIC_THEORY_UPGRADE_ID, TROPICAL_DEVELOPMENT_UPGRADE_ID) },
-    { level: 26, ids: buildCenteredTierRow(ELECTRICITY_UPGRADE_ID) },
-    { level: 27, ids: buildCenteredTierRow() },
-    { level: 28, ids: buildCenteredTierRow(INTERCHANGEABLE_PARTS_UPGRADE_ID) },
-    { level: 29, ids: buildCenteredTierRow() },
-    { level: 30, ids: buildCenteredTierRow(AGI_PROJECT_UPGRADE_ID) },
+    ...KNOWLEDGE_UPGRADE_TIER_ROWS.map((tier) => ({
+        level: tier.level,
+        ids: buildCenteredTierRow(...tier.ids),
+    })),
 ];
 
 const KNOWLEDGE_TREE_CHIP = 110;
@@ -180,6 +96,7 @@ const TIER_ROW_PAD_X = 48;
 const TIER_LABEL_W = 72;
 /** Lv 라벨이 들어가는 첫 열 너비(단일 그리드의 1열). */
 const KNOWLEDGE_TREE_LABEL_BAND_PX = TIER_ROW_PAD_X + TIER_LABEL_W + 14;
+const KNOWLEDGE_TREE_BODY_PAD_TOP = 0;
 const TIER_ROW_MIN_H = 130;
 const TIER_STACK_GAP = 28;
 const KNOWLEDGE_CONNECTOR_COLOR = '#4b4e55';
@@ -220,6 +137,8 @@ const KNOWLEDGE_TREE_CHIP_HOVER_BG = '#24262b';
 const KNOWLEDGE_CONNECTOR_IDLE_OPACITY = 0.16;
 const KNOWLEDGE_CONNECTOR_DIMMED_OPACITY = 0.08;
 const KNOWLEDGE_CONNECTOR_ACTIVE_OPACITY = 0.95;
+const KNOWLEDGE_HEADER_BG = '#0e1722';
+const KNOWLEDGE_TIER_AVAILABLE_BG = 'rgba(96,165,250,0.08)';
 
 /** 칩 6열 + 열 사이 간격 */
 function knowledgeTreeGridWidthPx(): number {
@@ -240,6 +159,28 @@ function findTierGridSlot(upgradeId: number): { rowIdx: number; colIdx: number }
 function getTierLevelForUpgrade(upgradeId: number | null): number {
     if (upgradeId == null) return 1;
     return TIERS.find((tier) => tier.ids.includes(upgradeId))?.level ?? 1;
+}
+
+function getTierRowHeightPx(_rowIdx: number): number {
+    return TIER_ROW_MIN_H;
+}
+
+function getTierRowTopPx(rowIdx: number): number {
+    let top = 0;
+    for (let i = 0; i < rowIdx; i += 1) {
+        top += getTierRowHeightPx(i) + TIER_STACK_GAP;
+    }
+    return top;
+}
+
+function getKnowledgeAvailableBackgroundHeightPx(currentLevel: number): number {
+    for (let tierIdx = TIERS.length - 1; tierIdx >= 0; tierIdx -= 1) {
+        if (TIERS[tierIdx]!.level <= currentLevel) {
+            return getTierRowTopPx(tierIdx) + getTierRowHeightPx(tierIdx) / 2;
+        }
+    }
+
+    return 0;
 }
 
 function collectConnectedUpgradeIds(upgradeId: number | null): Set<number> {
@@ -336,24 +277,32 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const tooltipRef = useRef<HTMLDivElement>(null);
     const treeScrollRef = useRef<HTMLDivElement>(null);
     const treeContentRef = useRef<HTMLDivElement>(null);
+    const savedTreeScrollTopRef = useRef(0);
     const [connectorLines, setConnectorLines] = useState<KnowledgeConnectorLine[]>([]);
     const [tooltipPosition, setTooltipPosition] = useState<KnowledgeUpgradeTooltipPosition | null>(null);
 
-    const selectedUpgrade = selectedId != null ? KNOWLEDGE_UPGRADES[selectedId] : null;
-    const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
-    const selectedTierLevel = getTierLevelForUpgrade(selectedId);
     const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 17 && tutorialStep <= 21;
     const activeFocusId = tutorialRestrictsHover
         ? selectedId
         : hoveredId ?? selectedId;
+    const detailId = activeFocusId;
+    const detailUpgrade = detailId != null ? KNOWLEDGE_UPGRADES[detailId] : null;
+    const detailUnlocked = detailId != null && unlockedUpgrades.includes(detailId);
+    const detailTierLevel = getTierLevelForUpgrade(detailId);
+    const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
+    const selectedTierLevel = getTierLevelForUpgrade(selectedId);
     const activeConnectionIds = collectConnectedUpgradeIds(activeFocusId);
+    const detailDirectPrereqs = detailId != null ? [...getKnowledgeUpgradeDirectPrerequisites(detailId)] : [];
+    const detailDirectDependents = detailId != null ? [...getKnowledgeUpgradeDirectDependents(detailId)] : [];
     const selectedDirectPrereqs = selectedId != null ? [...getKnowledgeUpgradeDirectPrerequisites(selectedId)] : [];
-    const selectedDirectDependents = selectedId != null ? [...getKnowledgeUpgradeDirectDependents(selectedId)] : [];
     const unmetSelectedPrereqs = selectedDirectPrereqs.filter((prereqId) => !unlockedUpgrades.includes(prereqId));
     const unmetSelectedPrereqNames = unmetSelectedPrereqs.map((prereqId) =>
         t(`knowledgeUpgrade.${prereqId}.name`, language) || KNOWLEDGE_UPGRADES[prereqId]?.name || `#${prereqId}`,
     );
     const hasResearchPoints = levelUpResearchPoints > 0;
+    const availableBackgroundHeightPx = getKnowledgeAvailableBackgroundHeightPx(currentLevel);
+    const selectedLockedByResearchCutoff =
+        selectedId != null && isKnowledgeUpgradeLockedByResearchCutoff(selectedId, currentLevel);
     const canResearchWithCurrentPick =
         currentLevel >= selectedTierLevel &&
         selectedId != null &&
@@ -366,6 +315,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         selectedUnlocked ||
         unmetSelectedPrereqs.length > 0 ||
         needsHigherLevel ||
+        selectedLockedByResearchCutoff ||
         tutorialResearchLocked ||
         (hasResearchPoints && !canResearchWithCurrentPick);
 
@@ -381,14 +331,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             Math.max(0, (contentEl.clientWidth - KNOWLEDGE_TREE_LABEL_BAND_PX - gridWidth) / 2);
         const xForCol = (colIdx: number) =>
             centeredGridStartX + colIdx * (KNOWLEDGE_TREE_CHIP + KNOWLEDGE_TREE_GAP) + KNOWLEDGE_TREE_CHIP / 2;
-        const rowTop = (rowIdx: number) => rowIdx * (TIER_ROW_MIN_H + TIER_STACK_GAP);
         const bottomAnchorY = (rowIdx: number, pressed: boolean) =>
-            rowTop(rowIdx) +
-            (TIER_ROW_MIN_H + KNOWLEDGE_TREE_CHIP) / 2 +
+            getTierRowTopPx(rowIdx) +
+            (getTierRowHeightPx(rowIdx) + KNOWLEDGE_TREE_CHIP) / 2 +
             (pressed ? KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y : 0);
         const topAnchorY = (rowIdx: number, pressed: boolean) =>
-            rowTop(rowIdx) +
-            (TIER_ROW_MIN_H - KNOWLEDGE_TREE_CHIP) / 2 +
+            getTierRowTopPx(rowIdx) +
+            (getTierRowHeightPx(rowIdx) - KNOWLEDGE_TREE_CHIP) / 2 +
             (pressed ? KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y : 0);
 
         const next: KnowledgeConnectorLine[] = [];
@@ -415,8 +364,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         setConnectorLines(next);
     }, [activeFocusId]);
 
-    const updateSelectedTooltipPosition = useCallback(() => {
-        if (selectedId == null) {
+    const updateDetailTooltipPosition = useCallback(() => {
+        if (detailId == null) {
             setTooltipPosition(null);
             return;
         }
@@ -425,7 +374,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         if (!overlayEl) return;
 
         const anchorEl = overlayEl.querySelector<HTMLElement>(
-            `[data-knowledge-upgrade-id="${selectedId}"]`,
+            `[data-knowledge-upgrade-id="${detailId}"]`,
         );
         if (!anchorEl) {
             setTooltipPosition(null);
@@ -465,13 +414,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         );
 
         setTooltipPosition({ left, top, placement });
-    }, [selectedId]);
+    }, [detailId]);
 
     useLayoutEffect(() => {
         if (!isOpen) return;
         const raf = requestAnimationFrame(() => {
+            if (scrollEl) scrollEl.scrollTop = savedTreeScrollTopRef.current;
             updateKnowledgeTreeConnectors();
-            updateSelectedTooltipPosition();
+            updateDetailTooltipPosition();
         });
         const contentEl = treeContentRef.current;
         const tooltipEl = tooltipRef.current;
@@ -480,24 +430,24 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         const ro = typeof ResizeObserver !== 'undefined'
             ? new ResizeObserver(() => {
                 updateKnowledgeTreeConnectors();
-                updateSelectedTooltipPosition();
+                updateDetailTooltipPosition();
             })
             : null;
         ro?.observe(contentEl);
         if (tooltipEl) ro?.observe(tooltipEl);
         scrollEl?.addEventListener('scroll', updateKnowledgeTreeConnectors, { passive: true });
-        scrollEl?.addEventListener('scroll', updateSelectedTooltipPosition, { passive: true });
+        scrollEl?.addEventListener('scroll', updateDetailTooltipPosition, { passive: true });
         window.addEventListener('resize', updateKnowledgeTreeConnectors);
-        window.addEventListener('resize', updateSelectedTooltipPosition);
+        window.addEventListener('resize', updateDetailTooltipPosition);
         return () => {
             cancelAnimationFrame(raf);
             ro?.disconnect();
             scrollEl?.removeEventListener('scroll', updateKnowledgeTreeConnectors);
-            scrollEl?.removeEventListener('scroll', updateSelectedTooltipPosition);
+            scrollEl?.removeEventListener('scroll', updateDetailTooltipPosition);
             window.removeEventListener('resize', updateKnowledgeTreeConnectors);
-            window.removeEventListener('resize', updateSelectedTooltipPosition);
+            window.removeEventListener('resize', updateDetailTooltipPosition);
         };
-    }, [isOpen, updateKnowledgeTreeConnectors, updateSelectedTooltipPosition, language, selectedId]);
+    }, [isOpen, updateKnowledgeTreeConnectors, updateDetailTooltipPosition, language, detailId]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -526,7 +476,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     if (!isOpen) return null;
 
     const detailEraColor =
-        selectedUpgrade != null ? getSymbolColorHex(selectedUpgrade.type) : '#888888';
+        detailUpgrade != null ? getSymbolColorHex(detailUpgrade.type) : '#888888';
     const connectorRenderLines: KnowledgeConnectorRenderLine[] = connectorLines.map((line) => ({
         ...line,
         active:
@@ -537,7 +487,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             activeFocusId != null &&
             !(activeConnectionIds.has(line.from) && activeConnectionIds.has(line.to)),
     }));
-
     const playKnowledgeUpgradeSound = () => {
         void audioManager.play('knowledge_upgraded_1');
         void audioManager.getCueDurationMs('knowledge_upgraded_1')
@@ -607,7 +556,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             {/* 상단 헤더 */}
             <div
                 style={{
+                    position: 'relative',
+                    zIndex: 2,
                     padding: '24px 32px',
+                    background: KNOWLEDGE_HEADER_BG,
                     flexShrink: 0,
                     display: 'flex',
                     alignItems: 'center',
@@ -690,21 +642,30 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 style={{
                     flex: 1,
                     minHeight: 0,
-                    padding: '10px 32px 28px',
+                    padding: `${KNOWLEDGE_TREE_BODY_PAD_TOP}px 0 28px`,
                     boxSizing: 'border-box',
                     position: 'relative',
+                    zIndex: 1,
+                    overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
                 }}
             >
                 <div
                     ref={treeScrollRef}
+                    className="knowledge-upgrades-tree-scroll"
+                    onScroll={(e) => {
+                        savedTreeScrollTopRef.current = e.currentTarget.scrollTop;
+                    }}
                     style={{
                         flex: 1,
                         width: '100%',
                         minHeight: 0,
+                        boxSizing: 'border-box',
                         overflowY: 'auto',
                         paddingBottom: 8,
+                        position: 'relative',
+                        zIndex: 1,
                     }}
                 >
                     <div
@@ -716,7 +677,24 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                             gap: TIER_STACK_GAP,
                         }}
                     >
+                        {availableBackgroundHeightPx > 0 && (
+                            <div
+                                aria-hidden
+                                data-knowledge-available-background
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    right: 0,
+                                    top: 0,
+                                    height: `${availableBackgroundHeightPx}px`,
+                                    background: KNOWLEDGE_TIER_AVAILABLE_BG,
+                                    pointerEvents: 'none',
+                                    zIndex: 0,
+                                }}
+                            />
+                        )}
                         {TIERS.map((tier) => {
+                            const tierRowHeight = getTierRowHeightPx(TIERS.indexOf(tier));
                             const tierUnlockable = currentLevel >= tier.level;
                             const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
                             const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
@@ -727,7 +705,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                     style={{
                                         position: 'relative',
                                         flex: '0 0 auto',
-                                        minHeight: `${TIER_ROW_MIN_H}px`,
+                                        minHeight: `${tierRowHeight}px`,
                                     }}
                                 >
                                     <div
@@ -756,8 +734,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                             letterSpacing: '0.12em',
                                             color: labelColor,
                                             fontWeight: 'bold',
-                                            background: '#070a0f',
                                             paddingRight: '14px',
+                                            textShadow: '0 2px 4px rgba(0,0,0,0.9)',
                                         }}
                                     >
                                         Lv.{tier.level}
@@ -799,6 +777,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const upgrade = KNOWLEDGE_UPGRADES[id];
                                                 if (!upgrade) return null;
                                                 const unlocked = unlockedUpgrades.includes(id);
+                                                const lockedByResearchCutoff = isKnowledgeUpgradeLockedByResearchCutoff(id, currentLevel);
                                                 const isSelected = selectedId === id;
                                                 const isHovered = hoveredId === id;
                                                 const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
@@ -866,6 +845,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                                     height: 'calc(100% - 24px)',
                                                                     objectFit: 'contain',
                                                                     imageRendering: 'pixelated',
+                                                                    filter: lockedByResearchCutoff
+                                                                        ? 'grayscale(1) saturate(0) brightness(0.65)'
+                                                                        : undefined,
                                                                     pointerEvents: 'none',
                                                                 }}
                                                             />
@@ -928,13 +910,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     </div>
                 </div>
 
-                {selectedUpgrade && tooltipPosition && (
+                {detailUpgrade && tooltipPosition && (
                     <div
                         ref={tooltipRef}
                         className={[
                             'knowledge-upgrade-tooltip',
                             `knowledge-upgrade-tooltip--${tooltipPosition.placement}`,
-                            selectedId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-tooltip--ancient-era' : '',
+                            detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-tooltip--ancient-era' : '',
                         ].filter(Boolean).join(' ')}
                         style={{
                             left: tooltipPosition.left,
@@ -943,12 +925,12 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     >
                         <div className="knowledge-upgrade-tooltip-scroll">
                             <div className="symbol-tooltip-name">
-                                {selectedUnlocked && (
+                                {detailUnlocked && (
                                     <span style={{ marginRight: 6, color: '#86efac' }} aria-hidden>
                                         ✓
                                     </span>
                                 )}
-                                {t(`knowledgeUpgrade.${selectedId}.name`, language) || selectedUpgrade.name}
+                                {t(`knowledgeUpgrade.${detailId}.name`, language) || detailUpgrade.name}
                             </div>
                             <div
                                 className="symbol-tooltip-rarity"
@@ -960,12 +942,12 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                     marginTop: '4px',
                                 }}
                             >
-                                {t(ERA_NAME_KEYS[selectedUpgrade.type], language)}
+                                {t(ERA_NAME_KEYS[detailUpgrade.type], language)}
                             </div>
                             <div className="knowledge-upgrade-detail-tier">
-                                {t('knowledgeUpgrade.detail.unlockLevel', language).replace('{level}', String(selectedTierLevel))}
+                                {t('knowledgeUpgrade.detail.unlockLevel', language).replace('{level}', String(detailTierLevel))}
                             </div>
-                            {(selectedDirectPrereqs.length > 0 || selectedDirectDependents.length > 0) && (
+                            {(detailDirectPrereqs.length > 0 || detailDirectDependents.length > 0) && (
                                 <div
                                     style={{
                                         marginTop: '10px',
@@ -974,9 +956,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                         gap: '6px',
                                     }}
                                 >
-                                    {selectedDirectPrereqs.length > 0 && (
+                                    {detailDirectPrereqs.length > 0 && (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                            {selectedDirectPrereqs.map((prereqId) => {
+                                            {detailDirectPrereqs.map((prereqId) => {
                                                 const prereqName =
                                                     t(`knowledgeUpgrade.${prereqId}.name`, language) ||
                                                     KNOWLEDGE_UPGRADES[prereqId]?.name ||
@@ -1001,9 +983,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                             })}
                                         </div>
                                     )}
-                                    {selectedDirectDependents.length > 0 && (
+                                    {detailDirectDependents.length > 0 && (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                            {selectedDirectDependents.map((dependentId) => (
+                                            {detailDirectDependents.map((dependentId) => (
                                                 <span
                                                     key={`dependent-${dependentId}`}
                                                     style={{
@@ -1022,7 +1004,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                 </div>
                             )}
                             <div className="symbol-tooltip-desc" style={{ marginTop: '8px' }}>
-                                {(t(`knowledgeUpgrade.${selectedId}.desc`, language) || selectedUpgrade.description)
+                                {(t(`knowledgeUpgrade.${detailId}.desc`, language) || detailUpgrade.description)
                                     .split('\n')
                                     .map((line, i) => (
                                         <div key={i} className="symbol-tooltip-desc-line">
@@ -1030,7 +1012,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                         </div>
                                     ))}
                             </div>
-                            {selectedUpgrade.descSymbols && selectedUpgrade.descSymbols.length > 0 && (
+                            {detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0 && (
                                 <div
                                     className="knowledge-upgrade-desc-symbols-area"
                                     style={{
@@ -1040,59 +1022,63 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                     }}
                                 >
                                     <UpgradeCardDescSymbols
-                                        upgradeId={selectedId!}
-                                        entries={selectedUpgrade.descSymbols}
+                                        upgradeId={detailId!}
+                                        entries={detailUpgrade.descSymbols}
                                         layoutSize="panel"
                                     />
                                 </div>
                             )}
                         </div>
 
-                        <div className="knowledge-upgrade-tooltip-actions" style={{ display: 'flex', justifyContent: 'center' }}>
-                            <button
-                                className="bottom-right-btn knowledge-upgrade-research-btn"
-                                onClick={handleUnlock}
-                                data-audio-click="knowledge_upgrade"
-                                aria-disabled={researchButtonDisabled}
-                                style={{
-                                    width: '100%',
-                                    maxWidth: '280px',
-                                    padding: '12px 16px',
-                                    boxSizing: 'border-box',
-                                    fontFamily: 'Mulmaru, sans-serif',
-                                    letterSpacing: '0.04em',
-                                    lineHeight: 1.25,
-                                    borderRadius: 0,
-                                    opacity: selectedUnlocked ? 0.4 : researchButtonDisabled ? 0.3 : 1,
-                                    background: selectedUnlocked
-                                        ? 'rgba(40,85,48,0.45)'
-                                        : 'rgba(80,40,0,0.9)',
-                                    boxShadow: selectedUnlocked || researchButtonDisabled
-                                        ? 'inset 0 0 0 4px #333, 0 6px 0 0 #222, 0 6px 10px rgba(0,0,0,0.35)'
-                                        : 'inset 0 0 0 4px #fbbf2455, 0 6px 0 0 #7c3100, 0 6px 16px rgba(251,191,36,0.25)',
-                                    color: selectedUnlocked ? '#86a878' : '#fbbf24',
-                                    cursor: selectedUnlocked || researchButtonDisabled ? 'not-allowed' : 'pointer',
-                                }}
-                            >
-                                {selectedUnlocked
-                                    ? t('knowledgeUpgrade.detail.alreadyResearched', language)
-                                    : unmetSelectedPrereqNames.length > 0
-                                        ? t('knowledgeUpgrade.detail.prerequisiteButton', language)
-                                            .replace('{names}', unmetSelectedPrereqNames.join(' / '))
-                                        : needsHigherLevel
-                                            ? t('knowledgeUpgrade.detail.levelRequired', language)
-                                                .replace('{level}', String(selectedTierLevel))
-                                            : hasResearchPoints &&
-                                                selectedId != null &&
-                                                !isUpgradeLegalForKnowledgePick(
-                                                    selectedId,
-                                                    unlockedUpgrades,
-                                                    currentLevel,
-                                                )
-                                              ? t('knowledgeUpgrade.detail.unavailableThisPick', language)
-                                              : t('knowledgeUpgrade.detail.research', language)}
-                            </button>
-                        </div>
+                        {detailId === selectedId && (
+                            <div className="knowledge-upgrade-tooltip-actions" style={{ display: 'flex', justifyContent: 'center' }}>
+                                <button
+                                    className="bottom-right-btn knowledge-upgrade-research-btn"
+                                    onClick={handleUnlock}
+                                    data-audio-click="knowledge_upgrade"
+                                    aria-disabled={researchButtonDisabled}
+                                    style={{
+                                        width: '100%',
+                                        maxWidth: '280px',
+                                        padding: '12px 16px',
+                                        boxSizing: 'border-box',
+                                        fontFamily: 'Mulmaru, sans-serif',
+                                        letterSpacing: '0.04em',
+                                        lineHeight: 1.25,
+                                        borderRadius: 0,
+                                        opacity: selectedUnlocked ? 0.4 : researchButtonDisabled ? 0.3 : 1,
+                                        background: selectedUnlocked
+                                            ? 'rgba(40,85,48,0.45)'
+                                            : 'rgba(80,40,0,0.9)',
+                                        boxShadow: selectedUnlocked || researchButtonDisabled
+                                            ? 'inset 0 0 0 4px #333, 0 6px 0 0 #222, 0 6px 10px rgba(0,0,0,0.35)'
+                                            : 'inset 0 0 0 4px #fbbf2455, 0 6px 0 0 #7c3100, 0 6px 16px rgba(251,191,36,0.25)',
+                                        color: selectedUnlocked ? '#86a878' : '#fbbf24',
+                                        cursor: selectedUnlocked || researchButtonDisabled ? 'not-allowed' : 'pointer',
+                                    }}
+                                >
+                                    {selectedUnlocked
+                                        ? t('knowledgeUpgrade.detail.alreadyResearched', language)
+                                        : unmetSelectedPrereqNames.length > 0
+                                            ? t('knowledgeUpgrade.detail.prerequisiteButton', language)
+                                                .replace('{names}', unmetSelectedPrereqNames.join(' / '))
+                                            : needsHigherLevel
+                                                ? t('knowledgeUpgrade.detail.levelRequired', language)
+                                                    .replace('{level}', String(selectedTierLevel))
+                                                : selectedLockedByResearchCutoff
+                                                    ? t('knowledgeUpgrade.detail.previousEraResearch', language)
+                                                : hasResearchPoints &&
+                                                    selectedId != null &&
+                                                    !isUpgradeLegalForKnowledgePick(
+                                                        selectedId,
+                                                        unlockedUpgrades,
+                                                        currentLevel,
+                                                    )
+                                                  ? t('knowledgeUpgrade.detail.unavailableThisPick', language)
+                                                  : t('knowledgeUpgrade.detail.research', language)}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

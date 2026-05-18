@@ -38,7 +38,7 @@ export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
 
 export function buildModernAgeDescSymbols(): KnowledgeUpgradeDescSymbol[] {
     const poolRemoveKeys = Object.values(SYMBOLS)
-        .filter((s) => s.type === SymbolType.MEDIEVAL || s.type === SymbolType.TERRAIN)
+        .filter((s) => s.type === SymbolType.MEDIEVAL)
         .map((s) => s.key as SymbolKey)
         .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
 
@@ -78,6 +78,8 @@ export const ARCHERY_UPGRADE_ID = 9;
 export const LAW_CODE_UPGRADE_ID = 10;
 export const CURRENCY_UPGRADE_ID = 11;
 export const SACRIFICIAL_RITE_UPGRADE_ID = 12;
+export const INQUISITION_UPGRADE_ID = 64;
+export const RESTRUCTURING_UPGRADE_ID = 65;
 export const HORSEMANSHIP_UPGRADE_ID = 13;
 export const SEAFARING_UPGRADE_ID = 14;
 export const CELESTIAL_NAVIGATION_UPGRADE_ID = 15;
@@ -130,6 +132,8 @@ export const ELECTRICITY_UPGRADE_ID = 61;
 export const INTERCHANGEABLE_PARTS_UPGRADE_ID = 62;
 export const AGI_PROJECT_UPGRADE_ID = 63;
 export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
+export const PUBLIC_ADMINISTRATION_UPGRADE_ID = 66;
+export const MASS_MEDIA_UPGRADE_ID = 67;
 export const TERRITORIAL_REORG_UPGRADE_ID = -1;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
@@ -481,8 +485,38 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         name: 'Sacrificial Rite',
         type: SymbolType.ANCIENT,
         description:
-            'Gain 3 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
+            'Gain 2 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
         sprite: '012.png',
+    },
+    [INQUISITION_UPGRADE_ID]: {
+        id: INQUISITION_UPGRADE_ID,
+        name: 'Inquisition',
+        type: SymbolType.MEDIEVAL,
+        description:
+            'Gain 2 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
+        sprite: '064.png',
+    },
+    [RESTRUCTURING_UPGRADE_ID]: {
+        id: RESTRUCTURING_UPGRADE_ID,
+        name: 'Restructuring',
+        type: SymbolType.MODERN,
+        description:
+            'Gain 2 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
+        sprite: '065.png',
+    },
+    [PUBLIC_ADMINISTRATION_UPGRADE_ID]: {
+        id: PUBLIC_ADMINISTRATION_UPGRADE_ID,
+        name: 'Public Administration',
+        type: SymbolType.MEDIEVAL,
+        description: 'In the selection phase, each card is 1.5x as likely to become an event.',
+        sprite: '066.png',
+    },
+    [MASS_MEDIA_UPGRADE_ID]: {
+        id: MASS_MEDIA_UPGRADE_ID,
+        name: 'Mass Media',
+        type: SymbolType.MODERN,
+        description: 'In the selection phase, each card is 2x as likely to become an event.',
+        sprite: '067.png',
     },
     [STATE_LABOR_UPGRADE_ID]: {
         id: STATE_LABOR_UPGRADE_ID,
