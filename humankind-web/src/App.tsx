@@ -3,14 +3,17 @@ import { useGameStore } from './game/state/gameStore';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore, type Language } from './game/state/settingsStore';
 import { usePreGameStore } from './game/state/preGameStore';
+import { useRelicStore } from './game/state/relicStore';
 import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
 import DestroySelection from './components/DestroySelection';
+import LootRewardSelection from './components/LootRewardSelection';
 import OblivionFurnaceBoardOverlay from './components/OblivionFurnaceBoardOverlay';
 import DemoStartScreen from './components/DemoStartScreen';
 import LeaderSelectScreen from './components/LeaderSelectScreen';
+import LeaderProgressScreen from './components/LeaderProgressScreen';
 
 import PauseMenu from './components/PauseMenu';
 import DevOverlay from './components/DevOverlay';
@@ -486,7 +489,9 @@ function App() {
     hasNewRelicShopStock,
     clearRelicShopStockBadge,
     levelUpResearchPoints,
+    initializeGame,
   } = useGameStore();
+  const resetRelics = useRelicStore((s) => s.resetRelics);
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
@@ -719,6 +724,12 @@ function App() {
     returnToIntro();
   }, [completeTutorial, isRelicShopOpen, returnToIntro, toggleRelicShop]);
 
+  const handleGameOverMainMenu = useCallback(() => {
+    initializeGame();
+    resetRelics();
+    returnToIntro();
+  }, [initializeGame, resetRelics, returnToIntro]);
+
   // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -778,6 +789,15 @@ function App() {
       <>
         <CustomCursor />
         <LeaderSelectScreen />
+      </>
+    );
+  }
+
+  if (preGameScreen === 'leaderProgress') {
+    return (
+      <>
+        <CustomCursor />
+        <LeaderProgressScreen />
       </>
     );
   }
@@ -1064,6 +1084,9 @@ function App() {
       {/* ===== SYMBOL SELECTION OVERLAY ===== */}
       <SymbolSelection />
 
+      {/* ===== LOOT REWARD SELECTION OVERLAY ===== */}
+      <LootRewardSelection />
+
       {/* ===== RELIC SELECTION OVERLAY ===== */}
       <RelicSelection />
 
@@ -1076,7 +1099,7 @@ function App() {
           <div className="endgame-panel">
             <div className="endgame-title endgame-defeat">{t('game.gameOver', language)}</div>
             <div className="endgame-subtitle">{t('game.turn', language)} {turn} - {t('game.notEnoughFood', language)}</div>
-            <button className="endgame-btn" onClick={returnToLeaderSelect}>{t('game.restart', language)}</button>
+            <button className="endgame-btn" onClick={handleGameOverMainMenu}>{t('pause.mainMenu', language)}</button>
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@ import PauseMenu from './PauseMenu';
 export default function DemoStartScreen() {
   const language = useSettingsStore((s) => s.language);
   const proceedToLeaderSelect = usePreGameStore((s) => s.proceedToLeaderSelect);
+  const proceedToLeaderProgress = usePreGameStore((s) => s.proceedToLeaderProgress);
   const skipIntroToDefaults = usePreGameStore((s) => s.skipIntroToDefaults);
   const continueSavedGame = usePreGameStore((s) => s.continueSavedGame);
   const hasSavedGame = usePreGameStore((s) => s.hasSavedGame);
@@ -91,6 +92,14 @@ export default function DemoStartScreen() {
           <button
             type="button"
             className="main-menu-button"
+            onClick={proceedToLeaderProgress}
+            aria-label={t('mainMenu.leaders', language)}
+          >
+            {t('mainMenu.leaders', language)}
+          </button>
+          <button
+            type="button"
+            className="main-menu-button"
             disabled
             aria-disabled="true"
             aria-label={t('mainMenu.achievements', language)}
@@ -116,7 +125,7 @@ export default function DemoStartScreen() {
         ×
       </button>
       <div className="main-menu-version" aria-label="alpha version">
-        a0.1.0
+        a0.1.1
       </div>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>

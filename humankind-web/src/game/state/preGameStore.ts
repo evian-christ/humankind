@@ -3,7 +3,7 @@ import type { LeaderId } from '../data/leaders';
 import { useGameStore } from './gameStore';
 import { hasSavedGame as hasSavedGameInStorage, loadSavedGamePatch } from './saveGame';
 
-export type PreGameScreen = 'intro' | 'leader' | null;
+export type PreGameScreen = 'intro' | 'leader' | 'leaderProgress' | null;
 
 const TUTORIAL_COMPLETED_KEY = 'humankind.tutorial.completed.v1';
 
@@ -31,6 +31,7 @@ interface PreGameState {
   hasCompletedTutorial: boolean;
 
   proceedToLeaderSelect: () => void;
+  proceedToLeaderProgress: () => void;
   returnToIntro: () => void;
   selectLeader: (leaderId: LeaderId) => void;
   exitPreGame: () => void;
@@ -50,6 +51,10 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
   proceedToLeaderSelect: () => {
     if (!get().hasCompletedTutorial) return;
     set({ screen: 'leader' });
+  },
+
+  proceedToLeaderProgress: () => {
+    set({ screen: 'leaderProgress' });
   },
 
   returnToIntro: () => {
