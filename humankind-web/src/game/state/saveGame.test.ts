@@ -37,6 +37,8 @@ const createSerializableState = (): GameState => {
 
     return {
         leaderId: 'shihuang',
+        leaderProgressLevel: 1,
+        lastLeaderProgressAward: null,
         food: 12,
         gold: 3,
         knowledge: 7,
@@ -70,6 +72,7 @@ const createSerializableState = (): GameState => {
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
         bonusXpPerTurn: 0,
+        qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
         isRelicShopOpen: false,
         hasNewRelicShopStock: false,

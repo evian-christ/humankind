@@ -360,7 +360,7 @@ const DataBrowser = () => {
             const q = search.toLowerCase();
             list = list.filter(r =>
                 r.name.toLowerCase().includes(q) ||
-                r.description.toLowerCase().includes(q) ||
+                getRewardDescriptionAllEras(r).toLowerCase().includes(q) ||
                 r.rarity.toLowerCase().includes(q) ||
                 String(r.id).includes(q),
             );
@@ -374,7 +374,7 @@ const DataBrowser = () => {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = a.name; vb = b.name; break;
                     case 'rarity': va = REWARD_RARITY_ORDER.indexOf(a.rarity); vb = REWARD_RARITY_ORDER.indexOf(b.rarity); break;
-                    case 'desc': va = a.description; vb = b.description; break;
+                    case 'desc': va = getRewardDescriptionAllEras(a); vb = getRewardDescriptionAllEras(b); break;
                     default: va = a.id; vb = b.id;
                 }
                 return genericCompare(va, vb, dir);

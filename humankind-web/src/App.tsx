@@ -23,6 +23,7 @@ import OwnedSymbolsModal from './components/OwnedSymbolsModal';
 import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
+import { LEADERS, MAX_LEADER_LEVEL, getLeaderXpRequiredForLevel, leaderHasPortraitSprite, type LeaderId, type LeaderProgressAwardResult } from './game/data/leaders';
 import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 import { audioManager } from './audio/audioManager';
@@ -75,10 +76,121 @@ const CustomCursor = () => {
 
 
 const ERA_NAME_KEYS: Record<number, string> = {
+  0: 'era.primitive',
   1: 'era.ancient',
   2: 'era.medieval',
   3: 'era.modern',
+  4: 'era.future',
 };
+
+const LEADER_ASSET_BASE_URL = import.meta.env.BASE_URL;
+
+function endgameLeaderPortraitSrc(id: LeaderId): string | null {
+  if (id === 'ramesses') return `${LEADER_ASSET_BASE_URL}assets/leaders/001_mini.png`;
+  if (id === 'shihuang') return `${LEADER_ASSET_BASE_URL}assets/leaders/002_mini.png`;
+  return null;
+}
+
+function EndgameLeaderProgressReveal({
+  award,
+  language,
+}: {
+  award: LeaderProgressAwardResult;
+  language: Language;
+}) {
+  const [animatedXp, setAnimatedXp] = useState(award.previous.xp);
+  const [animatedLevel, setAnimatedLevel] = useState(award.previous.level);
+  const leader = LEADERS[award.leaderId];
+  const leaderName = leader ? t(leader.nameKey, language) : '';
+  const portraitSrc = endgameLeaderPortraitSrc(award.leaderId);
+  const showPortrait = leaderHasPortraitSprite(award.leaderId) && portraitSrc;
+  const animatedXpRequired = getLeaderXpRequiredForLevel(animatedLevel);
+  const visibleRatio = Math.min(1, animatedXp / animatedXpRequired);
+
+  const resolveAnimatedProgress = useCallback((totalGained: number) => {
+    let level = award.previous.level;
+    let xp = award.previous.xp + totalGained;
+
+    while (level < MAX_LEADER_LEVEL) {
+      const required = getLeaderXpRequiredForLevel(level);
+      if (xp < required) break;
+      xp -= required;
+      level += 1;
+    }
+
+    const required = getLeaderXpRequiredForLevel(level);
+    return {
+      level,
+      xp: level >= MAX_LEADER_LEVEL ? Math.min(xp, required) : xp,
+    };
+  }, [award.previous.level, award.previous.xp]);
+
+  useEffect(() => {
+    let frame = 0;
+    const durationMs = 1200;
+    const startMs = performance.now();
+
+    const tick = (now: number) => {
+      const raw = Math.min(1, (now - startMs) / durationMs);
+      const eased = 1 - Math.pow(1 - raw, 3);
+      const progress = resolveAnimatedProgress(Math.round(award.xpAwarded * eased));
+      setAnimatedLevel(progress.level);
+      setAnimatedXp(progress.xp);
+      if (raw < 1) {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+
+    setAnimatedLevel(award.previous.level);
+    setAnimatedXp(award.previous.xp);
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [award.previous.level, award.previous.xp, award.xpAwarded, resolveAnimatedProgress]);
+
+  return (
+    <section className="leader-detail-hero endgame-progress-reveal">
+      <div className="leader-detail-status">
+        {showPortrait ? (
+          <div className="leader-detail-portrait" aria-hidden="true">
+            <span className="leader-progress-portrait">
+              <img src={portraitSrc} alt="" draggable={false} />
+            </span>
+            <span className="leader-progress-card-shade" aria-hidden="true" />
+          </div>
+        ) : null}
+        <div className="leader-detail-topline">
+          <div className="leader-detail-heading">
+            <h1 className="main-menu-title leader-detail-title">
+              <span className="main-menu-title-main leader-detail-title-main">
+                {leaderName}
+              </span>
+            </h1>
+          </div>
+          <div className="leader-detail-level">
+            {t('leaderProgress.currentLevel', language).replace('{level}', String(animatedLevel))}
+          </div>
+        </div>
+        <div className="leader-detail-xp endgame-progress-xp">
+          <div className="endgame-xp-gain" style={{ left: `${Math.max(8, visibleRatio * 100)}%` }}>
+            +{award.xpAwarded}
+          </div>
+          <div className="leader-detail-xp-head">
+            <span>{t('leaderProgress.xp', language)}</span>
+            <span>{animatedXp} / {animatedXpRequired}</span>
+          </div>
+          <div className="leader-detail-xpbar" aria-hidden="true">
+            <span style={{ width: `${visibleRatio * 100}%` }} />
+          </div>
+        </div>
+        {award.levelsGained > 0 ? (
+          <div className="endgame-level-gained">
+            {language === 'ko' ? `레벨 +${award.levelsGained}` : `Level +${award.levelsGained}`}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
 
 const TUTORIAL_DIALOG_STEPS_KO = [
   [
@@ -490,6 +602,7 @@ function App() {
     clearRelicShopStockBadge,
     levelUpResearchPoints,
     initializeGame,
+    lastLeaderProgressAward,
   } = useGameStore();
   const resetRelics = useRelicStore((s) => s.resetRelics);
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
@@ -507,6 +620,7 @@ function App() {
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
   const [tutorialDialogStep, setTutorialDialogStep] = useState(0);
+  const [showGameOverProgress, setShowGameOverProgress] = useState(false);
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
@@ -729,6 +843,12 @@ function App() {
     resetRelics();
     returnToIntro();
   }, [initializeGame, resetRelics, returnToIntro]);
+
+  useEffect(() => {
+    if (phase !== 'game_over') {
+      setShowGameOverProgress(false);
+    }
+  }, [phase]);
 
   // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
   useEffect(() => {
@@ -1097,9 +1217,29 @@ function App() {
       {isInGame && phase === 'game_over' && (
         <div className="endgame-overlay">
           <div className="endgame-panel">
-            <div className="endgame-title endgame-defeat">{t('game.gameOver', language)}</div>
-            <div className="endgame-subtitle">{t('game.turn', language)} {turn} - {t('game.notEnoughFood', language)}</div>
-            <button className="endgame-btn" onClick={handleGameOverMainMenu}>{t('pause.mainMenu', language)}</button>
+            {showGameOverProgress && lastLeaderProgressAward ? (
+              <>
+                <EndgameLeaderProgressReveal award={lastLeaderProgressAward} language={language} />
+                <button className="endgame-btn" onClick={handleGameOverMainMenu}>{t('pause.mainMenu', language)}</button>
+              </>
+            ) : (
+              <>
+                <div className="endgame-title endgame-defeat">{t('game.gameOver', language)}</div>
+                <div className="endgame-subtitle">{t('game.turn', language)} {turn} - {t('game.notEnoughFood', language)}</div>
+              <button
+                className="endgame-btn"
+                onClick={() => {
+                  if (!lastLeaderProgressAward) {
+                    handleGameOverMainMenu();
+                    return;
+                  }
+                  setShowGameOverProgress(true);
+                }}
+              >
+                {language === 'ko' ? '계속 >>' : 'Continue >>'}
+              </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1110,6 +1250,18 @@ function App() {
           <div className="endgame-panel">
             <div className="endgame-title endgame-victory">{t('game.victory', language)}</div>
             <div className="endgame-subtitle">{t('game.turn', language)} {turn}</div>
+            {lastLeaderProgressAward ? (
+              <div className="endgame-leader-xp">
+                <span>{language === 'ko' ? '지도자 경험치' : 'Leader XP'}</span>
+                <strong>+{lastLeaderProgressAward.xpAwarded}</strong>
+                <small>
+                  {t('leaderProgress.currentLevel', language).replace('{level}', String(lastLeaderProgressAward.next.level))}
+                  {lastLeaderProgressAward.levelsGained > 0
+                    ? ` (+${lastLeaderProgressAward.levelsGained})`
+                    : ''}
+                </small>
+              </div>
+            ) : null}
             <button className="endgame-btn" onClick={returnToLeaderSelect}>{t('game.restart', language)}</button>
           </div>
         </div>

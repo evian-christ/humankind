@@ -3,10 +3,16 @@ import { usePreGameStore } from '../game/state/preGameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
   LEADERS,
+  DEFAULT_LEADER_PROGRESS,
+  getLeaderProgressState,
+  getLeaderUnlockForLevel,
   leaderHasPortraitSprite,
   LEADER_LIST,
+  MAX_LEADER_LEVEL,
   type LeaderId,
 } from '../game/data/leaders';
+import { Sym } from '../game/data/symbolDefinitions';
+import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 import { t } from '../i18n';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -17,38 +23,6 @@ function leaderPortraitSrc(id: LeaderId, variant: LeaderPortraitVariant = 'full'
   if (id === 'ramesses') return `${ASSET_BASE_URL}assets/leaders/001_${variant}.png`;
   if (id === 'shihuang') return `${ASSET_BASE_URL}assets/leaders/002_${variant}.png`;
   return null;
-}
-
-type LeaderUnlock = {
-  level: number;
-  nameKey?: string;
-  descKey?: string;
-  unlockedByDefault?: boolean;
-};
-
-const MAX_LEADER_LEVEL = 10;
-const DEFAULT_LEADER_LEVEL = 1;
-const DEFAULT_LEADER_XP = 0;
-const DEFAULT_LEADER_XP_REQUIRED = 100;
-
-const LEADER_UNLOCKS: Partial<Record<LeaderId, LeaderUnlock[]>> = {
-  ramesses: [
-    {
-      level: 1,
-      nameKey: 'leader.ramesses.main.name',
-      descKey: 'leader.ramesses.main.desc',
-      unlockedByDefault: true,
-    },
-    {
-      level: 3,
-      nameKey: 'leader.ramesses.sub.name',
-      descKey: 'leader.ramesses.sub.desc',
-    },
-  ],
-};
-
-function getLeaderUnlockForLevel(leaderId: LeaderId, level: number): LeaderUnlock {
-  return LEADER_UNLOCKS[leaderId]?.find((unlock) => unlock.level === level) ?? { level };
 }
 
 function LeaderProgressPortrait({
@@ -87,18 +61,30 @@ function LeaderProgressPortrait({
 export default function LeaderProgressScreen() {
   const language = useSettingsStore((s) => s.language);
   const returnToIntro = usePreGameStore((s) => s.returnToIntro);
-  const [selectedLeaderId, setSelectedLeaderId] = useState<LeaderId | null>(null);
+  const returnToLeaderSelect = usePreGameStore((s) => s.returnToLeaderSelect);
+  const initialLeaderId = usePreGameStore((s) => s.leaderProgressInitialLeaderId);
+  const backTarget = usePreGameStore((s) => s.leaderProgressBackTarget);
+  const [selectedLeaderId, setSelectedLeaderId] = useState<LeaderId | null>(initialLeaderId);
 
   const selectedLeader = selectedLeaderId ? LEADERS[selectedLeaderId] : null;
   const selectedLeaderName = selectedLeader ? t(selectedLeader.nameKey, language) : '';
-  const currentLevel = DEFAULT_LEADER_LEVEL;
-  const currentXp = DEFAULT_LEADER_XP;
-  const xpRequired = DEFAULT_LEADER_XP_REQUIRED;
+  const progress = selectedLeader ? getLeaderProgressState(selectedLeader.id) : DEFAULT_LEADER_PROGRESS;
+  const currentLevel = progress.level;
+  const currentXp = progress.xp;
+  const xpRequired = progress.xpRequired;
   const xpRatio = Math.min(1, currentXp / xpRequired);
 
   const handleBack = () => {
     if (selectedLeaderId) {
+      if (backTarget === 'leader') {
+        returnToLeaderSelect();
+        return;
+      }
       setSelectedLeaderId(null);
+      return;
+    }
+    if (backTarget === 'leader') {
+      returnToLeaderSelect();
       return;
     }
     returnToIntro();
@@ -160,10 +146,17 @@ export default function LeaderProgressScreen() {
                 {Array.from({ length: MAX_LEADER_LEVEL }, (_, index) => {
                   const level = index + 1;
                   const unlock = getLeaderUnlockForLevel(selectedLeader.id, level);
-                  const unlockNameKey = unlock.nameKey;
-                  const unlockDescKey = unlock.descKey;
+                  const unlockNameKey = unlock?.nameKey;
+                  const unlockDescKey = unlock?.descKey;
                   const hasUnlock = unlockNameKey != null && unlockDescKey != null;
-                  const unlocked = unlock.unlockedByDefault || currentLevel >= level;
+                  const unlocked = unlock?.unlockedByDefault || currentLevel >= level;
+                  const isEventUnlock = unlock?.kind === 'kadesh_battle_escape' || unlock?.kind === 'currency_standardization';
+                  const symbolUnlockSpriteUrl =
+                    unlock?.kind === 'heqet'
+                      ? getSymbolSpriteUrl(Sym.heqet)
+                      : unlock?.kind === 'foxtail_millet'
+                        ? getSymbolSpriteUrl(Sym.foxtail_millet)
+                        : null;
                   return (
                     <article
                       key={level}
@@ -189,12 +182,28 @@ export default function LeaderProgressScreen() {
                         ) : null}
                       </div>
                       {hasUnlock ? (
-                        <div className="leader-unlock-body">
-                          <div className="leader-unlock-name">
-                            {t(unlockNameKey!, language)}
-                          </div>
-                          <div className="leader-unlock-desc">
-                            {t(unlockDescKey!, language)}
+                        <div className={[
+                          'leader-unlock-body',
+                          isEventUnlock ? 'leader-unlock-body--event' : '',
+                          symbolUnlockSpriteUrl ? 'leader-unlock-body--symbol' : '',
+                        ].filter(Boolean).join(' ')}>
+                          {isEventUnlock ? (
+                            <span className="leader-unlock-event-mark" aria-hidden="true">
+                              <span>!</span>
+                            </span>
+                          ) : null}
+                          {symbolUnlockSpriteUrl ? (
+                            <span className="leader-unlock-symbol-mark" aria-hidden="true">
+                              <img src={symbolUnlockSpriteUrl} alt="" draggable={false} />
+                            </span>
+                          ) : null}
+                          <div className="leader-unlock-copy">
+                            <div className="leader-unlock-name">
+                              {t(unlockNameKey!, language)}
+                            </div>
+                            <div className="leader-unlock-desc">
+                              {t(unlockDescKey!, language)}
+                            </div>
                           </div>
                         </div>
                       ) : (

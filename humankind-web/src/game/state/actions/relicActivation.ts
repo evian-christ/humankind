@@ -15,6 +15,11 @@ interface RelicActivationDeps {
     phaseAfterTurnFlowComplete: () => GameState['phase'];
 }
 
+const getEraReward = (era: number, rewards: readonly [number, number, number]): number => {
+    const eraIndex = Number.isFinite(era) ? Math.max(0, Math.min(2, Math.floor(era) - 1)) : 0;
+    return rewards[eraIndex];
+};
+
 export const createRelicActivationActions = ({
     get,
     set,
@@ -60,7 +65,7 @@ export const createRelicActivationActions = ({
         }
 
         if (defId === RELIC_ID.TROY_GOLD_LOOT) {
-            const goldGain = 25;
+            const goldGain = getEraReward(state.era, [25, 50, 100]);
             set((s) => ({
                 gold: s.gold + goldGain,
                 relicFloats: [
@@ -79,7 +84,7 @@ export const createRelicActivationActions = ({
         }
 
         if (defId === RELIC_ID.EGYPTIAN_GRANARY_MODEL) {
-            const foodGain = 30;
+            const foodGain = getEraReward(state.era, [30, 50, 100]);
             set((s) => ({
                 food: s.food + foodGain,
                 relicFloats: [

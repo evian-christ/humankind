@@ -224,4 +224,18 @@ export const GAME_EVENTS: Record<number, GameEventDefinition> = {
         description: 'Gain Food, Gold, and Knowledge immediately. Scales with the current era.',
         availability: 'Requires owning at least 1 of every terrain symbol.',
     },
+    23: {
+        id: 23,
+        key: 'kadesh_battle_escape',
+        category: 'leader',
+        description: 'Add a barbarian unit with 1 HP.',
+        availability: '-',
+    },
+    24: {
+        id: 24,
+        key: 'currency_standardization',
+        category: 'leader',
+        description: 'For the next 5 turns, double Gold base production.',
+        availability: '-',
+    },
 };

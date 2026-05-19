@@ -16,8 +16,8 @@ export default function DemoStartScreen() {
   const canStartGame = hasCompletedTutorial;
   const canContinue = hasCompletedTutorial && hasSavedGame();
   const shouldHighlightTutorial = !hasCompletedTutorial;
+  const [playOptionsOpen, setPlayOptionsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const tutorialLabel = language === 'ko' ? '튜토리얼' : 'Tutorial';
   const quitLabel = language === 'ko' ? '나가기' : 'Quit';
 
   const handleQuit = () => {
@@ -54,45 +54,70 @@ export default function DemoStartScreen() {
   return (
     <div className="demo-start-root">
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
-        <h1 className="main-menu-title">
-          <span className="main-menu-title-main">Humankind</span>
-          <span className="main-menu-title-sub">in a nutshell</span>
+        <h1 className="main-menu-title main-menu-title--image">
+          <img
+            className="main-menu-title-sprite"
+            src="/capsules/librarylogo.png"
+            alt="Humankind in a nutshell"
+            draggable={false}
+          />
           <span className="main-menu-title-demo">DEMO</span>
         </h1>
 
         <nav className="main-menu-actions" aria-label={t('mainMenu.actionsLabel', language)}>
-          <button
-            type="button"
-            className={`main-menu-button${shouldHighlightTutorial ? ' main-menu-button--tutorial-highlight' : ''}`}
-            onClick={startTutorial}
-            aria-label={tutorialLabel}
-          >
-            {tutorialLabel}
-          </button>
+          <div className="main-menu-play-row">
+            <button
+              type="button"
+              className={`main-menu-button main-menu-play-button${playOptionsOpen ? ' main-menu-play-button--open' : ''}`}
+              onClick={() => setPlayOptionsOpen((open) => !open)}
+              aria-expanded={playOptionsOpen}
+              aria-controls="main-menu-play-options"
+              aria-label={t('mainMenu.play', language)}
+            >
+              {t('mainMenu.play', language)}
+            </button>
+            <div
+              id="main-menu-play-options"
+              className={`main-menu-play-options${playOptionsOpen ? ' main-menu-play-options--open' : ''}`}
+              aria-hidden={!playOptionsOpen}
+            >
+              <button
+                type="button"
+                className={`main-menu-button main-menu-option-button${shouldHighlightTutorial ? ' main-menu-button--tutorial-highlight' : ''}`}
+                onClick={startTutorial}
+                tabIndex={playOptionsOpen ? 0 : -1}
+                aria-label={t('mainMenu.tutorial', language)}
+              >
+                {t('mainMenu.tutorial', language)}
+              </button>
+              <button
+                type="button"
+                className="main-menu-button main-menu-option-button"
+                onClick={proceedToLeaderSelect}
+                disabled={!canStartGame}
+                aria-disabled={!canStartGame}
+                tabIndex={playOptionsOpen ? 0 : -1}
+                aria-label={t('mainMenu.restart', language)}
+              >
+                {t('mainMenu.restart', language)}
+              </button>
+              <button
+                type="button"
+                className="main-menu-button main-menu-option-button"
+                onClick={continueSavedGame}
+                disabled={!canContinue}
+                aria-disabled={!canContinue}
+                tabIndex={playOptionsOpen ? 0 : -1}
+                aria-label={t('mainMenu.resume', language)}
+              >
+                {t('mainMenu.resume', language)}
+              </button>
+            </div>
+          </div>
           <button
             type="button"
             className="main-menu-button"
-            onClick={proceedToLeaderSelect}
-            disabled={!canStartGame}
-            aria-disabled={!canStartGame}
-            aria-label={t('mainMenu.newGame', language)}
-          >
-            {t('mainMenu.newGame', language)}
-          </button>
-          <button
-            type="button"
-            className="main-menu-button"
-            onClick={continueSavedGame}
-            disabled={!canContinue}
-            aria-disabled={!canContinue}
-            aria-label={t('mainMenu.continue', language)}
-          >
-            {t('mainMenu.continue', language)}
-          </button>
-          <button
-            type="button"
-            className="main-menu-button"
-            onClick={proceedToLeaderProgress}
+            onClick={() => proceedToLeaderProgress()}
             aria-label={t('mainMenu.leaders', language)}
           >
             {t('mainMenu.leaders', language)}

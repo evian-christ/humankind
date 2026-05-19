@@ -5,6 +5,8 @@ import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBl
 import { usePreGameStore } from '../game/state/preGameStore';
 import { useGameStore } from '../game/state/gameStore';
 import { useRelicStore } from '../game/state/relicStore';
+import { clearSavedGame } from '../game/state/saveGame';
+import { clearLeaderProgress } from '../game/data/leaders';
 
 const LANGUAGE_OPTIONS: { value: Language; labelKey: string }[] = [
     { value: 'en', labelKey: 'settings.lang.en' },
@@ -57,6 +59,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         setDeveloperMode,
     } = useSettingsStore();
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
+    const resetPreGameProgress = usePreGameStore((s) => s.resetPreGameProgress);
     const initializeGame = useGameStore((s) => s.initializeGame);
     const resetRelics = useRelicStore((s) => s.resetRelics);
 
@@ -156,6 +159,19 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         initializeGame();
         resetRelics();
         returnToIntro();
+        setScreen('main');
+        onClose();
+    };
+
+    const handleResetGameData = () => {
+        const confirmed = window.confirm(t('settings.resetProgress.confirm', language));
+        if (!confirmed) return;
+
+        clearSavedGame();
+        clearLeaderProgress();
+        initializeGame();
+        resetRelics();
+        resetPreGameProgress();
         setScreen('main');
         onClose();
     };
@@ -342,6 +358,21 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                                             onClick={() => setDeveloperMode(true)}
                                         >
                                             {t('settings.developerMode.on', language)}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="settings-row settings-row--danger">
+                                    <div className="settings-row-copy">
+                                        <div className="settings-row-label">{t('settings.resetProgress', language)}</div>
+                                        <div className="settings-row-hint">{t('settings.resetProgress.hint', language)}</div>
+                                    </div>
+                                    <div className="settings-row-controls">
+                                        <button
+                                            className="settings-danger-btn"
+                                            onClick={handleResetGameData}
+                                        >
+                                            {t('settings.resetProgress.button', language)}
                                         </button>
                                     </div>
                                 </div>

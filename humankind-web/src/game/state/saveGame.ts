@@ -37,6 +37,7 @@ interface SavedGame {
     savedAt: number;
     state: {
         leaderId: GameState['leaderId'];
+        leaderProgressLevel?: number;
         food: number;
         gold: number;
         knowledge: number;
@@ -55,6 +56,7 @@ interface SavedGame {
         religionUnlocked: boolean;
         unlockedKnowledgeUpgrades: number[];
         bonusXpPerTurn: number;
+        qinCurrencyStandardTurnsRemaining?: number;
         levelUpResearchPoints: number;
         isRelicShopOpen: boolean;
         hasNewRelicShopStock: boolean;
@@ -196,6 +198,7 @@ export function saveGameState(state: GameState): void {
         savedAt: Date.now(),
         state: {
             leaderId: state.leaderId,
+            leaderProgressLevel: state.leaderProgressLevel,
             food: state.food,
             gold: state.gold,
             knowledge: state.knowledge,
@@ -214,6 +217,7 @@ export function saveGameState(state: GameState): void {
             religionUnlocked: state.religionUnlocked,
             unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
             bonusXpPerTurn: state.bonusXpPerTurn,
+            qinCurrencyStandardTurnsRemaining: state.qinCurrencyStandardTurnsRemaining,
             levelUpResearchPoints: state.levelUpResearchPoints,
             isRelicShopOpen: state.isRelicShopOpen,
             hasNewRelicShopStock: state.hasNewRelicShopStock,
@@ -262,6 +266,8 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
 
         return {
             leaderId: save.state.leaderId,
+            leaderProgressLevel: save.state.leaderProgressLevel ?? 1,
+            lastLeaderProgressAward: null,
             isTutorialMode: false,
             food: save.state.food,
             gold: save.state.gold,
@@ -297,6 +303,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             religionUnlocked: save.state.religionUnlocked,
             unlockedKnowledgeUpgrades: save.state.unlockedKnowledgeUpgrades,
             bonusXpPerTurn: save.state.bonusXpPerTurn,
+            qinCurrencyStandardTurnsRemaining: save.state.qinCurrencyStandardTurnsRemaining ?? 0,
             levelUpResearchPoints: save.state.levelUpResearchPoints,
             isRelicShopOpen: save.state.isRelicShopOpen,
             hasNewRelicShopStock: save.state.hasNewRelicShopStock,

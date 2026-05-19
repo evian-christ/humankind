@@ -145,6 +145,7 @@ interface SimulationState {
     unlockedKnowledgeUpgrades: number[];
     religionUnlocked: boolean;
     bonusXpPerTurn: number;
+    qinCurrencyStandardTurnsRemaining: number;
     barbarianSymbolThreat: number;
     barbarianCampThreat: number;
     naturalDisasterThreat: number;
@@ -354,6 +355,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             unlockedKnowledgeUpgrades: [],
             religionUnlocked: false,
             bonusXpPerTurn: 0,
+            qinCurrencyStandardTurnsRemaining: 0,
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
@@ -378,6 +380,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
         unlockedKnowledgeUpgrades: [],
         religionUnlocked: false,
         bonusXpPerTurn: 0,
+        qinCurrencyStandardTurnsRemaining: 0,
         barbarianSymbolThreat: 0,
         barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
@@ -599,6 +602,7 @@ const simulateTurn = (
     resolveCombat(state);
 
     const baseTotals = getHudTurnStartPassiveTotals(state);
+    state.qinCurrencyStandardTurnsRemaining = Math.max(0, state.qinCurrencyStandardTurnsRemaining - 1);
     const pipeline = createSlotEffectPipeline({
         board: state.board,
         boardWidth: BOARD_WIDTH,
@@ -656,6 +660,7 @@ const simulateTurn = (
         boardHeight: BOARD_HEIGHT,
         effects: pipeline.accumulatedEffects,
         leaderId: null,
+        currentEra: state.era,
         currentGold: state.gold + pipeline.totals.gold,
         bonusXpPerTurn: state.bonusXpPerTurn,
         unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,

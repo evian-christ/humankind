@@ -31,6 +31,7 @@ const GOLD_INFLATION_QUADRATIC_PER_LEVEL = 0.0017;
 
 export interface HudTurnStartPassiveState {
     unlockedKnowledgeUpgrades: number[];
+    qinCurrencyStandardTurnsRemaining?: number;
 }
 
 export const getGoldInflationMultiplier = (level: number): number => {
@@ -62,6 +63,8 @@ export const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
 };
 
 export const getEraFromLevel = (level: number): number => {
+    if (level <= 0) return 0;
+    if (level >= 30) return 4;
     if (level <= 10) return 1;
     if (level <= 20) return 2;
     return 3;
@@ -94,7 +97,7 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(NATIONALISM_UPGRADE_ID) ? 3 : 0) +
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 5 : 0);
-    const gold =
+    const baseGold =
         (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 2 : 0) +
@@ -102,6 +105,7 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(COLONIALISM_UPGRADE_ID) ? 3 : 0) +
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 8 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 10 : 0);
+    const gold = (state.qinCurrencyStandardTurnsRemaining ?? 0) > 0 ? baseGold * 2 : baseGold;
     const food =
         (upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +

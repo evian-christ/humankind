@@ -59,6 +59,7 @@ import {
     getGoldInflationMultiplier,
     getHudTurnStartPassiveTotals,
     getInflatedGoldCost,
+    getEraFromLevel,
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
 } from './gameCalculations';
@@ -85,6 +86,20 @@ describe('gold inflation costs', () => {
         expect(getRerollCost(20)).toBe(5);
         expect(getRerollCost(30)).toBe(8);
         expect(getRerollCost(30, 0.5)).toBe(4);
+    });
+});
+
+describe('getEraFromLevel', () => {
+    it('keeps transition levels in the previous era and labels level 30 as future', () => {
+        expect(getEraFromLevel(0)).toBe(0);
+        expect(getEraFromLevel(9)).toBe(1);
+        expect(getEraFromLevel(10)).toBe(1);
+        expect(getEraFromLevel(11)).toBe(2);
+        expect(getEraFromLevel(19)).toBe(2);
+        expect(getEraFromLevel(20)).toBe(2);
+        expect(getEraFromLevel(21)).toBe(3);
+        expect(getEraFromLevel(29)).toBe(3);
+        expect(getEraFromLevel(30)).toBe(4);
     });
 });
 
@@ -576,6 +591,13 @@ describe('getHudTurnStartPassiveTotals', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [EXPLORATION_UPGRADE_ID],
         })).toEqual({ food: 0, gold: 2, knowledge: 2 });
+    });
+
+    it('doubles passive gold production during Qin Shi Huang Currency Standardization', () => {
+        expect(getHudTurnStartPassiveTotals({
+            unlockedKnowledgeUpgrades: [EXPLORATION_UPGRADE_ID, COLONIALISM_UPGRADE_ID],
+            qinCurrencyStandardTurnsRemaining: 5,
+        })).toEqual({ food: 0, gold: 10, knowledge: 2 });
     });
 
     it('applies Colonialism passive gold production', () => {

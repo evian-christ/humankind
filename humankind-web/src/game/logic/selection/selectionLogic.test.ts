@@ -141,6 +141,140 @@ describe('selectionLogic', () => {
         expect(publicAdminResult.choices.every(isGameEventDefinition)).toBe(true);
     });
 
+    it('offers the Kadesh leader event only after Ramesses reaches leader level 3', () => {
+        const rollKadesh = () => {
+            const randomValues = [0, 0, 0, 0.05, 0.99, 0.05, 0.99, 0.05, 0.99];
+            let call = 0;
+            vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
+        };
+
+        rollKadesh();
+        const lockedResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            leaderId: 'ramesses',
+            leaderProgressLevel: 2,
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(lockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'kadesh_battle_escape')).toBe(false);
+
+        vi.restoreAllMocks();
+        rollKadesh();
+        const unlockedResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            leaderId: 'ramesses',
+            leaderProgressLevel: 3,
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(unlockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'kadesh_battle_escape')).toBe(true);
+    });
+
+    it('offers the Currency Standardization leader event only after Qin Shi Huang reaches leader level 3', () => {
+        const rollCurrencyStandardization = () => {
+            const randomValues = [0, 0, 0, 0.05, 0.99, 0.05, 0.99, 0.05, 0.99];
+            let call = 0;
+            vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
+        };
+
+        rollCurrencyStandardization();
+        const lockedResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            leaderId: 'shihuang',
+            leaderProgressLevel: 2,
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(lockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'currency_standardization')).toBe(false);
+
+        vi.restoreAllMocks();
+        rollCurrencyStandardization();
+        const unlockedResult = generateChoices({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            leaderId: 'shihuang',
+            leaderProgressLevel: 3,
+            forceTerrainInNextSymbolChoices: false,
+        });
+        expect(unlockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'currency_standardization')).toBe(true);
+    });
+
+    it('includes Heqet only after Ramesses reaches leader level 7', () => {
+        const lockedPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            leaderId: 'ramesses',
+            leaderProgressLevel: 6,
+        });
+        expect(lockedPool.some((sym) => sym.id === S.heqet)).toBe(false);
+
+        const wrongLeaderPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            leaderId: 'shihuang',
+            leaderProgressLevel: 7,
+        });
+        expect(wrongLeaderPool.some((sym) => sym.id === S.heqet)).toBe(false);
+
+        const unlockedPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            leaderId: 'ramesses',
+            leaderProgressLevel: 7,
+        });
+        expect(unlockedPool.some((sym) => sym.id === S.heqet)).toBe(true);
+    });
+
+    it('includes Foxtail Millet only after Qin Shi Huang reaches leader level 7', () => {
+        const lockedPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            leaderId: 'shihuang',
+            leaderProgressLevel: 6,
+        });
+        expect(lockedPool.some((sym) => sym.id === S.foxtail_millet)).toBe(false);
+
+        const wrongLeaderPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            leaderId: 'ramesses',
+            leaderProgressLevel: 7,
+        });
+        expect(wrongLeaderPool.some((sym) => sym.id === S.foxtail_millet)).toBe(false);
+
+        const unlockedPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+            leaderId: 'shihuang',
+            leaderProgressLevel: 7,
+        });
+        expect(unlockedPool.some((sym) => sym.id === S.foxtail_millet)).toBe(true);
+    });
+
     it('stacks Mass Media multiplicatively with Public Administration', () => {
         vi.spyOn(Math, 'random').mockReturnValue(0.25);
 

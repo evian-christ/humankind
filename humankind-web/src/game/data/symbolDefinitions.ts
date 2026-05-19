@@ -148,6 +148,8 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Destroyed; on destroy: adds 2 random Normal symbols.", sprite: "044.png" }),
     def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+1 Knowledge per 2 empty slots.", sprite: "045.png" }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.ANCIENT, description: "+1 Food. Destroyed after 5 turns.", sprite: "046.png" }),
+    def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +1 additional Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
+    def('foxtail_millet', { name: "Foxtail Millet", type: SymbolType.ANCIENT, description: "+5 Food per 2 adjacent Terrain symbols.", sprite: "088.png" }),
 
     // Medieval
     def('tax', { name: "Tax", type: SymbolType.MEDIEVAL, description: "+Gold equal to a random adjacent symbol's Food produced this turn.", sprite: "047.png" }),
@@ -220,10 +222,10 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     }),
 
     // Religion
-    def('christianity', { name: "Christianity", type: SymbolType.RELIGION, description: "+Food equal to the highest Food produced by an adjacent symbol. Destroyed if another Religion symbol is on the board.", sprite: "055.png" }),
-    def('islam', { name: "Islam", type: SymbolType.RELIGION, description: "+2 Gold per Knowledge-producing symbol on the board. Destroyed if another Religion symbol is on the board.", sprite: "056.png" }),
-    def('buddhism', { name: "Buddhism", type: SymbolType.RELIGION, description: "+2 Food per empty slot on the board. Destroyed if another Religion symbol is on the board.", sprite: "057.png" }),
-    def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If placed in a corner: +10 Food and +10 Knowledge. Destroyed if another Religion symbol is on the board.", sprite: "058.png" }),
+    def('christianity', { name: "Christianity", type: SymbolType.RELIGION, description: "+Food equal to the highest Food produced by an adjacent symbol. Destroyed if two or more Religion symbols are on the board.", sprite: "055.png" }),
+    def('islam', { name: "Islam", type: SymbolType.RELIGION, description: "+2 Food per Knowledge-producing symbol on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "056.png" }),
+    def('buddhism', { name: "Buddhism", type: SymbolType.RELIGION, description: "+2 Food per empty slot on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "057.png" }),
+    def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If there are no duplicate symbols on the board: +1 Food per 2 symbols on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "058.png" }),
 
     // Unit
     def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Primitive melee unit.", ...UNIT_COMBAT_STATS.warrior, sprite: "063.png" }),
@@ -290,6 +292,7 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'archer', 'tracker_archer', 'knight', 'cavalry', 'cavalry_corps', 'crossbowman', 'musketman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
     'flood', 'earthquake', 'drought',
     'wool', 'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
+    'heqet', 'foxtail_millet',
 ];
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
@@ -305,7 +308,7 @@ export const isBasePool = (s: SymbolDefinition) => {
 const FOOD_PRODUCING_KEYS: SymbolKey[] = [
     'wheat', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
     'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey', 'corn', 'wild_berries',
-    'sheep', 'mushroom', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition',
+    'sheep', 'mushroom', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition', 'heqet', 'foxtail_millet',
 ];
 
 /** Food를 생산하는 심볼 ID 목록 */
@@ -313,7 +316,7 @@ export const FOOD_PRODUCING_IDS = new Set<number>(FOOD_PRODUCING_KEYS.map((k) =>
 
 const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
     'monument', 'totem', 'library', 'pearl', 'stargazer', 'stone_tablet',
-    'compass', 'papyrus', 'expedition',
+    'compass', 'papyrus', 'expedition', 'heqet',
 ];
 
 /** Knowledge를 생산하는 심볼 ID 목록 */

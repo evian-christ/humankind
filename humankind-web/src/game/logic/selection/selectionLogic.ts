@@ -1,5 +1,7 @@
 import type { SymbolDefinition } from '../../data/symbolDefinitions';
 import { SYMBOLS, SymbolType, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, S, Sym } from '../../data/symbolDefinitions';
+import type { LeaderId } from '../../data/leaders';
+import { isLeaderUnlockActive } from '../../data/leaders';
 import {
     CAPITAL_RELOCATION_MIN_SYMBOLS,
     GAME_EVENTS,
@@ -30,6 +32,8 @@ export interface SelectionContext {
     upgrades: number[];
     ownedRelicDefIds: number[];
     ownedSymbolDefIds?: number[];
+    leaderId?: LeaderId | null;
+    leaderProgressLevel?: number;
     /** 개척자(68): 다음 선택지에 지형 1칸 이상 강제 */
     forceTerrainInNextSymbolChoices: boolean;
 }
@@ -64,11 +68,19 @@ const EVERY_TERRAIN_REQUIRED_IDS: readonly number[] = [
     S.mountain,
 ];
 
-function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds'>): GameEventDefinition[] {
+function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds' | 'leaderId' | 'leaderProgressLevel'>): GameEventDefinition[] {
     const ownedSymbolDefIds = ctx.ownedSymbolDefIds ?? [];
 
     return Object.values(GAME_EVENTS).filter((event) => {
-        if (event.category === 'leader') return false;
+        if (event.category === 'leader') {
+            if (event.key === 'kadesh_battle_escape') {
+                return isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'kadesh_battle_escape');
+            }
+            if (event.key === 'currency_standardization') {
+                return isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'currency_standardization');
+            }
+            return false;
+        }
         if (event.era != null && event.era !== ctx.era) return false;
         if (event.category !== 'conditional') return true;
 
@@ -126,7 +138,7 @@ const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
 };
 
 /** 심볼을 시대별로 그룹화 (적 심볼은 이벤트로만 등장하므로 선택 풀에서 제외) */
-export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds'>): Record<number, SymbolDefinition[]> {
+export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel'>): Record<number, SymbolDefinition[]> {
     const result: Record<number, SymbolDefinition[]> = {};
     const hasRelic = (relicId: number) => ctx.ownedRelicDefIds.includes(relicId);
 
@@ -169,6 +181,8 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
         if ((sym.id === S.mushroom || sym.id === S.fur) && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
+        if (sym.id === S.heqet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'heqet')) isUnlocked = true;
+        if (sym.id === S.foxtail_millet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'foxtail_millet')) isUnlocked = true;
 
         if (!isUnlocked && !isReplacementTarget) continue;
 
@@ -202,11 +216,13 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
 }
 
 /** 현재 시대에 등장 가능한 심볼 플랫 풀 빌드 (균등 확률용) */
-export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds'>): SymbolDefinition[] {
+export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel'>): SymbolDefinition[] {
     const symbolsByEra = getSymbolsByEra({
         religionUnlocked: ctx.religionUnlocked,
         upgrades: ctx.upgrades,
         ownedRelicDefIds: ctx.ownedRelicDefIds,
+        leaderId: ctx.leaderId,
+        leaderProgressLevel: ctx.leaderProgressLevel,
     });
     const flat: SymbolDefinition[] = [];
     const feudal = ctx.upgrades?.includes(FEUDALISM_UPGRADE_ID);

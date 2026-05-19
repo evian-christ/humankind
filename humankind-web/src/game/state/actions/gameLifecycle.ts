@@ -1,5 +1,5 @@
 import type { LeaderId } from '../../data/leaders';
-import { LEADERS, getLeaderStartingRelics, isLeaderPlayable } from '../../data/leaders';
+import { LEADERS, getLeaderProgressState, getLeaderStartingRelics, isLeaderPlayable } from '../../data/leaders';
 import { S, SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { GameState } from '../gameStore';
 import {
@@ -50,6 +50,7 @@ const createCommonResetPatch = () => ({
     religionUnlocked: false,
     unlockedKnowledgeUpgrades: [],
     bonusXpPerTurn: 0,
+    qinCurrencyStandardTurnsRemaining: 0,
     levelUpResearchPoints: 0,
     isRelicShopOpen: false,
     hasNewRelicShopStock: false,
@@ -83,6 +84,8 @@ export const createGameLifecycleActions = ({
         const { board, playerSymbols: symbols } = createStartingBoard();
         set({
             leaderId: null,
+            leaderProgressLevel: 1,
+            lastLeaderProgressAward: null,
             food: 0,
             gold: 0,
             knowledge: 0,
@@ -109,6 +112,7 @@ export const createGameLifecycleActions = ({
         leaderRelics.forEach((def) => relicStore.addRelic(def));
 
         const leader = LEADERS[leaderId];
+        const leaderProgressLevel = getLeaderProgressState(leaderId).level;
         const startingFood = leader?.startingFood ?? 0;
         const startingGold = leader?.startingGold ?? 0;
 
@@ -130,6 +134,8 @@ export const createGameLifecycleActions = ({
 
         set({
             leaderId,
+            leaderProgressLevel,
+            lastLeaderProgressAward: null,
             food: startingFood,
             gold: startingGold,
             knowledge: 0,
@@ -150,6 +156,8 @@ export const createGameLifecycleActions = ({
         relicStore.resetRelics();
         set({
             leaderId: null,
+            leaderProgressLevel: 1,
+            lastLeaderProgressAward: null,
             food: 0,
             gold: 0,
             knowledge: 45,

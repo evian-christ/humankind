@@ -24,6 +24,8 @@ const makeState = (): GameState => {
 
     return {
         leaderId: null,
+        leaderProgressLevel: 1,
+        lastLeaderProgressAward: null,
         food: 0,
         gold: 10,
         knowledge: 0,
@@ -45,6 +47,7 @@ const makeState = (): GameState => {
         pendingContributors: [],
         effectPhase: null,
         effectPhase3ReachedThisRun: false,
+        lootMergeFx: null,
         eventLog: [],
         prevBoard: createEmptyBoard(),
         combatAnimation: null,
@@ -57,6 +60,7 @@ const makeState = (): GameState => {
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
         bonusXpPerTurn: 0,
+        qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
         isRelicShopOpen: false,
         hasNewRelicShopStock: false,
@@ -75,6 +79,8 @@ const makeState = (): GameState => {
         freeSelectionRerolls: 0,
         destroySelectionMaxSymbols: 3,
         territorialAfterEdictPending: false,
+        lootRewardChoices: [],
+        pendingLootSlot: null,
         spinBoard: () => {},
         startProcessing: () => {},
         continueProcessingAfterNewThreatFloats: () => {},
@@ -110,6 +116,7 @@ const makeState = (): GameState => {
         trainHorseUnitAt: () => {},
         trainDeerUnitAt: () => {},
         openLootAt: () => {},
+        selectLootReward: () => {},
         appendEventLog: () => {},
         clearEventLog: () => {},
     };
@@ -188,6 +195,26 @@ describe('selectionFlow actions', () => {
         expect(harness.get().playerSymbols.filter((sym) => sym.definition.id === S.enemy_infantry)).toHaveLength(3);
         expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(false);
         expect(getEnemyPoolForEra(1)).toContain(S.enemy_warrior);
+    });
+
+    it('summons a 1 HP barbarian for Escape from Kadesh event', () => {
+        const harness = createHarness();
+
+        harness.actions.selectEvent(23);
+
+        const enemy = harness.get().playerSymbols.find((sym) => sym.definition.id === S.enemy_warrior);
+        expect(harness.get().phase).toBe('idle');
+        expect(enemy).toBeDefined();
+        expect(enemy?.enemy_hp).toBe(1);
+    });
+
+    it('activates Qin Shi Huang Currency Standardization for 5 turns', () => {
+        const harness = createHarness();
+
+        harness.actions.selectEvent(24);
+
+        expect(harness.get().phase).toBe('idle');
+        expect(harness.get().qinCurrencyStandardTurnsRemaining).toBe(5);
     });
 
     it('refreshes the relic shop when selecting Relic Caravan event', async () => {

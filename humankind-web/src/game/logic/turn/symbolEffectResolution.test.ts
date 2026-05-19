@@ -148,7 +148,7 @@ describe('symbolEffectResolution', () => {
             religionEffectCache: new Map([[slotKey(3, 2), { food: 0, gold: 0, knowledge: 5 }]]),
             getAdjacentCoords,
         });
-        expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 0, gold: 2, knowledge: 0 }]);
+        expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 2, gold: 0, knowledge: 0 }]);
 
         const buddhismBoard = createEmptyBoard();
         buddhismBoard[0][1] = createInstance(Sym.buddhism, 'buddhism');
@@ -163,13 +163,14 @@ describe('symbolEffectResolution', () => {
 
         const hinduismBoard = createEmptyBoard();
         hinduismBoard[0][0] = createInstance(Sym.hinduism, 'hinduism');
+        hinduismBoard[1][0] = createInstance(Sym.wheat, 'wheat');
         const hinduismResult = computeReligionDeferredEffects({
             board: hinduismBoard,
             religionSlots: [{ x: 0, y: 0, id: S.hinduism }],
             religionEffectCache: new Map(),
             getAdjacentCoords,
         });
-        expect(hinduismResult.effects).toEqual([{ x: 0, y: 0, food: 10, gold: 0, knowledge: 10 }]);
+        expect(hinduismResult.effects).toEqual([{ x: 0, y: 0, food: 1, gold: 0, knowledge: 0 }]);
     });
 
     it('upgrades religion effects with Theocracy while preserving destroy-on-other-religion', () => {
@@ -200,7 +201,7 @@ describe('symbolEffectResolution', () => {
             getAdjacentCoords,
             unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
         });
-        expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 0, gold: 3, knowledge: 0 }]);
+        expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 3, gold: 0, knowledge: 0 }]);
 
         const buddhismBoard = createEmptyBoard();
         buddhismBoard[0][1] = createInstance(Sym.buddhism, 'buddhism');
@@ -216,6 +217,8 @@ describe('symbolEffectResolution', () => {
 
         const hinduismBoard = createEmptyBoard();
         hinduismBoard[0][0] = createInstance(Sym.hinduism, 'hinduism');
+        hinduismBoard[1][0] = createInstance(Sym.wheat, 'wheat');
+        hinduismBoard[2][0] = createInstance(Sym.rice, 'rice');
         const hinduismResult = computeReligionDeferredEffects({
             board: hinduismBoard,
             religionSlots: [{ x: 0, y: 0, id: S.hinduism }],
@@ -223,7 +226,7 @@ describe('symbolEffectResolution', () => {
             getAdjacentCoords,
             unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
         });
-        expect(hinduismResult.effects).toEqual([{ x: 0, y: 0, food: 20, gold: 0, knowledge: 20 }]);
+        expect(hinduismResult.effects).toEqual([{ x: 0, y: 0, food: 3, gold: 0, knowledge: 0 }]);
 
         const conflictBoard = createEmptyBoard();
         const christianity = createInstance(Sym.christianity, 'c1');
@@ -243,6 +246,23 @@ describe('symbolEffectResolution', () => {
         expect(conflictResult.effects).toEqual([]);
         expect(christianity.is_marked_for_destruction).toBe(true);
         expect(islam.is_marked_for_destruction).toBe(true);
+    });
+
+    it('blocks Hinduism when any duplicate symbol is on the board', () => {
+        const board = createEmptyBoard();
+        board[0][0] = createInstance(Sym.hinduism, 'hinduism');
+        board[1][0] = createInstance(Sym.wheat, 'wheat_1');
+        board[2][0] = createInstance(Sym.wheat, 'wheat_2');
+
+        const result = computeReligionDeferredEffects({
+            board,
+            religionSlots: [{ x: 0, y: 0, id: S.hinduism }],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+        });
+
+        expect(result.effects).toEqual([]);
+        expect(result.foodDelta).toBe(0);
     });
 
     it('destroys religion symbols when another religion is on the board', () => {
@@ -273,6 +293,28 @@ describe('symbolEffectResolution', () => {
         expect(result.knowledgeDelta).toBe(0);
         expect(christianity.is_marked_for_destruction).toBe(true);
         expect(islam.is_marked_for_destruction).toBe(true);
+    });
+
+    it('destroys matching religion symbols when two or more religion symbols are on the board', () => {
+        const board = createEmptyBoard();
+        const christianityA = createInstance(Sym.christianity, 'christianity_a');
+        const christianityB = createInstance(Sym.christianity, 'christianity_b');
+        board[1][1] = christianityA;
+        board[2][2] = christianityB;
+
+        const result = computeReligionDeferredEffects({
+            board,
+            religionSlots: [
+                { x: 1, y: 1, id: S.christianity },
+                { x: 2, y: 2, id: S.christianity },
+            ],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+        });
+
+        expect(result.effects).toEqual([]);
+        expect(christianityA.is_marked_for_destruction).toBe(true);
+        expect(christianityB.is_marked_for_destruction).toBe(true);
     });
 
     it('builds food totals by slot and applies deferred merchant gold from a random adjacent symbol', () => {
@@ -460,6 +502,36 @@ describe('symbolEffectResolution', () => {
 
         expect(result.addSymbolIds).toBeUndefined();
         expect(village.is_marked_for_destruction).toBe(true);
+    });
+
+    it('lets Heqet gain food from grassland and knowledge from wheat adjacency once each', () => {
+        const board = createEmptyBoard();
+        const heqet = createInstance(Sym.heqet, 'heqet');
+        board[1][1] = heqet;
+        board[0][1] = createInstance(Sym.grassland, 'grassland_1');
+        board[2][1] = createInstance(Sym.grassland, 'grassland_2');
+        board[1][0] = createInstance(Sym.wheat, 'wheat_1');
+        board[1][2] = createInstance(Sym.wheat, 'wheat_2');
+
+        const result = processSingleSymbolEffects(heqet, board, 1, 1, { upgrades: [] });
+
+        expect(result.food).toBe(2);
+        expect(result.knowledge).toBe(2);
+    });
+
+    it('lets Foxtail Millet gain food per two adjacent terrain symbols', () => {
+        const board = createEmptyBoard();
+        const millet = createInstance(Sym.foxtail_millet, 'foxtail_millet');
+        board[1][1] = millet;
+        board[0][1] = createInstance(Sym.grassland, 'grassland');
+        board[2][1] = createInstance(Sym.plains, 'plains');
+        board[1][0] = createInstance(Sym.sea, 'sea');
+        board[1][2] = createInstance(Sym.wheat, 'wheat');
+
+        const result = processSingleSymbolEffects(millet, board, 1, 1, { upgrades: [] });
+
+        expect(result.food).toBe(5);
+        expect(result.contributors).toHaveLength(3);
     });
 
     it('grants permanent knowledge per destroyed adjacent ancient symbol for scholar', () => {

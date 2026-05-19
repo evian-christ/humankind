@@ -74,6 +74,8 @@ export const SYMBOL_NUMERIC_ID = {
     tribal_village: 44,
     stargazer: 45,
     wild_seeds: 46,
+    heqet: 87,
+    foxtail_millet: 88,
 
     // ── Medieval (47–54) ──
     tax: 47,

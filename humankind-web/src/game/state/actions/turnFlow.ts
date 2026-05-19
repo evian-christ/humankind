@@ -1,5 +1,6 @@
 import { t } from '../../../i18n';
 import { RELICS } from '../../data/relicDefinitions';
+import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
 import { SYMBOLS, S, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { useSettingsStore } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
@@ -82,6 +83,19 @@ export const createTurnFlowActions = ({
     buildActiveRelicEffects,
 }: TurnFlowDeps) => {
     const turnRuns = createTurnRunScheduler();
+    const awardTerminalLeaderProgress = (outcome: LeaderGameOutcome) => {
+        const state = get();
+        if (!state.leaderId || state.isTutorialMode || state.lastLeaderProgressAward) return;
+        const award = awardLeaderGameXp(state.leaderId, {
+            survivedTurns: state.turn,
+            finalLevel: state.level,
+            outcome,
+        });
+        set({
+            leaderProgressLevel: award.next.level,
+            lastLeaderProgressAward: award,
+        });
+    };
 
     return {
     spinBoard: () => {
@@ -157,6 +171,7 @@ export const createTurnFlowActions = ({
             effectPhase3ReachedThisRun: false,
             lootMergeFx: null,
             runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge },
+            qinCurrencyStandardTurnsRemaining: Math.max(0, (state.qinCurrencyStandardTurnsRemaining ?? 0) - 1),
         });
         get().appendEventLog({
             turn: state.turn,
@@ -208,6 +223,8 @@ export const createTurnFlowActions = ({
                 boardHeight,
                 effects,
                 leaderId: stateAtFinish.leaderId,
+                leaderProgressLevel: stateAtFinish.leaderProgressLevel,
+                currentEra: stateAtFinish.era,
                 currentGold: stateAtFinish.gold + tGold,
                 bonusXpPerTurn: stateAtFinish.bonusXpPerTurn ?? 0,
                 unlockedKnowledgeUpgrades: stateAtFinish.unlockedKnowledgeUpgrades || [],
@@ -294,6 +311,8 @@ export const createTurnFlowActions = ({
                         upgrades: (prev.unlockedKnowledgeUpgrades || []).map(Number),
                         ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
                         ownedSymbolDefIds: prev.playerSymbols.map((s) => s.definition.id),
+                        leaderId: prev.leaderId,
+                        leaderProgressLevel: prev.leaderProgressLevel,
                         forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices,
                     };
                     const nextChoiceRes = prev.edictRemovalPending
@@ -334,12 +353,18 @@ export const createTurnFlowActions = ({
                 });
 
                 const eraAfter = get().era;
-                if (get().leaderId === 'shihuang' && eraAfter > eraBeforeKnowledgeFinish) {
+                if (
+                    isLeaderUnlockActive(get().leaderId, get().leaderProgressLevel, 'shihuang_unification_foundation')
+                    && eraAfter > eraBeforeKnowledgeFinish
+                ) {
                     const debrisDef = RELICS[RELIC_ID.ANCIENT_RELIC_DEBRIS];
                     const tribeDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
                     const rs = useRelicStore.getState();
                     for (let e = eraBeforeKnowledgeFinish + 1; e <= eraAfter; e++) {
-                        if (debrisDef) rs.addRelic(debrisDef);
+                        if (debrisDef) {
+                            rs.addRelic(debrisDef);
+                            rs.addRelic(debrisDef);
+                        }
                         if (tribeDef) rs.addRelic(tribeDef);
                     }
                     get().appendEventLog({
@@ -353,6 +378,7 @@ export const createTurnFlowActions = ({
                 }
 
                 if (get().phase === 'victory') {
+                    awardTerminalLeaderProgress('victory');
                     clearSavedGame();
                     return;
                 }
@@ -397,6 +423,7 @@ export const createTurnFlowActions = ({
                         });
 
                         if (phaseResolution.nextPhase === 'game_over') {
+                            awardTerminalLeaderProgress('game_over');
                             set({ phase: 'game_over' as GamePhase });
                             clearSavedGame();
                             return;

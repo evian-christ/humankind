@@ -32,6 +32,8 @@ const makeState = (): GameState => {
 
     return {
         leaderId: null,
+        leaderProgressLevel: 1,
+        lastLeaderProgressAward: null,
         food: 0,
         gold: 0,
         knowledge: 0,
@@ -66,6 +68,7 @@ const makeState = (): GameState => {
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
         bonusXpPerTurn: 0,
+        qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
         isRelicShopOpen: false,
         hasNewRelicShopStock: false,

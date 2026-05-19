@@ -1,6 +1,5 @@
 import { RELIGION_DOCTRINE_IDS, S, SymbolType } from '../../data/symbolDefinitions';
 import { GUILD_UPGRADE_ID, THEOCRACY_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import { isCorner } from '../symbolEffects/core';
 import type { BoardCounterFloatAnchor, BoardGrid, BoardCoord, ResourceDelta } from './turnTypes';
 
 export type SlotEffect = BoardCoord & ResourceDelta & {
@@ -65,7 +64,7 @@ export function computeReligionDeferredEffects(args: {
     unlockedKnowledgeUpgrades?: readonly number[];
     allSymbolsAreCorner?: boolean;
 }): DeferredReligionResult {
-    const { board, religionSlots, religionEffectCache, getAdjacentCoords, unlockedKnowledgeUpgrades = [], allSymbolsAreCorner = false } = args;
+    const { board, religionSlots, religionEffectCache, getAdjacentCoords, unlockedKnowledgeUpgrades = [] } = args;
     const effects: SlotEffect[] = [];
     let foodDelta = 0;
     let goldDelta = 0;
@@ -80,19 +79,28 @@ export function computeReligionDeferredEffects(args: {
     const doctrineGold = new Map<string, number>();
     const doctrineKnowledge = new Map<string, number>();
     const emptySlotCount = board.reduce((count, col) => count + col.filter((cell) => cell === null).length, 0);
-    const presentReligionIds = new Set<number>();
+    const symbolCounts = new Map<number, number>();
+    let presentReligionCount = 0;
+    let placedSymbolCount = 0;
 
     for (const slot of religionSlots) {
         const key = slotKey(slot.x, slot.y);
         doctrineFood.set(key, 0);
         doctrineGold.set(key, 0);
         doctrineKnowledge.set(key, 0);
+    }
 
-        const sym = board[slot.x][slot.y];
-        if (sym && !sym.is_marked_for_destruction) {
-            presentReligionIds.add(sym.definition.id);
+    for (const col of board) {
+        for (const sym of col) {
+            if (!sym || sym.is_marked_for_destruction) continue;
+            placedSymbolCount++;
+            symbolCounts.set(sym.definition.id, (symbolCounts.get(sym.definition.id) ?? 0) + 1);
+            if (RELIGION_DOCTRINE_IDS.has(sym.definition.id)) presentReligionCount++;
         }
     }
+
+    const hasMultipleReligionSymbols = presentReligionCount >= 2;
+    const hasDuplicateSymbols = [...symbolCounts.values()].some((count) => count >= 2);
 
     const maxIters = 4;
     for (let iter = 0; iter < maxIters; iter++) {
@@ -122,8 +130,7 @@ export function computeReligionDeferredEffects(args: {
             const sym = board[slot.x][slot.y];
             if (!sym || sym.is_marked_for_destruction) continue;
 
-            const hasOtherReligionOnBoard = [...presentReligionIds].some((id) => id !== sym.definition.id);
-            if (hasOtherReligionOnBoard) {
+            if (hasMultipleReligionSymbols) {
                 const prevFood = doctrineFood.get(key) ?? 0;
                 const prevGold = doctrineGold.get(key) ?? 0;
                 const prevKnowledge = doctrineKnowledge.get(key) ?? 0;
@@ -158,12 +165,11 @@ export function computeReligionDeferredEffects(args: {
             if (sym.definition.id === S.christianity) {
                 food = hasTheocracy ? Math.max(boardWideMaxFood, maxAdjFood) : maxAdjFood;
             } else if (sym.definition.id === S.islam) {
-                gold = knowledgeProducerCount * (hasTheocracy ? 3 : 2);
+                food = knowledgeProducerCount * (hasTheocracy ? 3 : 2);
             } else if (sym.definition.id === S.buddhism) {
                 food = emptySlotCount * (hasTheocracy ? 4 : 2);
-            } else if (sym.definition.id === S.hinduism && (allSymbolsAreCorner || isCorner(slot.x, slot.y))) {
-                food = hasTheocracy ? 20 : 10;
-                knowledge = hasTheocracy ? 20 : 10;
+            } else if (sym.definition.id === S.hinduism && !hasDuplicateSymbols) {
+                food = hasTheocracy ? placedSymbolCount : Math.floor(placedSymbolCount / 2);
             }
 
             const prevFood = doctrineFood.get(key) ?? 0;
@@ -183,8 +189,7 @@ export function computeReligionDeferredEffects(args: {
         const sym = board[slot.x][slot.y];
         if (!sym || sym.is_marked_for_destruction) continue;
 
-        const hasOtherReligionOnBoard = [...presentReligionIds].some((id) => id !== sym.definition.id);
-        if (hasOtherReligionOnBoard) {
+        if (hasMultipleReligionSymbols) {
             sym.is_marked_for_destruction = true;
             continue;
         }

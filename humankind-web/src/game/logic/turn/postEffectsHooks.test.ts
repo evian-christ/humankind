@@ -17,6 +17,91 @@ const createInstance = (definition: (typeof SYMBOLS)[number], id: string): Playe
 });
 
 describe('postEffectsHooks', () => {
+    it('applies Ramesses Relic Vault only from leader level 5', () => {
+        const baseArgs = {
+            board: createEmptyBoard(),
+            boardWidth: 5,
+            boardHeight: 4,
+            effects: [],
+            leaderId: 'ramesses' as const,
+            bonusXpPerTurn: 0,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: () => [],
+            relics: [
+                { instanceId: 'relic-a', definition: { id: 9001 }, effect_counter: 0, bonus_stacks: 0 },
+                { instanceId: 'relic-b', definition: { id: 9002 }, effect_counter: 0, bonus_stacks: 0 },
+            ],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        };
+
+        expect(runPostEffectsHooks({ ...baseArgs, leaderProgressLevel: 4 }).bonusKnowledge).toBe(0);
+        expect(runPostEffectsHooks({ ...baseArgs, leaderProgressLevel: 5 }).bonusKnowledge).toBe(2);
+    });
+
+    it('applies Qin Shi Huang prosperity from leader level 1 with ancient ratios', () => {
+        const board = createEmptyBoard();
+        board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat-a');
+        board[1][0] = createInstance(SYMBOLS[S.rice]!, 'rice-a');
+        board[2][0] = createInstance(SYMBOLS[S.stone]!, 'stone-a');
+        board[3][0] = createInstance(SYMBOLS[S.monument]!, 'monument-a');
+
+        const baseArgs = {
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            effects: [],
+            leaderId: 'shihuang' as const,
+            bonusXpPerTurn: 0,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: () => [],
+            relics: [],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        };
+
+        const result = runPostEffectsHooks({ ...baseArgs, leaderProgressLevel: 1 });
+
+        expect(result.bonusFood).toBe(1);
+        expect(result.bonusKnowledge).toBe(4);
+    });
+
+    it('scales Qin Shi Huang prosperity by era', () => {
+        const board = createEmptyBoard();
+        board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat-a');
+        board[1][0] = createInstance(SYMBOLS[S.rice]!, 'rice-a');
+        board[2][0] = createInstance(SYMBOLS[S.stone]!, 'stone-a');
+        board[3][0] = createInstance(SYMBOLS[S.monument]!, 'monument-a');
+        board[4][0] = createInstance(SYMBOLS[S.library]!, 'library-a');
+        board[0][1] = createInstance(SYMBOLS[S.merchant]!, 'merchant-a');
+
+        const baseArgs = {
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            effects: [],
+            leaderId: 'shihuang' as const,
+            leaderProgressLevel: 1,
+            bonusXpPerTurn: 0,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: () => [],
+            relics: [],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        };
+
+        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 2 }).bonusFood).toBe(2);
+        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 2 }).bonusKnowledge).toBe(4);
+        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 3 }).bonusFood).toBe(3);
+        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 3 }).bonusKnowledge).toBe(7);
+    });
+
     it('upgrades Date destroy food to 20 with Dry Storage', () => {
         const board = createEmptyBoard();
         const date = createInstance(SYMBOLS[S.date]!, 'date');

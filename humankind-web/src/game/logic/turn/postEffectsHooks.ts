@@ -1,4 +1,5 @@
 import type { LeaderId } from '../../data/leaders';
+import { isLeaderUnlockActive } from '../../data/leaders';
 import type { PlayerSymbolInstance } from '../../types';
 import { FOOD_PRODUCING_IDS, GOLD_PRODUCING_IDS, KNOWLEDGE_PRODUCING_IDS, SymbolType, S, TAX_SYMBOL_ID } from '../../data/symbolDefinitions';
 import {
@@ -57,6 +58,8 @@ export function runPostEffectsHooks(args: {
     boardHeight: number;
     effects: EffectEntry[];
     leaderId: LeaderId | null;
+    leaderProgressLevel?: number;
+    currentEra?: number;
     currentGold?: number;
     bonusXpPerTurn: number;
     unlockedKnowledgeUpgrades: number[];
@@ -71,6 +74,8 @@ export function runPostEffectsHooks(args: {
         boardHeight,
         effects,
         leaderId,
+        leaderProgressLevel = 1,
+        currentEra = 1,
         currentGold = 0,
         bonusXpPerTurn,
         unlockedKnowledgeUpgrades,
@@ -568,7 +573,7 @@ export function runPostEffectsHooks(args: {
 
     // ── 리더/영구 보너스 ──
     // 진시황 천하부강: 보드 심볼 2개당 식량 +1, 빈 칸 2개당 지식 +1 (파괴 예정 칸은 빈 칸)
-    if (leaderId === 'shihuang') {
+    if (isLeaderUnlockActive(leaderId, leaderProgressLevel, 'shihuang_prosperity')) {
         let placedSymbols = 0;
         let emptySlots = 0;
         for (let qx = 0; qx < boardWidth; qx++) {
@@ -578,14 +583,15 @@ export function runPostEffectsHooks(args: {
                 else emptySlots++;
             }
         }
-        const qinFood = Math.floor(placedSymbols / 2);
-        const qinKnowledge = Math.floor(emptySlots / 2);
+        const qinDivisor = currentEra >= 3 ? 2 : currentEra >= 2 ? 3 : 4;
+        const qinFood = Math.floor(placedSymbols / qinDivisor);
+        const qinKnowledge = Math.floor(emptySlots / qinDivisor);
         if (qinFood > 0) bonusFood += qinFood;
         if (qinKnowledge > 0) bonusKnowledge += qinKnowledge;
     }
 
     // 람세스 유물 금고: 보유 유물 1개당 지식 +1/턴
-    if (leaderId === 'ramesses') {
+    if (isLeaderUnlockActive(leaderId, leaderProgressLevel, 'relic_vault')) {
         const relicVaultKnowledge = relics.length;
         if (relicVaultKnowledge > 0) {
             bonusKnowledge += relicVaultKnowledge;

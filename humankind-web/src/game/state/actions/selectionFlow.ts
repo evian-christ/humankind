@@ -89,6 +89,8 @@ const resolveStandardChoices = (state: GameState): ChoiceResolution => {
         upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
         ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
         ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
+        leaderId: state.leaderId,
+        leaderProgressLevel: state.leaderProgressLevel,
         forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
     });
 
@@ -295,6 +297,18 @@ export const createSelectionFlowActions = ({
                     createInstance(def, state.unlockedKnowledgeUpgrades || []),
                 ];
             }
+        } else if (event.key === 'kadesh_battle_escape') {
+            const def = SYMBOLS[S.enemy_warrior];
+            if (def) {
+                const enemy = createInstance(def, state.unlockedKnowledgeUpgrades || []);
+                enemy.enemy_hp = 1;
+                patch.playerSymbols = [
+                    ...(patch.playerSymbols ?? state.playerSymbols),
+                    enemy,
+                ];
+            }
+        } else if (event.key === 'currency_standardization') {
+            patch.qinCurrencyStandardTurnsRemaining = 5;
         } else if (event.key === 'every_terrain_bounty') {
             const bounty = EVERY_TERRAIN_BOUNTY_EACH[eraIdx];
             foodDelta += bounty;

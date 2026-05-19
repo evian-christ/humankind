@@ -10,6 +10,7 @@ import {
     type SelectionChoice,
 } from '../logic/selection/selectionLogic';
 import type { RewardDefinition } from '../data/rewardDefinitions';
+import type { LeaderProgressAwardResult } from '../data/leaders';
 import type { PlayerSymbolInstance } from '../types';
 import { getEraFromLevel } from './gameCalculations';
 import {
@@ -106,6 +107,8 @@ export interface GameEventLogEntry {
 
 export interface GameState {
     leaderId: import('../data/leaders').LeaderId | null;
+    leaderProgressLevel: number;
+    lastLeaderProgressAward: LeaderProgressAwardResult | null;
     food: number;
     gold: number;
     knowledge: number; // 기존 knowledge
@@ -172,6 +175,8 @@ export interface GameState {
     unlockedKnowledgeUpgrades: number[];
     /** 매 턴 영구 지식 보너스 */
     bonusXpPerTurn: number;
+    /** 진시황 전용 이벤트 화폐 통일: 남은 기본 골드 생산량 2배 턴 수 */
+    qinCurrencyStandardTurnsRemaining: number;
 
     /** Unused research picks: +1 per level gained, -1 when confirming a knowledge upgrade (no per-level queue). */
     levelUpResearchPoints: number;
@@ -350,6 +355,8 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
 
 export const useGameStore = create<GameState>((set, get) => ({
     leaderId: null,
+    leaderProgressLevel: 1,
+    lastLeaderProgressAward: null,
     food: 0,
     gold: 0,
     knowledge: 0,
@@ -386,6 +393,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     religionUnlocked: false,
     unlockedKnowledgeUpgrades: [],
     bonusXpPerTurn: 0,
+    qinCurrencyStandardTurnsRemaining: 0,
 
     levelUpResearchPoints: 0,
     isRelicShopOpen: false,
@@ -531,6 +539,8 @@ export const useGameStore = create<GameState>((set, get) => ({
                 upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
                 ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
                 ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
+                leaderId: state.leaderId,
+                leaderProgressLevel: state.leaderProgressLevel,
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
             });
             const choices = res.choices;
