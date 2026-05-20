@@ -44,13 +44,10 @@ export const processSingleSymbolEffects = (
 ): EffectResult => {
     symbolInstance.effect_counter = (symbolInstance.effect_counter || 0);
 
-    if (
+    const isTerrainProductionDisabled =
         disabledTerrainCoords &&
         symbolInstance.definition.type === SymbolType.TERRAIN &&
-        disabledTerrainCoords.has(`${x},${y}`)
-    ) {
-        return { food: 0, gold: 0, knowledge: 0 };
-    }
+        disabledTerrainCoords.has(`${x},${y}`);
 
     const state = createEffectState();
     const handlerCtx: SymbolEffectHandlerContext = {
@@ -69,5 +66,11 @@ export const processSingleSymbolEffects = (
         if (handler(handlerCtx)) break;
     }
 
-    return buildEffectResult(state);
+    const result = buildEffectResult(state);
+    if (isTerrainProductionDisabled) {
+        result.food = 0;
+        result.gold = 0;
+        result.knowledge = 0;
+    }
+    return result;
 };

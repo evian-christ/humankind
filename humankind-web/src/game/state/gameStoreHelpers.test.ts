@@ -10,20 +10,24 @@ import { S, SYMBOLS } from '../data/symbolDefinitions';
 import { SymbolType } from '../data/symbolTypes';
 
 describe('gameStoreHelpers starting layout', () => {
-    it('creates a starting board with oral tradition and two wild seeds in fixed slots', () => {
+    it('creates a starting board with oral tradition and four wild seeds in fixed slots', () => {
         const { board, playerSymbols } = createStartingBoard();
 
         expect(playerSymbols.map((sym) => sym.definition.id)).toEqual([
             S.oral_tradition,
             S.wild_seeds,
             S.wild_seeds,
+            S.wild_seeds,
+            S.wild_seeds,
         ]);
         expect(board[2][1]?.definition.id).toBe(S.oral_tradition);
+        expect(board[0][1]?.definition.id).toBe(S.wild_seeds);
         expect(board[1][2]?.definition.id).toBe(S.wild_seeds);
+        expect(board[4][1]?.definition.id).toBe(S.wild_seeds);
         expect(board[3][2]?.definition.id).toBe(S.wild_seeds);
     });
 
-    it('tops up missing starting wild seeds to two copies', () => {
+    it('tops up missing starting wild seeds to four copies', () => {
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
         const withOneSeed = [
             oral,
@@ -32,7 +36,7 @@ describe('gameStoreHelpers starting layout', () => {
 
         const result = ensureStartingWildSeedsOwned(withOneSeed);
 
-        expect(result.filter((sym) => sym.definition.id === S.wild_seeds)).toHaveLength(2);
+        expect(result.filter((sym) => sym.definition.id === S.wild_seeds)).toHaveLength(4);
     });
 
     it('moves the center occupant when anchoring oral tradition', () => {

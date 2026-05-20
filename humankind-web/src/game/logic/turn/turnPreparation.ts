@@ -1,6 +1,6 @@
 import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
 import { getEnemyPoolForEra } from '../../data/enemyPools';
-import type { BoardGrid, BoardCoord, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
+import type { BoardGrid, BoardCoord, ThreatLabelKey, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
 
 const createEmptyBoard = (width: number, height: number): BoardGrid => {
     return Array(width).fill(null).map(() => Array(height).fill(null));
@@ -79,7 +79,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
 
     const newPlayerSymbols = [...playerSymbols];
     const spinUpgrades = unlockedKnowledgeUpgrades || [];
-    const newThreats: { instanceId: string; label: string }[] = [];
+    const newThreats: { instanceId: string; label: string; key: ThreatLabelKey }[] = [];
 
     if (turn > 0) {
         if (rng.next() * 100 < 3) {
@@ -89,7 +89,8 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
             if (enemyDef) {
                 const inst = createSymbolInstance(enemyDef, spinUpgrades);
                 newPlayerSymbols.push(inst);
-                newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel('threat.barbarian_invasion') });
+                const key = 'threat.barbarian_invasion';
+                newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(key), key });
             }
         }
 
@@ -110,7 +111,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
                 const inst = createSymbolInstance(def, spinUpgrades);
                 inst.effect_counter = rng.int(counterMin, counterMax);
                 newPlayerSymbols.push(inst);
-                newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(labelKey) });
+                newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(labelKey), key: labelKey });
             };
 
             if (pick === floodId) {
@@ -121,7 +122,8 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
                 if (def) {
                     const inst = createSymbolInstance(def, spinUpgrades);
                     newPlayerSymbols.push(inst);
-                    newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel('threat.earthquake') });
+                    const key = 'threat.earthquake';
+                    newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(key), key });
                 }
             } else {
                 const count = rng.int(3, 6);
@@ -157,13 +159,16 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     const anchoredBoard = anchored.board;
     const anchoredSymbols = anchored.playerSymbols;
 
-    const newThreatLabels = new Map<string, string>(newThreats.map((n) => [n.instanceId, n.label]));
+    const newThreatLabels = new Map<string, { label: string; key: ThreatLabelKey }>(
+        newThreats.map((n) => [n.instanceId, { label: n.label, key: n.key }]),
+    );
     const pendingNewThreatFloats: TurnPreparationOutput['pendingNewThreatFloats'] = [];
     for (let x = 0; x < boardWidth; x++) {
         for (let y = 0; y < boardHeight; y++) {
             const inst = anchoredBoard[x][y];
             if (inst && newThreatLabels.has(inst.instanceId)) {
-                pendingNewThreatFloats.push({ x, y, label: newThreatLabels.get(inst.instanceId)! });
+                const threat = newThreatLabels.get(inst.instanceId)!;
+                pendingNewThreatFloats.push({ x, y, label: threat.label, key: threat.key });
             }
         }
     }

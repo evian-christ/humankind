@@ -29,8 +29,11 @@ export interface TurnThreatState {
     naturalDisasterThreat: number;
 }
 
+export type ThreatLabelKey = 'threat.barbarian_invasion' | 'threat.flood' | 'threat.earthquake' | 'threat.drought';
+
 export interface PendingThreatFloat extends BoardCoord {
     label: string;
+    key?: ThreatLabelKey;
 }
 
 export type CreateSymbolInstance = (
@@ -39,7 +42,7 @@ export type CreateSymbolInstance = (
 ) => PlayerSymbolInstance;
 
 export type ThreatLabelResolver = (
-    key: 'threat.barbarian_invasion' | 'threat.flood' | 'threat.earthquake' | 'threat.drought',
+    key: ThreatLabelKey,
 ) => string;
 
 export interface TurnPreparationInput {

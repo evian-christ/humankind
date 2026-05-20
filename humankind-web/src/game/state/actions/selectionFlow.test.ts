@@ -11,7 +11,9 @@ import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     ARCHERY_UPGRADE_ID,
+    ELECTION_SYSTEM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
+    GLOBALIZATION_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
@@ -311,6 +313,46 @@ describe('selectionFlow actions', () => {
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
         expect(harness.get().bonusXpPerTurn).toBe(2);
         expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('grants the first selection reroll when Election System is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 26,
+            era: 3,
+            gold: 0,
+            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(ELECTION_SYSTEM_UPGRADE_ID);
+
+        expect(harness.get().phase).toBe('selection');
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(ELECTION_SYSTEM_UPGRADE_ID);
+        expect(harness.get().freeSelectionRerolls).toBe(1);
+
+        harness.actions.rerollSymbols();
+
+        expect(harness.get().gold).toBe(0);
+        expect(harness.get().freeSelectionRerolls).toBe(0);
+        expect(harness.get().symbolChoices).toHaveLength(3);
+    });
+
+    it('grants 2 Ancient Tribe Joins when Globalization is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 26,
+            era: 3,
+            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(GLOBALIZATION_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(GLOBALIZATION_UPGRADE_ID);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
+        ).toHaveLength(2);
     });
 
     it('unlocks religion only when Theology is researched', () => {

@@ -38,7 +38,7 @@ const makeState = (): GameState => {
         gold: 0,
         knowledge: 0,
         level: 0,
-        era: 1,
+        era: 0,
         turn: 0,
         board,
         playerSymbols: [oral],

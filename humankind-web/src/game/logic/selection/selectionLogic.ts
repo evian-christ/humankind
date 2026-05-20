@@ -232,8 +232,8 @@ export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnloc
         if (!syms || syms.length === 0) continue;
         const cat = Number(catStr);
         if (cat === SymbolType.RELIGION && !ctx.religionUnlocked) continue;
-        if (cat === SymbolType.MEDIEVAL && ctx.era < 2 && !feudal) continue;
-        if (cat === SymbolType.MODERN && ctx.era < 3) continue;
+        if (cat === SymbolType.MEDIEVAL && !feudal) continue;
+        if (cat === SymbolType.MODERN && !modernAge) continue;
         if (modernAge && cat === SymbolType.MEDIEVAL) continue;
         if (modernAge && cat === SymbolType.TERRAIN) continue;
         flat.push(...syms);

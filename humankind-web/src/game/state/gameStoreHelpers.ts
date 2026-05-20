@@ -11,7 +11,12 @@ export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
 
 export const ORAL_TRADITION_ANCHOR = { x: 2, y: 1 } as const;
-export const STARTING_WILD_SEED_ANCHORS = [{ x: 1, y: 2 }, { x: 3, y: 2 }] as const;
+export const STARTING_WILD_SEED_ANCHORS = [
+    { x: 0, y: 1 },
+    { x: 1, y: 2 },
+    { x: 4, y: 1 },
+    { x: 3, y: 2 },
+] as const;
 
 let instanceCounter = 0;
 const generateInstanceId = (): string => `symbol_${Date.now()}_${instanceCounter++}`;
@@ -240,8 +245,9 @@ export const getStartingSymbols = (): PlayerSymbolInstance[] => {
     const out: PlayerSymbolInstance[] = [];
     if (oralTradition) out.push(createInstance(oralTradition, []));
     if (wildSeeds) {
-        out.push(createInstance(wildSeeds, []));
-        out.push(createInstance(wildSeeds, []));
+        for (let i = 0; i < STARTING_WILD_SEED_ANCHORS.length; i++) {
+            out.push(createInstance(wildSeeds, []));
+        }
     }
     return out;
 };

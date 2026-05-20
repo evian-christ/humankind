@@ -3,6 +3,8 @@ import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
+    ELECTION_SYSTEM_UPGRADE_ID,
+    GLOBALIZATION_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
@@ -81,6 +83,24 @@ const OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
     INQUISITION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
 ]);
+
+const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
+    upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
+
+const withSelectionPhaseFreeReroll = (
+    state: GameState,
+    patch: Partial<GameState>,
+): Partial<GameState> => {
+    if (patch.phase !== 'selection') return patch;
+    const floor = getSelectionPhaseFreeRerollFloor(
+        patch.unlockedKnowledgeUpgrades ?? state.unlockedKnowledgeUpgrades ?? [],
+    );
+    if (floor <= 0) return patch;
+    return {
+        ...patch,
+        freeSelectionRerolls: Math.max(patch.freeSelectionRerolls ?? state.freeSelectionRerolls ?? 0, floor),
+    };
+};
 
 const resolveStandardChoices = (state: GameState): ChoiceResolution => {
     const res = generateChoicesSelection({
@@ -186,13 +206,13 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
                 ? state.forceTerrainInNextSymbolChoices
                 : standard!.forceTerrainInNextSymbolChoices;
 
-        return {
+        return withSelectionPhaseFreeReroll(state, {
             bonusSelectionQueue: q,
             symbolChoices: nextChoices,
             symbolSelectionRelicSourceId: null,
             forceTerrainInNextSymbolChoices: nextForceTerrain,
             phase: q.length > 0 ? 'selection' as GamePhase : phaseAfterTurnFlowComplete(),
-        };
+        });
     }
 
     return {
@@ -455,6 +475,14 @@ export const createSelectionFlowActions = ({
             }
         }
 
+        if (uid === GLOBALIZATION_UPGRADE_ID) {
+            const tribeJoinDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
+            if (tribeJoinDef) {
+                const rs = useRelicStore.getState();
+                for (let i = 0; i < 2; i++) rs.addRelic(tribeJoinDef);
+            }
+        }
+
         let religionUnlocked = state.religionUnlocked;
         if (uid === THEOLOGY_UPGRADE_ID) religionUnlocked = true;
 
@@ -528,12 +556,12 @@ export const createSelectionFlowActions = ({
         }
 
         if (state.returnPhaseAfterDevKnowledgeUpgrade != null) {
-            set({
+            set(withSelectionPhaseFreeReroll(state, {
                 ...baseUnlock,
                 phase: state.returnPhaseAfterDevKnowledgeUpgrade,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
                 symbolSelectionRelicSourceId: null,
-            });
+            }));
             return;
         }
 
@@ -545,14 +573,14 @@ export const createSelectionFlowActions = ({
                   }
                 : resolveStandardChoices(state);
 
-        set({
+        set(withSelectionPhaseFreeReroll(state, {
             ...baseUnlock,
             phase: 'selection' as GamePhase,
             returnPhaseAfterDevKnowledgeUpgrade: null,
             symbolSelectionRelicSourceId: null,
             symbolChoices: choiceResolution.choices,
             forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
-        });
+        }));
     },
 
     confirmDestroySymbols: (instanceIds: string[]) => {
@@ -593,7 +621,7 @@ export const createSelectionFlowActions = ({
         if (src === EDICT_SYMBOL_ID) {
             const terr = state.territorialAfterEdictPending;
             const choiceResolution = terr ? null : resolveStandardChoices(state);
-            set({
+            set(withSelectionPhaseFreeReroll(state, {
                 ...rewardPatch(state),
                 playerSymbols: newSymbols,
                 phase: 'selection',
@@ -606,7 +634,7 @@ export const createSelectionFlowActions = ({
                     ? state.forceTerrainInNextSymbolChoices
                     : choiceResolution!.forceTerrainInNextSymbolChoices,
                 ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
-            });
+            }));
             afterSetRelicRefresh();
             return;
         }
@@ -628,7 +656,7 @@ export const createSelectionFlowActions = ({
                 afterSetRelicRefresh();
                 return;
             }
-            set({
+            set(withSelectionPhaseFreeReroll(state, {
                 ...rewardPatch(state),
                 playerSymbols: newSymbols,
                 gold: state.gold + dGold + goldAdd,
@@ -638,7 +666,7 @@ export const createSelectionFlowActions = ({
                 symbolSelectionRelicSourceId: null,
                 symbolChoices: resolveTerrainChoices(state),
                 bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
-            });
+            }));
             afterSetRelicRefresh();
         }
     },
@@ -650,7 +678,7 @@ export const createSelectionFlowActions = ({
         if (src === EDICT_SYMBOL_ID) {
             const terr = state.territorialAfterEdictPending;
             const choiceResolution = terr ? null : resolveStandardChoices(state);
-            set({
+            set(withSelectionPhaseFreeReroll(state, {
                 phase: 'selection',
                 pendingDestroySource: null,
                 destroySelectionMaxSymbols: 3,
@@ -661,7 +689,7 @@ export const createSelectionFlowActions = ({
                     ? state.forceTerrainInNextSymbolChoices
                     : choiceResolution!.forceTerrainInNextSymbolChoices,
                 ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
-            });
+            }));
             return;
         }
         if (state.edictRemovalPending) {

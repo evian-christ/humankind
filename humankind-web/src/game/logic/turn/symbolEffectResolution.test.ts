@@ -114,6 +114,30 @@ describe('symbolEffectResolution', () => {
         expect(saltResult.food).toBe(1);
     });
 
+    it('lets flood disable Desert production without blocking its destruction effect', () => {
+        const board = createEmptyBoard();
+        const desert = createInstance(Sym.desert, 'desert');
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        board[1][1] = desert;
+        board[0][1] = wheat;
+        const disabled = new Set([slotKey(1, 1)]);
+
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const result = processSingleSymbolEffects(
+            desert,
+            board,
+            1,
+            1,
+            { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
+            undefined,
+            disabled,
+        );
+
+        expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 0 });
+        expect(wheat.is_marked_for_destruction).toBe(true);
+        vi.mocked(Math.random).mockRestore();
+    });
+
     it('computes deferred Christianity, Islam, Buddhism, and Hinduism effects from board state', () => {
         const board = createEmptyBoard();
         board[1][1] = createInstance(Sym.christianity, 'christianity');

@@ -14,6 +14,7 @@ import type { LeaderProgressAwardResult } from '../data/leaders';
 import type { PlayerSymbolInstance } from '../types';
 import { getEraFromLevel } from './gameCalculations';
 import {
+    ELECTION_SYSTEM_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
@@ -31,7 +32,7 @@ import { createTurnFlowActions } from './actions/turnFlow';
 import { createRelicShopFlowActions } from './actions/relicShopFlow';
 import { createGameLifecycleActions } from './actions/gameLifecycle';
 import { createBoardInteractionActions } from './actions/boardInteraction';
-import type { BoardEffectDelta } from '../logic/turn/turnTypes';
+import type { BoardEffectDelta, PendingThreatFloat } from '../logic/turn/turnTypes';
 
 export { type PlayerSymbolInstance } from '../types';
 export { BOARD_HEIGHT, BOARD_WIDTH } from './gameStoreHelpers';
@@ -194,7 +195,7 @@ export interface GameState {
     barbarianCampThreat: number;
     naturalDisasterThreat: number;
     /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
-    pendingNewThreatFloats: { x: number; y: number; label: string }[];
+    pendingNewThreatFloats: PendingThreatFloat[];
     /** destroy_selection 진입 시 출처 (22 영토 정비 / 69 칙령) */
     pendingDestroySource: typeof TERRITORIAL_REORG_UPGRADE_ID | typeof EDICT_SYMBOL_ID | null;
     /** 망각의 화로 발동 시 제거할 유물 instanceId */
@@ -301,6 +302,9 @@ const shuffle = <T>(arr: T[]): T[] => {
 
 const INITIAL_STARTING_BOARD_STATE = createStartingBoard();
 
+const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
+    upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
+
 
 // (선택 풀 구성 로직은 `../logic/selection/selectionLogic.ts`로 이동)
 
@@ -361,7 +365,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     gold: 0,
     knowledge: 0,
     level: 0,
-    era: 1,
+    era: 0,
     turn: 0,
     board: INITIAL_STARTING_BOARD_STATE.board,
     playerSymbols: INITIAL_STARTING_BOARD_STATE.playerSymbols,
@@ -519,7 +523,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => {
         if (stat === 'level') {
-            const L = Math.max(1, Math.min(30, Math.round(value)));
+            const L = Math.max(0, Math.min(30, Math.round(value)));
             set({ level: L, era: getEraFromLevel(L) });
             return;
         }
@@ -545,7 +549,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
             const choices = res.choices;
             if (res.consumedForceTerrain) set({ forceTerrainInNextSymbolChoices: false });
-            set({ phase: 'selection', symbolChoices: choices, symbolSelectionRelicSourceId: null });
+            set({
+                phase: 'selection',
+                symbolChoices: choices,
+                symbolSelectionRelicSourceId: null,
+                freeSelectionRerolls: Math.max(
+                    state.freeSelectionRerolls ?? 0,
+                    getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
+                ),
+            });
         } else if (screen === 'upgrade') {
             set({
                 levelUpResearchPoints: (state.levelUpResearchPoints ?? 0) + 1,

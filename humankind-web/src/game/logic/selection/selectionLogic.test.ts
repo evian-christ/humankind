@@ -29,11 +29,22 @@ describe('selectionLogic', () => {
         expect(pool.some((sym) => sym.id === S.compass)).toBe(false);
     });
 
+    it('does not include Medieval symbols at level 10 before Medieval Age is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
+    });
+
     it('includes Compass in the pool once the upgrade is unlocked', () => {
         const pool = buildFlatPool({
             era: 2,
             religionUnlocked: false,
-            upgrades: [COMPASS_UPGRADE_ID],
+            upgrades: [FEUDALISM_UPGRADE_ID, COMPASS_UPGRADE_ID],
             ownedRelicDefIds: [],
         });
 
@@ -44,7 +55,7 @@ describe('selectionLogic', () => {
         const pool = buildFlatPool({
             era: 2,
             religionUnlocked: false,
-            upgrades: [JUNGLE_EXPEDITION_UPGRADE_ID],
+            upgrades: [FEUDALISM_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID],
             ownedRelicDefIds: [],
         });
 
@@ -67,7 +78,7 @@ describe('selectionLogic', () => {
         const pool = buildFlatPool({
             era: 2,
             religionUnlocked: false,
-            upgrades: [CARAVANSERAI_UPGRADE_ID],
+            upgrades: [FEUDALISM_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID],
             ownedRelicDefIds: [],
         });
 
@@ -314,7 +325,18 @@ describe('selectionLogic', () => {
             religionUnlocked: false,
             upgrades: [],
             ownedRelicDefIds: [],
-            ownedSymbolDefIds: [S.oral_tradition, S.wild_seeds, S.wild_seeds, S.wheat, S.rice],
+            ownedSymbolDefIds: [
+                S.oral_tradition,
+                S.wild_seeds,
+                S.wild_seeds,
+                S.wild_seeds,
+                S.wild_seeds,
+                S.wild_seeds,
+                S.wild_seeds,
+                S.wild_seeds,
+                S.wild_seeds,
+                S.wild_seeds,
+            ],
             forceTerrainInNextSymbolChoices: false,
         });
 

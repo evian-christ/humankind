@@ -5,6 +5,7 @@ import {
 } from '../../logic/selection/selectionLogic';
 import { useRelicStore } from '../relicStore';
 import type { GameState } from '../gameStore';
+import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -19,6 +20,9 @@ const getEraReward = (era: number, rewards: readonly [number, number, number]): 
     const eraIndex = Number.isFinite(era) ? Math.max(0, Math.min(2, Math.floor(era) - 1)) : 0;
     return rewards[eraIndex];
 };
+
+const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
+    upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
 
 export const createRelicActivationActions = ({
     get,
@@ -115,6 +119,10 @@ export const createRelicActivationActions = ({
                 phase: 'selection',
                 symbolChoices: res.choices,
                 symbolSelectionRelicSourceId: RELIC_ID.ANCIENT_RELIC_DEBRIS,
+                freeSelectionRerolls: Math.max(
+                    state.freeSelectionRerolls ?? 0,
+                    getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
+                ),
                 forceTerrainInNextSymbolChoices:
                     state.forceTerrainInNextSymbolChoices && res.consumedForceTerrain
                         ? false
@@ -140,6 +148,10 @@ export const createRelicActivationActions = ({
                 phase: 'selection',
                 symbolChoices: choices,
                 symbolSelectionRelicSourceId: RELIC_ID.ANCIENT_TRIBE_JOIN,
+                freeSelectionRerolls: Math.max(
+                    state.freeSelectionRerolls ?? 0,
+                    getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
+                ),
             });
             get().appendEventLog({
                 turn: state.turn,

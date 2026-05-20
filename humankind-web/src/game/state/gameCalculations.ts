@@ -65,8 +65,8 @@ export const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
 export const getEraFromLevel = (level: number): number => {
     if (level <= 0) return 0;
     if (level >= 30) return 4;
-    if (level <= 10) return 1;
-    if (level <= 20) return 2;
+    if (level < 10) return 1;
+    if (level < 20) return 2;
     return 3;
 };
 
@@ -145,7 +145,8 @@ export function isUpgradeLegalForKnowledgePick(
     if (upgradeEra == null) return false;
 
     const currentEra = getEraFromLevel(level);
-    const medievalUnlocked = have.has(FEUDALISM_UPGRADE_ID) || currentEra >= 2;
+    const medievalUnlocked = have.has(FEUDALISM_UPGRADE_ID);
+    const modernUnlocked = have.has(MODERN_AGE_UPGRADE_ID);
     if (uid === FEUDALISM_UPGRADE_ID) {
         return level >= 10 && have.has(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
     }
@@ -157,5 +158,6 @@ export function isUpgradeLegalForKnowledgePick(
     }
     if (getKnowledgeUpgradeDirectPrerequisites(uid).some((prereqId) => !have.has(prereqId))) return false;
     if (upgrade.type === SymbolType.MEDIEVAL) return medievalUnlocked;
+    if (upgrade.type === SymbolType.MODERN) return modernUnlocked;
     return upgradeEra <= currentEra;
 }

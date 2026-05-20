@@ -348,7 +348,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             gold: 0,
             knowledge: 0,
             level: 0,
-            era: 1,
+            era: 0,
             turn: 0,
             board: start.board,
             playerSymbols: start.playerSymbols,
@@ -370,7 +370,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
         gold: 0,
         knowledge: 0,
         level: 0,
-        era: 1,
+        era: 0,
         turn: 0,
         board: Array(BOARD_WIDTH).fill(null).map(() => Array(BOARD_HEIGHT).fill(null)),
         playerSymbols: config.startingSymbolIds

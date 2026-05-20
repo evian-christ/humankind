@@ -37,6 +37,7 @@ import {
 } from '../../logic/turn/turnPipeline';
 import type { PlayerSymbolInstance } from '../../types';
 import { RELIC_ID } from '../../logic/relics/relicIds';
+import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import {
     buildCombatPresentationPlan,
     buildSlotEffectPresentationPlan,
@@ -52,6 +53,9 @@ import type { GamePhase, GameState } from '../gameStore';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
+
+const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
+    upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
 
 interface TurnFlowDeps {
     get: GameStoreGet;
@@ -458,6 +462,10 @@ export const createTurnFlowActions = ({
                         set({
                             phase: 'selection' as GamePhase,
                             symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
+                            freeSelectionRerolls: Math.max(
+                                finalState.freeSelectionRerolls ?? 0,
+                                getSelectionPhaseFreeRerollFloor(finalState.unlockedKnowledgeUpgrades ?? []),
+                            ),
                         });
                         saveGameState(get());
                     }

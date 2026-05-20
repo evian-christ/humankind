@@ -144,12 +144,14 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
   },
 
   startTutorial: () => {
+    saveTutorialCompleted();
     useGameStore.getState().startTutorialGame();
     set({
       screen: null,
       selectedLeaderId: null,
       leaderProgressInitialLeaderId: null,
       leaderProgressBackTarget: 'intro',
+      hasCompletedTutorial: true,
     });
   },
 

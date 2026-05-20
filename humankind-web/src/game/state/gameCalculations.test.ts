@@ -90,14 +90,12 @@ describe('gold inflation costs', () => {
 });
 
 describe('getEraFromLevel', () => {
-    it('keeps transition levels in the previous era and labels level 30 as future', () => {
+    it('maps level boundaries to primitive, ancient, medieval, modern, and future eras', () => {
         expect(getEraFromLevel(0)).toBe(0);
         expect(getEraFromLevel(9)).toBe(1);
-        expect(getEraFromLevel(10)).toBe(1);
-        expect(getEraFromLevel(11)).toBe(2);
+        expect(getEraFromLevel(10)).toBe(2);
         expect(getEraFromLevel(19)).toBe(2);
-        expect(getEraFromLevel(20)).toBe(2);
-        expect(getEraFromLevel(21)).toBe(3);
+        expect(getEraFromLevel(20)).toBe(3);
         expect(getEraFromLevel(29)).toBe(3);
         expect(getEraFromLevel(30)).toBe(4);
     });
@@ -120,7 +118,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             EDUCATION_UPGRADE_ID,
-            [WRITING_SYSTEM_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, WRITING_SYSTEM_UPGRADE_ID],
             14,
         )).toBe(true);
     });
@@ -133,7 +131,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             SCIENTIFIC_THEORY_UPGRADE_ID,
-            [EDUCATION_UPGRADE_ID],
+            [MODERN_AGE_UPGRADE_ID, EDUCATION_UPGRADE_ID],
             25,
         )).toBe(true);
     });
@@ -146,7 +144,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             THEOCRACY_UPGRADE_ID,
-            [THEOLOGY_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, THEOLOGY_UPGRADE_ID],
             15,
         )).toBe(true);
     });
@@ -159,7 +157,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             GUILD_UPGRADE_ID,
-            [CURRENCY_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, CURRENCY_UPGRADE_ID],
             14,
         )).toBe(true);
     });
@@ -172,7 +170,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             MILITARY_SCIENCE_UPGRADE_ID,
-            [HORSEMANSHIP_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, HORSEMANSHIP_UPGRADE_ID],
             14,
         )).toBe(true);
     });
@@ -189,7 +187,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
     it('allows Three-field System once Irrigation and level requirements are met', () => {
         expect(isUpgradeLegalForKnowledgePick(
             THREE_FIELD_SYSTEM_UPGRADE_ID,
-            [IRRIGATION_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, IRRIGATION_UPGRADE_ID],
             11,
         )).toBe(true);
     });
@@ -202,7 +200,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             AGRICULTURAL_SURPLUS_UPGRADE_ID,
-            [THREE_FIELD_SYSTEM_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID],
             17,
         )).toBe(true);
     });
@@ -215,7 +213,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             MODERN_AGRICULTURE_UPGRADE_ID,
-            [AGRICULTURAL_SURPLUS_UPGRADE_ID],
+            [MODERN_AGE_UPGRADE_ID, AGRICULTURAL_SURPLUS_UPGRADE_ID],
             23,
         )).toBe(true);
     });
@@ -277,7 +275,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             PASTURE_MANAGEMENT_UPGRADE_ID,
-            [NOMADIC_TRADITION_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID],
             18,
         )).toBe(true);
     });
@@ -316,7 +314,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             NATIONALISM_UPGRADE_ID,
-            [],
+            [FEUDALISM_UPGRADE_ID],
             19,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
@@ -326,7 +324,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             ELECTRICITY_UPGRADE_ID,
-            [],
+            [MODERN_AGE_UPGRADE_ID],
             29,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
@@ -344,7 +342,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             COMPASS_UPGRADE_ID,
-            [FISHERIES_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, FISHERIES_UPGRADE_ID],
             12,
         )).toBe(true);
     });
@@ -357,7 +355,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             FISHERY_GUILD_UPGRADE_ID,
-            [SEAFARING_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, SEAFARING_UPGRADE_ID],
             11,
         )).toBe(true);
     });
@@ -370,7 +368,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             MARITIME_TRADE_UPGRADE_ID,
-            [CELESTIAL_NAVIGATION_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID],
             13,
         )).toBe(true);
     });
@@ -383,7 +381,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             PLANTATION_UPGRADE_ID,
-            [MINING_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, MINING_UPGRADE_ID],
             11,
         )).toBe(true);
     });
@@ -409,7 +407,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             TANNING_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID],
             12,
         )).toBe(true);
     });
@@ -422,7 +420,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             FORESTRY_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID, TANNING_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID, TANNING_UPGRADE_ID],
             18,
         )).toBe(true);
     });
@@ -435,7 +433,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             PRESERVATION_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID, TANNING_UPGRADE_ID, FORESTRY_UPGRADE_ID],
+            [MODERN_AGE_UPGRADE_ID, HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID, TANNING_UPGRADE_ID, FORESTRY_UPGRADE_ID],
             24,
         )).toBe(true);
     });
@@ -448,7 +446,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             JUNGLE_EXPEDITION_UPGRADE_ID,
-            [PLANTATION_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, PLANTATION_UPGRADE_ID],
             16,
         )).toBe(true);
     });
@@ -461,7 +459,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             TROPICAL_DEVELOPMENT_UPGRADE_ID,
-            [JUNGLE_EXPEDITION_UPGRADE_ID],
+            [MODERN_AGE_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID],
             25,
         )).toBe(true);
     });
@@ -479,7 +477,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             OCEANIC_ROUTES_UPGRADE_ID,
-            [MARITIME_TRADE_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID],
+            [MODERN_AGE_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID],
             21,
         )).toBe(true);
     });
@@ -492,7 +490,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             SHIPBUILDING_UPGRADE_ID,
-            [FISHERIES_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, FISHERIES_UPGRADE_ID],
             15,
         )).toBe(true);
     });
@@ -518,7 +516,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             DESERT_STORAGE_UPGRADE_ID,
-            [DRY_STORAGE_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID],
             12,
         )).toBe(true);
     });
@@ -531,7 +529,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             CARAVANSERAI_UPGRADE_ID,
-            [DESERT_STORAGE_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID],
             17,
         )).toBe(true);
     });
@@ -544,7 +542,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             OASIS_RECOVERY_UPGRADE_ID,
-            [CARAVANSERAI_UPGRADE_ID],
+            [MODERN_AGE_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID],
             22,
         )).toBe(true);
     });
