@@ -84,7 +84,7 @@ function buildCenteredTierRow(...upgradeIds: number[]): (number | null)[] {
 }
 
 const TIERS: { level: number; ids: (number | null)[] }[] = [
-    ...KNOWLEDGE_UPGRADE_TIER_ROWS.map((tier) => ({
+    ...KNOWLEDGE_UPGRADE_TIER_ROWS.filter((tier) => tier.level >= 1).map((tier) => ({
         level: tier.level,
         ids: buildCenteredTierRow(...tier.ids),
     })),

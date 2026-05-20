@@ -159,6 +159,7 @@ const SymbolSelection = () => {
         symbolChoices,
         gold,
         rerollsThisTurn,
+        freeSelectionRerolls,
         level,
         selectSymbol,
         selectEvent,
@@ -190,7 +191,9 @@ const SymbolSelection = () => {
     const rerollCost = getRerollCost(level, hasLydia ? 0.5 : 1);
     const maxRerolls = hasLydia ? 3 : Infinity;
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
-    const canReroll = gold >= rerollCost && (rerollsLeft === null || rerollsLeft > 0);
+    const hasFreeReroll = (freeSelectionRerolls ?? 0) > 0;
+    const visibleRerollCost = hasFreeReroll ? 0 : rerollCost;
+    const canReroll = (hasFreeReroll || gold >= rerollCost) && (rerollsLeft === null || rerollsLeft > 0);
 
     const hideRerollFromRelicSource =
         symbolSelectionRelicSourceId === RELIC_ANCIENT_DEBRIS ||
@@ -275,7 +278,7 @@ const SymbolSelection = () => {
                             >
                                 <span>{t('game.reroll', language)}</span>
                                 <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>
-                                <span style={{ color: '#fbbf24', fontWeight: '900' }}>{rerollCost}</span>
+                                <span style={{ color: '#fbbf24', fontWeight: '900' }}>{visibleRerollCost}</span>
                                 {rerollsLeft !== null && (
                                     <span style={{ marginLeft: '4px', opacity: 0.75, fontSize: '0.75em' }}>
                                         {rerollsLeft}/{maxRerolls}

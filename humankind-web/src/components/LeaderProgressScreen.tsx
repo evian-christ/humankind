@@ -228,6 +228,7 @@ export default function LeaderProgressScreen() {
             {LEADER_LIST.map((leader) => {
               const enabled = leader.enabled;
               const label = t(leader.nameKey, language);
+              const cardLabel = enabled ? label : t('leader.locked.desc', language);
               return (
                 <button
                   key={leader.id}
@@ -238,8 +239,12 @@ export default function LeaderProgressScreen() {
                   ]
                     .filter(Boolean)
                     .join(' ')}
-                  aria-label={label}
-                  onClick={() => setSelectedLeaderId(leader.id)}
+                  aria-label={cardLabel}
+                  aria-disabled={!enabled}
+                  onClick={() => {
+                    if (!enabled) return;
+                    setSelectedLeaderId(leader.id);
+                  }}
                 >
                   <span className="leader-progress-portrait" aria-hidden="true">
                     <LeaderProgressPortrait
@@ -249,11 +254,13 @@ export default function LeaderProgressScreen() {
                     />
                   </span>
                   <span className="leader-progress-card-shade" aria-hidden="true" />
-                  <span className="leader-progress-info">
-                    <span className="leader-progress-name">
-                      {label}
+                  {enabled ? (
+                    <span className="leader-progress-info">
+                      <span className="leader-progress-name">
+                        {label}
+                      </span>
                     </span>
-                  </span>
+                  ) : null}
                 </button>
               );
             })}
