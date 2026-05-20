@@ -134,6 +134,8 @@ export const AGI_PROJECT_UPGRADE_ID = 63;
 export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
 export const PUBLIC_ADMINISTRATION_UPGRADE_ID = 66;
 export const MASS_MEDIA_UPGRADE_ID = 67;
+export const ELECTION_SYSTEM_UPGRADE_ID = 68;
+export const GLOBALIZATION_UPGRADE_ID = 69;
 export const TERRITORIAL_REORG_UPGRADE_ID = -1;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
@@ -517,6 +519,20 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.MODERN,
         description: 'In the selection phase, each card is 2x as likely to become an event.',
         sprite: '067.png',
+    },
+    [ELECTION_SYSTEM_UPGRADE_ID]: {
+        id: ELECTION_SYSTEM_UPGRADE_ID,
+        name: 'Election System',
+        type: SymbolType.MODERN,
+        description: 'The first reroll in each selection phase is free.',
+        sprite: '068.png',
+    },
+    [GLOBALIZATION_UPGRADE_ID]: {
+        id: GLOBALIZATION_UPGRADE_ID,
+        name: 'Globalization',
+        type: SymbolType.MODERN,
+        description: 'Gain 2 Ancient Tribe Joins.',
+        sprite: '069.png',
     },
     [STATE_LABOR_UPGRADE_ID]: {
         id: STATE_LABOR_UPGRADE_ID,

@@ -15,7 +15,9 @@ export type LeaderId =
   | 'locked_7'
   | 'locked_8'
   | 'locked_9'
-  | 'locked_10';
+  | 'locked_10'
+  | 'locked_11'
+  | 'locked_12';
 
 export interface LeaderDefinition {
   id: LeaderId;
@@ -239,9 +241,35 @@ export const LEADERS: Record<LeaderId, LeaderDefinition> = {
     startingGold: 0,
     startingFood: 0,
   },
+  locked_11: {
+    id: 'locked_11',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
+  locked_12: {
+    id: 'locked_12',
+    enabled: false,
+    nameKey: 'leader.locked.name',
+    descriptionKey: 'leader.locked.desc',
+    mainEffectNameKey: 'leader.locked.main.name',
+    mainEffectDescKey: 'leader.locked.main.desc',
+    subEffectNameKey: 'leader.locked.sub.name',
+    subEffectDescKey: 'leader.locked.sub.desc',
+    startingRelicIds: [],
+    startingGold: 0,
+    startingFood: 0,
+  },
 };
 
-/** UI 표시 순서(10칸) */
+/** UI 표시 순서(12칸) */
 export const LEADER_LIST: LeaderDefinition[] = [
   LEADERS.ramesses,
   LEADERS.shihuang,
@@ -253,6 +281,8 @@ export const LEADER_LIST: LeaderDefinition[] = [
   LEADERS.locked_8,
   LEADERS.locked_9,
   LEADERS.locked_10,
+  LEADERS.locked_11,
+  LEADERS.locked_12,
 ];
 
 export const LEADER_UNLOCKS: Partial<Record<LeaderId, LeaderUnlock[]>> = {
