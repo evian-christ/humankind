@@ -27,6 +27,7 @@ import { LEADERS, MAX_LEADER_LEVEL, getLeaderXpRequiredForLevel, leaderHasPortra
 import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 import { audioManager } from './audio/audioManager';
+import type { AudioPlaybackHandle } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
 import { boardCellLocalRect, computeBoardPixelLayout } from './game/layout/boardPixelLayout';
 
@@ -82,6 +83,60 @@ const ERA_NAME_KEYS: Record<number, string> = {
   3: 'era.modern',
   4: 'era.future',
 };
+const ANCIENT_ERA_BGM_CUE_IDS = [
+  'ancient_01',
+  'ancient_02',
+  'ancient_03',
+  'ancient_04',
+  'ancient_05',
+  'ancient_06',
+  'ancient_07',
+] as const;
+const MEDIEVAL_ERA_BGM_CUE_IDS = [
+  'medieval_01',
+  'medieval_02',
+  'medieval_03',
+  'medieval_04',
+  'medieval_05',
+  'medieval_06',
+] as const;
+const MODERN_ERA_BGM_CUE_IDS = [
+  'modern_01',
+  'modern_02',
+  'modern_03',
+  'modern_04',
+  'modern_05',
+] as const;
+const GAMEPLAY_BGM_PLAYLISTS = [
+  {
+    id: 'ancient_era',
+    minLevel: 0,
+    maxLevel: 9,
+    cueIds: ANCIENT_ERA_BGM_CUE_IDS,
+  },
+  {
+    id: 'medieval_era',
+    minLevel: 10,
+    maxLevel: 19,
+    cueIds: MEDIEVAL_ERA_BGM_CUE_IDS,
+  },
+  {
+    id: 'modern_era',
+    minLevel: 20,
+    maxLevel: 30,
+    cueIds: MODERN_ERA_BGM_CUE_IDS,
+  },
+] as const;
+const GAMEPLAY_BGM_FADE_OUT_MS = 2500;
+const GAMEPLAY_BGM_FADE_IN_MS = 1800;
+const GAMEPLAY_BGM_TRANSITION_DELAY_MS = GAMEPLAY_BGM_FADE_OUT_MS + 150;
+const GAME_OVER_AUDIO_FADE_OUT_MS = 1000;
+const GAME_OVER_MUSIC_FADE_IN_MS = 4200;
+const XP_FILL_FADE_OUT_MS = 120;
+
+function getGameplayBgmPlaylist(level: number) {
+  return GAMEPLAY_BGM_PLAYLISTS.find((playlist) => level >= playlist.minLevel && level <= playlist.maxLevel) ?? null;
+}
 
 const LEADER_ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -107,45 +162,127 @@ function EndgameLeaderProgressReveal({
   const animatedXpRequired = getLeaderXpRequiredForLevel(animatedLevel);
   const visibleRatio = Math.min(1, animatedXp / animatedXpRequired);
 
-  const resolveAnimatedProgress = useCallback((totalGained: number) => {
-    let level = award.previous.level;
-    let xp = award.previous.xp + totalGained;
+  const xpTimeline = useMemo(() => {
+    const cumulativeXpAt = (targetLevel: number, xp: number) => {
+      let total = 0;
+      for (let level = 1; level < targetLevel; level += 1) {
+        total += getLeaderXpRequiredForLevel(level);
+      }
+      return total + xp;
+    };
 
-    while (level < MAX_LEADER_LEVEL) {
-      const required = getLeaderXpRequiredForLevel(level);
-      if (xp < required) break;
-      xp -= required;
-      level += 1;
+    const progressAtTotal = (totalXp: number) => {
+      let level = 1;
+      let remainingXp = Math.max(0, totalXp);
+
+      while (level < MAX_LEADER_LEVEL) {
+        const required = getLeaderXpRequiredForLevel(level);
+        if (remainingXp < required) {
+          return { level, xp: Math.round(remainingXp) };
+        }
+        remainingXp -= required;
+        level += 1;
+      }
+
+      return {
+        level: MAX_LEADER_LEVEL,
+        xp: Math.min(Math.round(remainingXp), getLeaderXpRequiredForLevel(MAX_LEADER_LEVEL)),
+      };
+    };
+
+    const startTotal = cumulativeXpAt(award.previous.level, award.previous.xp);
+    const endTotal = Math.max(startTotal, cumulativeXpAt(award.next.level, award.next.xp));
+    const levelUpThresholds: number[] = [];
+
+    for (let level = award.previous.level; level < award.next.level; level += 1) {
+      levelUpThresholds.push(cumulativeXpAt(level + 1, 0));
     }
 
-    const required = getLeaderXpRequiredForLevel(level);
     return {
-      level,
-      xp: level >= MAX_LEADER_LEVEL ? Math.min(xp, required) : xp,
+      startTotal,
+      endTotal,
+      levelUpThresholds,
+      progressAtTotal,
     };
-  }, [award.previous.level, award.previous.xp]);
+  }, [award.next.level, award.next.xp, award.previous.level, award.previous.xp]);
 
   useEffect(() => {
     let frame = 0;
-    const durationMs = 1200;
-    const startMs = performance.now();
+    let cancelled = false;
+    let xpFillHandle: AudioPlaybackHandle | null = null;
+    let nextLevelUpIndex = 0;
 
-    const tick = (now: number) => {
-      const raw = Math.min(1, (now - startMs) / durationMs);
-      const eased = 1 - Math.pow(1 - raw, 3);
-      const progress = resolveAnimatedProgress(Math.round(award.xpAwarded * eased));
-      setAnimatedLevel(progress.level);
-      setAnimatedXp(progress.xp);
-      if (raw < 1) {
-        frame = requestAnimationFrame(tick);
+    const stopXpFill = () => {
+      xpFillHandle?.stop({ fadeOutMs: XP_FILL_FADE_OUT_MS });
+      xpFillHandle = null;
+    };
+
+    const startXpFill = async () => {
+      const handle = await audioManager.play('xp_fill', {
+        loop: true,
+        playbackRate: 1,
+      });
+
+      if (cancelled) {
+        handle?.stop({ fadeOutMs: XP_FILL_FADE_OUT_MS });
+        return;
       }
+
+      xpFillHandle = handle;
     };
 
     setAnimatedLevel(award.previous.level);
     setAnimatedXp(award.previous.xp);
+
+    const distance = xpTimeline.endTotal - xpTimeline.startTotal;
+    if (distance <= 0) {
+      setAnimatedLevel(award.next.level);
+      setAnimatedXp(award.next.xp);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const durationMs = Math.max(1100, Math.min(3600, 850 + distance * 8));
+    const startMs = performance.now();
+
+    void startXpFill();
+
+    const tick = (now: number) => {
+      if (cancelled) return;
+
+      const raw = Math.min(1, (now - startMs) / durationMs);
+      const currentTotal = xpTimeline.startTotal + distance * raw;
+      const nextProgress = xpTimeline.progressAtTotal(currentTotal);
+
+      setAnimatedLevel(nextProgress.level);
+      setAnimatedXp(nextProgress.xp);
+
+      while (
+        nextLevelUpIndex < xpTimeline.levelUpThresholds.length
+        && currentTotal >= xpTimeline.levelUpThresholds[nextLevelUpIndex]!
+      ) {
+        nextLevelUpIndex += 1;
+        void audioManager.play('level_up', { volume: 0.25 });
+      }
+
+      if (raw < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        setAnimatedLevel(award.next.level);
+        setAnimatedXp(award.next.xp);
+        stopXpFill();
+      }
+    };
+
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [award.previous.level, award.previous.xp, award.xpAwarded, resolveAnimatedProgress]);
+
+    return () => {
+      cancelled = true;
+      stopXpFill();
+      cancelAnimationFrame(frame);
+    };
+  }, [award.next.level, award.next.xp, award.previous.level, award.previous.xp, xpTimeline]);
 
   return (
     <section className="leader-detail-hero endgame-progress-reveal">
@@ -171,7 +308,7 @@ function EndgameLeaderProgressReveal({
           </div>
         </div>
         <div className="leader-detail-xp endgame-progress-xp">
-          <div className="endgame-xp-gain" style={{ left: `${Math.max(8, visibleRatio * 100)}%` }}>
+          <div className="endgame-xp-gain">
             +{award.xpAwarded}
           </div>
           <div className="leader-detail-xp-head">
@@ -603,6 +740,7 @@ function App() {
     levelUpResearchPoints,
     initializeGame,
     lastLeaderProgressAward,
+    level,
   } = useGameStore();
   const resetRelics = useRelicStore((s) => s.resetRelics);
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
@@ -621,10 +759,15 @@ function App() {
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
   const [tutorialDialogStep, setTutorialDialogStep] = useState(0);
   const [showGameOverProgress, setShowGameOverProgress] = useState(false);
+  const [showVictoryProgress, setShowVictoryProgress] = useState(false);
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
   const gameAreaRef = useRef<HTMLDivElement>(null);
+  const activeGameplayBgmPlaylistIdRef = useRef<string | null>(null);
+  const gameplayBgmTransitionTimerRef = useRef<number | null>(null);
+  const gameOverMusicTimerRef = useRef<number | null>(null);
+  const wasInGameOverPhaseRef = useRef(false);
   const relicHudTooltip = useViewportClampedBottomHudTooltip();
   const knowledgeHudTooltip = useViewportClampedBottomHudTooltip();
   const ownedSymbolsHudTooltip = useViewportClampedBottomHudTooltip();
@@ -637,6 +780,7 @@ function App() {
     audioManager.registerCue('symbol_interact', DEFAULT_AUDIO_CUES.symbol_interact);
     audioManager.registerCue('attack_melee', DEFAULT_AUDIO_CUES.attack_melee);
     audioManager.registerCue('attack_ranged', DEFAULT_AUDIO_CUES.attack_ranged);
+    audioManager.registerCue('enemy_invade', DEFAULT_AUDIO_CUES.enemy_invade);
     audioManager.registerCue('symbol_choice_chose', DEFAULT_AUDIO_CUES.symbol_choice_chose);
     audioManager.registerCue('symbol_choice_reroll', DEFAULT_AUDIO_CUES.symbol_choice_reroll);
     audioManager.registerCue('resource_food', DEFAULT_AUDIO_CUES.resource_food);
@@ -644,7 +788,137 @@ function App() {
     audioManager.registerCue('resource_knowledge', DEFAULT_AUDIO_CUES.resource_knowledge);
     audioManager.registerCue('knowledge_upgraded_1', DEFAULT_AUDIO_CUES.knowledge_upgraded_1);
     audioManager.registerCue('knowledge_upgraded_2', DEFAULT_AUDIO_CUES.knowledge_upgraded_2);
+    audioManager.registerCue('level_up', DEFAULT_AUDIO_CUES.level_up);
+    audioManager.registerCue('xp_fill', DEFAULT_AUDIO_CUES.xp_fill);
     audioManager.registerCue('selection_open', DEFAULT_AUDIO_CUES.selection_open);
+    audioManager.registerCue('victory', DEFAULT_AUDIO_CUES.victory);
+    audioManager.registerCue('main_theme', DEFAULT_AUDIO_CUES.main_theme);
+    audioManager.registerCue('board_ambient', DEFAULT_AUDIO_CUES.board_ambient);
+    audioManager.registerCue('gameover_music', DEFAULT_AUDIO_CUES.gameover_music);
+    audioManager.registerCue('victory_music', DEFAULT_AUDIO_CUES.victory_music);
+    for (const cueId of [
+      ...ANCIENT_ERA_BGM_CUE_IDS,
+      ...MEDIEVAL_ERA_BGM_CUE_IDS,
+      ...MODERN_ERA_BGM_CUE_IDS,
+    ]) {
+      audioManager.registerCue(cueId, DEFAULT_AUDIO_CUES[cueId]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (preGameScreen !== null) {
+      if (gameplayBgmTransitionTimerRef.current !== null) {
+        window.clearTimeout(gameplayBgmTransitionTimerRef.current);
+        gameplayBgmTransitionTimerRef.current = null;
+      }
+      activeGameplayBgmPlaylistIdRef.current = null;
+      audioManager.stopEffectLoop('board_ambient', { fadeOutMs: 180 });
+      audioManager.stopMusicPlaylist({ fadeOutMs: 180 });
+      void audioManager.playMusic('main_theme', { fadeInMs: 3000 });
+      return;
+    }
+
+    audioManager.stopMusic({ fadeOutMs: 180 });
+    void audioManager.playEffectLoop('board_ambient', { fadeInMs: 250 });
+  }, [preGameScreen]);
+
+  useEffect(() => {
+    const isTerminalPhase = phase === 'game_over' || phase === 'victory';
+    const nextPlaylist = isInGame && !isTerminalPhase ? getGameplayBgmPlaylist(level) : null;
+
+    if (!nextPlaylist) {
+      if (gameplayBgmTransitionTimerRef.current !== null) {
+        window.clearTimeout(gameplayBgmTransitionTimerRef.current);
+        gameplayBgmTransitionTimerRef.current = null;
+      }
+      activeGameplayBgmPlaylistIdRef.current = null;
+      if (isTerminalPhase) return;
+      audioManager.stopMusicPlaylist({ fadeOutMs: GAMEPLAY_BGM_FADE_OUT_MS });
+      return;
+    }
+
+    if (activeGameplayBgmPlaylistIdRef.current === nextPlaylist.id) return;
+
+    if (gameplayBgmTransitionTimerRef.current !== null) {
+      window.clearTimeout(gameplayBgmTransitionTimerRef.current);
+      gameplayBgmTransitionTimerRef.current = null;
+    }
+
+    const hasActiveGameplayPlaylist = activeGameplayBgmPlaylistIdRef.current !== null;
+    activeGameplayBgmPlaylistIdRef.current = nextPlaylist.id;
+
+    const playNextPlaylist = () => {
+      void audioManager.playMusicPlaylist(nextPlaylist.id, [...nextPlaylist.cueIds], {
+        fadeInMs: GAMEPLAY_BGM_FADE_IN_MS,
+        minGapMs: 2000,
+        maxGapMs: 3000,
+      });
+    };
+
+    if (!hasActiveGameplayPlaylist) {
+      playNextPlaylist();
+      return;
+    }
+
+    audioManager.stopMusicPlaylist({ fadeOutMs: GAMEPLAY_BGM_FADE_OUT_MS });
+    gameplayBgmTransitionTimerRef.current = window.setTimeout(() => {
+      gameplayBgmTransitionTimerRef.current = null;
+      playNextPlaylist();
+    }, GAMEPLAY_BGM_TRANSITION_DELAY_MS);
+  }, [isInGame, level, phase]);
+
+  useEffect(() => {
+    if (!isInGame || phase !== 'game_over') return;
+    wasInGameOverPhaseRef.current = true;
+
+    if (gameplayBgmTransitionTimerRef.current !== null) {
+      window.clearTimeout(gameplayBgmTransitionTimerRef.current);
+      gameplayBgmTransitionTimerRef.current = null;
+    }
+
+    activeGameplayBgmPlaylistIdRef.current = null;
+    audioManager.stopMusicPlaylist({ fadeOutMs: GAME_OVER_AUDIO_FADE_OUT_MS });
+    audioManager.stopEffectLoop('board_ambient', { fadeOutMs: GAME_OVER_AUDIO_FADE_OUT_MS });
+    if (gameOverMusicTimerRef.current !== null) {
+      window.clearTimeout(gameOverMusicTimerRef.current);
+      gameOverMusicTimerRef.current = null;
+    }
+    void audioManager.unlock().then(() => {
+      void audioManager.playMusic('gameover_music', { fadeInMs: GAME_OVER_MUSIC_FADE_IN_MS });
+    });
+  }, [isInGame, phase]);
+
+  useEffect(() => {
+    if (!isInGame || phase !== 'victory') return;
+
+    if (gameplayBgmTransitionTimerRef.current !== null) {
+      window.clearTimeout(gameplayBgmTransitionTimerRef.current);
+      gameplayBgmTransitionTimerRef.current = null;
+    }
+
+    activeGameplayBgmPlaylistIdRef.current = null;
+    audioManager.stopMusicPlaylist({ fadeOutMs: GAME_OVER_AUDIO_FADE_OUT_MS });
+    audioManager.stopEffectLoop('board_ambient', { fadeOutMs: GAME_OVER_AUDIO_FADE_OUT_MS });
+    if (gameOverMusicTimerRef.current !== null) {
+      window.clearTimeout(gameOverMusicTimerRef.current);
+      gameOverMusicTimerRef.current = null;
+    }
+    void audioManager.unlock().then(() => {
+      void audioManager.playMusic('victory_music', { fadeInMs: GAME_OVER_MUSIC_FADE_IN_MS });
+    });
+  }, [isInGame, phase]);
+
+  useEffect(() => {
+    return () => {
+      if (gameplayBgmTransitionTimerRef.current !== null) {
+        window.clearTimeout(gameplayBgmTransitionTimerRef.current);
+        gameplayBgmTransitionTimerRef.current = null;
+      }
+      if (gameOverMusicTimerRef.current !== null) {
+        window.clearTimeout(gameOverMusicTimerRef.current);
+        gameOverMusicTimerRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -679,6 +953,7 @@ function App() {
 
     const handlePointerDown = (event: PointerEvent) => {
       if (!event.isPrimary || event.button !== 0) return;
+      void audioManager.unlock();
       const target = event.target instanceof Element ? event.target : null;
       const control = target?.closest(selector) ?? null;
       if (!control || !root.contains(control)) return;
@@ -688,6 +963,7 @@ function App() {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      void audioManager.unlock();
       if (event.code !== 'Enter' && event.code !== 'Space') return;
       const target = event.target instanceof Element ? event.target : null;
       const control = target?.closest(selector) ?? null;
@@ -844,10 +1120,49 @@ function App() {
     returnToIntro();
   }, [initializeGame, resetRelics, returnToIntro]);
 
-  useEffect(() => {
-    if (phase !== 'game_over') {
-      setShowGameOverProgress(false);
+  const fadeOutGameOverMusic = useCallback(() => {
+    if (gameOverMusicTimerRef.current !== null) {
+      window.clearTimeout(gameOverMusicTimerRef.current);
+      gameOverMusicTimerRef.current = null;
     }
+    audioManager.stopMusic({ fadeOutMs: GAME_OVER_AUDIO_FADE_OUT_MS });
+  }, []);
+
+  const handleGameOverContinue = useCallback(() => {
+    fadeOutGameOverMusic();
+
+    if (!lastLeaderProgressAward) {
+      window.setTimeout(handleGameOverMainMenu, GAME_OVER_AUDIO_FADE_OUT_MS);
+      return;
+    }
+
+    setShowGameOverProgress(true);
+  }, [fadeOutGameOverMusic, handleGameOverMainMenu, lastLeaderProgressAward]);
+
+  const handleVictoryContinue = useCallback(() => {
+    fadeOutGameOverMusic();
+
+    if (!lastLeaderProgressAward) {
+      window.setTimeout(handleGameOverMainMenu, GAME_OVER_AUDIO_FADE_OUT_MS);
+      return;
+    }
+
+    setShowVictoryProgress(true);
+  }, [fadeOutGameOverMusic, handleGameOverMainMenu, lastLeaderProgressAward]);
+
+  useEffect(() => {
+    if (phase === 'game_over') return;
+
+    setShowGameOverProgress(false);
+    if (!wasInGameOverPhaseRef.current) return;
+
+    wasInGameOverPhaseRef.current = false;
+    fadeOutGameOverMusic();
+  }, [fadeOutGameOverMusic, phase]);
+
+  useEffect(() => {
+    if (phase === 'victory') return;
+    setShowVictoryProgress(false);
   }, [phase]);
 
   // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
@@ -886,7 +1201,6 @@ function App() {
   const suppressBoardTooltips = !boardIsForegroundForTooltips || fullscreenModalBlocksBoardTooltips;
 
   const knowledge = useGameStore((s) => s.knowledge);
-  const level = useGameStore((s) => s.level);
   const food = useGameStore((s) => s.food);
   const gold = useGameStore((s) => s.gold);
   const era = useGameStore((s) => s.era);
@@ -1215,12 +1529,20 @@ function App() {
 
       {/* ===== GAME OVER OVERLAY ===== */}
       {isInGame && phase === 'game_over' && (
-        <div className="endgame-overlay">
-          <div className="endgame-panel">
+        <div className="endgame-overlay endgame-overlay--defeat">
+          <div className={`endgame-panel ${showGameOverProgress && lastLeaderProgressAward ? '' : 'endgame-panel--defeat-intro'}`}>
             {showGameOverProgress && lastLeaderProgressAward ? (
               <>
                 <EndgameLeaderProgressReveal award={lastLeaderProgressAward} language={language} />
-                <button className="endgame-btn" onClick={handleGameOverMainMenu}>{t('pause.mainMenu', language)}</button>
+                <button
+                  className="endgame-btn"
+                  onClick={() => {
+                    fadeOutGameOverMusic();
+                    handleGameOverMainMenu();
+                  }}
+                >
+                  {t('pause.mainMenu', language)}
+                </button>
               </>
             ) : (
               <>
@@ -1228,13 +1550,7 @@ function App() {
                 <div className="endgame-subtitle">{t('game.turn', language)} {turn} - {t('game.notEnoughFood', language)}</div>
               <button
                 className="endgame-btn"
-                onClick={() => {
-                  if (!lastLeaderProgressAward) {
-                    handleGameOverMainMenu();
-                    return;
-                  }
-                  setShowGameOverProgress(true);
-                }}
+                onClick={handleGameOverContinue}
               >
                 {language === 'ko' ? '계속 >>' : 'Continue >>'}
               </button>
@@ -1245,7 +1561,7 @@ function App() {
       )}
 
       {/* ===== VICTORY OVERLAY ===== */}
-      {isInGame && phase === 'victory' && (
+      {isInGame && phase === 'victory' && false && (
         <div className="endgame-overlay">
           <div className="endgame-panel">
             <div className="endgame-title endgame-victory">{t('game.victory', language)}</div>
@@ -1253,16 +1569,45 @@ function App() {
             {lastLeaderProgressAward ? (
               <div className="endgame-leader-xp">
                 <span>{language === 'ko' ? '지도자 경험치' : 'Leader XP'}</span>
-                <strong>+{lastLeaderProgressAward.xpAwarded}</strong>
+                <strong>+{lastLeaderProgressAward?.xpAwarded}</strong>
                 <small>
-                  {t('leaderProgress.currentLevel', language).replace('{level}', String(lastLeaderProgressAward.next.level))}
-                  {lastLeaderProgressAward.levelsGained > 0
-                    ? ` (+${lastLeaderProgressAward.levelsGained})`
+                  {t('leaderProgress.currentLevel', language).replace('{level}', String(lastLeaderProgressAward?.next.level ?? 1))}
+                  {(lastLeaderProgressAward?.levelsGained ?? 0) > 0
+                    ? ` (+${lastLeaderProgressAward?.levelsGained})`
                     : ''}
                 </small>
               </div>
             ) : null}
             <button className="endgame-btn" onClick={returnToLeaderSelect}>{t('game.restart', language)}</button>
+          </div>
+        </div>
+      )}
+
+      {isInGame && phase === 'victory' && (
+        <div className="endgame-overlay endgame-overlay--victory">
+          <div className={`endgame-panel ${showVictoryProgress && lastLeaderProgressAward ? '' : 'endgame-panel--victory-intro'}`}>
+            {showVictoryProgress && lastLeaderProgressAward ? (
+              <>
+                <EndgameLeaderProgressReveal award={lastLeaderProgressAward} language={language} />
+                <button
+                  className="endgame-btn"
+                  onClick={handleGameOverMainMenu}
+                >
+                  {t('pause.mainMenu', language)}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="endgame-title endgame-victory">{t('game.victory', language)}</div>
+                <div className="endgame-subtitle">{t('game.turn', language)} {turn}</div>
+                <button
+                  className="endgame-btn endgame-btn--victory"
+                  onClick={handleVictoryContinue}
+                >
+                  {language === 'ko' ? '\uacc4\uc18d >>' : 'Continue >>'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

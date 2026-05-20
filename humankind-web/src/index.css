@@ -2136,6 +2136,7 @@ button.spin-btn:disabled:active {
 
 .main-menu-play-options--open {
   max-height: 240px;
+  overflow: visible;
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
@@ -3477,6 +3478,15 @@ button.spin-btn:disabled:active {
 
 .leader-progress-card--locked {
   filter: grayscale(1) brightness(0.52);
+  cursor: default;
+}
+
+.leader-progress-card--locked .leader-progress-card-shade {
+  display: none;
+}
+
+.leader-progress-card--locked .leader-progress-portrait {
+  padding: 0;
 }
 
 .leader-progress-portrait {
@@ -3514,7 +3524,7 @@ button.spin-btn:disabled:active {
   border: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.56);
-  font-size: clamp(54px, 8vw, 108px);
+  font-size: clamp(72px, 9vw, 132px);
   font-weight: 900;
   line-height: 1;
 }
@@ -4372,11 +4382,60 @@ button.spin-btn:disabled:active {
   z-index: 600;
 }
 
+.endgame-overlay--defeat {
+  background: #000;
+  animation: endgame-defeat-fade-to-black 1.8s ease-out both;
+}
+
+.endgame-overlay--victory {
+  background: #000;
+  animation: endgame-defeat-fade-to-black 1.8s ease-out both;
+}
+
 .endgame-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
+}
+
+.endgame-panel--defeat-intro {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  animation: endgame-defeat-text-in 0.8s ease-out 1.8s forwards;
+}
+
+.endgame-panel--victory-intro {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  animation: endgame-defeat-text-in 0.8s ease-out 1.8s forwards;
+}
+
+@keyframes endgame-defeat-fade-to-black {
+  from {
+    background: rgba(0, 0, 0, 0);
+  }
+  to {
+    background: #000;
+  }
+}
+
+@keyframes endgame-defeat-text-in {
+  0% {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(12px);
+  }
+  1% {
+    visibility: visible;
+  }
+  100% {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
 }
 
 .endgame-title {
@@ -4424,7 +4483,7 @@ button.spin-btn:disabled:active {
 .endgame-xp-gain {
   position: absolute;
   top: 0;
-  transform: translateX(-50%);
+  right: 0;
   color: #fff1a8;
   font-family: 'Mulmaru', sans-serif;
   font-size: 24px;
@@ -4434,7 +4493,6 @@ button.spin-btn:disabled:active {
   text-shadow:
     0 2px 0 #000,
     0 0 16px rgba(250, 204, 21, 0.86);
-  transition: left 80ms linear;
 }
 
 .endgame-level-gained {
@@ -5167,6 +5225,7 @@ button.relic-shop-btn--knowledge {
 
 /* ===== SETTINGS PANEL ===== */
 .settings-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -5362,6 +5421,104 @@ button.relic-shop-btn--knowledge {
   background: rgba(185, 28, 28, 0.34);
   border-color: #fca5a5;
   outline: none;
+}
+
+.settings-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+.settings-confirm-panel {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 22px;
+  padding: 32px 36px 30px;
+  box-sizing: border-box;
+  background: rgba(18, 18, 18, 0.96);
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.settings-confirm-title {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 34px;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.settings-confirm-message {
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 21px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.76);
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.settings-confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.settings-confirm-btn {
+  min-width: 132px;
+  padding: 10px 20px;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 23px;
+  letter-spacing: 1px;
+  border-radius: 6px;
+  cursor: var(--app-cursor-pointer);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.settings-confirm-btn:hover,
+.settings-confirm-btn:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.settings-confirm-btn--cancel {
+  color: #ddd;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #555;
+}
+
+.settings-confirm-btn--cancel:hover,
+.settings-confirm-btn--cancel:focus-visible {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #aaa;
+}
+
+.settings-confirm-btn--danger {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.26);
+  border: 2px solid rgba(248, 113, 113, 0.68);
+}
+
+.settings-confirm-btn--danger:hover,
+.settings-confirm-btn--danger:focus-visible {
+  color: #ffffff;
+  background: rgba(185, 28, 28, 0.38);
+  border-color: #fca5a5;
 }
 
 /* Dropdown. */

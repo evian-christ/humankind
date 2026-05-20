@@ -6,7 +6,7 @@ export type GameEventReward = Partial<Record<'food' | 'gold' | 'knowledge', numb
 export type EraScaledTuple = readonly [number, number, number];
 
 export const CAPITAL_RELOCATION_DESTROY_COUNT = 2;
-export const CAPITAL_RELOCATION_MIN_SYMBOLS = 5;
+export const CAPITAL_RELOCATION_MIN_SYMBOLS = 10;
 export const CAPITAL_RELOCATION_FOOD_REWARD = 25;
 export const CAPITAL_RELOCATION_KNOWLEDGE_REWARD = 15;
 export const BORDER_RAID_REWARD: EraScaledTuple = [10, 20, 40];

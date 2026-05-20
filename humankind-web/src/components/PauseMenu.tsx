@@ -39,6 +39,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     const [screen, setScreen] = useState<'main' | 'settings'>(initialScreen);
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     const {
         resolutionWidth,
         resolutionHeight,
@@ -48,6 +49,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         masterVolume,
         musicVolume,
         effectVolume,
+        ambientVolume,
         developerMode,
         setResolution,
         setLanguage,
@@ -56,6 +58,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         setMasterVolume,
         setMusicVolume,
         setEffectVolume,
+        setAmbientVolume,
         setDeveloperMode,
     } = useSettingsStore();
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
@@ -64,7 +67,10 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     const resetRelics = useRelicStore((s) => s.resetRelics);
 
     useEffect(() => {
-        if (isOpen) setScreen(initialScreen);
+        if (isOpen) {
+            setScreen(initialScreen);
+            setIsResetConfirmOpen(false);
+        }
     }, [initialScreen, isOpen]);
 
     useEffect(() => {
@@ -147,6 +153,10 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     };
 
     const handleSettingsBack = () => {
+        if (isResetConfirmOpen) {
+            setIsResetConfirmOpen(false);
+            return;
+        }
         if (initialScreen === 'settings') {
             onClose();
             return;
@@ -164,14 +174,16 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     };
 
     const handleResetGameData = () => {
-        const confirmed = window.confirm(t('settings.resetProgress.confirm', language));
-        if (!confirmed) return;
+        setIsResetConfirmOpen(true);
+    };
 
+    const handleConfirmResetGameData = () => {
         clearSavedGame();
         clearLeaderProgress();
         initializeGame();
         resetRelics();
         resetPreGameProgress();
+        setIsResetConfirmOpen(false);
         setScreen('main');
         onClose();
     };
@@ -383,6 +395,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                             <>
                                 {renderVolumeRow('settings.masterVolume', masterVolume, setMasterVolume)}
                                 {renderVolumeRow('settings.musicVolume', musicVolume, setMusicVolume)}
+                                {renderVolumeRow('settings.ambientVolume', ambientVolume, setAmbientVolume)}
                                 {renderVolumeRow('settings.effectVolume', effectVolume, setEffectVolume)}
                             </>
                         )}
@@ -391,6 +404,33 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                     <button className="settings-back-btn" onClick={handleSettingsBack}>
                         {t('settings.back', language)}
                     </button>
+
+                    {isResetConfirmOpen && (
+                        <div className="settings-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="settings-reset-confirm-title">
+                            <div className="settings-confirm-panel">
+                                <div id="settings-reset-confirm-title" className="settings-confirm-title">
+                                    {t('settings.resetProgress.confirmTitle', language)}
+                                </div>
+                                <div className="settings-confirm-message">
+                                    {t('settings.resetProgress.confirm', language)}
+                                </div>
+                                <div className="settings-confirm-actions">
+                                    <button
+                                        className="settings-confirm-btn settings-confirm-btn--cancel"
+                                        onClick={() => setIsResetConfirmOpen(false)}
+                                    >
+                                        {t('settings.resetProgress.cancel', language)}
+                                    </button>
+                                    <button
+                                        className="settings-confirm-btn settings-confirm-btn--danger"
+                                        onClick={handleConfirmResetGameData}
+                                    >
+                                        {t('settings.resetProgress.confirmButton', language)}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

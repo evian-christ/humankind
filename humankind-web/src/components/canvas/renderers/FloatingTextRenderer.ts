@@ -192,6 +192,11 @@ export class FloatingTextRenderer {
         const rowGap = 0;
         const threatFloatFontSize = Math.max(28, cellHeight * 0.24);
 
+        const hasBarbarianInvasion = state.pendingNewThreatFloats.some((threat) => threat.key === 'threat.barbarian_invasion');
+        if (hasBarbarianInvasion) {
+            void audioManager.play('enemy_invade');
+        }
+
         for (const { x, y, label } of state.pendingNewThreatFloats) {
             const cx = startX + gridOffsetX + x * (cellWidth + colGap) + cellWidth / 2;
             const baseY = startY + gridOffsetY + y * (cellHeight + rowGap) + cellHeight * 0.28;
