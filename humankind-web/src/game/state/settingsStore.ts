@@ -71,6 +71,7 @@ export interface SettingsState {
     masterVolume: number;
     musicVolume: number;
     effectVolume: number;
+    ambientVolume: number;
     developerMode: boolean;
 
     setResolution: (width: number, height: number) => void;
@@ -80,6 +81,7 @@ export interface SettingsState {
     setMasterVolume: (volume: number) => void;
     setMusicVolume: (volume: number) => void;
     setEffectVolume: (volume: number) => void;
+    setAmbientVolume: (volume: number) => void;
     setDeveloperMode: (enabled: boolean) => void;
 }
 
@@ -93,6 +95,7 @@ type PersistedSettings = Pick<
     | 'masterVolume'
     | 'musicVolume'
     | 'effectVolume'
+    | 'ambientVolume'
     | 'developerMode'
 >;
 
@@ -111,6 +114,7 @@ const defaultSettings: PersistedSettings = {
     masterVolume: 1,
     musicVolume: 1,
     effectVolume: 1,
+    ambientVolume: 1,
     developerMode: false,
 };
 
@@ -148,6 +152,7 @@ function loadSettings(): PersistedSettings {
             masterVolume: clampVolume(save.settings.masterVolume),
             musicVolume: clampVolume(save.settings.musicVolume),
             effectVolume: clampVolume(save.settings.effectVolume),
+            ambientVolume: clampVolume(save.settings.ambientVolume ?? defaultSettings.ambientVolume),
             developerMode: typeof save.settings.developerMode === 'boolean'
                 ? save.settings.developerMode
                 : defaultSettings.developerMode,
@@ -173,6 +178,7 @@ function saveSettings(state: PersistedSettings): void {
             masterVolume: state.masterVolume,
             musicVolume: state.musicVolume,
             effectVolume: state.effectVolume,
+            ambientVolume: state.ambientVolume,
             developerMode: state.developerMode,
         },
     };
@@ -236,6 +242,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             saveSettings(next);
             return { musicVolume: clamped };
         });
+        audioManager.setMusicVolume(clamped);
     },
 
     setEffectVolume: (volume) => {
@@ -246,6 +253,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             return { effectVolume: clamped };
         });
         audioManager.setEffectVolume(clamped);
+    },
+
+    setAmbientVolume: (volume) => {
+        const clamped = clampVolume(volume);
+        set((state) => {
+            const next = { ...state, ambientVolume: clamped };
+            saveSettings(next);
+            return { ambientVolume: clamped };
+        });
+        audioManager.setAmbientVolume(clamped);
     },
 
     setDeveloperMode: (enabled) => {
@@ -369,7 +386,9 @@ function scheduleFrame(callback: () => void) {
 }
 
 audioManager.setMasterVolume(initialSettings.masterVolume);
+audioManager.setMusicVolume(initialSettings.musicVolume);
 audioManager.setEffectVolume(initialSettings.effectVolume);
+audioManager.setAmbientVolume(initialSettings.ambientVolume);
 scheduleFrame(() => {
     applyLanguageToDOM(initialSettings.language);
     applyResolutionToDOM(initialSettings.resolutionWidth, initialSettings.resolutionHeight);
