@@ -1086,7 +1086,7 @@ function App() {
     if (tutorialDialogStep === 11 && target.closest('.relic-shop-btn--owned-symbols')) return true;
     if (tutorialDialogStep === 16 && target.closest('.relic-shop-btn--knowledge')) return true;
     if (tutorialDialogStep === 18 && target.closest('.knowledge-upgrade-chip--ancient-era')) return true;
-    if (tutorialDialogStep === 20 && target.closest('.knowledge-upgrade-research-btn')) return true;
+    if (tutorialDialogStep === 20 && target.closest('.knowledge-upgrade-chip--ancient-era')) return true;
     if (tutorialDialogStep === 21 && target.closest('.knowledge-upgrades-back-btn')) return true;
     if (tutorialDialogStep === 22 && target.closest('.relic-shop-btn--relic')) return true;
     return false;

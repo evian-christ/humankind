@@ -1993,6 +1993,34 @@ button.spin-btn:disabled:active {
   width: min(82vw, 638px);
   max-width: 100%;
   height: auto;
+  filter:
+    drop-shadow(0 0 10px rgba(255, 255, 255, 0.44))
+    drop-shadow(0 0 28px rgba(236, 243, 255, 0.34))
+    drop-shadow(0 0 62px rgba(201, 218, 242, 0.18));
+  animation: main-menu-title-sprite-glow 4.8s ease-in-out infinite;
+}
+
+@keyframes main-menu-title-sprite-glow {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 10px rgba(255, 255, 255, 0.44))
+      drop-shadow(0 0 28px rgba(236, 243, 255, 0.34))
+      drop-shadow(0 0 62px rgba(201, 218, 242, 0.18));
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 15px rgba(255, 255, 255, 0.72))
+      drop-shadow(0 0 42px rgba(242, 247, 255, 0.52))
+      drop-shadow(0 0 88px rgba(214, 228, 248, 0.28));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-menu-title-sprite {
+    animation: none;
+  }
 }
 
 .main-menu-title-main,
@@ -4639,11 +4667,10 @@ button.spin-btn:disabled:active {
   position: fixed;
   z-index: 20;
   width: min(520px, calc(100vw - 40px));
-  max-height: min(640px, calc(100vh - 120px));
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(15, 15, 15, 0.97);
   border: 2px solid #555;
   padding: 26px 30px;
@@ -4652,41 +4679,39 @@ button.spin-btn:disabled:active {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
-.knowledge-upgrade-tooltip::before {
-  content: '';
+@keyframes knowledge-upgrade-tooltip-pin-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.knowledge-upgrade-tooltip-pin-progress {
   position: absolute;
-  top: 54px;
-  width: 18px;
-  height: 18px;
-  background: rgba(15, 15, 15, 0.97);
-  border-top: 2px solid #555;
-  border-right: 2px solid #555;
-  transform: rotate(45deg);
+  top: -2px;
+  left: -2px;
+  z-index: 1;
+  width: calc(100% + 4px);
+  height: 5px;
+  background: #60a5fa;
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.55);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+  animation: knowledge-upgrade-tooltip-pin-progress 1s linear forwards;
 }
 
-.knowledge-upgrade-tooltip--right::before {
-  left: -11px;
-}
-
-.knowledge-upgrade-tooltip--left::before {
-  right: -11px;
+.knowledge-upgrade-tooltip-pin-progress--full {
+  transform: scaleX(1);
+  animation: none;
 }
 
 .knowledge-upgrade-tooltip-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.knowledge-upgrade-tooltip-actions {
-  flex-shrink: 0;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid #444;
 }
 
 .knowledge-upgrade-tooltip .symbol-tooltip-name {
@@ -4713,11 +4738,6 @@ button.spin-btn:disabled:active {
   letter-spacing: 0.06em;
   margin-top: 2px;
   font-family: 'Mulmaru', sans-serif;
-}
-
-.knowledge-upgrade-tooltip-actions .bottom-right-btn {
-  font-size: 25px;
-  min-height: 62px;
 }
 
 /* Slightly larger symbol chips when desc block is in the overlay tooltip */
@@ -4905,7 +4925,7 @@ button.spin-btn:disabled:active {
   z-index: 5;
 }
 
-.tutorial-highlight-ancient-research .knowledge-upgrade-research-btn,
+.tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era,
 .tutorial-highlight-knowledge-back .knowledge-upgrades-back-btn {
   position: relative;
   z-index: 6;
@@ -5117,6 +5137,36 @@ button.knowledge-upgrade-chip {
   padding: 0;
   appearance: none;
   -webkit-appearance: none;
+}
+
+@keyframes knowledge-upgrade-chip-denied {
+  0% {
+    transform: translateY(0);
+  }
+  42% {
+    transform: translateY(4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+button.knowledge-upgrade-chip--denied {
+  animation: knowledge-upgrade-chip-denied 0.22s ease-out;
+}
+
+.knowledge-upgrade-chip-confirm-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 33px;
+  height: 56px;
+  box-sizing: border-box;
+  border-right: 10px solid #bbf7d0;
+  border-bottom: 10px solid #bbf7d0;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.62));
+  transform: translate(-50%, -60%) rotate(45deg);
+  pointer-events: none;
 }
 
 /* Full-width tab above relic / knowledge HUD buttons (NEW stock / research) */

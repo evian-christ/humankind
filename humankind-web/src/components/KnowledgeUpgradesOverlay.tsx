@@ -13,7 +13,10 @@ import { isUpgradeLegalForKnowledgePick } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    MODERN_AGE_UPGRADE_ID,
+    buildAncientSymbolsUnlockDescSymbols,
     getKnowledgeUpgradeDirectDependents,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../game/data/knowledgeUpgrades';
@@ -67,28 +70,114 @@ type KnowledgeUpgradeTooltipPosition = {
 
 /** 칩 열 수 — 개발용 확장 13열 */
 const KNOWLEDGE_TREE_GRID_COLS = 13;
+const KNOWLEDGE_TREE_MIN_BRANCH_GAP = 2;
+const KNOWLEDGE_TREE_CENTER_COL = Math.floor(KNOWLEDGE_TREE_GRID_COLS / 2);
+const KNOWLEDGE_TREE_ERA_SPINE_IDS = new Set([
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
+]);
 
-function buildCenteredTierRow(...upgradeIds: number[]): (number | null)[] {
-    const row = Array<number | null>(KNOWLEDGE_TREE_GRID_COLS).fill(null);
-    if (upgradeIds.length === 0) return row;
-
-    const minWidth = upgradeIds.length * 2 - 1;
-    const startCol = Math.max(0, Math.floor((KNOWLEDGE_TREE_GRID_COLS - minWidth) / 2));
-
-    for (let i = 0; i < upgradeIds.length; i += 1) {
-        const colIdx = startCol + i * 2;
-        if (colIdx >= 0 && colIdx < KNOWLEDGE_TREE_GRID_COLS) row[colIdx] = upgradeIds[i]!;
-    }
-
-    return row;
+function getEvenTierColumn(idx: number, count: number): number {
+    if (count <= 1) return KNOWLEDGE_TREE_CENTER_COL;
+    return Math.round(((idx + 1) * (KNOWLEDGE_TREE_GRID_COLS - 1)) / (count + 1));
 }
 
-const TIERS: { level: number; ids: (number | null)[] }[] = [
-    ...KNOWLEDGE_UPGRADE_TIER_ROWS.filter((tier) => tier.level >= 1).map((tier) => ({
-        level: tier.level,
-        ids: buildCenteredTierRow(...tier.ids),
-    })),
-];
+function getDependentBranchOffset(prereqId: number, upgradeId: number): number {
+    const siblings = getKnowledgeUpgradeDirectDependents(prereqId);
+    if (siblings.length <= 1) return 0;
+
+    const siblingIdx = siblings.indexOf(upgradeId);
+    if (siblingIdx < 0) return 0;
+
+    return Math.round((siblingIdx - (siblings.length - 1) / 2) * 2);
+}
+
+function getNearestOpenTierColumn(
+    preferredCol: number,
+    occupiedCols: readonly number[],
+    minGap: number,
+    blockedCols: readonly number[] = [],
+): number | null {
+    const countSideOccupancy = (side: 'left' | 'right') =>
+        occupiedCols.filter((col) => side === 'left' ? col < KNOWLEDGE_TREE_CENTER_COL : col > KNOWLEDGE_TREE_CENTER_COL).length;
+    const candidateCols = Array.from({ length: KNOWLEDGE_TREE_GRID_COLS }, (_, col) => col)
+        .sort((a, b) => {
+            const distanceDelta = Math.abs(a - preferredCol) - Math.abs(b - preferredCol);
+            if (distanceDelta !== 0) return distanceDelta;
+
+            const aSideLoad = a === KNOWLEDGE_TREE_CENTER_COL
+                ? 0
+                : countSideOccupancy(a < KNOWLEDGE_TREE_CENTER_COL ? 'left' : 'right');
+            const bSideLoad = b === KNOWLEDGE_TREE_CENTER_COL
+                ? 0
+                : countSideOccupancy(b < KNOWLEDGE_TREE_CENTER_COL ? 'left' : 'right');
+            if (aSideLoad !== bSideLoad) return aSideLoad - bSideLoad;
+
+            const centerDelta = Math.abs(b - KNOWLEDGE_TREE_CENTER_COL) - Math.abs(a - KNOWLEDGE_TREE_CENTER_COL);
+            return centerDelta !== 0 ? centerDelta : a - b;
+        });
+
+    return candidateCols.find((col) =>
+        !blockedCols.includes(col) &&
+        occupiedCols.every((occupiedCol) => Math.abs(occupiedCol - col) >= minGap),
+    ) ?? null;
+}
+
+function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
+    const knownCols = new Map<number, number>();
+    let previousTierCols: number[] = [];
+
+    return KNOWLEDGE_UPGRADE_TIER_ROWS.filter((tier) => tier.level >= 0).map((tier) => {
+        const row = Array<number | null>(KNOWLEDGE_TREE_GRID_COLS).fill(null);
+        const preferredCols = tier.ids.map((upgradeId, order) => {
+            const prereqCols = getKnowledgeUpgradeDirectPrerequisites(upgradeId)
+                .map((prereqId) => {
+                    const prereqCol = knownCols.get(prereqId);
+                    return prereqCol == null
+                        ? null
+                        : prereqCol + getDependentBranchOffset(prereqId, upgradeId);
+                })
+                .filter((col): col is number => col != null);
+            return {
+                upgradeId,
+                order,
+                hasPrereq: prereqCols.length > 0,
+                col: KNOWLEDGE_TREE_ERA_SPINE_IDS.has(upgradeId)
+                    ? KNOWLEDGE_TREE_CENTER_COL
+                    : prereqCols.length > 0
+                    ? Math.round(prereqCols.reduce((sum, col) => sum + col, 0) / prereqCols.length)
+                    : getEvenTierColumn(order, tier.ids.length),
+            };
+        });
+        const occupiedCols: number[] = [];
+
+        preferredCols
+            .sort((a, b) => {
+                if (a.hasPrereq !== b.hasPrereq) return a.hasPrereq ? -1 : 1;
+                return a.col !== b.col ? a.col - b.col : a.order - b.order;
+            })
+            .forEach((item) => {
+                const blockedCols = item.hasPrereq ? [] : previousTierCols;
+                const col = KNOWLEDGE_TREE_ERA_SPINE_IDS.has(item.upgradeId)
+                    ? getNearestOpenTierColumn(KNOWLEDGE_TREE_CENTER_COL, occupiedCols, 1)
+                    :
+                    getNearestOpenTierColumn(item.col, occupiedCols, KNOWLEDGE_TREE_MIN_BRANCH_GAP, blockedCols) ??
+                    getNearestOpenTierColumn(item.col, occupiedCols, 1, blockedCols) ??
+                    getNearestOpenTierColumn(item.col, occupiedCols, KNOWLEDGE_TREE_MIN_BRANCH_GAP) ??
+                    getNearestOpenTierColumn(item.col, occupiedCols, 1);
+                if (col == null) return;
+                row[col] = item.upgradeId;
+                knownCols.set(item.upgradeId, col);
+                occupiedCols.push(col);
+            });
+
+        previousTierCols = occupiedCols;
+        return { level: tier.level, ids: row };
+    });
+}
+
+const TIERS: { level: number; ids: (number | null)[] }[] = buildBranchTierRows();
 
 const KNOWLEDGE_TREE_CHIP = 110;
 const KNOWLEDGE_TREE_GAP = 16;
@@ -111,21 +200,56 @@ const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#555';
 const KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT = '#444';
 const KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED = '#469068';
 const KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED = '#26503a';
+const KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED = '#2a2b2e';
+const KNOWLEDGE_TREE_CHIP_PILLAR_LOCKED = '#111111';
 const KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET = 8;
 const KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET = 1;
+const KNOWLEDGE_TREE_CHIP_PILLAR_CONFIRM_OFFSET = 7;
 const KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y = 5;
+const KNOWLEDGE_TREE_CHIP_CONFIRM_TRANSLATE_Y = 1;
 const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
+const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#b91c1c';
+const KNOWLEDGE_TREE_CHIP_DENIED_PILLAR = '#7f1d1d';
+const KNOWLEDGE_TOOLTIP_PIN_DELAY_MS = 1000;
+const KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS = 180;
 
-function knowledgeTreeChipFrameShadow(pressed: boolean, researched: boolean): string {
-    const inset = researched ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
-    const pillar = researched ? KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED : KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT;
-    return pressed
-        ? `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 6px rgba(0,0,0,0.4)`
-        : `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 12px rgba(0,0,0,0.4)`;
+function knowledgeTreeChipFrameShadow(
+    pressDepth: 'idle' | 'confirm' | 'pressed',
+    researched: boolean,
+    locked: boolean,
+    denied = false,
+): string {
+    const inset = denied
+        ? KNOWLEDGE_TREE_CHIP_DENIED_FRAME
+        : researched
+            ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED
+            : locked
+                ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED
+                : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
+    const pillar = denied
+        ? KNOWLEDGE_TREE_CHIP_DENIED_PILLAR
+        : researched
+            ? KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED
+            : locked
+                ? KNOWLEDGE_TREE_CHIP_PILLAR_LOCKED
+                : KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT;
+    if (pressDepth === 'pressed') {
+        return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 6px rgba(0,0,0,0.4)`;
+    }
+    if (pressDepth === 'confirm') {
+        return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_CONFIRM_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_CONFIRM_OFFSET}px 9px rgba(0,0,0,0.4)`;
+    }
+    return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 12px rgba(0,0,0,0.4)`;
 }
 
-function knowledgeTreeChipFrameColor(researched: boolean): string {
-    return researched ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
+function knowledgeTreeChipFrameColor(researched: boolean, locked: boolean, denied: boolean): string {
+    return denied
+        ? KNOWLEDGE_TREE_CHIP_DENIED_FRAME
+        : researched
+            ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED
+            : locked
+                ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED
+                : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
 }
 
 /** Idle chip fill — same before/after research (border differentiates researched) */
@@ -137,7 +261,6 @@ const KNOWLEDGE_TREE_CHIP_HOVER_BG = '#24262b';
 const KNOWLEDGE_CONNECTOR_IDLE_OPACITY = 0.16;
 const KNOWLEDGE_CONNECTOR_DIMMED_OPACITY = 0.08;
 const KNOWLEDGE_CONNECTOR_ACTIVE_OPACITY = 0.95;
-const KNOWLEDGE_HEADER_BG = '#0e1722';
 const KNOWLEDGE_TIER_AVAILABLE_BG = 'rgba(96,165,250,0.08)';
 
 /** 칩 6열 + 열 사이 간격 */
@@ -264,15 +387,22 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     useRegisterBoardTooltipBlock('knowledge-upgrades-overlay', isOpen);
 
     const unlockedUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades);
+    const leaderId = useGameStore((s) => s.leaderId);
+    const leaderProgressLevel = useGameStore((s) => s.leaderProgressLevel);
     const currentLevel = useGameStore((s) => s.level);
     const levelUpResearchPoints = useGameStore((s) => s.levelUpResearchPoints ?? 0);
     const phase = useGameStore((s) => s.phase);
     const language = useSettingsStore((s) => s.language);
 
-    const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [confirmingId, setConfirmingId] = useState<number | null>(null);
     const [hoveredId, setHoveredId] = useState<number | null>(null);
+    const [pinnedTooltipId, setPinnedTooltipId] = useState<number | null>(null);
+    const [deniedChipId, setDeniedChipId] = useState<number | null>(null);
     const [researchPointsMouseHints, setResearchPointsMouseHints] = useState<ResearchPointsMouseHint[]>([]);
     const researchHintIdRef = useRef(0);
+    const deniedChipTimeoutRef = useRef<number | null>(null);
+    const tooltipPinTimeoutRef = useRef<number | null>(null);
+    const tooltipReleaseTimeoutRef = useRef<number | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
     const treeScrollRef = useRef<HTMLDivElement>(null);
@@ -282,42 +412,60 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const [tooltipPosition, setTooltipPosition] = useState<KnowledgeUpgradeTooltipPosition | null>(null);
 
     const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 17 && tutorialStep <= 21;
-    const activeFocusId = tutorialRestrictsHover
-        ? selectedId
-        : hoveredId ?? selectedId;
+    const activeFocusId = pinnedTooltipId ?? hoveredId ?? (tutorialRestrictsHover ? confirmingId : null);
     const detailId = activeFocusId;
     const detailUpgrade = detailId != null ? KNOWLEDGE_UPGRADES[detailId] : null;
     const detailUnlocked = detailId != null && unlockedUpgrades.includes(detailId);
     const detailTierLevel = getTierLevelForUpgrade(detailId);
-    const selectedUnlocked = selectedId != null && unlockedUpgrades.includes(selectedId);
-    const selectedTierLevel = getTierLevelForUpgrade(selectedId);
     const activeConnectionIds = collectConnectedUpgradeIds(activeFocusId);
     const detailDirectPrereqs = detailId != null ? [...getKnowledgeUpgradeDirectPrerequisites(detailId)] : [];
     const detailDirectDependents = detailId != null ? [...getKnowledgeUpgradeDirectDependents(detailId)] : [];
-    const selectedDirectPrereqs = selectedId != null ? [...getKnowledgeUpgradeDirectPrerequisites(selectedId)] : [];
-    const unmetSelectedPrereqs = selectedDirectPrereqs.filter((prereqId) => !unlockedUpgrades.includes(prereqId));
-    const unmetSelectedPrereqNames = unmetSelectedPrereqs.map((prereqId) =>
-        t(`knowledgeUpgrade.${prereqId}.name`, language) || KNOWLEDGE_UPGRADES[prereqId]?.name || `#${prereqId}`,
-    );
     const hasResearchPoints = levelUpResearchPoints > 0;
     const availableBackgroundHeightPx = getKnowledgeAvailableBackgroundHeightPx(currentLevel);
-    const selectedLockedByResearchCutoff =
-        selectedId != null && isKnowledgeUpgradeLockedByResearchCutoff(selectedId, currentLevel);
-    const canResearchWithCurrentPick =
-        currentLevel >= selectedTierLevel &&
-        selectedId != null &&
-        isUpgradeLegalForKnowledgePick(selectedId, unlockedUpgrades, currentLevel);
-    const canResearchSelected = hasResearchPoints && !selectedUnlocked && unmetSelectedPrereqs.length === 0 && canResearchWithCurrentPick;
-    const needsHigherLevel = selectedId != null && currentLevel < selectedTierLevel;
+    const isPermanentlyLocked = useCallback((id: number): boolean => {
+        const check = (currentId: number, memo: Map<number, boolean>): boolean => {
+            if (memo.has(currentId)) return memo.get(currentId)!;
+            
+            if (unlockedUpgrades.includes(currentId)) {
+                memo.set(currentId, false);
+                return false;
+            }
+
+            if (isKnowledgeUpgradeLockedByResearchCutoff(currentId, currentLevel)) {
+                memo.set(currentId, true);
+                return true;
+            }
+
+            const prereqs = getKnowledgeUpgradeDirectPrerequisites(currentId);
+            for (const p of prereqs) {
+                if (check(p, memo)) {
+                    memo.set(currentId, true);
+                    return true;
+                }
+            }
+
+            memo.set(currentId, false);
+            return false;
+        };
+        
+        return check(id, new Map<number, boolean>());
+    }, [currentLevel, unlockedUpgrades]);
+
     const tutorialResearchLocked = tutorialStep === 19;
-    const researchButtonDisabled =
-        selectedId == null ||
-        selectedUnlocked ||
-        unmetSelectedPrereqs.length > 0 ||
-        needsHigherLevel ||
-        selectedLockedByResearchCutoff ||
-        tutorialResearchLocked ||
-        (hasResearchPoints && !canResearchWithCurrentPick);
+    const canConfirmResearch = useCallback((id: number): boolean => (
+        !tutorialResearchLocked &&
+        hasResearchPoints &&
+        currentLevel >= getTierLevelForUpgrade(id) &&
+        !unlockedUpgrades.includes(id) &&
+        !isPermanentlyLocked(id) &&
+        isUpgradeLegalForKnowledgePick(id, unlockedUpgrades, currentLevel)
+    ), [
+        currentLevel,
+        hasResearchPoints,
+        isPermanentlyLocked,
+        tutorialResearchLocked,
+        unlockedUpgrades,
+    ]);
 
     const updateKnowledgeTreeConnectors = useCallback(() => {
         const contentEl = treeContentRef.current;
@@ -353,16 +501,16 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     from: prereqId,
                     to: upgradeId,
                     x1: xForCol(sourcePos.colIdx),
-                    y1: bottomAnchorY(sourcePos.rowIdx, activeFocusId === prereqId),
+                    y1: bottomAnchorY(sourcePos.rowIdx, activeFocusId === prereqId || isPermanentlyLocked(prereqId)),
                     x2: xForCol(targetPos.colIdx),
-                    y2: topAnchorY(targetPos.rowIdx, activeFocusId === upgradeId),
+                    y2: topAnchorY(targetPos.rowIdx, activeFocusId === upgradeId || isPermanentlyLocked(upgradeId)),
                     prerequisiteCount: prerequisites.length,
                 });
             }
         }
 
         setConnectorLines(next);
-    }, [activeFocusId]);
+    }, [activeFocusId, isPermanentlyLocked]);
 
     const updateDetailTooltipPosition = useCallback(() => {
         if (detailId == null) {
@@ -391,6 +539,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         const anchorLeft = (anchorRect.left - rootRect.left) / scaleX;
         const anchorRight = (anchorRect.right - rootRect.left) / scaleX;
         const anchorTop = (anchorRect.top - rootRect.top) / scaleY;
+        const anchorBottom = (anchorRect.bottom - rootRect.top) / scaleY;
         const tooltipEl = tooltipRef.current;
         const tooltipWidth = tooltipEl?.offsetWidth ?? 520;
         const tooltipHeight = tooltipEl?.offsetHeight ?? 640;
@@ -408,13 +557,38 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             Math.max(minInset, unclampedLeft),
             Math.max(minInset, viewportWidth - tooltipWidth - minInset),
         );
+        const anchorCenterY = (anchorTop + anchorBottom) / 2;
+        const alignTopToAnchor = anchorCenterY <= viewportHeight / 2;
+        const preferredTop = alignTopToAnchor
+            ? anchorTop
+            : anchorBottom - tooltipHeight;
         const top = Math.min(
-            Math.max(minInset, anchorTop),
+            Math.max(minInset, preferredTop),
             Math.max(minInset, viewportHeight - tooltipHeight - minInset),
         );
 
-        setTooltipPosition({ left, top, placement });
+        setTooltipPosition((prev) => {
+            if (
+                prev != null &&
+                prev.left === left &&
+                prev.top === top &&
+                prev.placement === placement
+            ) {
+                return prev;
+            }
+            return { left, top, placement };
+        });
     }, [detailId]);
+
+    useLayoutEffect(() => {
+        if (!isOpen || detailId == null || tooltipPosition == null || tooltipRef.current == null) return;
+
+        const raf = requestAnimationFrame(() => {
+            updateDetailTooltipPosition();
+        });
+
+        return () => cancelAnimationFrame(raf);
+    }, [detailId, isOpen, tooltipPosition, updateDetailTooltipPosition]);
 
     useLayoutEffect(() => {
         if (!isOpen) return;
@@ -453,25 +627,47 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         if (!isOpen) return;
         const handler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                if (selectedId !== null) setSelectedId(null);
+                if (confirmingId !== null) setConfirmingId(null);
                 else onClose();
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [isOpen, onClose, selectedId]);
+    }, [confirmingId, isOpen, onClose]);
 
     // 패널 닫기 (오버레이 닫힐 때 선택 초기화)
     useEffect(() => {
         if (!isOpen) {
+            if (tooltipPinTimeoutRef.current != null) {
+                window.clearTimeout(tooltipPinTimeoutRef.current);
+                tooltipPinTimeoutRef.current = null;
+            }
+            if (tooltipReleaseTimeoutRef.current != null) {
+                window.clearTimeout(tooltipReleaseTimeoutRef.current);
+                tooltipReleaseTimeoutRef.current = null;
+            }
             queueMicrotask(() => {
-                setSelectedId(null);
+                setConfirmingId(null);
                 setHoveredId(null);
+                setPinnedTooltipId(null);
+                setDeniedChipId(null);
                 setTooltipPosition(null);
                 setResearchPointsMouseHints([]);
             });
         }
     }, [isOpen]);
+
+    useEffect(() => () => {
+        if (deniedChipTimeoutRef.current != null) {
+            window.clearTimeout(deniedChipTimeoutRef.current);
+        }
+        if (tooltipPinTimeoutRef.current != null) {
+            window.clearTimeout(tooltipPinTimeoutRef.current);
+        }
+        if (tooltipReleaseTimeoutRef.current != null) {
+            window.clearTimeout(tooltipReleaseTimeoutRef.current);
+        }
+    }, []);
 
     if (!isOpen) return null;
 
@@ -497,47 +693,122 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             });
     };
 
-    const handleUnlock = (e: ReactMouseEvent<HTMLButtonElement>) => {
-        if (tutorialResearchLocked) {
-            void audioManager.play('denied');
-            return;
-        }
-        if (!selectedId || selectedUnlocked || unmetSelectedPrereqs.length > 0 || needsHigherLevel) {
-            void audioManager.play('denied');
-            return;
-        }
+    const showDeniedChipFeedback = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
+        void audioManager.play('denied');
+        setDeniedChipId(null);
+        window.requestAnimationFrame(() => {
+            setDeniedChipId(id);
+            if (deniedChipTimeoutRef.current != null) {
+                window.clearTimeout(deniedChipTimeoutRef.current);
+            }
+            deniedChipTimeoutRef.current = window.setTimeout(() => {
+                setDeniedChipId((prev) => (prev === id ? null : prev));
+            }, 220);
+        });
         if (!hasResearchPoints) {
-            void audioManager.play('denied');
             researchHintIdRef.current += 1;
-            const id = researchHintIdRef.current;
-            setResearchPointsMouseHints((prev) => [...prev, { id, x: e.clientX, y: e.clientY }]);
-            return;
+            const hintId = researchHintIdRef.current;
+            setResearchPointsMouseHints((prev) => [...prev, { id: hintId, x: e.clientX, y: e.clientY }]);
         }
-        if (!canResearchSelected) {
-            void audioManager.play('denied');
+    };
+
+    const unlockConfirmedUpgrade = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
+        if (!canConfirmResearch(id)) {
+            showDeniedChipFeedback(id, e);
             return;
         }
         const st = useGameStore.getState();
         if ((st.levelUpResearchPoints ?? 0) <= 0) {
-            void audioManager.play('denied');
+            showDeniedChipFeedback(id, e);
             return;
         }
-        const choice = KNOWLEDGE_UPGRADES[selectedId];
+        const choice = KNOWLEDGE_UPGRADES[id];
         if (!choice) {
-            void audioManager.play('denied');
+            showDeniedChipFeedback(id, e);
             return;
         }
         playKnowledgeUpgradeSound();
         useGameStore.setState({
             returnPhaseAfterDevKnowledgeUpgrade: phase,
         });
-        useGameStore.getState().selectUpgrade(selectedId);
-        if (tutorialStep === 20 && selectedId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
-            setSelectedId(null);
+        useGameStore.getState().selectUpgrade(id);
+        if (tutorialStep === 20 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+            setConfirmingId(null);
             onTutorialStepChange?.(21);
             return;
         }
-        setSelectedId(null);
+        setConfirmingId(null);
+    };
+
+    const handleChipClick = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
+        if (confirmingId === id) {
+            unlockConfirmedUpgrade(id, e);
+            return;
+        }
+        if (!canConfirmResearch(id)) {
+            showDeniedChipFeedback(id, e);
+            return;
+        }
+        setConfirmingId(id);
+        if (tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+            onTutorialStepChange?.(19);
+        }
+    };
+
+    const clearTooltipPinTimer = () => {
+        if (tooltipPinTimeoutRef.current != null) {
+            window.clearTimeout(tooltipPinTimeoutRef.current);
+            tooltipPinTimeoutRef.current = null;
+        }
+    };
+
+    const clearTooltipReleaseTimer = () => {
+        if (tooltipReleaseTimeoutRef.current != null) {
+            window.clearTimeout(tooltipReleaseTimeoutRef.current);
+            tooltipReleaseTimeoutRef.current = null;
+        }
+    };
+
+    const handleChipMouseEnter = (id: number) => {
+        if (tutorialRestrictsHover) return;
+        if (pinnedTooltipId === id) {
+            clearTooltipReleaseTimer();
+            setHoveredId(id);
+            return;
+        }
+        if (pinnedTooltipId != null) return;
+        clearTooltipPinTimer();
+        clearTooltipReleaseTimer();
+        setHoveredId(id);
+        tooltipPinTimeoutRef.current = window.setTimeout(() => {
+            setPinnedTooltipId(id);
+            tooltipPinTimeoutRef.current = null;
+        }, KNOWLEDGE_TOOLTIP_PIN_DELAY_MS);
+    };
+
+    const handleChipMouseLeave = (id: number) => {
+        setHoveredId((prev) => (prev === id ? null : prev));
+        if (pinnedTooltipId === id) {
+            clearTooltipReleaseTimer();
+            tooltipReleaseTimeoutRef.current = window.setTimeout(() => {
+                setPinnedTooltipId((prev) => (prev === id ? null : prev));
+                tooltipReleaseTimeoutRef.current = null;
+            }, KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS);
+        } else {
+            clearTooltipPinTimer();
+        }
+        setConfirmingId((prev) => (prev === id ? null : prev));
+    };
+
+    const handleTooltipMouseEnter = () => {
+        clearTooltipReleaseTimer();
+    };
+
+    const handleTooltipMouseLeave = () => {
+        clearTooltipPinTimer();
+        clearTooltipReleaseTimer();
+        setPinnedTooltipId(null);
+        setHoveredId(null);
     };
 
     return (
@@ -556,14 +827,17 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             {/* 상단 헤더 */}
             <div
                 style={{
-                    position: 'relative',
-                    zIndex: 2,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 5,
                     padding: '24px 32px',
-                    background: KNOWLEDGE_HEADER_BG,
-                    flexShrink: 0,
+                    background: 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 20,
+                    pointerEvents: 'none',
                 }}
             >
                 <button
@@ -583,6 +857,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                         height: '48px',
                         padding: 0,
                         flexShrink: 0,
+                        pointerEvents: 'auto',
                         transition: 'color 0.2s, transform 0.2s',
                         borderRadius: '50%',
                     }}
@@ -777,8 +1052,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const upgrade = KNOWLEDGE_UPGRADES[id];
                                                 if (!upgrade) return null;
                                                 const unlocked = unlockedUpgrades.includes(id);
-                                                const lockedByResearchCutoff = isKnowledgeUpgradeLockedByResearchCutoff(id, currentLevel);
-                                                const isSelected = selectedId === id;
+                                                const lockedByResearchCutoff = isPermanentlyLocked(id);
+                                                const isConfirming = confirmingId === id;
+                                                const isDenied = deniedChipId === id;
                                                 const isHovered = hoveredId === id;
                                                 const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
                                                 const isSelectionRelated =
@@ -787,7 +1063,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const chipFilter = activeFocusId != null && !isSelectionRelated
                                                     ? 'brightness(0.28) saturate(0.8)'
                                                     : 'none';
-                                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked);
+                                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked, lockedByResearchCutoff, isDenied);
                                                 const upgradeSpriteUrl = resolveUpgradeSprite(upgrade.sprite);
                                                 return (
                                                     <button
@@ -795,21 +1071,14 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                         type="button"
                                                         className={[
                                                             'knowledge-upgrade-chip',
+                                                            isDenied ? 'knowledge-upgrade-chip--denied' : '',
                                                             id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
                                                         ].filter(Boolean).join(' ')}
                                                         title={name}
                                                         data-knowledge-upgrade-id={id}
-                                                        onClick={() => {
-                                                            setSelectedId(isSelected ? null : id);
-                                                            if (tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
-                                                                onTutorialStepChange?.(19);
-                                                            }
-                                                        }}
-                                                        onMouseEnter={() => {
-                                                            if (tutorialRestrictsHover) return;
-                                                            setHoveredId(id);
-                                                        }}
-                                                        onMouseLeave={() => setHoveredId((prev) => (prev === id ? null : prev))}
+                                                        onClick={(e) => handleChipClick(id, e)}
+                                                        onMouseEnter={() => handleChipMouseEnter(id)}
+                                                        onMouseLeave={() => handleChipMouseLeave(id)}
                                                         style={{
                                                             width: `${KNOWLEDGE_TREE_CHIP}px`,
                                                             height: `${KNOWLEDGE_TREE_CHIP}px`,
@@ -819,20 +1088,33 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             overflow: 'hidden',
                                                             borderRadius: 0,
                                                             filter: chipFilter,
-                                                            boxShadow: knowledgeTreeChipFrameShadow(isSelected, unlocked),
-                                                            background: isSelected
+                                                            boxShadow: knowledgeTreeChipFrameShadow(
+                                                                lockedByResearchCutoff
+                                                                    ? 'pressed'
+                                                                    : isConfirming
+                                                                        ? 'confirm'
+                                                                        : 'idle',
+                                                                unlocked,
+                                                                lockedByResearchCutoff,
+                                                                isDenied,
+                                                            ),
+                                                            background: isConfirming
                                                                 ? KNOWLEDGE_TREE_CHIP_SELECTED_BG
                                                                 : isHovered
                                                                     ? KNOWLEDGE_TREE_CHIP_HOVER_BG
-                                                                : KNOWLEDGE_TREE_CHIP_IDLE_BG,
+                                                                : lockedByResearchCutoff ? '#161616' : KNOWLEDGE_TREE_CHIP_IDLE_BG,
                                                             color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
                                                             cursor: 'pointer',
-                                                            transform: isSelected ? 'translateY(5px)' : 'none',
+                                                            transform: lockedByResearchCutoff
+                                                                ? `translateY(${KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y}px)`
+                                                                : isConfirming
+                                                                    ? `translateY(${KNOWLEDGE_TREE_CHIP_CONFIRM_TRANSLATE_Y}px)`
+                                                                    : 'none',
                                                             transition:
                                                                 'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
                                                         }}
                                                     >
-                                                        {upgradeSpriteUrl && (
+                                                        {upgradeSpriteUrl && !isConfirming && (
                                                             <img
                                                                 src={upgradeSpriteUrl}
                                                                 alt={name}
@@ -850,6 +1132,12 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                                         : undefined,
                                                                     pointerEvents: 'none',
                                                                 }}
+                                                            />
+                                                        )}
+                                                        {isConfirming && (
+                                                            <span
+                                                                aria-hidden
+                                                                className="knowledge-upgrade-chip-confirm-mark"
                                                             />
                                                         )}
                                                         {unlocked && (
@@ -915,6 +1203,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                         ref={tooltipRef}
                         className={[
                             'knowledge-upgrade-tooltip',
+                            pinnedTooltipId === detailId ? 'knowledge-upgrade-tooltip--pinned' : '',
                             `knowledge-upgrade-tooltip--${tooltipPosition.placement}`,
                             detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-tooltip--ancient-era' : '',
                         ].filter(Boolean).join(' ')}
@@ -922,7 +1211,19 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                             left: tooltipPosition.left,
                             top: tooltipPosition.top,
                         }}
+                        onMouseEnter={pinnedTooltipId === detailId ? handleTooltipMouseEnter : undefined}
+                        onMouseLeave={pinnedTooltipId === detailId ? handleTooltipMouseLeave : undefined}
                     >
+                        {(hoveredId === detailId || pinnedTooltipId === detailId) && (
+                            <div
+                                key={`pin-progress-${detailId}`}
+                                aria-hidden
+                                className={[
+                                    'knowledge-upgrade-tooltip-pin-progress',
+                                    pinnedTooltipId === detailId ? 'knowledge-upgrade-tooltip-pin-progress--full' : '',
+                                ].filter(Boolean).join(' ')}
+                            />
+                        )}
                         <div className="knowledge-upgrade-tooltip-scroll">
                             <div className="symbol-tooltip-name">
                                 {detailUnlocked && (
@@ -1023,62 +1324,17 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                 >
                                     <UpgradeCardDescSymbols
                                         upgradeId={detailId!}
-                                        entries={detailUpgrade.descSymbols}
+                                        entries={
+                                            detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID
+                                                ? buildAncientSymbolsUnlockDescSymbols(leaderId, leaderProgressLevel)
+                                                : detailUpgrade.descSymbols
+                                        }
                                         layoutSize="panel"
                                     />
                                 </div>
                             )}
                         </div>
 
-                        {detailId === selectedId && (
-                            <div className="knowledge-upgrade-tooltip-actions" style={{ display: 'flex', justifyContent: 'center' }}>
-                                <button
-                                    className="bottom-right-btn knowledge-upgrade-research-btn"
-                                    onClick={handleUnlock}
-                                    data-audio-click="knowledge_upgrade"
-                                    aria-disabled={researchButtonDisabled}
-                                    style={{
-                                        width: '100%',
-                                        maxWidth: '280px',
-                                        padding: '12px 16px',
-                                        boxSizing: 'border-box',
-                                        fontFamily: 'Mulmaru, sans-serif',
-                                        letterSpacing: '0.04em',
-                                        lineHeight: 1.25,
-                                        borderRadius: 0,
-                                        opacity: selectedUnlocked ? 0.4 : researchButtonDisabled ? 0.3 : 1,
-                                        background: selectedUnlocked
-                                            ? 'rgba(40,85,48,0.45)'
-                                            : 'rgba(80,40,0,0.9)',
-                                        boxShadow: selectedUnlocked || researchButtonDisabled
-                                            ? 'inset 0 0 0 4px #333, 0 6px 0 0 #222, 0 6px 10px rgba(0,0,0,0.35)'
-                                            : 'inset 0 0 0 4px #fbbf2455, 0 6px 0 0 #7c3100, 0 6px 16px rgba(251,191,36,0.25)',
-                                        color: selectedUnlocked ? '#86a878' : '#fbbf24',
-                                        cursor: selectedUnlocked || researchButtonDisabled ? 'not-allowed' : 'pointer',
-                                    }}
-                                >
-                                    {selectedUnlocked
-                                        ? t('knowledgeUpgrade.detail.alreadyResearched', language)
-                                        : unmetSelectedPrereqNames.length > 0
-                                            ? t('knowledgeUpgrade.detail.prerequisiteButton', language)
-                                                .replace('{names}', unmetSelectedPrereqNames.join(' / '))
-                                            : needsHigherLevel
-                                                ? t('knowledgeUpgrade.detail.levelRequired', language)
-                                                    .replace('{level}', String(selectedTierLevel))
-                                                : selectedLockedByResearchCutoff
-                                                    ? t('knowledgeUpgrade.detail.previousEraResearch', language)
-                                                : hasResearchPoints &&
-                                                    selectedId != null &&
-                                                    !isUpgradeLegalForKnowledgePick(
-                                                        selectedId,
-                                                        unlockedUpgrades,
-                                                        currentLevel,
-                                                    )
-                                                  ? t('knowledgeUpgrade.detail.unavailableThisPick', language)
-                                                  : t('knowledgeUpgrade.detail.research', language)}
-                                </button>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
