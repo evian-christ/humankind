@@ -1,5 +1,5 @@
 {
-  "productName": "Humankind",
+  "productName": "Humankind in a nutshell DEMO",
   "version": "1.2.0",
   "identifier": "com.humankind.app",
   "build": {
@@ -12,7 +12,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Humankind",
+        "title": "Humankind in a nutshell DEMO",
         "width": 1280,
         "height": 720,
         "resizable": true,
