@@ -3,8 +3,8 @@ import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
+    COLONIALISM_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
-    GLOBALIZATION_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
@@ -475,11 +475,11 @@ export const createSelectionFlowActions = ({
             }
         }
 
-        if (uid === GLOBALIZATION_UPGRADE_ID) {
+        if (uid === COLONIALISM_UPGRADE_ID) {
             const tribeJoinDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
             if (tribeJoinDef) {
                 const rs = useRelicStore.getState();
-                for (let i = 0; i < 2; i++) rs.addRelic(tribeJoinDef);
+                for (let i = 0; i < 3; i++) rs.addRelic(tribeJoinDef);
             }
         }
 

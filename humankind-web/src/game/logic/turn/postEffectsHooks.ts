@@ -744,6 +744,13 @@ export function runPostEffectsHooks(args: {
         urWheelPlan = { instanceId: urWheelRelicForPlan.instanceId, target };
     }
 
+    // ── 야만인 침입 디버프 남은 턴수 차감 ──
+    for (const s of ownedSymbols) {
+        if (s.spawnedByBarbarianInvasion && s.barbarianInvasionTurnsRemaining !== undefined && s.barbarianInvasionTurnsRemaining > 0) {
+            s.barbarianInvasionTurnsRemaining--;
+        }
+    }
+
     return {
         destroyedCount,
         destroyedSymbols,

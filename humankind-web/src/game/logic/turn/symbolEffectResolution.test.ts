@@ -5,7 +5,7 @@ import {
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     ARCHITECTURE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
-    COLONIALISM_UPGRADE_ID,
+    MERCANTILISM_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
@@ -426,6 +426,38 @@ describe('symbolEffectResolution', () => {
         expect(upgradedResult.food).toBe(6);
     });
 
+    it('lets Internet make all placed symbols count as adjacent during the effect phase', () => {
+        const board = createEmptyBoard();
+        const salt = createInstance(Sym.salt, 'salt');
+        board[0][0] = salt;
+        board[2][2] = createInstance(Sym.internet, 'internet');
+        board[4][3] = createInstance(Sym.grassland, 'remote-grassland');
+
+        const baseResult = processSingleSymbolEffects(salt, board, 0, 0, { upgrades: [] });
+        const internetResult = processSingleSymbolEffects(salt, board, 0, 0, {
+            upgrades: [],
+            allSymbolsAdjacent: true,
+        });
+
+        expect(baseResult.food).toBe(0);
+        expect(internetResult.food).toBe(1);
+        expect(internetResult.contributors).toEqual([{ x: 4, y: 3 }]);
+    });
+
+    it('does not make remote empty slots adjacent when Internet is active', () => {
+        const board = createEmptyBoard();
+        const oasis = createInstance(Sym.oasis, 'oasis');
+        board[0][0] = oasis;
+        board[4][3] = createInstance(Sym.internet, 'internet');
+
+        const result = processSingleSymbolEffects(oasis, board, 0, 0, {
+            upgrades: [OASIS_RECOVERY_UPGRADE_ID],
+            allSymbolsAdjacent: true,
+        });
+
+        expect(result.food).toBe(9);
+    });
+
     it('upgrades monument to produce 10 knowledge with Nationalism', () => {
         const board = createEmptyBoard();
         const monument = createInstance(Sym.monument, 'monument');
@@ -455,7 +487,7 @@ describe('symbolEffectResolution', () => {
         expect(upgradedResult.food).toBe(10);
     });
 
-    it('upgrades spices to produce 3 food per terrain type with Colonialism', () => {
+    it('upgrades spices to produce 3 food per terrain type with Mercantilism', () => {
         const board = createEmptyBoard();
         const spices = createInstance(Sym.spices, 'spices');
         board[0][0] = spices;
@@ -464,7 +496,7 @@ describe('symbolEffectResolution', () => {
         board[1][1] = createInstance(Sym.forest, 'forest');
 
         const baseResult = processSingleSymbolEffects(spices, board, 0, 0, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(spices, board, 0, 0, { upgrades: [COLONIALISM_UPGRADE_ID] });
+        const upgradedResult = processSingleSymbolEffects(spices, board, 0, 0, { upgrades: [MERCANTILISM_UPGRADE_ID] });
 
         expect(baseResult.food).toBe(3);
         expect(upgradedResult.food).toBe(9);

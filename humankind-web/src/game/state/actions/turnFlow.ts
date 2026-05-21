@@ -5,6 +5,7 @@ import { SYMBOLS, S, type SymbolDefinition } from '../../data/symbolDefinitions'
 import { useSettingsStore } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
+import { getEffectiveAdjacentCoords } from '../../logic/symbolEffects/core';
 import {
     applyKnowledgeAndLevelUps,
 } from '../../logic/progression/eraTransition';
@@ -67,7 +68,7 @@ interface TurnFlowDeps {
         board: (PlayerSymbolInstance | null)[][],
         x: number,
         y: number,
-        effectCtx: { upgrades: number[] },
+        effectCtx: { upgrades: number[]; allSymbolsAdjacent?: boolean },
         relicEffects: ActiveRelicEffects,
         disabledTerrainCoords?: ReadonlySet<string>,
     ) => ReturnType<typeof import('../../logic/symbolEffects').processSingleSymbolEffects>;
@@ -190,7 +191,10 @@ export const createTurnFlowActions = ({
             baseTotals,
         });
         const relicEffects = buildActiveRelicEffects();
-        const effectCtx = { upgrades: (state.unlockedKnowledgeUpgrades || []).map((id) => Number(id)) };
+        const effectCtx = {
+            upgrades: (state.unlockedKnowledgeUpgrades || []).map((id) => Number(id)),
+            allSymbolsAdjacent: slotPipeline.allSymbolsAdjacent,
+        };
         const slotEffectDeps = {
             processSingleSymbolEffects: (args: ProcessSlotArgs) =>
                 processSingleSymbolEffects(
@@ -221,6 +225,10 @@ export const createTurnFlowActions = ({
             const currentBoard = get().board;
             const relics = useRelicStore.getState().relics;
             const getRelicInst = (id: number) => relics.find((r) => r.definition.id === id);
+            const getPhaseAdjacentCoords = (x: number, y: number) =>
+                slotPipeline.allSymbolsAdjacent
+                    ? getEffectiveAdjacentCoords(currentBoard, x, y, true)
+                    : getAdjacentCoords(x, y);
             const post = runPostEffectsHooks({
                 board: currentBoard,
                 boardWidth,
@@ -232,7 +240,7 @@ export const createTurnFlowActions = ({
                 currentGold: stateAtFinish.gold + tGold,
                 bonusXpPerTurn: stateAtFinish.bonusXpPerTurn ?? 0,
                 unlockedKnowledgeUpgrades: stateAtFinish.unlockedKnowledgeUpgrades || [],
-                getAdjacentCoords,
+                getAdjacentCoords: getPhaseAdjacentCoords,
                 relics,
                 ownedSymbols: stateAtFinish.playerSymbols,
                 relicStoreApi: useRelicStore.getState(),
@@ -778,6 +786,7 @@ export const createTurnFlowActions = ({
                 event: { ax, ay },
                 getAdjacentCoords,
                 getEffectiveMaxHP,
+                unlockedKnowledgeUpgrades: get().unlockedKnowledgeUpgrades,
             });
 
             const effectSpeed = useSettingsStore.getState().effectSpeed;

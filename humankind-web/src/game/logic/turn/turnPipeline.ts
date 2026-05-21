@@ -1,6 +1,7 @@
 import { PLANTATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
+import { getEffectiveAdjacentCoords, hasInternetOnBoard } from '../symbolEffects/core';
 import type { ActiveRelicEffects, EffectResult, LootMergeResolution, SymbolEffectContext } from '../symbolEffects/types';
 import {
     buildFoodBySlotKey,
@@ -61,6 +62,7 @@ export interface SlotEffectPipeline {
     accumulatedEffects: SlotEffect[];
     religionEffectCache: SlotEffectCache;
     religionSlotsToRecalculate: DeferredReligionSlot[];
+    allSymbolsAdjacent: boolean;
 }
 
 export interface CreateSlotEffectPipelineArgs {
@@ -235,15 +237,19 @@ export function buildSlotOrder(boardWidth: number, boardHeight: number): Array<{
 
 export function createSlotEffectPipeline(args: CreateSlotEffectPipelineArgs): SlotEffectPipeline {
     const { board, boardWidth, boardHeight, baseTotals } = args;
+    const allSymbolsAdjacent = hasInternetOnBoard(board);
+    const getPhaseAdjacentCoords = (x: number, y: number) =>
+        getEffectiveAdjacentCoords(board, x, y, allSymbolsAdjacent);
     return {
         slotOrder: buildSlotOrder(boardWidth, boardHeight),
-        disabledTerrainCoords: collectDisabledTerrainCoords(board, boardWidth, boardHeight),
+        disabledTerrainCoords: collectDisabledTerrainCoords(board, boardWidth, boardHeight, getPhaseAdjacentCoords),
         totals: { ...baseTotals },
         symbolsToAdd: [],
         symbolsToSpawnOnBoard: [],
         accumulatedEffects: [],
         religionEffectCache: new Map(),
         religionSlotsToRecalculate: [],
+        allSymbolsAdjacent,
     };
 }
 
@@ -321,11 +327,15 @@ export function applySlotEffectResult(
 
 export function completeSlotEffects(args: CompleteSlotEffectsArgs): void {
     const { pipeline, board, boardWidth, boardHeight, getAdjacentCoords, unlockedKnowledgeUpgrades = [], relicEffects } = args;
+    const getPhaseAdjacentCoords = (x: number, y: number) =>
+        pipeline.allSymbolsAdjacent
+            ? getEffectiveAdjacentCoords(board, x, y, true)
+            : getAdjacentCoords(x, y);
     const religionResult = computeReligionDeferredEffects({
         board,
         religionSlots: pipeline.religionSlotsToRecalculate,
         religionEffectCache: pipeline.religionEffectCache,
-        getAdjacentCoords,
+        getAdjacentCoords: getPhaseAdjacentCoords,
         unlockedKnowledgeUpgrades,
         allSymbolsAreCorner: relicEffects?.allSymbolsAreCorner ?? false,
     });
@@ -340,7 +350,7 @@ export function completeSlotEffects(args: CompleteSlotEffectsArgs): void {
         width: boardWidth,
         height: boardHeight,
         foodBySlotKey: buildFoodBySlotKey(pipeline.accumulatedEffects),
-        getAdjacentCoords,
+        getAdjacentCoords: getPhaseAdjacentCoords,
         unlockedKnowledgeUpgrades,
     });
 

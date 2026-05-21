@@ -27,7 +27,12 @@ export const slotKey = (x: number, y: number): string => `${x},${y}`;
  * 홍수 심볼의 카운터가 비어 있으면 기존 처리와 동일하게 3으로 초기화한다.
  * 즉, 좌표 수집 함수지만 flood 인스턴스의 effect_counter를 의도적으로 mutate한다.
  */
-export function collectDisabledTerrainCoords(board: BoardGrid, width: number, height: number): Set<string> {
+export function collectDisabledTerrainCoords(
+    board: BoardGrid,
+    width: number,
+    height: number,
+    getAdjacentCoords?: (x: number, y: number) => BoardCoord[],
+): Set<string> {
     const disabledTerrainCoords = new Set<string>();
 
     for (let bx = 0; bx < width; bx++) {
@@ -38,15 +43,24 @@ export function collectDisabledTerrainCoords(board: BoardGrid, width: number, he
             if (!sym.effect_counter || sym.effect_counter <= 0) sym.effect_counter = 3;
             if (sym.effect_counter <= 0) continue;
 
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dy = -1; dy <= 1; dy++) {
-                    if (dx === 0 && dy === 0) continue;
-                    const nx = bx + dx;
-                    const ny = by + dy;
-                    if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-                    const neighbor = board[nx][ny];
+            if (getAdjacentCoords) {
+                for (const pos of getAdjacentCoords(bx, by)) {
+                    const neighbor = board[pos.x]?.[pos.y];
                     if (neighbor?.definition.type === SymbolType.TERRAIN) {
-                        disabledTerrainCoords.add(slotKey(nx, ny));
+                        disabledTerrainCoords.add(slotKey(pos.x, pos.y));
+                    }
+                }
+            } else {
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nx = bx + dx;
+                        const ny = by + dy;
+                        if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+                        const neighbor = board[nx][ny];
+                        if (neighbor?.definition.type === SymbolType.TERRAIN) {
+                            disabledTerrainCoords.add(slotKey(nx, ny));
+                        }
                     }
                 }
             }

@@ -15,4 +15,8 @@ export interface PlayerSymbolInstance {
     merchant_store_pending?: boolean;
     /** 파괴 X 연출 숨김 (전리품 흡수 등) */
     suppress_destroy_overlay?: boolean;
+    /** 야만인 침입으로 생성된 적인지 여부 */
+    spawnedByBarbarianInvasion?: boolean;
+    /** 야만인 침입 디버프 남은 턴수 */
+    barbarianInvasionTurnsRemaining?: number;
 }

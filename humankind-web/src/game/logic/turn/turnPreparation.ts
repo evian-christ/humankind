@@ -88,6 +88,8 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
             const enemyDef = SYMBOLS[enemyId];
             if (enemyDef) {
                 const inst = createSymbolInstance(enemyDef, spinUpgrades);
+                inst.spawnedByBarbarianInvasion = true;
+                inst.barbarianInvasionTurnsRemaining = 3;
                 newPlayerSymbols.push(inst);
                 const key = 'threat.barbarian_invasion';
                 newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(key), key });

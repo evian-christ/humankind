@@ -76,6 +76,7 @@ export const SYMBOL_NUMERIC_ID = {
     wild_seeds: 46,
     heqet: 87,
     foxtail_millet: 88,
+    internet: 89,
 
     // ── Medieval (47–54) ──
     tax: 47,

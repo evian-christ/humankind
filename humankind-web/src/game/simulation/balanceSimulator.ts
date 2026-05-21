@@ -552,6 +552,7 @@ const resolveCombat = (state: SimulationState) => {
             event: { ax, ay },
             getAdjacentCoords,
             getEffectiveMaxHP,
+            unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
         });
     }
 

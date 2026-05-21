@@ -20,6 +20,7 @@ import {
     HORSEMANSHIP_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
+    GLOBALIZATION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
@@ -178,6 +179,7 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.expedition && upgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID)) isUnlocked = true; // Jungle Expedition -> Expedition
         if ((sym.id === S.dye || sym.id === S.papyrus) && upgrades.includes(DRY_STORAGE_UPGRADE_ID)) isUnlocked = true; // Dry Storage -> Dye, Papyrus
         if (sym.id === S.caravanserai && upgrades.includes(CARAVANSERAI_UPGRADE_ID)) isUnlocked = true; // Caravanserai -> Caravanserai
+        if (sym.id === S.internet && upgrades.includes(GLOBALIZATION_UPGRADE_ID)) isUnlocked = true; // Globalization -> Internet
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
         if ((sym.id === S.mushroom || sym.id === S.fur) && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;

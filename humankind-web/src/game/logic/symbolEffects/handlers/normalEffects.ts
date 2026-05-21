@@ -5,7 +5,7 @@ import {
     ARCHITECTURE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
-    COLONIALISM_UPGRADE_ID,
+    MERCANTILISM_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
@@ -421,7 +421,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                     if (s?.definition.type === SymbolType.TERRAIN) terrainTypes.add(s.definition.id);
                 }
             }
-            state.food += terrainTypes.size * (upgrades.includes(COLONIALISM_UPGRADE_ID) ? 3 : 1);
+            state.food += terrainTypes.size * (upgrades.includes(MERCANTILISM_UPGRADE_ID) ? 3 : 1);
             return true;
         }
 

@@ -138,6 +138,12 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
     def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+5 Knowledge per relic owned.", sprite: "037.png" }),
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
+    def('internet', {
+        name: "Internet",
+        type: SymbolType.NORMAL,
+        description: "While placed on the board, all symbols are considered adjacent.",
+        sprite: "-",
+    }),
 
     // Ancient
     def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.", sprite: "039.png" }),
@@ -292,7 +298,7 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'archer', 'tracker_archer', 'knight', 'cavalry', 'cavalry_corps', 'crossbowman', 'musketman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
     'flood', 'earthquake', 'drought',
     'wool', 'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
-    'heqet', 'foxtail_millet',
+    'heqet', 'foxtail_millet', 'internet',
 ];
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */

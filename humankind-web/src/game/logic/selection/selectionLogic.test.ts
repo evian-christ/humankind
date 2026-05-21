@@ -5,6 +5,7 @@ import {
     COMPASS_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
+    GLOBALIZATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
@@ -83,6 +84,17 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.id === S.caravanserai)).toBe(true);
+    });
+
+    it('includes Internet in the pool once Globalization is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 3,
+            religionUnlocked: false,
+            upgrades: [MODERN_AGE_UPGRADE_ID, GLOBALIZATION_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.internet)).toBe(true);
     });
 
     it('does not include deleted medieval symbols in the pool after feudalism', () => {

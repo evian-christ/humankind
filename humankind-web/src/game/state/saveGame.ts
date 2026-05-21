@@ -23,6 +23,8 @@ interface SerializedSymbol {
     stored_gold?: number;
     merchant_store_pending?: boolean;
     suppress_destroy_overlay?: boolean;
+    spawnedByBarbarianInvasion?: boolean;
+    barbarianInvasionTurnsRemaining?: number;
 }
 
 interface SerializedRelic {
@@ -98,6 +100,8 @@ const serializeSymbol = (symbol: PlayerSymbolInstance): SerializedSymbol => ({
     stored_gold: symbol.stored_gold,
     merchant_store_pending: symbol.merchant_store_pending,
     suppress_destroy_overlay: symbol.suppress_destroy_overlay,
+    spawnedByBarbarianInvasion: symbol.spawnedByBarbarianInvasion,
+    barbarianInvasionTurnsRemaining: symbol.barbarianInvasionTurnsRemaining,
 });
 
 const deserializeSymbol = (saved: SerializedSymbol): PlayerSymbolInstance | null => {
@@ -114,6 +118,8 @@ const deserializeSymbol = (saved: SerializedSymbol): PlayerSymbolInstance | null
         stored_gold: saved.stored_gold,
         merchant_store_pending: saved.merchant_store_pending,
         suppress_destroy_overlay: saved.suppress_destroy_overlay,
+        spawnedByBarbarianInvasion: saved.spawnedByBarbarianInvasion,
+        barbarianInvasionTurnsRemaining: saved.barbarianInvasionTurnsRemaining,
     };
 };
 

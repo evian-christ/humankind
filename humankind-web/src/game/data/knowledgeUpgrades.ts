@@ -1,4 +1,5 @@
-import { SymbolType, SYMBOLS, SYMBOL_NUMERIC_ID, type SymbolKey } from './symbolDefinitions';
+import { isLeaderUnlockActive, type LeaderId } from './leaders';
+import { EXCLUDED_FROM_BASE_POOL, SymbolType, SYMBOLS, SYMBOL_NUMERIC_ID, type SymbolKey } from './symbolDefinitions';
 
 /** 지식 업그레이드 설명에 나오는 심볼과, 선택 풀·효과에 미치는 관계 */
 export type KnowledgeUpgradeSymbolRelation = 'pool_add' | 'pool_remove' | 'effect_modify';
@@ -14,9 +15,20 @@ export interface KnowledgeUpgradeDescSymbol {
 
 /** 중세시대(15) 카드 칩 — 풀 제외/추가는 게임과 동기, 효과 변경은 산만(지형 등장 확률만 바뀌는 타일은 칩 제외) */
 /** 고대 시대(지식) — 고대 타입 심볼 풀 해금 카드 칩용 */
-export function buildAncientSymbolsUnlockDescSymbols(): KnowledgeUpgradeDescSymbol[] {
+export function buildAncientSymbolsUnlockDescSymbols(
+    leaderId: LeaderId | null = null,
+    leaderProgressLevel = 1,
+): KnowledgeUpgradeDescSymbol[] {
     return Object.values(SYMBOLS)
-        .filter((s) => s.type === SymbolType.ANCIENT)
+        .filter((s) => {
+            if (s.type !== SymbolType.ANCIENT) return false;
+            if (!EXCLUDED_FROM_BASE_POOL.has(s.id)) return true;
+            if (s.key === 'heqet') return isLeaderUnlockActive(leaderId, leaderProgressLevel, 'heqet');
+            if (s.key === 'foxtail_millet') {
+                return isLeaderUnlockActive(leaderId, leaderProgressLevel, 'foxtail_millet');
+            }
+            return false;
+        })
         .sort((a, b) => a.id - b.id)
         .map((s) => ({ symbolKey: s.key as SymbolKey, relation: 'pool_add' as const }));
 }
@@ -117,7 +129,7 @@ export const FORESTRY_UPGRADE_ID = 46;
 export const PASTURE_MANAGEMENT_UPGRADE_ID = 47;
 export const GUNPOWDER_UPGRADE_ID = 48;
 export const NATIONALISM_UPGRADE_ID = 49;
-export const COLONIALISM_UPGRADE_ID = 50;
+export const MERCANTILISM_UPGRADE_ID = 50;
 export const MODERN_AGE_UPGRADE_ID = 51;
 export const OCEANIC_ROUTES_UPGRADE_ID = 52;
 export const STEAM_POWER_UPGRADE_ID = 53;
@@ -136,6 +148,9 @@ export const PUBLIC_ADMINISTRATION_UPGRADE_ID = 66;
 export const MASS_MEDIA_UPGRADE_ID = 67;
 export const ELECTION_SYSTEM_UPGRADE_ID = 68;
 export const GLOBALIZATION_UPGRADE_ID = 69;
+export const BUTTRESS_UPGRADE_ID = 70;
+export const CASTLE_UPGRADE_ID = 71;
+export const COLONIALISM_UPGRADE_ID = 72;
 export const TERRITORIAL_REORG_UPGRADE_ID = -1;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
@@ -382,11 +397,11 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         sprite: '038.png',
         descSymbols: [{ symbolKey: 'honey', relation: 'effect_modify' }],
     },
-    [COLONIALISM_UPGRADE_ID]: {
-        id: COLONIALISM_UPGRADE_ID,
-        name: 'Colonialism',
+    [MERCANTILISM_UPGRADE_ID]: {
+        id: MERCANTILISM_UPGRADE_ID,
+        name: 'Mercantilism',
         type: SymbolType.MEDIEVAL,
-        description: 'Base Gold production +3. Upgrades Spices.',
+        description: 'Base Gold production +2. Upgrades Spices.',
         sprite: '050.png',
         descSymbols: [{ symbolKey: 'spices', relation: 'effect_modify' }],
     },
@@ -531,8 +546,16 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: GLOBALIZATION_UPGRADE_ID,
         name: 'Globalization',
         type: SymbolType.MODERN,
-        description: 'Gain 2 Ancient Tribe Joins.',
+        description: 'Unlocks Internet.',
         sprite: '069.png',
+        descSymbols: [{ symbolKey: 'internet', relation: 'pool_add' }],
+    },
+    [COLONIALISM_UPGRADE_ID]: {
+        id: COLONIALISM_UPGRADE_ID,
+        name: 'Colonialism',
+        type: SymbolType.MODERN,
+        description: 'Gain 3 Ancient Tribe Joins.',
+        sprite: '072.png',
     },
     [STATE_LABOR_UPGRADE_ID]: {
         id: STATE_LABOR_UPGRADE_ID,
@@ -545,21 +568,21 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: URBANIZATION_UPGRADE_ID,
         name: 'Urbanization',
         type: SymbolType.MODERN,
-        description: 'Base Food production +10. Base Gold production +2.',
+        description: 'Base Food production +4. Base Gold production +4.',
         sprite: '058.png',
     },
     [STEAM_POWER_UPGRADE_ID]: {
         id: STEAM_POWER_UPGRADE_ID,
         name: 'Steam Power',
         type: SymbolType.MODERN,
-        description: 'Base Gold production +8. Base Knowledge production +4.',
+        description: 'Base Gold production +4. Base Knowledge production +2.',
         sprite: '053.png',
     },
     [ELECTRICITY_UPGRADE_ID]: {
         id: ELECTRICITY_UPGRADE_ID,
         name: 'Electricity',
         type: SymbolType.MODERN,
-        description: 'Base Food production +5. Base Gold production +10. Base Knowledge production +5.',
+        description: 'Base Food production +3. Base Gold production +3. Base Knowledge production +3.',
         sprite: '061.png',
     },
     [FEUDAL_CORN_UPGRADE_ID]: {
@@ -793,6 +816,20 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'sheep', relation: 'effect_modify' },
             { symbolKey: 'wool', relation: 'effect_modify' },
         ],
+    },
+    [BUTTRESS_UPGRADE_ID]: {
+        id: BUTTRESS_UPGRADE_ID,
+        name: 'Buttress',
+        type: SymbolType.MEDIEVAL,
+        description: 'Base Food production +2.',
+        sprite: '070.png',
+    },
+    [CASTLE_UPGRADE_ID]: {
+        id: CASTLE_UPGRADE_ID,
+        name: 'Castle',
+        type: SymbolType.MEDIEVAL,
+        description: 'Enemy units spawned by barbarian invasion have 50% reduced attack power for 3 turns.',
+        sprite: '071.png',
     },
 
 

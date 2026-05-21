@@ -3,7 +3,6 @@ import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     ARCHITECTURE_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
-    COLONIALISM_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
@@ -14,9 +13,11 @@ import {
     MODERN_AGE_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
+    MERCANTILISM_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
+    BUTTRESS_UPGRADE_ID,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../data/knowledgeUpgrades';
 import { isKnowledgeUpgradeLockedByResearchCutoff } from '../data/knowledgeUpgradeTiers';
@@ -95,24 +96,25 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(NATIONALISM_UPGRADE_ID) ? 3 : 0) +
-        (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 4 : 0) +
-        (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 5 : 0);
+        (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0);
     const baseGold =
         (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
-        (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(EXPLORATION_UPGRADE_ID) ? 2 : 0) +
-        (upgrades.includes(COLONIALISM_UPGRADE_ID) ? 3 : 0) +
-        (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 8 : 0) +
-        (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 10 : 0);
+        (upgrades.includes(MERCANTILISM_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 4 : 0) +
+        (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0);
     const gold = (state.qinCurrencyStandardTurnsRemaining ?? 0) > 0 ? baseGold * 2 : baseGold;
     const food =
         (upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
-        (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 10 : 0) +
-        (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 5 : 0) +
-        (upgrades.includes(FEUDAL_CORN_UPGRADE_ID) ? 2 : 0);
+        (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 4 : 0) +
+        (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0) +
+        (upgrades.includes(FEUDAL_CORN_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(BUTTRESS_UPGRADE_ID) ? 2 : 0);
     return {
         food,
         gold,

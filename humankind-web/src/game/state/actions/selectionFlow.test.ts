@@ -11,6 +11,7 @@ import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     ARCHERY_UPGRADE_ID,
+    COLONIALISM_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     GLOBALIZATION_UPGRADE_ID,
@@ -338,7 +339,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
-    it('grants 2 Ancient Tribe Joins when Globalization is researched', () => {
+    it('unlocks Globalization without granting Ancient Tribe Joins directly', () => {
         const harness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
@@ -352,7 +353,24 @@ describe('selectionFlow actions', () => {
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(GLOBALIZATION_UPGRADE_ID);
         expect(
             useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
-        ).toHaveLength(2);
+        ).toHaveLength(0);
+    });
+
+    it('grants 3 Ancient Tribe Joins when Colonialism is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 21,
+            era: 3,
+            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(COLONIALISM_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(COLONIALISM_UPGRADE_ID);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
+        ).toHaveLength(3);
     });
 
     it('unlocks religion only when Theology is researched', () => {

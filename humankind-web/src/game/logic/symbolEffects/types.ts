@@ -68,6 +68,7 @@ export const DEFAULT_RELIC_EFFECTS: ActiveRelicEffects = {
 
 export interface SymbolEffectContext {
     upgrades: number[];
+    allSymbolsAdjacent?: boolean;
 }
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];

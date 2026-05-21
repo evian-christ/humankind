@@ -1,4 +1,5 @@
 import { SymbolType } from '../../data/symbolDefinitions';
+import { CASTLE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import type { PlayerSymbolInstance } from '../../types';
 import {
     applyFixedDamageToEnemy,
@@ -34,6 +35,7 @@ export interface CombatStepInput {
     event: CombatEvent;
     getAdjacentCoords: (x: number, y: number) => CombatCoord[];
     getEffectiveMaxHP: (sym: PlayerSymbolInstance) => number;
+    unlockedKnowledgeUpgrades?: number[];
 }
 
 export interface CombatStepResult {
@@ -53,7 +55,7 @@ export function collectCombatEvents(board: BoardGrid, width: number, height: num
 }
 
 export function resolveCombatStep(input: CombatStepInput): CombatStepResult {
-    const { board, width, height, event, getAdjacentCoords, getEffectiveMaxHP } = input;
+    const { board, width, height, event, getAdjacentCoords, getEffectiveMaxHP, unlockedKnowledgeUpgrades = [] } = input;
     const { ax, ay } = event;
     const attacker = board[ax][ay];
     const picked = resolveCombatTarget({
@@ -75,6 +77,16 @@ export function resolveCombatStep(input: CombatStepInput): CombatStepResult {
         !target.is_marked_for_destruction
     ) {
         atkDmg = attacker.definition.base_attack ?? 0;
+
+        // "성" 지식 업그레이드 보유 시, 야만인 침입으로 스폰된 적의 공격력 50% 감소 (반올림)
+        if (
+            unlockedKnowledgeUpgrades.includes(CASTLE_UPGRADE_ID) &&
+            attacker.spawnedByBarbarianInvasion &&
+            attacker.barbarianInvasionTurnsRemaining !== undefined &&
+            attacker.barbarianInvasionTurnsRemaining > 0
+        ) {
+            atkDmg = Math.round(atkDmg * 0.5);
+        }
 
         if (atkDmg > 0) {
             const maxHP = getEffectiveMaxHP(target);

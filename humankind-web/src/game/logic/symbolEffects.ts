@@ -3,7 +3,7 @@ import { SymbolType } from '../data/symbolDefinitions';
 import {
     buildEffectResult,
     createEffectState,
-    getAdjacentCoords,
+    getEffectiveAdjacentCoords,
     type SymbolEffectHandler,
     type SymbolEffectHandlerContext,
 } from './symbolEffects/core';
@@ -58,7 +58,7 @@ export const processSingleSymbolEffects = (
         ctx,
         relicEffects,
         state,
-        adj: getAdjacentCoords(x, y),
+        adj: getEffectiveAdjacentCoords(boardGrid, x, y, ctx.allSymbolsAdjacent),
         upgrades: ctx.upgrades,
     };
 

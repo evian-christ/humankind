@@ -93,6 +93,40 @@ export const getAdjacentCoords = (x: number, y: number): { x: number; y: number 
     return adj;
 };
 
+export const hasInternetOnBoard = (boardGrid: BoardGrid): boolean => {
+    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+        for (let by = 0; by < BOARD_HEIGHT; by++) {
+            const symbol = boardGrid[bx]?.[by];
+            if (symbol?.definition.id === S.internet && !symbol.is_marked_for_destruction) return true;
+        }
+    }
+    return false;
+};
+
+export const getEffectiveAdjacentCoords = (
+    boardGrid: BoardGrid,
+    x: number,
+    y: number,
+    allSymbolsAdjacent = false,
+): { x: number; y: number }[] => {
+    const coords = getAdjacentCoords(x, y);
+    if (!allSymbolsAdjacent) return coords;
+
+    const seen = new Set(coords.map((pos) => `${pos.x},${pos.y}`));
+    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
+        for (let by = 0; by < BOARD_HEIGHT; by++) {
+            if (bx === x && by === y) continue;
+            const symbol = boardGrid[bx]?.[by];
+            if (!symbol || symbol.is_marked_for_destruction) continue;
+            const key = `${bx},${by}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            coords.push({ x: bx, y: by });
+        }
+    }
+    return coords;
+};
+
 export const hasSeaOrHarborAdjacent = (boardGrid: BoardGrid, x: number, y: number): boolean =>
     getAdjacentCoords(x, y).some((p) => {
         const nid = boardGrid[p.x][p.y]?.definition.id;
