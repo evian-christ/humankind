@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildAncientSymbolsUnlockDescSymbols, buildModernAgeDescSymbols } from './knowledgeUpgrades';
+import {
+    buildAncientSymbolsUnlockDescSymbols,
+    buildFeudalismDescSymbols,
+    buildModernAgeDescSymbols,
+} from './knowledgeUpgrades';
 import { SYMBOLS_BY_KEY, SymbolType, type SymbolKey } from './symbolDefinitions';
 
 describe('knowledgeUpgrades', () => {
@@ -23,5 +27,18 @@ describe('knowledgeUpgrades', () => {
         expect(
             removedSymbols.some((entry) => SYMBOLS_BY_KEY[entry.symbolKey as SymbolKey]?.type === SymbolType.TERRAIN),
         ).toBe(false);
+    });
+
+    it('shows every Medieval symbol as added by the Medieval Age upgrade', () => {
+        const medievalKeys = Object.values(SYMBOLS_BY_KEY)
+            .filter((symbol) => symbol.type === SymbolType.MEDIEVAL)
+            .map((symbol) => symbol.key)
+            .sort();
+        const shownKeys = buildFeudalismDescSymbols()
+            .filter((entry) => entry.relation === 'pool_add')
+            .map((entry) => entry.symbolKey)
+            .sort();
+
+        expect(shownKeys).toEqual(medievalKeys);
     });
 });

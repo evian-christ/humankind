@@ -22,6 +22,7 @@ import {
 } from '../game/data/knowledgeUpgrades';
 import {
     isKnowledgeUpgradeLockedByResearchCutoff,
+    KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID,
     KNOWLEDGE_UPGRADE_TIER_ROWS,
 } from '../game/data/knowledgeUpgradeTiers';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
@@ -131,6 +132,7 @@ function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
     return KNOWLEDGE_UPGRADE_TIER_ROWS.filter((tier) => tier.level >= 0).map((tier) => {
         const row = Array<number | null>(KNOWLEDGE_TREE_GRID_COLS).fill(null);
         const preferredCols = tier.ids.map((upgradeId, order) => {
+            const affinityCol = KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[upgradeId];
             const prereqCols = getKnowledgeUpgradeDirectPrerequisites(upgradeId)
                 .map((prereqId) => {
                     const prereqCol = knownCols.get(prereqId);
@@ -142,9 +144,12 @@ function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
             return {
                 upgradeId,
                 order,
+                hasAffinityCol: affinityCol != null,
                 hasPrereq: prereqCols.length > 0,
                 col: KNOWLEDGE_TREE_ERA_SPINE_IDS.has(upgradeId)
                     ? KNOWLEDGE_TREE_CENTER_COL
+                    : affinityCol != null
+                    ? affinityCol
                     : prereqCols.length > 0
                     ? Math.round(prereqCols.reduce((sum, col) => sum + col, 0) / prereqCols.length)
                     : getEvenTierColumn(order, tier.ids.length),
@@ -155,10 +160,11 @@ function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
         preferredCols
             .sort((a, b) => {
                 if (a.hasPrereq !== b.hasPrereq) return a.hasPrereq ? -1 : 1;
+                if (a.hasAffinityCol !== b.hasAffinityCol) return a.hasAffinityCol ? -1 : 1;
                 return a.col !== b.col ? a.col - b.col : a.order - b.order;
             })
             .forEach((item) => {
-                const blockedCols = item.hasPrereq ? [] : previousTierCols;
+                const blockedCols = item.hasPrereq || item.hasAffinityCol ? [] : previousTierCols;
                 const col = KNOWLEDGE_TREE_ERA_SPINE_IDS.has(item.upgradeId)
                     ? getNearestOpenTierColumn(KNOWLEDGE_TREE_CENTER_COL, occupiedCols, 1)
                     :

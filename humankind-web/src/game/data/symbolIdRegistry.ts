@@ -25,7 +25,6 @@ export const SYMBOL_NUMERIC_ID = {
     // 평원축
     cattle: 12,
     sheep: 13,
-    wool: 14,
     horse: 15,
 
     // 바다축
@@ -76,17 +75,16 @@ export const SYMBOL_NUMERIC_ID = {
     wild_seeds: 46,
     heqet: 87,
     foxtail_millet: 88,
-    internet: 89,
 
     // ── Medieval (47–54) ──
     tax: 47,
     scholar: 48,
     holy_relic: 49,
-    telescope: 50,
-    scales: 51,
+    monastery_garden: 50,
+    tax_storehouse: 51,
     pioneer: 52,
     edict: 53,
-    embassy: 54,
+    royal_colony: 54,
 
     // ── Religion (55–58) ──
     christianity: 55,
@@ -106,31 +104,25 @@ export const SYMBOL_NUMERIC_ID = {
     // melee by era -> ranged by era
     warrior: 63,
     cavalry: 64,
-    knight: 65,
-    cavalry_corps: 66,
-    musketman: 67,
-    infantry: 68,
-    archer: 69,
-    tracker_archer: 70,
-    crossbowman: 71,
-    cannon: 72,
+    infantry: 65,
+    archer: 66,
+    crossbowman: 67,
+    cannon: 68,
 
     // ── Enemy (74, 78–86) ──
-    enemy_warrior: 74,
-    enemy_cavalry: 78,
-    enemy_knight: 79,
-    enemy_cavalry_corps: 80,
-    enemy_musketman: 81,
-    enemy_infantry: 82,
-    enemy_archer: 83,
-    enemy_tracker_archer: 84,
-    enemy_crossbowman: 85,
-    enemy_cannon: 86,
+    enemy_warrior: 69,
+    enemy_cavalry: 70,
+    enemy_infantry: 71,
+    enemy_archer: 72,
+    enemy_crossbowman: 73,
+    enemy_cannon: 74,
 
     // ── Disaster (75–77) ──
     flood: 75,
     earthquake: 76,
     drought: 77,
+    plague: 78,
+    heatwave: 79,
 } as const;
 
 export type SymbolKey = keyof typeof SYMBOL_NUMERIC_ID;

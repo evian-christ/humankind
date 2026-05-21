@@ -65,8 +65,10 @@ const UPGRADE_SPRITE_VERSION: Record<string, string> = {
     '062.png': 'updated-20260513-0112',
     '063.png': 'updated-20260513-0113',
     '068.png': 'updated-20260520-election',
-    '069.png': 'updated-20260520-globalization',
     '072.png': 'updated-20260520-colonialism',
+    '073.png': 'updated-20260521-tribal-federation',
+    '074.png': 'updated-20260521-mercenaries',
+    '075.png': 'updated-20260521-total-mobilization',
 };
 
 export function resolveUpgradeSpriteFile(sprite: string): string {

@@ -40,7 +40,10 @@ export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
         .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
 
     /** `buildFlatPool`에서 중세시대 해금 시 포함되는 SymbolType.MEDIEVAL 심볼 */
-    const poolAddKeys: SymbolKey[] = ['tax', 'scholar', 'holy_relic', 'pioneer', 'edict'];
+    const poolAddKeys = Object.values(SYMBOLS)
+        .filter((s) => s.type === SymbolType.MEDIEVAL)
+        .map((s) => s.key as SymbolKey)
+        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
 
     return [
         ...poolRemoveKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_remove' as const })),
@@ -147,10 +150,12 @@ export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
 export const PUBLIC_ADMINISTRATION_UPGRADE_ID = 66;
 export const MASS_MEDIA_UPGRADE_ID = 67;
 export const ELECTION_SYSTEM_UPGRADE_ID = 68;
-export const GLOBALIZATION_UPGRADE_ID = 69;
 export const BUTTRESS_UPGRADE_ID = 70;
 export const CASTLE_UPGRADE_ID = 71;
 export const COLONIALISM_UPGRADE_ID = 72;
+export const TRIBAL_FEDERATION_UPGRADE_ID = 73;
+export const MERCENARIES_UPGRADE_ID = 74;
+export const TOTAL_MOBILIZATION_UPGRADE_ID = 75;
 export const TERRITORIAL_REORG_UPGRADE_ID = -1;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
@@ -167,11 +172,12 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: PASTORALISM_UPGRADE_ID,
         name: 'Pastoralism',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Cattle and Sheep.',
+        description: 'Upgrades Cattle, Sheep, and Plains.',
         sprite: '003.png',
         descSymbols: [
             { symbolKey: 'cattle', relation: 'effect_modify' },
             { symbolKey: 'sheep', relation: 'effect_modify' },
+            { symbolKey: 'plains', relation: 'effect_modify' },
         ],
     },
     [WRITING_SYSTEM_UPGRADE_ID]: {
@@ -186,11 +192,10 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: IRON_WORKING_UPGRADE_ID,
         name: 'Iron Working',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Warrior into Knight.',
+        description: 'Melee units gain +2 Attack and +4 HP.',
         sprite: '022.png',
         descSymbols: [
             { symbolKey: 'warrior', relation: 'effect_modify' },
-            { symbolKey: 'knight', relation: 'pool_add' },
         ],
     },
     [IRRIGATION_UPGRADE_ID]: {
@@ -264,12 +269,11 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: TRACKING_UPGRADE_ID,
         name: 'Tracking',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Forest, Mushroom, and Deer.',
+        description: 'Upgrades Forest and Mushroom.',
         sprite: '020.png',
         descSymbols: [
             { symbolKey: 'forest', relation: 'effect_modify' },
             { symbolKey: 'mushroom', relation: 'effect_modify' },
-            { symbolKey: 'deer', relation: 'effect_modify' },
         ],
     },
     [TANNING_UPGRADE_ID]: {
@@ -409,40 +413,42 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: MILITARY_SCIENCE_UPGRADE_ID,
         name: 'Military Science',
         type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Horse.',
+        description: 'Horse produces +3 Food and +4 Gold. Melee units gain +1 Attack and +1 HP.',
         sprite: '035.png',
-        descSymbols: [{ symbolKey: 'horse', relation: 'effect_modify' }],
+        descSymbols: [
+            { symbolKey: 'horse', relation: 'effect_modify' },
+        ],
     },
     [MECHANICS_UPGRADE_ID]: {
         id: MECHANICS_UPGRADE_ID,
         name: 'Mechanics',
         type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Archer into Crossbowman.',
+        description: 'Replaces Archer with Crossbowman. Ranged units gain +1 Attack and +2 HP.',
         sprite: '033.png',
         descSymbols: [
-            { symbolKey: 'archer', relation: 'effect_modify' },
+            { symbolKey: 'archer', relation: 'pool_remove' },
             { symbolKey: 'crossbowman', relation: 'pool_add' },
         ],
     },
     [GUNPOWDER_UPGRADE_ID]: {
         id: GUNPOWDER_UPGRADE_ID,
-        name: 'Gunpowder',
+        name: 'Stirrups',
         type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Knight into Musketman.',
+        description: 'Replaces Warrior with Knight. Melee units gain +2 Attack and +4 HP.',
         sprite: '048.png',
         descSymbols: [
-            { symbolKey: 'knight', relation: 'effect_modify' },
-            { symbolKey: 'musketman', relation: 'pool_add' },
+            { symbolKey: 'warrior', relation: 'pool_remove' },
+            { symbolKey: 'cavalry', relation: 'pool_add' },
         ],
     },
     [BALLISTICS_UPGRADE_ID]: {
         id: BALLISTICS_UPGRADE_ID,
         name: 'Ballistics',
         type: SymbolType.MODERN,
-        description: 'Upgrades Crossbowman into Cannon.',
+        description: 'Replaces Crossbowman with Cannon. Ranged units gain +1 Attack and +2 HP.',
         sprite: '055.png',
         descSymbols: [
-            { symbolKey: 'crossbowman', relation: 'effect_modify' },
+            { symbolKey: 'crossbowman', relation: 'pool_remove' },
             { symbolKey: 'cannon', relation: 'pool_add' },
         ],
     },
@@ -450,10 +456,10 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: INTERCHANGEABLE_PARTS_UPGRADE_ID,
         name: 'Interchangeable Parts',
         type: SymbolType.MODERN,
-        description: 'Upgrades Musketman into Infantry.',
+        description: 'Replaces Knight with Infantry. Melee units gain +2 Attack and +4 HP.',
         sprite: '062.png',
         descSymbols: [
-            { symbolKey: 'musketman', relation: 'effect_modify' },
+            { symbolKey: 'cavalry', relation: 'pool_remove' },
             { symbolKey: 'infantry', relation: 'pool_add' },
         ],
     },
@@ -474,9 +480,9 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: ARCHERY_UPGRADE_ID,
         name: 'Archery',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Archer.',
+        description: 'Ranged units gain +1 Attack and +2 HP.',
         sprite: '009.png',
-        descSymbols: [{ symbolKey: 'archer', relation: 'pool_add' }],
+        descSymbols: [{ symbolKey: 'archer', relation: 'effect_modify' }],
     },
     [CURRENCY_UPGRADE_ID]: {
         id: CURRENCY_UPGRADE_ID,
@@ -490,35 +496,31 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: HORSEMANSHIP_UPGRADE_ID,
         name: 'Horsemanship',
         type: SymbolType.ANCIENT,
-        description: 'Adds Horse to the symbol selection pool. Upgrades Plains.',
+        description: 'Adds Horse to the selection pool. Melee units gain +1 Attack and +1 HP.',
         sprite: '013.png',
         descSymbols: [
             { symbolKey: 'horse', relation: 'pool_add' },
-            { symbolKey: 'plains', relation: 'effect_modify' },
         ],
     },
     [SACRIFICIAL_RITE_UPGRADE_ID]: {
         id: SACRIFICIAL_RITE_UPGRADE_ID,
         name: 'Sacrificial Rite',
         type: SymbolType.ANCIENT,
-        description:
-            'Gain 2 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
+        description: 'Gain 2 Furnaces of Oblivion.',
         sprite: '012.png',
     },
     [INQUISITION_UPGRADE_ID]: {
         id: INQUISITION_UPGRADE_ID,
         name: 'Inquisition',
         type: SymbolType.MEDIEVAL,
-        description:
-            'Gain 2 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
+        description: 'Gain 2 Furnaces of Oblivion.',
         sprite: '064.png',
     },
     [RESTRUCTURING_UPGRADE_ID]: {
         id: RESTRUCTURING_UPGRADE_ID,
         name: 'Restructuring',
         type: SymbolType.MODERN,
-        description:
-            'Gain 2 Furnaces of Oblivion. Each consumes the relic to destroy 1 symbol on the board.',
+        description: 'Gain 2 Furnaces of Oblivion.',
         sprite: '065.png',
     },
     [PUBLIC_ADMINISTRATION_UPGRADE_ID]: {
@@ -542,20 +544,33 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'The first reroll in each selection phase is free.',
         sprite: '068.png',
     },
-    [GLOBALIZATION_UPGRADE_ID]: {
-        id: GLOBALIZATION_UPGRADE_ID,
-        name: 'Globalization',
-        type: SymbolType.MODERN,
-        description: 'Unlocks Internet.',
-        sprite: '069.png',
-        descSymbols: [{ symbolKey: 'internet', relation: 'pool_add' }],
-    },
     [COLONIALISM_UPGRADE_ID]: {
         id: COLONIALISM_UPGRADE_ID,
         name: 'Colonialism',
         type: SymbolType.MODERN,
         description: 'Gain 3 Ancient Tribe Joins.',
         sprite: '072.png',
+    },
+    [TRIBAL_FEDERATION_UPGRADE_ID]: {
+        id: TRIBAL_FEDERATION_UPGRADE_ID,
+        name: 'Tribal Federation',
+        type: SymbolType.ANCIENT,
+        description: 'Gain 2 Military Levies.',
+        sprite: '073.png',
+    },
+    [MERCENARIES_UPGRADE_ID]: {
+        id: MERCENARIES_UPGRADE_ID,
+        name: 'Mercenaries',
+        type: SymbolType.MEDIEVAL,
+        description: 'Gain 2 Military Levies.',
+        sprite: '074.png',
+    },
+    [TOTAL_MOBILIZATION_UPGRADE_ID]: {
+        id: TOTAL_MOBILIZATION_UPGRADE_ID,
+        name: 'Total Mobilization',
+        type: SymbolType.MODERN,
+        description: 'Gain 2 Military Levies.',
+        sprite: '075.png',
     },
     [STATE_LABOR_UPGRADE_ID]: {
         id: STATE_LABOR_UPGRADE_ID,
@@ -809,12 +824,11 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: NOMADIC_TRADITION_UPGRADE_ID,
         name: 'Nomadic Tradition',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Cattle, Sheep, and Wool.',
+        description: 'Upgrades Cattle and Sheep.',
         sprite: '024.png',
         descSymbols: [
             { symbolKey: 'cattle', relation: 'effect_modify' },
             { symbolKey: 'sheep', relation: 'effect_modify' },
-            { symbolKey: 'wool', relation: 'effect_modify' },
         ],
     },
     [BUTTRESS_UPGRADE_ID]: {
@@ -841,7 +855,7 @@ export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> 
     [GUILD_UPGRADE_ID]: [CURRENCY_UPGRADE_ID],
     [MILITARY_SCIENCE_UPGRADE_ID]: [HORSEMANSHIP_UPGRADE_ID],
     [SCIENTIFIC_THEORY_UPGRADE_ID]: [EDUCATION_UPGRADE_ID],
-    [IRON_WORKING_UPGRADE_ID]: [ARCHERY_UPGRADE_ID],
+
     [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
     [HORSEMANSHIP_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
     [NOMADIC_TRADITION_UPGRADE_ID]: [PASTORALISM_UPGRADE_ID],
@@ -866,10 +880,7 @@ export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> 
     [THREE_FIELD_SYSTEM_UPGRADE_ID]: [IRRIGATION_UPGRADE_ID],
     [AGRICULTURAL_SURPLUS_UPGRADE_ID]: [THREE_FIELD_SYSTEM_UPGRADE_ID],
     [MODERN_AGRICULTURE_UPGRADE_ID]: [AGRICULTURAL_SURPLUS_UPGRADE_ID],
-    [MECHANICS_UPGRADE_ID]: [IRON_WORKING_UPGRADE_ID],
-    [GUNPOWDER_UPGRADE_ID]: [MECHANICS_UPGRADE_ID],
-    [BALLISTICS_UPGRADE_ID]: [GUNPOWDER_UPGRADE_ID],
-    [INTERCHANGEABLE_PARTS_UPGRADE_ID]: [BALLISTICS_UPGRADE_ID],
+
     [DRY_STORAGE_UPGRADE_ID]: [FOREIGN_TRADE_UPGRADE_ID],
     [DESERT_STORAGE_UPGRADE_ID]: [DRY_STORAGE_UPGRADE_ID],
     [CARAVANSERAI_UPGRADE_ID]: [DESERT_STORAGE_UPGRADE_ID],

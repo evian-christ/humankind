@@ -8,6 +8,7 @@ import { LEADERS } from '../game/data/leaders';
 import { REWARDS, REWARD_RARITY_COLOR, REWARD_RARITY_ORDER, getRewardDescriptionAllEras } from '../game/data/rewardDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
+import { getDisplayUnitStats } from '../game/data/unitUpgrades';
 import { getEventDescription, getEventDescriptionAllEras, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
@@ -79,6 +80,7 @@ const DataBrowser = () => {
     const developerMode = useSettingsStore((s) => s.developerMode);
     const { devAddSymbol } = useGameStore();
     const era = useGameStore((s) => s.era);
+    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades || []);
 
     // Per-tab sort state
     const [symbolSort, setSymbolSort] = useState<SortState | null>(null);
@@ -155,8 +157,14 @@ const DataBrowser = () => {
                     case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'type': va = a.type; vb = b.type; break;
                     case 'desc': va = t(`symbol.${a.key}.desc`, language); vb = t(`symbol.${b.key}.desc`, language); break;
-                    case 'atk': va = a.base_attack ?? -1; vb = b.base_attack ?? -1; break;
-                    case 'hp': va = a.base_hp ?? -1; vb = b.base_hp ?? -1; break;
+                    case 'atk':
+                        va = getDisplayUnitStats(a, unlockedKnowledgeUpgrades).attack;
+                        vb = getDisplayUnitStats(b, unlockedKnowledgeUpgrades).attack;
+                        break;
+                    case 'hp':
+                        va = getDisplayUnitStats(a, unlockedKnowledgeUpgrades).hp;
+                        vb = getDisplayUnitStats(b, unlockedKnowledgeUpgrades).hp;
+                        break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     case 'basePool': va = isBasePool(a) ? 1 : 0; vb = isBasePool(b) ? 1 : 0; break;
                     default: va = a.id; vb = b.id;
@@ -168,7 +176,7 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [eraFilter, search, language, symbolSort]);
+    }, [eraFilter, search, language, symbolSort, unlockedKnowledgeUpgrades]);
 
     // 유물 목록
     const filteredRelics = useMemo(() => {
@@ -565,8 +573,12 @@ const DataBrowser = () => {
 
                                             <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.key}.desc`, language)} /></td>
                                             <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
-                                            <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
-                                            <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
+                                            <td className="databrowser-cell--stat">
+                                                {s.base_attack !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).attack : '-'}
+                                            </td>
+                                            <td className="databrowser-cell--stat">
+                                                {s.base_hp !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).hp : '-'}
+                                            </td>
                                             <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                             <td style={{ textAlign: 'center' }}>
                                                 <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
@@ -594,8 +606,12 @@ const DataBrowser = () => {
 
                                         <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.key}.desc`, language)} /></td>
                                         <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
-                                        <td className="databrowser-cell--stat">{s.base_attack ?? '-'}</td>
-                                        <td className="databrowser-cell--stat">{s.base_hp ?? '-'}</td>
+                                        <td className="databrowser-cell--stat">
+                                            {s.base_attack !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).attack : '-'}
+                                        </td>
+                                        <td className="databrowser-cell--stat">
+                                            {s.base_hp !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).hp : '-'}
+                                        </td>
                                         <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                         <td style={{ textAlign: 'center' }}>
                                             <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>

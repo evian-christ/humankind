@@ -22,16 +22,21 @@ function def(key: SymbolKey, body: DefBody): SymbolDefinition {
 }
 
 const UNIT_COMBAT_STATS = {
-    warrior: { base_attack: 3, base_hp: 10 },
+    warrior: { base_attack: 3, base_hp: 8 },
     cavalry: { base_attack: 4, base_hp: 15 },
-    knight: { base_attack: 5, base_hp: 20 },
-    cavalry_corps: { base_attack: 7, base_hp: 30 },
-    musketman: { base_attack: 10, base_hp: 40 },
     infantry: { base_attack: 20, base_hp: 80 },
     archer: { base_attack: 2, base_hp: 4 },
-    tracker_archer: { base_attack: 2, base_hp: 8 },
     crossbowman: { base_attack: 4, base_hp: 8 },
     cannon: { base_attack: 10, base_hp: 20 },
+} as const;
+
+const ENEMY_COMBAT_STATS = {
+    warrior: { base_attack: 3, base_hp: 8 },
+    cavalry: { base_attack: 7, base_hp: 16 },
+    infantry: { base_attack: 9, base_hp: 20 },
+    archer: { base_attack: 2, base_hp: 4 },
+    crossbowman: { base_attack: 4, base_hp: 8 },
+    cannon: { base_attack: 5, base_hp: 10 },
 } as const;
 
 /**
@@ -46,7 +51,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +2 Gold; if Forest is the only terrain on the board: +2 Food.", sprite: "004.png" }),
     def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "005.png" }),
     def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol.", sprite: "006.png" }),
-    def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+1 Food per 2 adjacent empty slots.", sprite: "007.png" }),
+    def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+2 Food per 2 adjacent empty slots. (Post-Arid Preservation: +4, Post-Oasis Reclamation: +6)", sprite: "007.png" }),
     def('mountain', { name: "Mountain", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "008.png" }),
 
     // Normal: grassland deck
@@ -66,16 +71,10 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         name: "Sheep",
         type: SymbolType.NORMAL,
         description:
-            "+1 Food; 10% chance to produce Wool; when adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold. With Pastoralism: 10% chance per turn to produce Sheep.",
+            "+1 Food; when adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold. With Pastoralism: 10% chance per turn to produce Sheep.",
         sprite: "013.png",
     }),
-    def('wool', {
-        name: "Wool",
-        type: SymbolType.NORMAL,
-        description: "Destroyed after 3 turns; on destroy: +5 Gold.",
-        sprite: "014.png",
-    }),
-    def('horse', { name: "Horse", type: SymbolType.NORMAL, description: "+1 Food, +1 Gold; when adjacent to Plains: +2 additional Food. When adjacent to a melee unit: Cavalry training opportunity.", sprite: "015.png" }),
+    def('horse', { name: "Horse", type: SymbolType.NORMAL, description: "+2 Food, +2 Gold.", sprite: "015.png" }),
 
     // Normal: sea deck
     def('fish', { name: "Fish", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +1 Food; 2+ Seas: +2 Food; 3+ Seas: +4 Food.", sprite: "016.png" }),
@@ -138,21 +137,15 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
     def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+5 Knowledge per relic owned.", sprite: "037.png" }),
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
-    def('internet', {
-        name: "Internet",
-        type: SymbolType.NORMAL,
-        description: "While placed on the board, all symbols are considered adjacent.",
-        sprite: "-",
-    }),
 
     // Ancient
     def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.", sprite: "039.png" }),
-    def('totem', { name: "Totem", type: SymbolType.ANCIENT, description: "In a corner: +20 Knowledge.", sprite: "040.png" }),
+    def('totem', { name: "Totem", type: SymbolType.ANCIENT, description: "In a corner: +12 Knowledge.", sprite: "040.png" }),
     def('omen', { name: "Omen", type: SymbolType.ANCIENT, description: "50% chance for +3 Food.", sprite: "041.png" }),
     def('campfire', { name: "Campfire", type: SymbolType.ANCIENT, description: "Gain Food equal to the Food produced this turn by the highest-producing adjacent symbol. Destroyed.", sprite: "042.png" }),
-    def('pottery', { name: "Pottery", type: SymbolType.ANCIENT, description: "+3 Food stored per turn; on destroy: gain Food equal to stored Counter.", sprite: "043.png" }),
-    def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Destroyed; on destroy: adds 2 random Normal symbols.", sprite: "044.png" }),
-    def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+1 Knowledge per 2 empty slots.", sprite: "045.png" }),
+    def('pottery', { name: "Pottery", type: SymbolType.ANCIENT, description: "+4 Food stored per turn; on destroy: gain Food equal to stored Counter.", sprite: "043.png" }),
+    def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Consume this: triggers 2 consecutive symbol selection phases.", sprite: "044.png" }),
+    def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+4 Knowledge per 4 empty slots.", sprite: "045.png" }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.ANCIENT, description: "+1 Food. Destroyed after 5 turns.", sprite: "046.png" }),
     def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +1 additional Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
     def('foxtail_millet', { name: "Foxtail Millet", type: SymbolType.ANCIENT, description: "+5 Food per 2 adjacent Terrain symbols.", sprite: "088.png" }),
@@ -173,13 +166,19 @@ const SYMBOL_LIST: SymbolDefinition[] = [
             "If there is a Religion symbol on the board: +7 Knowledge, +7 Gold.",
         sprite: "049.png",
     }),
-    def('telescope', {
-        name: "Telescope",
+    def('monastery_garden', {
+        name: "Monastery Garden",
         type: SymbolType.MEDIEVAL,
-        description: "+Knowledge equal to this slot number (1–20, top-left first).",
+        description:
+            "If there is a Religion symbol on the board: +7 Food, +7 Knowledge.",
         sprite: "050.png",
     }),
-    def('scales', { name: "Scales", type: SymbolType.MEDIEVAL, description: "+8 Knowledge.", sprite: "051.png" }),
+    def('tax_storehouse', {
+        name: "Tax Storehouse",
+        type: SymbolType.MEDIEVAL,
+        description: "+8 Food stored per turn; on destroy: gain Food equal to stored Counter.",
+        sprite: "051.png",
+    }),
     def('pioneer', {
         name: "Pioneer",
         type: SymbolType.MEDIEVAL,
@@ -192,10 +191,10 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         description: "Consume this to destroy 1 adjacent symbol.",
         sprite: "053.png",
     }),
-    def('embassy', {
-        name: "Embassy",
+    def('royal_colony', {
+        name: "Royal Colony",
         type: SymbolType.MEDIEVAL,
-        description: "Destroyed; on destroy: next turn, the first symbol-selection reroll costs 0 Gold.",
+        description: "Destroyed; on destroy: next symbol selection includes at least one Event symbol.",
         sprite: "054.png",
     }),
 
@@ -234,33 +233,27 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If there are no duplicate symbols on the board: +1 Food per 2 symbols on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "058.png" }),
 
     // Unit
-    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Primitive melee unit.", ...UNIT_COMBAT_STATS.warrior, sprite: "063.png" }),
-    def('cavalry', { name: "Cavalry", type: SymbolType.UNIT, description: "Ancient melee unit.", ...UNIT_COMBAT_STATS.cavalry, sprite: "064.png" }),
-    def('knight', { name: "Knight", type: SymbolType.UNIT, description: "Ancient melee unit.", ...UNIT_COMBAT_STATS.knight, sprite: "065.png" }),
-    def('cavalry_corps', { name: "Cavalry Corps", type: SymbolType.UNIT, description: "Medieval melee unit.", ...UNIT_COMBAT_STATS.cavalry_corps, sprite: "066.png" }),
-    def('musketman', { name: "Musketman", type: SymbolType.UNIT, description: "Medieval melee unit.", ...UNIT_COMBAT_STATS.musketman, sprite: "067.png" }),
-    def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Modern melee unit.", ...UNIT_COMBAT_STATS.infantry, sprite: "068.png" }),
-    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Ancient ranged unit.", ...UNIT_COMBAT_STATS.archer, sprite: "069.png" }),
-    def('tracker_archer', { name: "Tracker Archer", type: SymbolType.UNIT, description: "Ancient ranged unit. When adjacent to Forest: +1 Food.", ...UNIT_COMBAT_STATS.tracker_archer, sprite: "070.png" }),
-    def('crossbowman', { name: "Crossbowman", type: SymbolType.UNIT, description: "Medieval ranged unit.", ...UNIT_COMBAT_STATS.crossbowman, sprite: "071.png" }),
-    def('cannon', { name: "Cannon", type: SymbolType.UNIT, description: "Modern ranged unit.", ...UNIT_COMBAT_STATS.cannon, sprite: "072.png" }),
+    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Melee: attacks the first adjacent enemy symbol.", ...UNIT_COMBAT_STATS.warrior, sprite: "063.png" }),
+    def('cavalry', { name: "Knight", type: SymbolType.UNIT, description: "Melee: attacks the first adjacent enemy symbol.", ...UNIT_COMBAT_STATS.cavalry, sprite: "064.png" }),
+    def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Melee: attacks the first adjacent enemy symbol.", ...UNIT_COMBAT_STATS.infantry, sprite: "065.png" }),
+    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Ranged: attacks the first enemy symbol on the board.", ...UNIT_COMBAT_STATS.archer, sprite: "066.png" }),
+    def('crossbowman', { name: "Crossbowman", type: SymbolType.UNIT, description: "Ranged: attacks the first enemy symbol on the board.", ...UNIT_COMBAT_STATS.crossbowman, sprite: "067.png" }),
+    def('cannon', { name: "Cannon", type: SymbolType.UNIT, description: "Ranged: attacks the first enemy symbol on the board.", ...UNIT_COMBAT_STATS.cannon, sprite: "068.png" }),
 
     // Enemy
-    def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.warrior, sprite: "074.png" }),
-    def('enemy_cavalry', { name: "Cavalry", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.cavalry, sprite: "078.png" }),
-    def('enemy_knight', { name: "Knight", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.knight, sprite: "079.png" }),
-    def('enemy_cavalry_corps', { name: "Cavalry Corps", type: SymbolType.ENEMY, description: "-6 Food.", ...UNIT_COMBAT_STATS.cavalry_corps, sprite: "080.png" }),
-    def('enemy_musketman', { name: "Musketman", type: SymbolType.ENEMY, description: "-6 Food.", ...UNIT_COMBAT_STATS.musketman, sprite: "081.png" }),
-    def('enemy_infantry', { name: "Infantry", type: SymbolType.ENEMY, description: "-12 Food.", ...UNIT_COMBAT_STATS.infantry, sprite: "082.png" }),
-    def('enemy_archer', { name: "Archer", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.archer, sprite: "083.png" }),
-    def('enemy_tracker_archer', { name: "Tracker Archer", type: SymbolType.ENEMY, description: "-3 Food.", ...UNIT_COMBAT_STATS.tracker_archer, sprite: "084.png" }),
-    def('enemy_crossbowman', { name: "Crossbowman", type: SymbolType.ENEMY, description: "-6 Food.", ...UNIT_COMBAT_STATS.crossbowman, sprite: "085.png" }),
-    def('enemy_cannon', { name: "Cannon", type: SymbolType.ENEMY, description: "-12 Food.", ...UNIT_COMBAT_STATS.cannon, sprite: "086.png" }),
+    def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", ...ENEMY_COMBAT_STATS.warrior, sprite: "069.png" }),
+    def('enemy_cavalry', { name: "Knight", type: SymbolType.ENEMY, description: "-5 Food.", ...ENEMY_COMBAT_STATS.cavalry, sprite: "070.png" }),
+    def('enemy_infantry', { name: "Infantry", type: SymbolType.ENEMY, description: "-8 Food.", ...ENEMY_COMBAT_STATS.infantry, sprite: "071.png" }),
+    def('enemy_archer', { name: "Archer", type: SymbolType.ENEMY, description: "-3 Food.", ...ENEMY_COMBAT_STATS.archer, sprite: "072.png" }),
+    def('enemy_crossbowman', { name: "Crossbowman", type: SymbolType.ENEMY, description: "-5 Food.", ...ENEMY_COMBAT_STATS.crossbowman, sprite: "073.png" }),
+    def('enemy_cannon', { name: "Cannon", type: SymbolType.ENEMY, description: "-8 Food.", ...ENEMY_COMBAT_STATS.cannon, sprite: "074.png" }),
 
     // Disaster
     def('flood', { name: "Flood", type: SymbolType.DISASTER, description: "Disables production from adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "075.png" }),
     def('earthquake', { name: "Earthquake", type: SymbolType.DISASTER, description: "Destroyed. On destroy: destroy every symbol in the same column.", sprite: "076.png" }),
     def('drought', { name: "Drought", type: SymbolType.DISASTER, description: "When counter reaches 0: Destroy.", sprite: "077.png" }),
+    def('plague', { name: "Plague", type: SymbolType.DISASTER, description: "Disables the symbol selection phase. When counter reaches 0: Destroy.", sprite: "078.png" }),
+    def('heatwave', { name: "Heatwave", type: SymbolType.DISASTER, description: "Reduces symbol choices to two. When counter reaches 0: Destroy.", sprite: "079.png" }),
 ];
 
 export const SYMBOLS: Record<number, SymbolDefinition> = Object.fromEntries(
@@ -291,14 +284,13 @@ export const RELIGION_DOCTRINE_IDS = RELIGION_SYMBOL_IDS;
 const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'merchant', 'horse', 'crab', 'library', 'pearl',
     'compass',
-    'telescope', 'scales', 'embassy',
     'agi_core',
     'loot', 'greater_loot', 'radiant_loot',
     'christianity', 'islam', 'buddhism', 'hinduism',
-    'archer', 'tracker_archer', 'knight', 'cavalry', 'cavalry_corps', 'crossbowman', 'musketman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
-    'flood', 'earthquake', 'drought',
-    'wool', 'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
-    'heqet', 'foxtail_millet', 'internet',
+    'cavalry', 'crossbowman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
+    'flood', 'earthquake', 'drought', 'plague', 'heatwave',
+    'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
+    'heqet', 'foxtail_millet',
 ];
 
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */

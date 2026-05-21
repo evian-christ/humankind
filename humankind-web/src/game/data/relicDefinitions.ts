@@ -166,7 +166,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     },
     15: {
         id: 15,
-        name: "망각의 화로",
+        name: "국가 정비",
         description: "소모하여 보드 위에 있는 심볼 1개 파괴.",
         cost: 12,
         rarity: "common",
@@ -202,7 +202,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     },
     19: {
         id: 19,
-        name: "고대 부족 합류",
+        name: "개척자",
         description: "지형 선택을 1회 합니다. 클릭하여 사용.",
         cost: 15,
         rarity: "common",
@@ -379,6 +379,24 @@ export const RELICS: Record<number, RelicDefinition> = {
         rarity: "uncommon",
         type: SymbolType.NORMAL,
         sprite: "038.png",
+    },
+    39: {
+        id: 39,
+        name: "징집령",
+        description: "소모하여 유닛 심볼 획득. 클릭하여 사용.",
+        cost: 14,
+        rarity: "common",
+        type: SymbolType.NORMAL,
+        sprite: "039.png",
+    },
+    40: {
+        id: 40,
+        name: "예언의 주사위",
+        description: "소모하여 이벤트 선택을 발동합니다.",
+        cost: 14,
+        rarity: "common",
+        type: SymbolType.NORMAL,
+        sprite: "-",
     },
 };
 
