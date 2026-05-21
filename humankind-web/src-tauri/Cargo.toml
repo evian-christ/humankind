@@ -1,6 +1,6 @@
 [package]
 name = "humankind-web"
-version = "0.0.0"
+version = "1.2.0"
 description = "Humankind slot game"
 authors = ["you"]
 edition = "2021"
