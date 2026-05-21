@@ -57,7 +57,7 @@ export default function DemoStartScreen() {
         <h1 className="main-menu-title main-menu-title--image">
           <img
             className="main-menu-title-sprite"
-            src="/capsules/librarylogo.png"
+            src="./capsules/librarylogo.png"
             alt="Humankind in a nutshell"
             draggable={false}
           />
@@ -150,7 +150,7 @@ export default function DemoStartScreen() {
         ×
       </button>
       <div className="main-menu-version" aria-label="alpha version">
-        a0.1.1
+        a1.2.0
       </div>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
