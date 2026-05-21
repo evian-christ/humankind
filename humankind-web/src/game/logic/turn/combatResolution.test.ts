@@ -61,7 +61,7 @@ describe('combatResolution', () => {
             getEffectiveMaxHP,
         });
 
-        expect(board[1][0]?.enemy_hp).toBe(7);
+        expect(board[1][0]?.enemy_hp).toBe(5);
         expect(board[1][0]?.is_marked_for_destruction).toBe(false);
         expect(result.animation).toEqual({ ax: 0, ay: 0, tx: 1, ty: 0, atkDmg: 3, counterDmg: 0 });
     });
@@ -81,8 +81,8 @@ describe('combatResolution', () => {
             getEffectiveMaxHP,
         });
 
-        expect(board[0][0]?.enemy_hp).toBe(6);
-        expect(board[4][2]?.enemy_hp).toBe(10);
+        expect(board[0][0]?.enemy_hp).toBe(4);
+        expect(board[4][2]?.enemy_hp).toBe(8);
         expect(result.animation).toEqual({ ax: 4, ay: 3, tx: 0, ty: 0, atkDmg: 4, counterDmg: 0 });
     });
 

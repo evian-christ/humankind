@@ -25,7 +25,6 @@ import {
     boardHasAdjacentPlains,
     boardHasDestroyableAdjacentSymbol,
     boardHasTrainableAdjacentMelee,
-    boardHasTrainableAdjacentRanged,
     isOpenableLoot,
 } from './renderers/rendererShared';
 import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
@@ -598,11 +597,7 @@ export class PixiGameApp {
                     symDef.id === S.horse &&
                     !symbol.is_marked_for_destruction &&
                     boardHasTrainableAdjacentMelee(state.board, x, y, state.unlockedKnowledgeUpgrades);
-                const canTrainTrackerArcher =
-                    state.phase === 'idle' &&
-                    symDef.id === S.deer &&
-                    !symbol.is_marked_for_destruction &&
-                    boardHasTrainableAdjacentRanged(state.board, x, y, state.unlockedKnowledgeUpgrades);
+
                 const canOpenLoot =
                     state.phase === 'idle' &&
                     !symbol.is_marked_for_destruction &&
@@ -612,6 +607,10 @@ export class PixiGameApp {
                     symDef.id === S.edict &&
                     !symbol.is_marked_for_destruction &&
                     boardHasDestroyableAdjacentSymbol(state.board, x, y);
+                const canConsumeTribalVillage =
+                    state.phase === 'idle' &&
+                    symDef.id === S.tribal_village &&
+                    !symbol.is_marked_for_destruction;
 
                 const showSymbolHover = () => {
                     this.symbolHoverCell = { x, y };
@@ -622,7 +621,7 @@ export class PixiGameApp {
                     this.onHoverSymbol(null);
                 };
 
-                if (canButcherPasture || canTrainHorse || canTrainTrackerArcher || canOpenLoot || canUseEdict) {
+                if (canButcherPasture || canTrainHorse || canOpenLoot || canUseEdict || canConsumeTribalVillage) {
                     const cellRoot = new PIXI.Container();
                     cellRoot.x = cellX;
                     cellRoot.y = cellY;
@@ -641,6 +640,8 @@ export class PixiGameApp {
                           ? t('edictBoard.remove', lang)
                         : canOpenLoot
                           ? t('lootOpen.button', lang)
+                        : canConsumeTribalVillage
+                          ? t('tribalVillage.button', lang)
                           : t('horseTrain.button', lang);
                     const lbl = new PIXI.Text({
                         text: btnLabel,
@@ -692,9 +693,10 @@ export class PixiGameApp {
                                 useGameStore.getState().activateEdictAt(x, y);
                             } else if (canTrainHorse) {
                                 useGameStore.getState().trainHorseUnitAt(x, y);
-                            } else if (canTrainTrackerArcher) {
-                                useGameStore.getState().trainDeerUnitAt(x, y);
+                            } else if (canConsumeTribalVillage) {
+                                useGameStore.getState().consumeTribalVillageAt(x, y);
                             } else {
+                                void audioManager.play('open_reward');
                                 useGameStore.getState().openLootAt(x, y);
                             }
                             actionBtn.visible = false;

@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-    MILITARY_SCIENCE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
-    TRACKING_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
-import { Sym, type SymbolDefinition } from '../data/symbolDefinitions';
+import { RELICS } from '../data/relicDefinitions';
+import { isGameEventDefinition } from '../data/eventDefinitions';
+import { RELIC_ID } from '../logic/relics/relicIds';
+import { Sym, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import { useRelicStore } from './relicStore';
 
@@ -162,65 +163,9 @@ describe('gameStore pasture butchering', () => {
         const next = useGameStore.getState();
         expect(next.board[1][1]).toBeNull();
         expect(next.board[2][1]?.definition.id).toBe(Sym.cavalry.id);
-        expect(next.board[2][1]?.enemy_hp).toBe(12);
+        expect(next.board[2][1]?.enemy_hp).toBe(7);
         expect(next.playerSymbols.some((sym) => sym.instanceId === 'horse')).toBe(false);
         expect(next.playerSymbols.find((sym) => sym.instanceId === 'warrior')?.definition.id).toBe(Sym.cavalry.id);
-    });
-
-    it('trains an adjacent melee unit into cavalry corps with Military Science', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const board = createEmptyBoard();
-        const horse = createInstance(Sym.horse, 'horse');
-        const warrior = createInstance(Sym.warrior, 'warrior');
-        warrior.enemy_hp = 7;
-        board[1][1] = horse;
-        board[2][1] = warrior;
-
-        useGameStore.setState({
-            board,
-            playerSymbols: [horse, warrior],
-            phase: 'idle',
-            unlockedKnowledgeUpgrades: [MILITARY_SCIENCE_UPGRADE_ID],
-            lastEffects: [],
-        });
-
-        useGameStore.getState().trainHorseUnitAt(1, 1);
-
-        const next = useGameStore.getState();
-        expect(next.board[1][1]).toBeNull();
-        expect(next.board[2][1]?.definition.id).toBe(Sym.cavalry_corps.id);
-        expect(next.board[2][1]?.enemy_hp).toBe(27);
-        expect(next.playerSymbols.some((sym) => sym.instanceId === 'horse')).toBe(false);
-        expect(next.playerSymbols.find((sym) => sym.instanceId === 'warrior')?.definition.id).toBe(Sym.cavalry_corps.id);
-    });
-
-    it('consumes deer and trains an adjacent ranged unit into tracker archer after Tracking', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const board = createEmptyBoard();
-        const deer = createInstance(Sym.deer, 'deer');
-        const archer = createInstance(Sym.archer, 'archer');
-        archer.enemy_hp = 3;
-        board[1][1] = deer;
-        board[2][1] = archer;
-
-        useGameStore.setState({
-            board,
-            playerSymbols: [deer, archer],
-            phase: 'idle',
-            unlockedKnowledgeUpgrades: [TRACKING_UPGRADE_ID],
-            lastEffects: [],
-        });
-
-        useGameStore.getState().trainDeerUnitAt(1, 1);
-
-        const next = useGameStore.getState();
-        expect(next.board[1][1]).toBeNull();
-        expect(next.board[2][1]?.definition.id).toBe(Sym.tracker_archer.id);
-        expect(next.board[2][1]?.enemy_hp).toBe(7);
-        expect(next.playerSymbols.some((sym) => sym.instanceId === 'deer')).toBe(false);
-        expect(next.playerSymbols.find((sym) => sym.instanceId === 'archer')?.definition.id).toBe(Sym.tracker_archer.id);
     });
 
     it('opens radiant loot choice and can grant a relic reward', async () => {
@@ -229,8 +174,8 @@ describe('gameStore pasture butchering', () => {
         const rewardMod = await import('../data/rewardDefinitions');
         const lootChoicesSpy = vi.spyOn(rewardMod, 'generateLootRewardChoices').mockReturnValue([
             rewardMod.REWARDS[16]!,
-            rewardMod.REWARDS[7]!,
-            rewardMod.REWARDS[12]!,
+            rewardMod.REWARDS[8]!,
+            rewardMod.REWARDS[13]!,
         ]);
 
         useRelicStore.getState().resetRelics();
@@ -264,6 +209,35 @@ describe('gameStore pasture butchering', () => {
         vi.restoreAllMocks();
     });
 
+    it('can grant configured relics from a loot reward', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const loot = createInstance(Sym.radiant_loot, 'configured_relic_loot');
+        board[1][1] = loot;
+
+        useRelicStore.getState().resetRelics();
+        useGameStore.setState({
+            board,
+            playerSymbols: [loot],
+            phase: 'idle',
+            era: 1,
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+        });
+
+        useGameStore.getState().openLootAt(1, 1);
+        useGameStore.getState().selectLootReward(22);
+
+        expect(useRelicStore.getState().relics.map((relic) => relic.definition.id)).toEqual([
+            RELIC_ID.ANCIENT_TRIBE_JOIN,
+            RELIC_ID.ANCIENT_RELIC_DEBRIS,
+            RELIC_ID.ANCIENT_RELIC_DEBRIS,
+        ]);
+    });
+
     it('consumes edict to destroy an adjacent symbol chosen by the player', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
@@ -295,5 +269,111 @@ describe('gameStore pasture butchering', () => {
         expect(next.playerSymbols).toHaveLength(0);
         expect(next.phase).toBe('idle');
         expect(next.pendingEdictSource).toBeNull();
+    });
+
+    it('activates Military Levy into a unit-only symbol selection', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+
+        useRelicStore.getState().resetRelics();
+        useRelicStore.getState().addRelic(RELICS[RELIC_ID.MILITARY_LEVY]!);
+        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
+
+        useGameStore.setState({
+            phase: 'idle',
+            era: 1,
+            religionUnlocked: false,
+            unlockedKnowledgeUpgrades: [],
+            symbolChoices: [],
+            symbolSelectionRelicSourceId: null,
+        });
+
+        useGameStore.getState().activateClickableRelic(relicInstanceId);
+
+        const next = useGameStore.getState();
+        expect(next.phase).toBe('selection');
+        expect(next.symbolSelectionRelicSourceId).toBe(RELIC_ID.MILITARY_LEVY);
+        expect(next.symbolChoices).toHaveLength(3);
+        expect(next.symbolChoices.every((choice) => 'type' in choice && choice.type === SymbolType.UNIT)).toBe(true);
+        expect(useRelicStore.getState().relics).toHaveLength(0);
+    });
+
+    it('activates Prophecy Die into an event-only selection', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+
+        useRelicStore.getState().resetRelics();
+        useRelicStore.getState().addRelic(RELICS[RELIC_ID.PROPHECY_DIE]!);
+        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
+
+        useGameStore.setState({
+            phase: 'idle',
+            era: 1,
+            playerSymbols: [],
+            symbolChoices: [],
+            symbolSelectionRelicSourceId: null,
+        });
+
+        useGameStore.getState().activateClickableRelic(relicInstanceId);
+
+        const next = useGameStore.getState();
+        expect(next.phase).toBe('selection');
+        expect(next.symbolSelectionRelicSourceId).toBe(RELIC_ID.PROPHECY_DIE);
+        expect(next.symbolChoices).toHaveLength(3);
+        expect(next.symbolChoices.every(isGameEventDefinition)).toBe(true);
+        expect(useRelicStore.getState().relics).toHaveLength(0);
+    });
+
+    it('consumes tribal village to trigger symbol selection 2 times consecutively', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const village = createInstance(Sym.tribal_village, 'village');
+        board[1][1] = village;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [village],
+            phase: 'idle',
+            era: 1,
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+            bonusSelectionQueue: [],
+        });
+
+        // 부족 마을 소모
+        useGameStore.getState().consumeTribalVillageAt(1, 1);
+
+        const storeAfterConsume = useGameStore.getState();
+        expect(storeAfterConsume.board[1][1]).toBeNull();
+        expect(storeAfterConsume.phase).toBe('selection');
+        expect(storeAfterConsume.bonusSelectionQueue).toEqual(['any', 'any']);
+        expect(storeAfterConsume.symbolSelectionSymbolSourceId).toBe(Sym.tribal_village.id);
+        expect(storeAfterConsume.symbolChoices.length).toBeGreaterThan(0);
+
+        // 첫 번째 심볼 선택 (선택지 중 첫 번째 심볼 ID 선택)
+        const firstChoice = storeAfterConsume.symbolChoices[0];
+        const firstChoiceId = 'reward' in firstChoice ? (firstChoice.reward?.food ? 0 : 0) : firstChoice.id; // type safety
+        useGameStore.getState().selectSymbol(firstChoiceId || 1); // 기본 wheat 등의 심볼 ID
+
+        const storeAfterFirstSelect = useGameStore.getState();
+        // 큐에서 하나가 차감되어 ['any']가 대기 중이어야 하고, 페이즈는 여전히 selection 이어야 함
+        expect(storeAfterFirstSelect.phase).toBe('selection');
+        expect(storeAfterFirstSelect.bonusSelectionQueue).toEqual(['any']);
+        expect(storeAfterFirstSelect.symbolSelectionSymbolSourceId).toBe(Sym.tribal_village.id);
+        expect(storeAfterFirstSelect.symbolChoices.length).toBeGreaterThan(0);
+
+        // 두 번째 심볼 선택
+        const secondChoice = storeAfterFirstSelect.symbolChoices[0];
+        const secondChoiceId = 'reward' in secondChoice ? (secondChoice.reward?.food ? 0 : 0) : secondChoice.id;
+        useGameStore.getState().selectSymbol(secondChoiceId || 1);
+
+        const storeAfterSecondSelect = useGameStore.getState();
+        // 이제 큐가 완전히 비어서 phase가 idle로 돌아와야 함
+        expect(storeAfterSecondSelect.phase).toBe('idle');
+        expect(storeAfterSecondSelect.bonusSelectionQueue).toEqual([]);
+        expect(storeAfterSecondSelect.symbolSelectionSymbolSourceId).toBeNull();
     });
 });

@@ -1,11 +1,13 @@
-import { MILITARY_SCIENCE_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID, TRACKING_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
-import { isMeleeUnit, isRangedUnit } from '../../data/unitUpgrades';
+import { generateChoices as generateChoicesSelection } from '../../logic/selection/selectionLogic';
+import { isMeleeUnit, resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import type { GameState } from '../gameStore';
 import { RELICS } from '../../data/relicDefinitions';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
+    getStandardSymbolChoiceCount,
     scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import { useRelicStore } from '../relicStore';
@@ -84,6 +86,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             knowledge: prev.knowledge + dKnowledge,
             bonusXpPerTurn: prev.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+            forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: prev.isRelicShopOpen || symAgg.openRelicShop,
             lastEffects: [...prev.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
@@ -107,9 +110,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (prev.phase !== 'idle') return;
         const horse = prev.board[x]?.[y];
         if (!horse || horse.definition.id !== S.horse || horse.is_marked_for_destruction) return;
-        const trainedCavalryId = (prev.unlockedKnowledgeUpgrades || []).includes(MILITARY_SCIENCE_UPGRADE_ID)
-            ? S.cavalry_corps
-            : S.cavalry;
+        const trainedCavalryId = S.cavalry;
 
         const targetCoord = getAdjacentCoords(x, y).find(({ x: ax, y: ay }) => {
             const candidate = prev.board[ax]?.[ay];
@@ -121,7 +122,10 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (!targetCoord) return;
 
         const target = prev.board[targetCoord.x][targetCoord.y];
-        const cavalryDef = SYMBOLS[trainedCavalryId]!;
+        const cavalryDef = resolveUpgradedUnitDefinition(
+            SYMBOLS[trainedCavalryId]!,
+            prev.unlockedKnowledgeUpgrades || [],
+        );
         if (!target) return;
 
         const prevMax = target.definition.base_hp ?? 0;
@@ -161,63 +165,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             },
         });
     },
-    trainDeerUnitAt: (x: number, y: number) => {
-        const prev = get();
-        if (prev.phase !== 'idle') return;
-        if (!(prev.unlockedKnowledgeUpgrades || []).includes(TRACKING_UPGRADE_ID)) return;
-        const deer = prev.board[x]?.[y];
-        if (!deer || deer.definition.id !== S.deer || deer.is_marked_for_destruction) return;
 
-        const targetCoord = getAdjacentCoords(x, y).find(({ x: ax, y: ay }) => {
-            const candidate = prev.board[ax]?.[ay];
-            return !!candidate &&
-                !candidate.is_marked_for_destruction &&
-                isRangedUnit(candidate.definition) &&
-                candidate.definition.id !== S.tracker_archer;
-        });
-        if (!targetCoord) return;
-
-        const target = prev.board[targetCoord.x][targetCoord.y];
-        const trackerArcherDef = SYMBOLS[S.tracker_archer]!;
-        if (!target) return;
-
-        const prevMax = target.definition.base_hp ?? 0;
-        const nextMax = trackerArcherDef.base_hp ?? 0;
-        const currentHp = target.enemy_hp ?? prevMax;
-        const damageTaken = Math.max(0, prevMax - currentHp);
-        const upgradedTarget = {
-            ...target,
-            definition: trackerArcherDef,
-            remaining_attacks: trackerArcherDef.base_attack ? 3 : 0,
-            enemy_hp: Math.max(1, nextMax - damageTaken),
-        };
-
-        const newBoard = prev.board.map((col) => [...col]);
-        newBoard[x][y] = null;
-        newBoard[targetCoord.x][targetCoord.y] = upgradedTarget;
-        const newPlayerSymbols = prev.playerSymbols
-            .filter((symbol) => symbol.instanceId !== deer.instanceId)
-            .map((symbol) => symbol.instanceId === target.instanceId ? upgradedTarget : symbol);
-
-        set({
-            board: newBoard,
-            playerSymbols: newPlayerSymbols,
-        });
-
-        get().appendEventLog({
-            turn: prev.turn,
-            kind: 'system',
-            slot: { x, y },
-            symbolId: S.deer,
-            delta: { food: 0, gold: 0, knowledge: 0 },
-            meta: {
-                action: 'deer_train',
-                targetSlot: targetCoord,
-                fromSymbolId: target.definition.id,
-                toSymbolId: S.tracker_archer,
-            },
-        });
-    },
     openLootAt: (x: number, y: number) => {
         const prev = get();
         if (prev.phase !== 'idle') return;
@@ -226,11 +174,10 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (!loot || loot.is_marked_for_destruction || !LOOT_IDS.has(sid ?? -1)) return;
 
         const tier = LOOT_TIER_MAP[sid!]!;
-        const choices = generateLootRewardChoices(tier);
 
         set({
             phase: 'loot_reward_selection',
-            lootRewardChoices: choices,
+            lootRewardChoices: generateLootRewardChoices(tier),
             pendingLootSlot: { x, y, symbolId: sid! },
         });
     },
@@ -271,6 +218,11 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             const relicDef = relicPool[Math.floor(Math.random() * relicPool.length)];
             if (relicDef) useRelicStore.getState().addRelic(relicDef);
         }
+
+        reward.grantedRelicIds?.forEach((relicId) => {
+            const relicDef = RELICS[relicId];
+            if (relicDef) useRelicStore.getState().addRelic(relicDef);
+        });
 
         get().appendEventLog({
             turn: prev.turn,
@@ -347,6 +299,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             knowledge: state.knowledge + dKnowledge,
             bonusXpPerTurn: state.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+            forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: state.isRelicShopOpen || symAgg.openRelicShop,
             lastEffects: [...state.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
@@ -375,6 +328,89 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             phase: 'idle',
             pendingEdictSource: null,
             pendingOblivionFurnaceRelicId: null,
+        });
+    },
+    consumeTribalVillageAt: (x: number, y: number) => {
+        const prev = get();
+        if (prev.phase !== 'idle') return;
+        const sym = prev.board[x]?.[y];
+        const sid = sym?.definition.id;
+        if (!sym || sym.is_marked_for_destruction || sid !== S.tribal_village) return;
+
+        const removed = [sym];
+        const symAgg = aggregateCollectionDestroyEffects(removed, false, prev.unlockedKnowledgeUpgrades || []);
+        const shBonus = scarabBonusForOwnedRemoves(prev.board, removed.length);
+
+        const dFood = symAgg.food + shBonus.food;
+        const dGold = symAgg.gold + shBonus.gold;
+        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
+
+        const instanceIds = [sym.instanceId];
+        const newBoard = prev.board.map((col) => [...col]);
+        newBoard[x][y] = null;
+
+        const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
+        const newSymbols = appendSymbolDefIdsToPlayer(
+            baseFiltered,
+            symAgg.addSymbolDefIds,
+            prev.unlockedKnowledgeUpgrades || [],
+        );
+
+        // 첫 번째 standard 선택지 계산
+        const selCtx = {
+            era: prev.era,
+            religionUnlocked: prev.religionUnlocked,
+            upgrades: (prev.unlockedKnowledgeUpgrades || []).map(Number),
+            ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+            ownedSymbolDefIds: newSymbols.map((s) => s.definition.id),
+            leaderId: prev.leaderId,
+            leaderProgressLevel: prev.leaderProgressLevel,
+            choiceCount: getStandardSymbolChoiceCount(newBoard),
+            forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices,
+            forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices,
+        };
+
+        const firstChoiceRes = generateChoicesSelection(selCtx);
+        const choices = firstChoiceRes.choices;
+
+        let nextForceTerrain = prev.forceTerrainInNextSymbolChoices;
+        if (firstChoiceRes.consumedForceTerrain) nextForceTerrain = false;
+
+        let nextForceEvents = prev.forceEventsInNextSymbolChoices;
+        if (firstChoiceRes.consumedForceEvents) nextForceEvents = false;
+
+        set({
+            board: newBoard,
+            playerSymbols: newSymbols,
+            food: prev.food + dFood,
+            gold: prev.gold + dGold,
+            knowledge: prev.knowledge + dKnowledge,
+            bonusXpPerTurn: prev.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
+            forceTerrainInNextSymbolChoices: nextForceTerrain,
+            forceEventsInNextSymbolChoices: nextForceEvents,
+            freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
+            isRelicShopOpen: prev.isRelicShopOpen || symAgg.openRelicShop,
+            lastEffects: [...prev.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
+
+            // 2회 선택 페이즈 기동
+            phase: 'selection',
+            symbolChoices: choices,
+            bonusSelectionQueue: ['any', 'any'], // 첫 번째는 지금 띄우고, 두 번째가 큐에 대기하여 총 2회 발동
+            symbolSelectionRelicSourceId: null,
+            symbolSelectionSymbolSourceId: S.tribal_village,
+        });
+
+        if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
+
+        get().appendEventLog({
+            turn: prev.turn,
+            kind: 'system',
+            slot: { x, y },
+            symbolId: sid,
+            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
+            meta: {
+                action: 'tribal_village_consume',
+            },
         });
     },
 });

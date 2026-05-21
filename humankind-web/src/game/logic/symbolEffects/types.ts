@@ -33,6 +33,8 @@ export interface EffectResult {
     bonusXpPerTurnDelta?: number;
     /** 다음 심볼 선택지에 지형 1칸 이상 포함 */
     forceTerrainInNextChoices?: boolean;
+    /** 다음 심볼 선택지 3칸을 모두 이벤트로 생성 */
+    forceEventsInNextChoices?: boolean;
     /** 턴 종료 후 칙령: 보유 심볼 1개 제거 UI */
     edictRemovalPending?: boolean;
     /** 다음 심볼 선택 단계에서 소비할 무료 리롤 횟수 */

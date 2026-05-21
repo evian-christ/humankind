@@ -1,5 +1,5 @@
 import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
-import { getEnemyPoolForEra } from '../../data/enemyPools';
+import { getEnemyDefinitionForLevel, getEnemyPoolForLevel } from '../../data/enemyPools';
 import type { BoardGrid, BoardCoord, ThreatLabelKey, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
 
 const createEmptyBoard = (width: number, height: number): BoardGrid => {
@@ -62,7 +62,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         board,
         playerSymbols,
         turn,
-        era,
+        level,
         boardWidth,
         boardHeight,
         unlockedKnowledgeUpgrades,
@@ -82,10 +82,10 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     const newThreats: { instanceId: string; label: string; key: ThreatLabelKey }[] = [];
 
     if (turn > 0) {
-        if (rng.next() * 100 < 3) {
-            const pool = getEnemyPoolForEra(era);
+        if (rng.next() * 100 < 5) {
+            const pool = getEnemyPoolForLevel(level);
             const enemyId = rng.pick(pool);
-            const enemyDef = SYMBOLS[enemyId];
+            const enemyDef = getEnemyDefinitionForLevel(enemyId, level);
             if (enemyDef) {
                 const inst = createSymbolInstance(enemyDef, spinUpgrades);
                 inst.spawnedByBarbarianInvasion = true;
@@ -96,7 +96,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
             }
         }
 
-        if (rng.next() * 100 < 2) {
+        if (rng.next() * 100 < 3) {
             const floodId = S.flood;
             const earthquakeId = S.earthquake;
             const droughtId = S.drought;
@@ -178,9 +178,9 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     return {
         playerSymbols: anchoredSymbols,
         threatState: {
-            barbarianSymbolThreat: turn > 0 ? 3 : barbarianSymbolThreat,
+            barbarianSymbolThreat: turn > 0 ? 5 : barbarianSymbolThreat,
             barbarianCampThreat: 0,
-            naturalDisasterThreat: turn > 0 ? 2 : naturalDisasterThreat,
+            naturalDisasterThreat: turn > 0 ? 3 : naturalDisasterThreat,
         },
         pendingNewThreatFloats,
         prevBoard: board,

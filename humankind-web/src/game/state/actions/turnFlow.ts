@@ -36,6 +36,7 @@ import {
     commitLootMerge,
     type ProcessSlotArgs,
 } from '../../logic/turn/turnPipeline';
+import { getStandardSymbolChoiceCount } from '../gameStoreHelpers';
 import type { PlayerSymbolInstance } from '../../types';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
@@ -115,6 +116,7 @@ export const createTurnFlowActions = ({
             board: state.board,
             playerSymbols: state.playerSymbols,
             turn: state.turn,
+            level: state.level,
             era: state.era,
             boardWidth,
             boardHeight,
@@ -325,10 +327,12 @@ export const createTurnFlowActions = ({
                         ownedSymbolDefIds: prev.playerSymbols.map((s) => s.definition.id),
                         leaderId: prev.leaderId,
                         leaderProgressLevel: prev.leaderProgressLevel,
+                        choiceCount: getStandardSymbolChoiceCount(generated.board),
                         forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices,
+                        forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices,
                     };
                     const nextChoiceRes = prev.edictRemovalPending
-                        ? { choices: [] as SymbolDefinition[], consumedForceTerrain: false }
+                        ? { choices: [] as SymbolDefinition[], consumedForceTerrain: false, consumedForceEvents: false }
                         : generateChoicesSelection(selCtx);
                     const nextPhase: GamePhase = agiVictory ? 'victory' : 'processing';
 
@@ -355,6 +359,10 @@ export const createTurnFlowActions = ({
                             prev.forceTerrainInNextSymbolChoices && nextChoiceRes.consumedForceTerrain
                                 ? false
                                 : prev.forceTerrainInNextSymbolChoices,
+                        forceEventsInNextSymbolChoices:
+                            prev.forceEventsInNextSymbolChoices && nextChoiceRes.consumedForceEvents
+                                ? false
+                                : prev.forceEventsInNextSymbolChoices,
                         levelUpResearchPoints: (prev.levelUpResearchPoints ?? 0) + prog.gainedResearchPicks,
                         relicFloats: [...(prev.relicFloats ?? []), ...relicOwnEffectFloats],
                         knowledgeUpgradeFloats:
@@ -599,6 +607,9 @@ export const createTurnFlowActions = ({
                 }
                 if (result.forceTerrainInNextChoices) {
                     set({ forceTerrainInNextSymbolChoices: true });
+                }
+                if (result.forceEventsInNextChoices) {
+                    set({ forceEventsInNextSymbolChoices: true });
                 }
                 if (result.edictRemovalPending) {
                     set({ edictRemovalPending: true });

@@ -10,7 +10,6 @@ import {
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    ARCHERY_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
     CURRENCY_UPGRADE_ID,
@@ -20,7 +19,6 @@ import {
     HORSEMANSHIP_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
-    GLOBALIZATION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
@@ -35,8 +33,12 @@ export interface SelectionContext {
     ownedSymbolDefIds?: number[];
     leaderId?: LeaderId | null;
     leaderProgressLevel?: number;
+    /** Ongoing board effects may reduce the standard symbol choice count. */
+    choiceCount?: number;
     /** 개척자(68): 다음 선택지에 지형 1칸 이상 강제 */
     forceTerrainInNextSymbolChoices: boolean;
+    /** 왕도개척(54): 다음 선택지에 이벤트 1개 이상 강제 */
+    forceEventsInNextSymbolChoices?: boolean;
 }
 
 export type SelectionChoice = SymbolDefinition | GameEventDefinition;
@@ -171,7 +173,6 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
             isUnlocked = false;
         }
         if (sym.id === S.library && upgrades.includes(WRITING_SYSTEM_UPGRADE_ID)) isUnlocked = true; // Writing -> Library
-        if (sym.id === S.archer && upgrades.includes(ARCHERY_UPGRADE_ID)) isUnlocked = true; // Archery -> Archer
         if (sym.id === S.merchant && upgrades.includes(CURRENCY_UPGRADE_ID)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
         if ((sym.id === S.crab || sym.id === S.pearl) && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Crab, Pearl
@@ -179,7 +180,6 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.expedition && upgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID)) isUnlocked = true; // Jungle Expedition -> Expedition
         if ((sym.id === S.dye || sym.id === S.papyrus) && upgrades.includes(DRY_STORAGE_UPGRADE_ID)) isUnlocked = true; // Dry Storage -> Dye, Papyrus
         if (sym.id === S.caravanserai && upgrades.includes(CARAVANSERAI_UPGRADE_ID)) isUnlocked = true; // Caravanserai -> Caravanserai
-        if (sym.id === S.internet && upgrades.includes(GLOBALIZATION_UPGRADE_ID)) isUnlocked = true; // Globalization -> Internet
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
         if ((sym.id === S.mushroom || sym.id === S.fur) && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
@@ -258,9 +258,38 @@ export function generateTerrainOnlyChoices(ctx: Pick<SelectionContext, 'era' | '
     return choices;
 }
 
+/** 유닛 심볼만 3개 (군사 소집 유물용) */
+export function generateUnitOnlyChoices(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel'>): SymbolDefinition[] {
+    const pool = buildFlatPool(ctx).filter((s) => s.type === SymbolType.UNIT);
+    const choices: SymbolDefinition[] = [];
+    const defaultUnit = SYMBOLS[S.warrior] || Sym.warrior || pool[0];
+    for (let i = 0; i < 3; i++) {
+        if (pool.length > 0) {
+            choices.push(pool[Math.floor(Math.random() * pool.length)]!);
+        } else {
+            choices.push(defaultUnit);
+        }
+    }
+    return choices;
+}
+
+/** 현재 플레이어에게 가능한 이벤트만 3개 뽑습니다. */
+export function generateEventOnlyChoices(
+    ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds' | 'leaderId' | 'leaderProgressLevel'>,
+): GameEventDefinition[] {
+    const pool = getEligibleEvents(ctx);
+    const choices: GameEventDefinition[] = [];
+    for (let i = 0; i < 3; i++) {
+        if (pool.length === 0) break;
+        choices.push(pool[Math.floor(Math.random() * pool.length)]!);
+    }
+    return choices;
+}
+
 export interface GenerateChoicesResult {
     choices: SelectionChoice[];
     consumedForceTerrain: boolean;
+    consumedForceEvents?: boolean;
 }
 
 /** 심볼 3개 생성 — 중세시대(15) 해금 시 지형 가중 x0.2 */
@@ -268,6 +297,7 @@ export function generateChoices(ctx: SelectionContext): GenerateChoicesResult {
     const pool = buildFlatPool(ctx);
     const upgrades = ctx.upgrades || [];
     const feudalTerrainWeight = upgrades.includes(FEUDALISM_UPGRADE_ID);
+    const choiceCount = ctx.choiceCount ?? 3;
 
     const terrainSyms = pool.filter((s) => s.type === SymbolType.TERRAIN);
     const otherSyms = pool.filter((s) => s.type !== SymbolType.TERRAIN);
@@ -284,20 +314,41 @@ export function generateChoices(ctx: SelectionContext): GenerateChoicesResult {
         return otherSyms[Math.floor(Math.random() * otherSyms.length)]!;
     };
 
+    const choices: SymbolDefinition[] = [];
+    let consumedForceTerrain = false;
+
     if (ctx.forceTerrainInNextSymbolChoices) {
-        const choices: SymbolDefinition[] = [];
         const tPick =
             terrainSyms.length > 0
                 ? terrainSyms[Math.floor(Math.random() * terrainSyms.length)]!
                 : otherSyms[Math.floor(Math.random() * otherSyms.length)] ?? Sym.grassland;
         choices.push(tPick);
-        while (choices.length < 3) choices.push(pickOne());
-        return { choices: maybeReplaceChoicesWithEvents(choices, ctx), consumedForceTerrain: true };
+        while (choices.length < choiceCount) choices.push(pickOne());
+        consumedForceTerrain = true;
+    } else {
+        for (let i = 0; i < choiceCount; i++) choices.push(pickOne());
     }
 
-    const choices: SymbolDefinition[] = [];
-    for (let i = 0; i < 3; i++) choices.push(pickOne());
-    return { choices: maybeReplaceChoicesWithEvents(choices, ctx), consumedForceTerrain: false };
+    const finalChoices: SelectionChoice[] = maybeReplaceChoicesWithEvents(choices, ctx);
+    let consumedForceEvents = false;
+
+    if (ctx.forceEventsInNextSymbolChoices) {
+        const hasEvent = finalChoices.some((c) => 'key' in c);
+        if (!hasEvent) {
+            const events = getEligibleEvents(ctx);
+            if (events.length > 0) {
+                const replaceIdx = Math.floor(Math.random() * finalChoices.length);
+                finalChoices[replaceIdx] = events[Math.floor(Math.random() * events.length)]!;
+            }
+        }
+        consumedForceEvents = true;
+    }
+
+    return {
+        choices: finalChoices,
+        consumedForceTerrain,
+        consumedForceEvents,
+    };
 }
 
 /** 개발자용: 현재 상태에서 각 심볼이 한 번 픽될 확률(%) 반환 (균등) */

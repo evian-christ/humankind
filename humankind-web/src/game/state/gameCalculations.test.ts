@@ -46,8 +46,11 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     GUILD_UPGRADE_ID,
+    GUNPOWDER_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
+    IRON_WORKING_UPGRADE_ID,
     MATHEMATICS_UPGRADE_ID,
+    MECHANICS_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
@@ -298,6 +301,30 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             CELESTIAL_NAVIGATION_UPGRADE_ID,
             [FISHERIES_UPGRADE_ID],
             6,
+        )).toBe(true);
+    });
+
+    it('allows Iron Working at level 3 without Archery', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            IRON_WORKING_UPGRADE_ID,
+            [],
+            3,
+        )).toBe(true);
+    });
+
+    it('does not require Iron Working before Mechanics', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            MECHANICS_UPGRADE_ID,
+            [FEUDALISM_UPGRADE_ID],
+            13,
+        )).toBe(true);
+    });
+
+    it('allows Stirrups at level 13 without Mechanics', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            GUNPOWDER_UPGRADE_ID,
+            [FEUDALISM_UPGRADE_ID],
+            13,
         )).toBe(true);
     });
 

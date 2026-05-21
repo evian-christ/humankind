@@ -15,6 +15,28 @@ export const handleDisasterEffects: SymbolEffectHandler = ({ symbolInstance, rel
             if (relicEffects.terraFossilDisasterFood) state.food += 2;
             return true;
 
+        case S.heatwave:
+            if (!symbolInstance.effect_counter || symbolInstance.effect_counter <= 0) {
+                symbolInstance.effect_counter = Math.floor(Math.random() * 4) + 4;
+            }
+            symbolInstance.effect_counter -= 1;
+            if (symbolInstance.effect_counter <= 0) {
+                symbolInstance.is_marked_for_destruction = true;
+            }
+            if (relicEffects.terraFossilDisasterFood) state.food += 2;
+            return true;
+
+        case S.plague:
+            if (symbolInstance.effect_counter === undefined || symbolInstance.effect_counter === null || symbolInstance.effect_counter <= 0) {
+                symbolInstance.effect_counter = Math.floor(Math.random() * 3) + 2;
+            }
+            symbolInstance.effect_counter -= 1;
+            if (symbolInstance.effect_counter <= 0) {
+                symbolInstance.is_marked_for_destruction = true;
+            }
+            if (relicEffects.terraFossilDisasterFood) state.food += 2;
+            return true;
+
         case S.earthquake:
             if (relicEffects.terraFossilDisasterFood) state.food += 2;
             symbolInstance.is_marked_for_destruction = true;

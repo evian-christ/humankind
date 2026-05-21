@@ -31,12 +31,35 @@ export const handleMedievalEffects: SymbolEffectHandler = ({ symbolInstance, boa
             return true;
         }
 
+        case S.monastery_garden: {
+            for (let bx = 0; bx < boardGrid.length; bx++) {
+                for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+                    const cell = boardGrid[bx][by];
+                    if (cell && !cell.is_marked_for_destruction && cell.definition.type === SymbolType.RELIGION) {
+                        state.food += 7;
+                        state.knowledge += 7;
+                        return true;
+                    }
+                }
+            }
+            return true;
+        }
+
+        case S.tax_storehouse:
+            symbolInstance.effect_counter += 8;
+            return true;
+
         case S.pioneer:
             symbolInstance.is_marked_for_destruction = true;
             state.forceTerrainInNextChoices = true;
             return true;
 
         case S.edict:
+            return true;
+
+        case S.royal_colony:
+            symbolInstance.is_marked_for_destruction = true;
+            state.forceEventsInNextChoices = true;
             return true;
 
         case S.tax:

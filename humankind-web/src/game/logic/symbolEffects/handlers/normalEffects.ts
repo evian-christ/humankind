@@ -1,4 +1,4 @@
-import { S, SYMBOLS, SymbolType } from '../../../data/symbolDefinitions';
+import { S, SymbolType } from '../../../data/symbolDefinitions';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
@@ -290,15 +290,6 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
         }
 
-        case S.tracker_archer: {
-            const forestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.forest);
-            if (forestAdj.length > 0) {
-                state.food += 1;
-                state.contributors.push(forestAdj[0]!);
-            }
-            return true;
-        }
-
         case S.loot: {
             const adjacentLoot = adj.find(
                 (pos) =>
@@ -431,15 +422,6 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                 state.addSymbolIds.push(S.sheep);
                 state.contributors.push({ x, y });
             }
-            if (Math.random() < 0.1) state.addSymbolIds.push(S.wool);
-            return true;
-
-        case S.wool:
-            symbolInstance.effect_counter += 1;
-            if (symbolInstance.effect_counter >= 3) {
-                symbolInstance.is_marked_for_destruction = true;
-                state.gold += upgrades.includes(NOMADIC_TRADITION_UPGRADE_ID) ? 10 : 5;
-            }
             return true;
 
         case S.mushroom: {
@@ -477,13 +459,8 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
 
         case S.horse: {
             const hasMilitaryScience = upgrades.includes(MILITARY_SCIENCE_UPGRADE_ID);
-            state.food += hasMilitaryScience ? 2 : 1;
-            state.gold += hasMilitaryScience ? 2 : 1;
-            const plainsAdj = adj.find(pos => boardGrid[pos.x][pos.y]?.definition.id === S.plains);
-            if (plainsAdj) {
-                state.food += hasMilitaryScience ? 4 : 2;
-                state.contributors.push(plainsAdj);
-            }
+            state.food += hasMilitaryScience ? 5 : 2;
+            state.gold += hasMilitaryScience ? 6 : 2;
             return true;
         }
 

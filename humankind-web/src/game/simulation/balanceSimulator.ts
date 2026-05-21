@@ -49,7 +49,7 @@ import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
 import { DEFAULT_RELIC_EFFECTS, processSingleSymbolEffects } from '../logic/symbolEffects';
 import { applyKnowledgeAndLevelUps } from '../logic/progression/eraTransition';
-import { generateChoices } from '../logic/selection/selectionLogic';
+import { generateChoices, generateEventOnlyChoices } from '../logic/selection/selectionLogic';
 import {
     applyGeneratedSymbols,
     applySlotEffectResult,
@@ -150,6 +150,7 @@ interface SimulationState {
     barbarianCampThreat: number;
     naturalDisasterThreat: number;
     forceTerrainInNextSymbolChoices: boolean;
+    forceEventsInNextSymbolChoices: boolean;
     freeSelectionRerolls: number;
     edictRemovalPending: boolean;
 }
@@ -198,7 +199,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     },
     plains_axis: {
         primaryTerrainIds: [S.plains],
-        coreSymbolIds: [S.cattle, S.sheep, S.wool, S.horse],
+        coreSymbolIds: [S.cattle, S.sheep, S.horse],
         bridgeSymbolIds: [S.salt, S.spices, S.warrior, S.archer],
         upgradeIds: [
             PASTORALISM_UPGRADE_ID,
@@ -360,6 +361,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
             forceTerrainInNextSymbolChoices: false,
+            forceEventsInNextSymbolChoices: false,
             freeSelectionRerolls: 0,
             edictRemovalPending: false,
         };
@@ -385,6 +387,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
         barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
         forceTerrainInNextSymbolChoices: false,
+        forceEventsInNextSymbolChoices: false,
         freeSelectionRerolls: 0,
         edictRemovalPending: false,
     };
@@ -527,7 +530,13 @@ const applyUpgrade = (state: SimulationState, upgradeId: number) => {
     state.playerSymbols = state.playerSymbols.map((symbol) => {
         if (symbol.definition.type !== SymbolType.UNIT) return symbol;
         const nextDef = resolveUpgradedUnitDefinition(symbol.definition, nextUnlocked);
-        if (nextDef.id === symbol.definition.id) return symbol;
+        if (
+            nextDef.id === symbol.definition.id &&
+            nextDef.base_attack === symbol.definition.base_attack &&
+            nextDef.base_hp === symbol.definition.base_hp
+        ) {
+            return symbol;
+        }
         const prevMax = symbol.definition.base_hp ?? 0;
         const nextMax = nextDef.base_hp ?? 0;
         const currentHp = symbol.enemy_hp ?? prevMax;
@@ -579,6 +588,7 @@ const simulateTurn = (
         board: state.board,
         playerSymbols: state.playerSymbols,
         turn: state.turn,
+        level: state.level,
         era: state.era,
         boardWidth: BOARD_WIDTH,
         boardHeight: BOARD_HEIGHT,
@@ -642,6 +652,7 @@ const simulateTurn = (
         if (result.lootMerge) commitLootMerge(state.board, result.lootMerge);
         if (result.bonusXpPerTurnDelta) state.bonusXpPerTurn += result.bonusXpPerTurnDelta;
         if (result.forceTerrainInNextChoices) state.forceTerrainInNextSymbolChoices = true;
+        if (result.forceEventsInNextChoices) state.forceEventsInNextSymbolChoices = true;
         if (result.edictRemovalPending) state.edictRemovalPending = true;
         if (result.freeSelectionRerolls) state.freeSelectionRerolls += result.freeSelectionRerolls;
     }
@@ -725,19 +736,30 @@ const simulateTurn = (
     state.edictRemovalPending = false;
 
     const choiceResult = withSeededMathRandom(rng, () =>
-        generateChoices({
-            era: state.era,
-            religionUnlocked: state.religionUnlocked,
-            upgrades: state.unlockedKnowledgeUpgrades,
-            ownedRelicDefIds: [],
-            ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
-            forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
-        }),
+        state.forceEventsInNextSymbolChoices
+            ? {
+                choices: generateEventOnlyChoices({
+                    era: state.era,
+                    ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
+                    leaderId: null,
+                    leaderProgressLevel: 1,
+                }),
+                consumedForceTerrain: false,
+            }
+            : generateChoices({
+                era: state.era,
+                religionUnlocked: state.religionUnlocked,
+                upgrades: state.unlockedKnowledgeUpgrades,
+                ownedRelicDefIds: [],
+                ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
+                forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
+            }),
     );
     state.forceTerrainInNextSymbolChoices =
         state.forceTerrainInNextSymbolChoices && choiceResult.consumedForceTerrain
             ? false
             : state.forceTerrainInNextSymbolChoices;
+    state.forceEventsInNextSymbolChoices = false;
 
     const symbolChoices = choiceResult.choices.filter((choice): choice is SymbolDefinition => !isGameEventDefinition(choice));
     const selected = chooseSymbol(state, symbolChoices, config.pickStrategy, rng);

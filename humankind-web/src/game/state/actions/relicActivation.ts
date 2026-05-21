@@ -1,11 +1,14 @@
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import {
     generateChoices as generateChoicesSelection,
+    generateEventOnlyChoices,
     generateTerrainOnlyChoices as generateTerrainOnlyChoicesSelection,
+    generateUnitOnlyChoices,
 } from '../../logic/selection/selectionLogic';
 import { useRelicStore } from '../relicStore';
 import type { GameState } from '../gameStore';
 import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { getStandardSymbolChoiceCount } from '../gameStoreHelpers';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -113,6 +116,7 @@ export const createRelicActivationActions = ({
                 religionUnlocked: state.religionUnlocked,
                 upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
                 ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+                choiceCount: getStandardSymbolChoiceCount(state.board),
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
             });
             set({
@@ -157,6 +161,58 @@ export const createRelicActivationActions = ({
                 turn: state.turn,
                 kind: 'relic',
                 meta: { relicId: defId, action: 'tribe_join_terrain_pick' },
+            });
+            return;
+        }
+
+        if (defId === RELIC_ID.MILITARY_LEVY) {
+            useRelicStore.getState().removeRelic(instanceId);
+            const choices = generateUnitOnlyChoices({
+                era: state.era,
+                religionUnlocked: state.religionUnlocked,
+                upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
+                ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+                leaderId: state.leaderId,
+                leaderProgressLevel: state.leaderProgressLevel,
+            });
+            set({
+                phase: 'selection',
+                symbolChoices: choices,
+                symbolSelectionRelicSourceId: RELIC_ID.MILITARY_LEVY,
+                freeSelectionRerolls: Math.max(
+                    state.freeSelectionRerolls ?? 0,
+                    getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
+                ),
+            });
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'relic',
+                meta: { relicId: defId, action: 'military_levy_unit_pick' },
+            });
+            return;
+        }
+
+        if (defId === RELIC_ID.PROPHECY_DIE) {
+            useRelicStore.getState().removeRelic(instanceId);
+            const choices = generateEventOnlyChoices({
+                era: state.era,
+                ownedSymbolDefIds: state.playerSymbols.map((symbol) => symbol.definition.id),
+                leaderId: state.leaderId,
+                leaderProgressLevel: state.leaderProgressLevel,
+            });
+            set({
+                phase: 'selection',
+                symbolChoices: choices,
+                symbolSelectionRelicSourceId: RELIC_ID.PROPHECY_DIE,
+                freeSelectionRerolls: Math.max(
+                    state.freeSelectionRerolls ?? 0,
+                    getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
+                ),
+            });
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'relic',
+                meta: { relicId: defId, action: 'prophecy_die_event_pick' },
             });
             return;
         }

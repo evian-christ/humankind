@@ -777,6 +777,7 @@ function App() {
     audioManager.registerCue('button_click', DEFAULT_AUDIO_CUES.button_click);
     audioManager.registerCue('denied', DEFAULT_AUDIO_CUES.denied);
     audioManager.registerCue('relic_buy', DEFAULT_AUDIO_CUES.relic_buy);
+    audioManager.registerCue('open_reward', DEFAULT_AUDIO_CUES.open_reward);
     audioManager.registerCue('symbol_interact', DEFAULT_AUDIO_CUES.symbol_interact);
     audioManager.registerCue('attack_melee', DEFAULT_AUDIO_CUES.attack_melee);
     audioManager.registerCue('attack_ranged', DEFAULT_AUDIO_CUES.attack_ranged);

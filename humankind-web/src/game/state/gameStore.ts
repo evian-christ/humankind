@@ -24,6 +24,7 @@ import {
     createEmptyBoard,
     createInstance,
     createStartingBoard,
+    getStandardSymbolChoiceCount,
     phaseAfterTurnFlowComplete,
 } from './gameStoreHelpers';
 import { createSelectionFlowActions } from './actions/selectionFlow';
@@ -124,6 +125,8 @@ export interface GameState {
     symbolChoices: SelectionChoice[];
     /** 심볼 선택이 고대 유물 잔해(13)·고대 부족 합류(19) 클릭으로 열린 경우 해당 유물 정의 ID (표시·리롤 비활성) */
     symbolSelectionRelicSourceId: number | null;
+    /** Symbol that opened the current symbol selection when its name should be shown in the UI. */
+    symbolSelectionSymbolSourceId?: number | null;
     /** 유물 상점에 표시되는 유물 목록 (3개) */
     relicChoices: (RelicDefinition | null)[];
     /** 람세스 황금의 거래: 이번 입고(상점 갱신)에서 50% 할인된 유물 ID */
@@ -208,6 +211,8 @@ export interface GameState {
     edictRemovalPending: boolean;
     /** 개척자(68): 다음 generateChoices에서 지형 1칸 이상 강제 */
     forceTerrainInNextSymbolChoices: boolean;
+    /** 왕도 개척(54): 다음 일반 심볼 선택은 이벤트만 표시 */
+    forceEventsInNextSymbolChoices: boolean;
     /** 사절단(70): 심볼 선택 단계 첫 리롤(들) 무료 */
     freeSelectionRerolls: number;
     /** 파괴/제거 선택 시 최대 개수 (희생·영토 3, 칙령 1) */
@@ -259,10 +264,11 @@ export interface GameState {
     activateClickableRelic: (instanceId: string) => void;
     /** 소·양: 평원 인접·idle 시 도축(보드 제거; 소 +10 Food, 양 +5 Food/+5 Gold; 파괴 보상은 집계 반영) */
     butcherPastureAnimalAt: (x: number, y: number) => void;
-    /** 말: 근접 유닛 인접·idle 시 소모하여 해당 유닛을 기마병으로 훈련 */
+    /** 말: 근접 유닛 인접·idle 시 소모하여 해당 유닛을 기사로 훈련 */
     trainHorseUnitAt: (x: number, y: number) => void;
-    /** 사슴: 추적술 연구 후 원거리 유닛 인접·idle 시 소모하여 해당 유닛을 추적궁병으로 훈련 */
-    trainDeerUnitAt: (x: number, y: number) => void;
+    /** 부족 마을: idle 시 소모하여 심볼 선택 페이즈를 연속 발동 */
+    consumeTribalVillageAt: (x: number, y: number) => void;
+
     /** 전리품: idle 시 개봉 — 보상 선택지 3개 표시 */
     openLootAt: (x: number, y: number) => void;
     /** 전리품 보상 선택지 목록 (loot_reward_selection phase) */
@@ -374,6 +380,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     tutorialSpinStep: null,
     symbolChoices: [],
     symbolSelectionRelicSourceId: null,
+    symbolSelectionSymbolSourceId: null,
     relicChoices: generateRelicChoices(),
     relicHalfPriceRelicId: null,
     lastEffects: [],
@@ -415,6 +422,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     bonusSelectionQueue: [],
     edictRemovalPending: false,
     forceTerrainInNextSymbolChoices: false,
+    forceEventsInNextSymbolChoices: false,
     freeSelectionRerolls: 0,
     destroySelectionMaxSymbols: 3,
     territorialAfterEdictPending: false,
@@ -545,6 +553,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
                 leaderId: state.leaderId,
                 leaderProgressLevel: state.leaderProgressLevel,
+                choiceCount: getStandardSymbolChoiceCount(state.board),
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
             });
             const choices = res.choices;

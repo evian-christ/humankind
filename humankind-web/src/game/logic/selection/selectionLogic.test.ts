@@ -5,14 +5,13 @@ import {
     COMPASS_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    GLOBALIZATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
-import { S, SymbolType } from '../../data/symbolDefinitions';
-import { buildFlatPool, generateChoices } from './selectionLogic';
+import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
+import { buildFlatPool, generateChoices, generateEventOnlyChoices } from './selectionLogic';
 
 describe('selectionLogic', () => {
     afterEach(() => {
@@ -39,6 +38,25 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
+    });
+
+    it('includes every Medieval symbol once Medieval Age is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+        const medievalIds = Object.values(SYMBOLS)
+            .filter((sym) => sym.type === SymbolType.MEDIEVAL)
+            .map((sym) => sym.id)
+            .sort((a, b) => a - b);
+        const pooledMedievalIds = pool
+            .filter((sym) => sym.type === SymbolType.MEDIEVAL)
+            .map((sym) => sym.id)
+            .sort((a, b) => a - b);
+
+        expect(pooledMedievalIds).toEqual(medievalIds);
     });
 
     it('includes Compass in the pool once the upgrade is unlocked', () => {
@@ -86,30 +104,6 @@ describe('selectionLogic', () => {
         expect(pool.some((sym) => sym.id === S.caravanserai)).toBe(true);
     });
 
-    it('includes Internet in the pool once Globalization is unlocked', () => {
-        const pool = buildFlatPool({
-            era: 3,
-            religionUnlocked: false,
-            upgrades: [MODERN_AGE_UPGRADE_ID, GLOBALIZATION_UPGRADE_ID],
-            ownedRelicDefIds: [],
-        });
-
-        expect(pool.some((sym) => sym.id === S.internet)).toBe(true);
-    });
-
-    it('does not include deleted medieval symbols in the pool after feudalism', () => {
-        const pool = buildFlatPool({
-            era: 2,
-            religionUnlocked: false,
-            upgrades: [FEUDALISM_UPGRADE_ID],
-            ownedRelicDefIds: [],
-        });
-
-        expect(pool.some((sym) => sym.id === S.telescope)).toBe(false);
-        expect(pool.some((sym) => sym.id === S.scales)).toBe(false);
-        expect(pool.some((sym) => sym.id === S.embassy)).toBe(false);
-    });
-
     it('removes medieval and terrain symbols from the pool after modern age', () => {
         const pool = buildFlatPool({
             era: 3,
@@ -138,6 +132,23 @@ describe('selectionLogic', () => {
         expect(events).toHaveLength(3);
         expect(events.every((event) => event.era == null || event.era === 2)).toBe(true);
         expect(events[0]?.key).toBe('medieval_food_cache');
+    });
+
+    it('generates event-only choices from the currently eligible event pool', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+
+        const choices = generateEventOnlyChoices({
+            era: 2,
+            ownedSymbolDefIds: [],
+            leaderId: null,
+            leaderProgressLevel: 1,
+        });
+
+        expect(choices).toHaveLength(3);
+        expect(choices.every(isGameEventDefinition)).toBe(true);
+        expect(choices.every((event) => event.era == null || event.era === 2)).toBe(true);
+        expect(choices.every((event) => event.category !== 'conditional')).toBe(true);
+        expect(choices[0]?.key).toBe('medieval_food_cache');
     });
 
     it('increases each card event chance with Public Administration and Mass Media', () => {

@@ -50,6 +50,11 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         volume: 0.78,
         preload: true,
     },
+    open_reward: {
+        src: audioUrl('board_screen/open_reward.mp3'),
+        volume: 0.78,
+        preload: true,
+    },
     symbol_interact: {
         src: audioUrl('board_screen/symbol_interact.wav'),
         volume: 0.66,
@@ -291,6 +296,11 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         id: 'relic_buy',
         layer: 'ui',
         description: 'A relic is purchased from the relic shop.',
+    },
+    open_reward: {
+        id: 'open_reward',
+        layer: 'ui',
+        description: 'A loot reward choice overlay opens.',
     },
     symbol_interact: {
         id: 'symbol_interact',

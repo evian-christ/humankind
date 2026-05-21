@@ -49,6 +49,7 @@ export interface TurnPreparationInput {
     board: BoardGrid;
     playerSymbols: PlayerSymbolInstance[];
     turn: number;
+    level: number;
     era: number;
     boardWidth: number;
     boardHeight: number;

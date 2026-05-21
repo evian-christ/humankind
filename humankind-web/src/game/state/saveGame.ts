@@ -1,6 +1,7 @@
 import { RELICS } from '../data/relicDefinitions';
 import { SYMBOLS } from '../data/symbolDefinitions';
 import { GAME_EVENTS, isGameEventDefinition } from '../data/eventDefinitions';
+import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
 import type { GamePhase, GameState, GameEventLogEntry } from './gameStore';
 import { createEmptyBoard } from './gameStoreHelpers';
@@ -51,6 +52,7 @@ interface SavedGame {
         playerSymbols: SerializedSymbol[];
         symbolChoices: number[];
         symbolSelectionRelicSourceId: number | null;
+        symbolSelectionSymbolSourceId?: number | null;
         relicChoices: Array<number | null>;
         relicHalfPriceRelicId: number | null;
         lastEffects?: GameState['lastEffects'];
@@ -73,6 +75,7 @@ interface SavedGame {
         bonusSelectionQueue: GameState['bonusSelectionQueue'];
         edictRemovalPending: boolean;
         forceTerrainInNextSymbolChoices: boolean;
+        forceEventsInNextSymbolChoices?: boolean;
         freeSelectionRerolls: number;
         destroySelectionMaxSymbols: number;
         territorialAfterEdictPending: boolean;
@@ -104,9 +107,13 @@ const serializeSymbol = (symbol: PlayerSymbolInstance): SerializedSymbol => ({
     barbarianInvasionTurnsRemaining: symbol.barbarianInvasionTurnsRemaining,
 });
 
-const deserializeSymbol = (saved: SerializedSymbol): PlayerSymbolInstance | null => {
-    const definition = SYMBOLS[saved.definitionId];
-    if (!definition) return null;
+const deserializeSymbol = (
+    saved: SerializedSymbol,
+    unlockedUpgrades: readonly number[],
+): PlayerSymbolInstance | null => {
+    const baseDefinition = SYMBOLS[saved.definitionId];
+    if (!baseDefinition) return null;
+    const definition = resolveUpgradedUnitDefinition(baseDefinition, unlockedUpgrades);
     return {
         definition,
         instanceId: saved.instanceId,
@@ -163,11 +170,15 @@ const EVENT_CHOICE_SAVE_OFFSET = 10000;
 const serializeSelectionChoiceId = (choice: GameState['symbolChoices'][number]): number =>
     isGameEventDefinition(choice) ? EVENT_CHOICE_SAVE_OFFSET + choice.id : choice.id;
 
-const mapSelectionChoices = (ids: number[]): GameState['symbolChoices'] =>
+const mapSelectionChoices = (
+    ids: number[],
+    unlockedUpgrades: readonly number[],
+): GameState['symbolChoices'] =>
     ids
         .map((id) => {
             if (id >= EVENT_CHOICE_SAVE_OFFSET) return GAME_EVENTS[id - EVENT_CHOICE_SAVE_OFFSET] ?? null;
-            return SYMBOLS[id] ?? null;
+            const definition = SYMBOLS[id];
+            return definition ? resolveUpgradedUnitDefinition(definition, unlockedUpgrades) : null;
         })
         .filter((choice): choice is GameState['symbolChoices'][number] => choice != null);
 
@@ -216,6 +227,7 @@ export function saveGameState(state: GameState): void {
             playerSymbols: state.playerSymbols.map(serializeSymbol),
             symbolChoices: state.symbolChoices.map(serializeSelectionChoiceId),
             symbolSelectionRelicSourceId: state.symbolSelectionRelicSourceId,
+            symbolSelectionSymbolSourceId: state.symbolSelectionSymbolSourceId ?? null,
             relicChoices: state.relicChoices.map((relic) => relic?.id ?? null),
             relicHalfPriceRelicId: state.relicHalfPriceRelicId,
             lastEffects: [],
@@ -238,6 +250,7 @@ export function saveGameState(state: GameState): void {
             bonusSelectionQueue: state.bonusSelectionQueue,
             edictRemovalPending: state.edictRemovalPending,
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
+            forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
             freeSelectionRerolls: state.freeSelectionRerolls,
             destroySelectionMaxSymbols: state.destroySelectionMaxSymbols,
             territorialAfterEdictPending: state.territorialAfterEdictPending,
@@ -262,7 +275,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
         }
 
         const playerSymbols = save.state.playerSymbols
-            .map(deserializeSymbol)
+            .map((symbol) => deserializeSymbol(symbol, save.state.unlockedKnowledgeUpgrades))
             .filter((symbol): symbol is PlayerSymbolInstance => symbol != null);
         const symbolByInstanceId = new Map(playerSymbols.map((symbol) => [symbol.instanceId, symbol]));
         const relics = save.relics
@@ -284,8 +297,9 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             phase: save.state.phase,
             board: deserializeBoard(save.state.board, symbolByInstanceId),
             playerSymbols,
-            symbolChoices: mapSelectionChoices(save.state.symbolChoices),
+            symbolChoices: mapSelectionChoices(save.state.symbolChoices, save.state.unlockedKnowledgeUpgrades),
             symbolSelectionRelicSourceId: save.state.symbolSelectionRelicSourceId,
+            symbolSelectionSymbolSourceId: save.state.symbolSelectionSymbolSourceId ?? null,
             relicChoices: save.state.relicChoices.map((id) => (id == null ? null : RELICS[id] ?? null)),
             relicHalfPriceRelicId: save.state.relicHalfPriceRelicId,
             lastEffects: [],
@@ -325,6 +339,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             bonusSelectionQueue: save.state.bonusSelectionQueue,
             edictRemovalPending: save.state.edictRemovalPending,
             forceTerrainInNextSymbolChoices: save.state.forceTerrainInNextSymbolChoices,
+            forceEventsInNextSymbolChoices: save.state.forceEventsInNextSymbolChoices ?? false,
             freeSelectionRerolls: save.state.freeSelectionRerolls,
             destroySelectionMaxSymbols: save.state.destroySelectionMaxSymbols,
             territorialAfterEdictPending: save.state.territorialAfterEdictPending,

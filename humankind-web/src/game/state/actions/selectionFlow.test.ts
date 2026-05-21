@@ -3,21 +3,24 @@ import { createSelectionFlowActions } from './selectionFlow';
 import type { GameState } from '../gameStore';
 import { useRelicStore } from '../relicStore';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
-import { getEnemyPoolForEra } from '../../data/enemyPools';
+import { getEnemyPoolForLevel } from '../../data/enemyPools';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    ARCHERY_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
-    GLOBALIZATION_UPGRADE_ID,
+    GUNPOWDER_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
+    MERCENARIES_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
+    TOTAL_MOBILIZATION_UPGRADE_ID,
+    TRIBAL_FEDERATION_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
 const makeState = (): GameState => {
@@ -79,6 +82,7 @@ const makeState = (): GameState => {
         bonusSelectionQueue: [],
         edictRemovalPending: false,
         forceTerrainInNextSymbolChoices: false,
+        forceEventsInNextSymbolChoices: false,
         freeSelectionRerolls: 0,
         destroySelectionMaxSymbols: 3,
         territorialAfterEdictPending: false,
@@ -117,7 +121,8 @@ const makeState = (): GameState => {
         activateClickableRelic: () => {},
         butcherPastureAnimalAt: () => {},
         trainHorseUnitAt: () => {},
-        trainDeerUnitAt: () => {},
+        consumeTribalVillageAt: () => {},
+
         openLootAt: () => {},
         selectLootReward: () => {},
         appendEventLog: () => {},
@@ -168,6 +173,26 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolSelectionRelicSourceId).toBeNull();
     });
 
+    it('skips only the active tribal village selection while its second selection remains', () => {
+        const harness = createHarness({
+            bonusSelectionQueue: ['any', 'any'],
+            symbolSelectionSymbolSourceId: S.tribal_village,
+        });
+
+        harness.actions.skipSelection();
+
+        expect(harness.get().phase).toBe('selection');
+        expect(harness.get().bonusSelectionQueue).toEqual(['any']);
+        expect(harness.get().symbolChoices).toHaveLength(3);
+        expect(harness.get().symbolSelectionSymbolSourceId).toBe(S.tribal_village);
+
+        harness.actions.skipSelection();
+
+        expect(harness.get().phase).toBe('idle');
+        expect(harness.get().bonusSelectionQueue).toEqual([]);
+        expect(harness.get().symbolSelectionSymbolSourceId).toBeNull();
+    });
+
     it('uses a free reroll without spending gold', () => {
         const harness = createHarness({
             freeSelectionRerolls: 1,
@@ -182,10 +207,11 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
-    it('grants resources and summons 3 random current-era enemies when selecting Barbarian Suppression event', () => {
+    it('grants resources and summons 3 random current-level enemies when selecting Barbarian Suppression event', () => {
         vi.spyOn(Math, 'random').mockReturnValue(0);
         const harness = createHarness({
             era: 3,
+            level: 25,
             food: 5,
             gold: 7,
         });
@@ -197,7 +223,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().gold).toBe(47);
         expect(harness.get().playerSymbols.filter((sym) => sym.definition.id === S.enemy_infantry)).toHaveLength(3);
         expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(false);
-        expect(getEnemyPoolForEra(1)).toContain(S.enemy_warrior);
+        expect(getEnemyPoolForLevel(1)).toContain(S.enemy_warrior);
     });
 
     it('summons a 1 HP barbarian for Escape from Kadesh event', () => {
@@ -339,21 +365,19 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
-    it('unlocks Globalization without granting Ancient Tribe Joins directly', () => {
+    it('blocks rerolls for tribal village symbol selections', () => {
+        const originalChoices = [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.stone]!];
         const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 26,
-            era: 3,
-            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
+            symbolSelectionSymbolSourceId: S.tribal_village,
+            gold: 7,
+            symbolChoices: originalChoices,
         });
 
-        harness.actions.selectUpgrade(GLOBALIZATION_UPGRADE_ID);
+        harness.actions.rerollSymbols();
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(GLOBALIZATION_UPGRADE_ID);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
-        ).toHaveLength(0);
+        expect(harness.get().gold).toBe(7);
+        expect(harness.get().rerollsThisTurn).toBe(0);
+        expect(harness.get().symbolChoices).toBe(originalChoices);
     });
 
     it('grants 3 Ancient Tribe Joins when Colonialism is researched', () => {
@@ -371,6 +395,26 @@ describe('selectionFlow actions', () => {
         expect(
             useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
         ).toHaveLength(3);
+    });
+
+    it.each([
+        ['Tribal Federation', TRIBAL_FEDERATION_UPGRADE_ID, 4, []],
+        ['Mercenaries', MERCENARIES_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID]],
+        ['Total Mobilization', TOTAL_MOBILIZATION_UPGRADE_ID, 22, [MODERN_AGE_UPGRADE_ID]],
+    ])('grants 2 Military Levies when %s is researched', (_name, upgradeId, level, unlockedKnowledgeUpgrades) => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level,
+            unlockedKnowledgeUpgrades,
+        });
+
+        harness.actions.selectUpgrade(upgradeId);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(upgradeId);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.MILITARY_LEVY),
+        ).toHaveLength(2);
     });
 
     it('unlocks religion only when Theology is researched', () => {
@@ -397,24 +441,73 @@ describe('selectionFlow actions', () => {
         expect(theologyHarness.get().religionUnlocked).toBe(true);
     });
 
-    it('upgrades warriors into knights when iron working is researched', () => {
+    it('improves warrior combat stats when iron working is researched', () => {
         const warrior = createInstance(SYMBOLS[S.warrior]!, []);
         const board = createEmptyBoard();
         board[0][0] = warrior;
         const harness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
-            level: 8,
+            level: 3,
             playerSymbols: [warrior],
             board,
-            unlockedKnowledgeUpgrades: [ARCHERY_UPGRADE_ID],
+            unlockedKnowledgeUpgrades: [],
         });
 
         harness.actions.selectUpgrade(IRON_WORKING_UPGRADE_ID);
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(IRON_WORKING_UPGRADE_ID);
-        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.knight);
-        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.knight);
+        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
+        expect(harness.get().playerSymbols[0]?.definition.base_attack).toBe(5);
+        expect(harness.get().playerSymbols[0]?.definition.base_hp).toBe(12);
+        expect(harness.get().playerSymbols[0]?.enemy_hp).toBe(12);
+        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
+        expect(harness.get().board[0]?.[0]?.definition.base_attack).toBe(5);
+    });
+
+    it('uses shared ranged combat stats for all ranged unit symbols', () => {
+        const archer = createInstance(SYMBOLS[S.archer]!, []);
+        const crossbowman = createInstance(SYMBOLS[S.crossbowman]!, []);
+        const cannon = createInstance(SYMBOLS[S.cannon]!, []);
+
+        expect([archer, crossbowman, cannon].map((symbol) => ({
+            attack: symbol.definition.base_attack,
+            hp: symbol.definition.base_hp,
+        }))).toEqual([
+            { attack: 2, hp: 4 },
+            { attack: 2, hp: 4 },
+            { attack: 2, hp: 4 },
+        ]);
+    });
+
+    it('replaces warriors with knights and improves shared melee stats when Stirrups is researched', () => {
+        const warrior = createInstance(SYMBOLS[S.warrior]!, [IRON_WORKING_UPGRADE_ID]);
+        const cavalry = createInstance(SYMBOLS[S.cavalry]!, [IRON_WORKING_UPGRADE_ID]);
+        const board = createEmptyBoard();
+        board[0][0] = warrior;
+        board[1][0] = cavalry;
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 13,
+            playerSymbols: [warrior, cavalry],
+            board,
+            unlockedKnowledgeUpgrades: [IRON_WORKING_UPGRADE_ID, FEUDALISM_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(GUNPOWDER_UPGRADE_ID);
+
+        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.cavalry);
+        expect(harness.get().playerSymbols[1]?.definition.id).toBe(S.cavalry);
+        expect(harness.get().playerSymbols.map((symbol) => ({
+            attack: symbol.definition.base_attack,
+            hp: symbol.definition.base_hp,
+        }))).toEqual([
+            { attack: 7, hp: 16 },
+            { attack: 7, hp: 16 },
+        ]);
+        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.cavalry);
+        expect(harness.get().board[1]?.[0]?.definition.id).toBe(S.cavalry);
     });
 
     it('opens oblivion furnace board mode only when a relic-backed cell destroy resolves', () => {
@@ -443,5 +536,19 @@ describe('selectionFlow actions', () => {
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(AGI_PROJECT_UPGRADE_ID);
         expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.agi_core)).toBe(true);
         expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('blocks rerolls when MILITARY_LEVY selection is active', () => {
+        const harness = createHarness({
+            phase: 'selection',
+            symbolSelectionRelicSourceId: RELIC_ID.MILITARY_LEVY,
+            freeSelectionRerolls: 1,
+            rerollsThisTurn: 0,
+        });
+
+        harness.actions.rerollSymbols();
+
+        expect(harness.get().freeSelectionRerolls).toBe(1);
+        expect(harness.get().rerollsThisTurn).toBe(0);
     });
 });

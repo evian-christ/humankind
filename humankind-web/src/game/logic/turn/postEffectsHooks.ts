@@ -124,11 +124,15 @@ export function runPostEffectsHooks(args: {
         }
     }
 
-    // ── Pottery (20): 파괴 시 저장 식량 방출
+    // ── Stored Food symbols: 파괴 시 저장 식량 방출
     for (let x = 0; x < boardWidth; x++) {
         for (let y = 0; y < boardHeight; y++) {
             const s = board[x][y];
-            if (s && s.definition.id === S.pottery && s.is_marked_for_destruction) {
+            if (
+                s &&
+                (s.definition.id === S.pottery || s.definition.id === S.tax_storehouse) &&
+                s.is_marked_for_destruction
+            ) {
                 bonusFood += s.effect_counter || 0;
             }
         }
@@ -207,15 +211,6 @@ export function runPostEffectsHooks(args: {
                 bonusFood += src.food;
                 effects.push({ x: cx, y: cy, food: src.food, gold: 0, knowledge: 0 });
             }
-        }
-    }
-
-    // ── Tribal Village (48): 파괴 시 무작위 일반 심볼 2개 추가 ──
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (!s || s.definition.id !== S.tribal_village || !s.is_marked_for_destruction) continue;
-            addSymbolIds.push(randomBaseNormalSymbolId(), randomBaseNormalSymbolId());
         }
     }
 
@@ -720,9 +715,7 @@ export function runPostEffectsHooks(args: {
                         case S.rainforest:
                             return 1;
                         case S.plains:
-                            return 1 +
-                                (upgrades.includes(HORSEMANSHIP_UPGRADE_ID) ? 1 : 0) +
-                                (s.effect_counter || 0);
+                            return 1 + (s.effect_counter || 0);
                         case S.campfire:
                             return 1;
                         case S.merchant:

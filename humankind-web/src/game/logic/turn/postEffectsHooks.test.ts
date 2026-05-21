@@ -172,31 +172,7 @@ describe('postEffectsHooks', () => {
         expect(result.bonusKnowledge).toBe(0);
     });
 
-    it('adds two random normal symbols when tribal village is destroyed', () => {
-        const board = createEmptyBoard();
-        const village = createInstance(SYMBOLS[S.tribal_village]!, 'tribal_village');
-        village.is_marked_for_destruction = true;
-        board[0][0] = village;
 
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [],
-            leaderId: null,
-            bonusXpPerTurn: 0,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(result.addSymbolIds).toHaveLength(2);
-        expect(result.addSymbolIds.every((id) => SYMBOLS[id]?.type === SymbolType.NORMAL)).toBe(true);
-    });
 
     it('makes earthquake destroy every symbol in the same column', () => {
         const board = createEmptyBoard();

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { IRON_WORKING_UPGRADE_ID } from '../data/knowledgeUpgrades';
 import { SYMBOLS, S } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import type { GameState } from './gameStore';
@@ -88,6 +89,7 @@ const createSerializableState = (): GameState => {
         bonusSelectionQueue: [],
         edictRemovalPending: false,
         forceTerrainInNextSymbolChoices: false,
+        forceEventsInNextSymbolChoices: false,
         freeSelectionRerolls: 0,
         destroySelectionMaxSymbols: 3,
         territorialAfterEdictPending: false,
@@ -127,6 +129,32 @@ describe('saveGameState', () => {
         expect(localStorage.getItem('humankind.save.v1')).toBeNull();
         expect(hasSavedGame()).toBe(false);
         expect(loadSavedGamePatch()).toBeNull();
+
+        vi.unstubAllGlobals();
+    });
+
+    it('restores Iron Working warrior stats from unlocked upgrades', () => {
+        const localStorage = createLocalStorageMock();
+        vi.stubGlobal('localStorage', localStorage);
+
+        const warrior = {
+            ...createSymbol(S.warrior, 'symbol_warrior'),
+            enemy_hp: 10,
+        };
+        const state = createSerializableState();
+        state.playerSymbols = [warrior];
+        state.board = createEmptyBoard();
+        state.board[0][0] = warrior;
+        state.prevBoard = state.board;
+        state.unlockedKnowledgeUpgrades = [IRON_WORKING_UPGRADE_ID];
+
+        saveGameState(state);
+
+        const patch = loadSavedGamePatch();
+        expect(patch?.playerSymbols?.[0]?.definition.id).toBe(S.warrior);
+        expect(patch?.playerSymbols?.[0]?.definition.base_attack).toBe(5);
+        expect(patch?.playerSymbols?.[0]?.definition.base_hp).toBe(12);
+        expect(patch?.playerSymbols?.[0]?.enemy_hp).toBe(10);
 
         vi.unstubAllGlobals();
     });

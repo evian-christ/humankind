@@ -24,6 +24,7 @@ export interface EffectState {
     contributors: { x: number; y: number }[];
     bonusXpPerTurnDelta: number;
     forceTerrainInNextChoices: boolean;
+    forceEventsInNextChoices: boolean;
     edictRemovalPendingFlag: boolean;
     freeSelectionRerollsAcc: number;
     lootMerge: LootMergeResolution | null;
@@ -54,6 +55,7 @@ export const createEffectState = (): EffectState => ({
     contributors: [],
     bonusXpPerTurnDelta: 0,
     forceTerrainInNextChoices: false,
+    forceEventsInNextChoices: false,
     edictRemovalPendingFlag: false,
     freeSelectionRerollsAcc: 0,
     lootMerge: null,
@@ -72,6 +74,7 @@ export const buildEffectResult = (state: EffectState): EffectResult => {
     if (state.contributors.length > 0) result.contributors = state.contributors;
     if (state.bonusXpPerTurnDelta > 0) result.bonusXpPerTurnDelta = state.bonusXpPerTurnDelta;
     if (state.forceTerrainInNextChoices) result.forceTerrainInNextChoices = true;
+    if (state.forceEventsInNextChoices) result.forceEventsInNextChoices = true;
     if (state.edictRemovalPendingFlag) result.edictRemovalPending = true;
     if (state.freeSelectionRerollsAcc > 0) result.freeSelectionRerolls = state.freeSelectionRerollsAcc;
     if (state.lootMerge) result.lootMerge = state.lootMerge;
@@ -91,16 +94,6 @@ export const getAdjacentCoords = (x: number, y: number): { x: number; y: number 
         }
     }
     return adj;
-};
-
-export const hasInternetOnBoard = (boardGrid: BoardGrid): boolean => {
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
-            const symbol = boardGrid[bx]?.[by];
-            if (symbol?.definition.id === S.internet && !symbol.is_marked_for_destruction) return true;
-        }
-    }
-    return false;
 };
 
 export const getEffectiveAdjacentCoords = (

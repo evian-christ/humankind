@@ -126,6 +126,9 @@ export const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] =>
         .fill(null)
         .map(() => Array(BOARD_HEIGHT).fill(null));
 
+export const getStandardSymbolChoiceCount = (board: (PlayerSymbolInstance | null)[][]): number =>
+    board.some((col) => col.some((cell) => cell?.definition.id === S.heatwave)) ? 2 : 3;
+
 export const createInstance = (
     def: SymbolDefinition,
     unlockedUpgrades: readonly number[] = [],
@@ -136,10 +139,17 @@ export const createInstance = (
     if (baseHp === undefined) enemy_hp = undefined;
     else enemy_hp = baseHp;
 
+    let effect_counter = 0;
+    if (resolvedDef.id === S.plague) {
+        effect_counter = Math.floor(Math.random() * 3) + 2;
+    } else if (resolvedDef.id === S.heatwave) {
+        effect_counter = Math.floor(Math.random() * 4) + 4;
+    }
+
     return {
         definition: resolvedDef,
         instanceId: generateInstanceId(),
-        effect_counter: 0,
+        effect_counter,
         is_marked_for_destruction: false,
         remaining_attacks: resolvedDef.base_attack ? 3 : 0,
         enemy_hp,
@@ -155,6 +165,7 @@ export interface CollectionDestroyAgg {
     refreshRelicShop: boolean;
     bonusXpPerTurnDelta: number;
     forceTerrainInNextChoices: boolean;
+    forceEventsInNextChoices: boolean;
     freeSelectionRerolls: number;
 }
 
@@ -172,12 +183,14 @@ export const aggregateCollectionDestroyEffects = (
         refreshRelicShop: false,
         bonusXpPerTurnDelta: 0,
         forceTerrainInNextChoices: false,
+        forceEventsInNextChoices: false,
         freeSelectionRerolls: 0,
     };
     for (const sym of removed) {
         const id = sym.definition.id;
         switch (id) {
             case S.pottery:
+            case S.tax_storehouse:
                 out.food += sym.effect_counter || 0;
                 break;
             case S.tribal_village:
@@ -192,9 +205,6 @@ export const aggregateCollectionDestroyEffects = (
             case S.honey:
                 out.food += 5;
                 break;
-            case S.wool:
-                out.gold += unlockedKnowledgeUpgrades.includes(NOMADIC_TRADITION_UPGRADE_ID) ? 10 : 5;
-                break;
             case S.dye:
                 out.gold += unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
                 break;
@@ -203,6 +213,9 @@ export const aggregateCollectionDestroyEffects = (
                 break;
             case S.pioneer:
                 out.forceTerrainInNextChoices = true;
+                break;
+            case S.royal_colony:
+                out.forceEventsInNextChoices = true;
                 break;
             default:
                 break;

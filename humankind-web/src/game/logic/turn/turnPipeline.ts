@@ -1,7 +1,7 @@
 import { PLANTATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
-import { getEffectiveAdjacentCoords, hasInternetOnBoard } from '../symbolEffects/core';
+import { getEffectiveAdjacentCoords } from '../symbolEffects/core';
 import type { ActiveRelicEffects, EffectResult, LootMergeResolution, SymbolEffectContext } from '../symbolEffects/types';
 import {
     buildFoodBySlotKey,
@@ -115,7 +115,7 @@ interface CounterFloatConfig {
 
 function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolEffectContext): CounterFloatConfig | null {
     const def = symbol.definition;
-    if (def.id === S.flood || def.id === S.drought) return { anchor: 'bottom-right', mode: 'direct-countdown' };
+    if (def.id === S.flood || def.id === S.drought || def.id === S.heatwave) return { anchor: 'bottom-right', mode: 'direct-countdown' };
     if (def.id === S.wheat) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 10 };
     if (def.id === S.rice) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 20 };
     if (def.id === S.banana) {
@@ -237,7 +237,7 @@ export function buildSlotOrder(boardWidth: number, boardHeight: number): Array<{
 
 export function createSlotEffectPipeline(args: CreateSlotEffectPipelineArgs): SlotEffectPipeline {
     const { board, boardWidth, boardHeight, baseTotals } = args;
-    const allSymbolsAdjacent = hasInternetOnBoard(board);
+    const allSymbolsAdjacent = false;
     const getPhaseAdjacentCoords = (x: number, y: number) =>
         getEffectiveAdjacentCoords(board, x, y, allSymbolsAdjacent);
     return {

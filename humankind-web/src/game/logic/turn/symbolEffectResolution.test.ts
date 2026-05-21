@@ -426,38 +426,6 @@ describe('symbolEffectResolution', () => {
         expect(upgradedResult.food).toBe(6);
     });
 
-    it('lets Internet make all placed symbols count as adjacent during the effect phase', () => {
-        const board = createEmptyBoard();
-        const salt = createInstance(Sym.salt, 'salt');
-        board[0][0] = salt;
-        board[2][2] = createInstance(Sym.internet, 'internet');
-        board[4][3] = createInstance(Sym.grassland, 'remote-grassland');
-
-        const baseResult = processSingleSymbolEffects(salt, board, 0, 0, { upgrades: [] });
-        const internetResult = processSingleSymbolEffects(salt, board, 0, 0, {
-            upgrades: [],
-            allSymbolsAdjacent: true,
-        });
-
-        expect(baseResult.food).toBe(0);
-        expect(internetResult.food).toBe(1);
-        expect(internetResult.contributors).toEqual([{ x: 4, y: 3 }]);
-    });
-
-    it('does not make remote empty slots adjacent when Internet is active', () => {
-        const board = createEmptyBoard();
-        const oasis = createInstance(Sym.oasis, 'oasis');
-        board[0][0] = oasis;
-        board[4][3] = createInstance(Sym.internet, 'internet');
-
-        const result = processSingleSymbolEffects(oasis, board, 0, 0, {
-            upgrades: [OASIS_RECOVERY_UPGRADE_ID],
-            allSymbolsAdjacent: true,
-        });
-
-        expect(result.food).toBe(9);
-    });
-
     it('upgrades monument to produce 10 knowledge with Nationalism', () => {
         const board = createEmptyBoard();
         const monument = createInstance(Sym.monument, 'monument');
@@ -511,10 +479,10 @@ describe('symbolEffectResolution', () => {
         const baseResult = processSingleSymbolEffects(horse, board, 1, 1, { upgrades: [] });
         const upgradedResult = processSingleSymbolEffects(horse, board, 1, 1, { upgrades: [MILITARY_SCIENCE_UPGRADE_ID] });
 
-        expect(baseResult.food).toBe(3);
-        expect(baseResult.gold).toBe(1);
-        expect(upgradedResult.food).toBe(6);
-        expect(upgradedResult.gold).toBe(2);
+        expect(baseResult.food).toBe(2);
+        expect(baseResult.gold).toBe(2);
+        expect(upgradedResult.food).toBe(5);
+        expect(upgradedResult.gold).toBe(6);
     });
 
     it('adds board grassland count to wheat payout with Three-field System', () => {
@@ -549,7 +517,7 @@ describe('symbolEffectResolution', () => {
         expect(campfire.is_marked_for_destruction).toBe(true);
     });
 
-    it('marks tribal village for destruction without adding symbols during slot resolution', () => {
+    it('does not mark tribal village for destruction during slot resolution', () => {
         const board = createEmptyBoard();
         const village = createInstance(Sym.tribal_village, 'tribal_village');
         board[0][0] = village;
@@ -557,7 +525,7 @@ describe('symbolEffectResolution', () => {
         const result = processSingleSymbolEffects(village, board, 0, 0, { upgrades: [] });
 
         expect(result.addSymbolIds).toBeUndefined();
-        expect(village.is_marked_for_destruction).toBe(true);
+        expect(village.is_marked_for_destruction).toBe(false);
     });
 
     it('lets Heqet gain food from grassland and knowledge from wheat adjacency once each', () => {
@@ -695,7 +663,35 @@ describe('symbolEffectResolution', () => {
         expect(result.food).toBe(4);
     });
 
-    it('upgrades Oasis to produce food per adjacent empty slot with Dry Storage', () => {
+    it('produces four knowledge per four empty slots for Stargazer', () => {
+        const board = createEmptyBoard();
+        const stargazer = createInstance(Sym.stargazer, 'stargazer');
+        board[0][0] = stargazer;
+
+        const result = processSingleSymbolEffects(stargazer, board, 0, 0, { upgrades: [] });
+
+        expect(result.knowledge).toBe(16);
+    });
+
+    it('produces food per two adjacent empty slots by default for Oasis', () => {
+        const board = createEmptyBoard();
+        const oasis = createInstance(Sym.oasis, 'oasis');
+        board[1][1] = oasis;
+        board[0][1] = createInstance(Sym.wheat, 'occupied_1');
+        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+
+        const result = processSingleSymbolEffects(
+            oasis,
+            board,
+            1,
+            1,
+            { upgrades: [] },
+        );
+
+        expect(result.food).toBe(6);
+    });
+
+    it('upgrades Oasis to produce food per two adjacent empty slots with Dry Storage', () => {
         const board = createEmptyBoard();
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
@@ -710,10 +706,10 @@ describe('symbolEffectResolution', () => {
             { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(6);
+        expect(result.food).toBe(12);
     });
 
-    it('upgrades Oasis to produce triple food per adjacent empty slot with Oasis Recovery Network', () => {
+    it('upgrades Oasis to produce food per two adjacent empty slots with Oasis Recovery Network', () => {
         const board = createEmptyBoard();
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
@@ -786,24 +782,6 @@ describe('symbolEffectResolution', () => {
         expect(papyrus.is_marked_for_destruction).toBe(true);
         expect(library.is_marked_for_destruction).toBe(true);
         expect(flood.is_marked_for_destruction).toBe(false);
-    });
-
-    it('upgrades wool destroy gold with Nomadic Tradition', () => {
-        const board = createEmptyBoard();
-        const wool = createInstance(Sym.wool, 'wool');
-        wool.effect_counter = 2;
-        board[0][0] = wool;
-
-        const result = processSingleSymbolEffects(
-            wool,
-            board,
-            0,
-            0,
-            { upgrades: [NOMADIC_TRADITION_UPGRADE_ID] },
-        );
-
-        expect(result.gold).toBe(10);
-        expect(wool.is_marked_for_destruction).toBe(true);
     });
 
     it('produces base gold and knowledge for Dye and Papyrus', () => {
@@ -1330,25 +1308,6 @@ describe('symbolEffectResolution', () => {
         expect(mushroomResult.food).toBe(9);
         expect(mushroomResult.knowledge).toBe(9);
         expect(mushroom.is_marked_for_destruction).toBe(false);
-    });
-
-    it('gives Tracker Archer +1 Food when adjacent to Forest', () => {
-        const board = createEmptyBoard();
-        const trackerArcher = createInstance(Sym.tracker_archer, 'tracker_archer');
-        board[1][1] = trackerArcher;
-        board[1][2] = createInstance(Sym.forest, 'forest_1');
-
-        const result = processSingleSymbolEffects(
-            trackerArcher,
-            board,
-            1,
-            1,
-            { upgrades: [] },
-        );
-
-        expect(result.food).toBe(1);
-        expect(result.gold).toBe(0);
-        expect(result.knowledge).toBe(0);
     });
 
     it('upgrades Loot into Greater Loot when adjacent to another Loot', () => {

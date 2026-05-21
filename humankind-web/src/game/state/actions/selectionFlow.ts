@@ -12,6 +12,9 @@ import {
     KNOWLEDGE_UPGRADES,
     MECHANICS_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
+    TRIBAL_FEDERATION_UPGRADE_ID,
+    MERCENARIES_UPGRADE_ID,
+    TOTAL_MOBILIZATION_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
@@ -46,6 +49,7 @@ import { useRelicStore } from '../relicStore';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
+    getStandardSymbolChoiceCount,
     scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import {
@@ -62,6 +66,7 @@ export type GameStoreGet = () => GameState;
 interface ChoiceResolution {
     choices: ReturnType<typeof generateChoicesSelection>['choices'];
     forceTerrainInNextSymbolChoices: boolean;
+    forceEventsInNextSymbolChoices: boolean;
 }
 
 interface SelectionFlowDeps {
@@ -82,6 +87,11 @@ const OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
     SACRIFICIAL_RITE_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
+]);
+const MILITARY_LEVY_GRANT_UPGRADE_IDS = new Set<number>([
+    TRIBAL_FEDERATION_UPGRADE_ID,
+    MERCENARIES_UPGRADE_ID,
+    TOTAL_MOBILIZATION_UPGRADE_ID,
 ]);
 
 const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
@@ -111,7 +121,9 @@ const resolveStandardChoices = (state: GameState): ChoiceResolution => {
         ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
         leaderId: state.leaderId,
         leaderProgressLevel: state.leaderProgressLevel,
+        choiceCount: getStandardSymbolChoiceCount(state.board),
         forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
+        forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
     });
 
     return {
@@ -120,6 +132,10 @@ const resolveStandardChoices = (state: GameState): ChoiceResolution => {
             state.forceTerrainInNextSymbolChoices && res.consumedForceTerrain
                 ? false
                 : state.forceTerrainInNextSymbolChoices,
+        forceEventsInNextSymbolChoices:
+            state.forceEventsInNextSymbolChoices && res.consumedForceEvents
+                ? false
+                : state.forceEventsInNextSymbolChoices,
     };
 };
 
@@ -212,6 +228,7 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
             symbolSelectionRelicSourceId: null,
             forceTerrainInNextSymbolChoices: nextForceTerrain,
             phase: q.length > 0 ? 'selection' as GamePhase : phaseAfterTurnFlowComplete(),
+            symbolSelectionSymbolSourceId: q.length > 0 ? state.symbolSelectionSymbolSourceId ?? null : null,
         });
     }
 
@@ -219,6 +236,7 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
         phase: phaseAfterTurnFlowComplete(),
         symbolChoices: [],
         symbolSelectionRelicSourceId: null,
+        symbolSelectionSymbolSourceId: null,
     };
 };
 
@@ -231,6 +249,9 @@ export const createSelectionFlowActions = ({
     selectSymbol: (symbolId: number) => {
         const state = get();
         if (state.phase !== 'selection') return;
+
+        const hasPlague = state.board.some((col) => col.some((cell) => cell?.definition.id === 78));
+        if (hasPlague) return;
 
         const def = SYMBOLS[symbolId];
         if (!def) return;
@@ -386,10 +407,7 @@ export const createSelectionFlowActions = ({
                 : (state.relicFloats ?? []);
 
         set({
-            phase: phaseAfterTurnFlowComplete(),
-            symbolChoices: [],
-            symbolSelectionRelicSourceId: null,
-            bonusSelectionQueue: (state.bonusSelectionQueue?.length ?? 0) > 0 ? [] : state.bonusSelectionQueue,
+            ...resolveAfterSelection(state, phaseAfterTurnFlowComplete),
             gold: state.gold + skipGold,
             relicFloats: relicFloatsNext,
         });
@@ -398,9 +416,15 @@ export const createSelectionFlowActions = ({
     rerollSymbols: () => {
         const state = get();
         if (state.phase !== 'selection') return;
+
+        const hasPlague = state.board.some((col) => col.some((cell) => cell?.definition.id === 78));
+        if (hasPlague) return;
         if (
             state.symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_RELIC_DEBRIS ||
-            state.symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_TRIBE_JOIN
+            state.symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_TRIBE_JOIN ||
+            state.symbolSelectionRelicSourceId === RELIC_ID.MILITARY_LEVY ||
+            state.symbolSelectionRelicSourceId === RELIC_ID.PROPHECY_DIE ||
+            state.symbolSelectionSymbolSourceId === S.tribal_village
         ) {
             return;
         }
@@ -419,6 +443,7 @@ export const createSelectionFlowActions = ({
                 freeSelectionRerolls: freeLeft - 1,
                 symbolChoices: choiceResolution.choices,
                 forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
+                forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
             });
             return;
         }
@@ -429,6 +454,7 @@ export const createSelectionFlowActions = ({
             gold: state.gold - rerollCost,
             symbolChoices: choiceResolution.choices,
             forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
+            forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
             rerollsThisTurn: state.rerollsThisTurn + 1,
         });
     },
@@ -475,6 +501,14 @@ export const createSelectionFlowActions = ({
             }
         }
 
+        if (MILITARY_LEVY_GRANT_UPGRADE_IDS.has(uid)) {
+            const militaryLevyDef = RELICS[RELIC_ID.MILITARY_LEVY];
+            if (militaryLevyDef) {
+                const rs = useRelicStore.getState();
+                for (let i = 0; i < 2; i++) rs.addRelic(militaryLevyDef);
+            }
+        }
+
         if (uid === COLONIALISM_UPGRADE_ID) {
             const tribeJoinDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
             if (tribeJoinDef) {
@@ -503,7 +537,13 @@ export const createSelectionFlowActions = ({
             const migrateUnitDefinition = (s: PlayerSymbolInstance): PlayerSymbolInstance => {
                 if (s.definition.type !== SymbolType.UNIT) return s;
                 const nextDef = resolveUpgradedUnitDefinition(s.definition, newUnlocked);
-                if (nextDef.id === s.definition.id) return s;
+                if (
+                    nextDef.id === s.definition.id &&
+                    nextDef.base_attack === s.definition.base_attack &&
+                    nextDef.base_hp === s.definition.base_hp
+                ) {
+                    return s;
+                }
                 const prevMax = s.definition.base_hp ?? 0;
                 const nextMax = nextDef.base_hp ?? 0;
                 const currentHp = s.enemy_hp ?? prevMax;
@@ -570,6 +610,7 @@ export const createSelectionFlowActions = ({
                 ? {
                       choices: state.symbolChoices,
                       forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
+                      forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
                   }
                 : resolveStandardChoices(state);
 
@@ -580,6 +621,7 @@ export const createSelectionFlowActions = ({
             symbolSelectionRelicSourceId: null,
             symbolChoices: choiceResolution.choices,
             forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
+            forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
         }));
     },
 
@@ -602,6 +644,7 @@ export const createSelectionFlowActions = ({
             knowledge: s.knowledge + dKnowledge,
             bonusXpPerTurn: s.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+            forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
         });
@@ -620,7 +663,13 @@ export const createSelectionFlowActions = ({
 
         if (src === EDICT_SYMBOL_ID) {
             const terr = state.territorialAfterEdictPending;
-            const choiceResolution = terr ? null : resolveStandardChoices(state);
+            const choiceResolution = terr ? null : resolveStandardChoices({
+                ...state,
+                forceTerrainInNextSymbolChoices:
+                    state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+                forceEventsInNextSymbolChoices:
+                    state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
+            });
             set(withSelectionPhaseFreeReroll(state, {
                 ...rewardPatch(state),
                 playerSymbols: newSymbols,
@@ -633,6 +682,9 @@ export const createSelectionFlowActions = ({
                 forceTerrainInNextSymbolChoices: terr
                     ? state.forceTerrainInNextSymbolChoices
                     : choiceResolution!.forceTerrainInNextSymbolChoices,
+                forceEventsInNextSymbolChoices: terr
+                    ? state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices
+                    : choiceResolution!.forceEventsInNextSymbolChoices,
                 ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
             }));
             afterSetRelicRefresh();
@@ -688,6 +740,9 @@ export const createSelectionFlowActions = ({
                 forceTerrainInNextSymbolChoices: terr
                     ? state.forceTerrainInNextSymbolChoices
                     : choiceResolution!.forceTerrainInNextSymbolChoices,
+                forceEventsInNextSymbolChoices: terr
+                    ? state.forceEventsInNextSymbolChoices
+                    : choiceResolution!.forceEventsInNextSymbolChoices,
                 ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
             }));
             return;
@@ -732,6 +787,7 @@ export const createSelectionFlowActions = ({
             knowledge: s.knowledge + dKnowledge,
             bonusXpPerTurn: s.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
+            forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
         });

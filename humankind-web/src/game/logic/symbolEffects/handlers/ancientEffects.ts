@@ -20,7 +20,7 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.totem:
-            if (relicEffects.allSymbolsAreCorner || isCorner(x, y)) state.knowledge += 20;
+            if (relicEffects.allSymbolsAreCorner || isCorner(x, y)) state.knowledge += 12;
             return true;
 
         case S.omen:
@@ -32,15 +32,15 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.pottery:
-            symbolInstance.effect_counter += 3;
+            symbolInstance.effect_counter += 4;
             return true;
 
         case S.tribal_village:
-            symbolInstance.is_marked_for_destruction = true;
+            // 부족 마을은 플레이어가 클릭하여 발동(소모)하므로 턴 계산 시 자동 파괴하지 않습니다.
             return true;
 
         case S.stargazer:
-            state.knowledge += Math.floor(countEmptySlots(boardGrid) / 2);
+            state.knowledge += Math.floor(countEmptySlots(boardGrid) / 4) * 4;
             return true;
 
         case S.heqet: {

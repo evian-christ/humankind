@@ -5,6 +5,7 @@ export const AUDIO_CUE_IDS = [
     'button_click',
     'denied',
     'relic_buy',
+    'open_reward',
     'symbol_interact',
     'attack_melee',
     'attack_ranged',

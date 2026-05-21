@@ -8,7 +8,7 @@ import type { CellLayout, CombatBounce } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { getSymbolSpriteUrl } from '../../../game/data/symbolSpritePaths';
 
-const RANGED_ATTACKER_KEYS = new Set(['archer', 'tracker_archer', 'crossbowman', 'cannon']);
+const RANGED_ATTACKER_KEYS = new Set(['archer', 'crossbowman', 'cannon']);
 
 export class CombatRenderer {
     private container: PIXI.Container;

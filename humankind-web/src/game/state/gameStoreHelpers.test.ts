@@ -62,4 +62,21 @@ describe('gameStoreHelpers starting layout', () => {
         expect(result.addSymbolDefIds).toHaveLength(2);
         expect(result.addSymbolDefIds.every((id) => SYMBOLS[id]?.type === SymbolType.NORMAL)).toBe(true);
     });
+
+    it('releases tax storehouse food when destroyed from collection', () => {
+        const storehouse = createInstance(SYMBOLS[S.tax_storehouse]!, []);
+        storehouse.effect_counter = 24;
+
+        const result = aggregateCollectionDestroyEffects([storehouse], false, []);
+
+        expect(result.food).toBe(24);
+    });
+
+    it('forces event choices when royal colony is destroyed from collection', () => {
+        const colony = createInstance(SYMBOLS[S.royal_colony]!, []);
+
+        const result = aggregateCollectionDestroyEffects([colony], false, []);
+
+        expect(result.forceEventsInNextChoices).toBe(true);
+    });
 });

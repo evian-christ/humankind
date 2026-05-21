@@ -18,6 +18,7 @@ import {
     TRACKING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
 
 export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, adj, upgrades, relicEffects, state }) => {
@@ -46,11 +47,13 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
 
         case S.oasis: {
             const emptyAdjCount = adj.filter(pos => !boardGrid[pos.x][pos.y]).length;
-            state.food += upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)
-                ? emptyAdjCount * 3
+            const pairs = Math.floor(emptyAdjCount / 2);
+            const foodMultiplier = upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)
+                ? 6
                 : upgrades.includes(DESERT_STORAGE_UPGRADE_ID)
-                ? emptyAdjCount
-                : Math.floor(emptyAdjCount / 2);
+                ? 4
+                : 2;
+            state.food += pairs * foodMultiplier;
             return true;
         }
 
@@ -76,7 +79,7 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
 
         case S.plains:
             state.food += 1;
-            if (relicEffects.horsemansihpPastureBonus) state.food += 1;
+            if (upgrades.includes(PASTORALISM_UPGRADE_ID)) state.food += 1;
             state.food += symbolInstance.effect_counter || 0;
             return true;
 

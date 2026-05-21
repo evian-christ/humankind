@@ -84,6 +84,7 @@ const makeState = (): GameState => {
         bonusSelectionQueue: [],
         edictRemovalPending: false,
         forceTerrainInNextSymbolChoices: false,
+        forceEventsInNextSymbolChoices: false,
         freeSelectionRerolls: 0,
         destroySelectionMaxSymbols: 3,
         territorialAfterEdictPending: false,
@@ -120,7 +121,8 @@ const makeState = (): GameState => {
         activateClickableRelic: () => {},
         butcherPastureAnimalAt: () => {},
         trainHorseUnitAt: () => {},
-        trainDeerUnitAt: () => {},
+        consumeTribalVillageAt: () => {},
+
         openLootAt: () => {},
         lootRewardChoices: [],
         pendingLootSlot: null,
