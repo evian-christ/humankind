@@ -802,8 +802,55 @@ button.spin-btn:disabled:active {
   transition: transform 140ms ease;
 }
 
+.loot-reward-card-frame::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: -18px;
+  pointer-events: none;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.72);
+  filter: blur(24px);
+  animation: loot-reward-card-aura 1200ms ease-out;
+}
+
+@keyframes loot-reward-card-aura {
+  0% {
+    opacity: 0.92;
+    transform: scale(1.04);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.selection-plague-blocked {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  border: 2px dashed #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+  font-family: 'Mulmaru', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
 .selection-card-frame:hover {
   transform: translateY(-6px);
+}
+
+.selection-card-frame.selection-plague-card-frame:hover {
+  transform: none;
 }
 
 .selection-card {

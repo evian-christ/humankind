@@ -2,7 +2,7 @@ import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { getRerollCost } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
+import { SYMBOLS, S, SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { isGameEventDefinition, type GameEventDefinition } from '../game/data/eventDefinitions';
 import { useRelicStore } from '../game/state/relicStore';
 import { getBoardSymbolTooltipDesc, getEventDescription, t } from '../i18n';
@@ -26,6 +26,8 @@ const ERA_NAME_KEYS: Record<number, string> = {
 /** gameStore RELIC_ID: 고대 유물 잔해 / 고대 부족 합류 — 심볼 선택 UI 전용 표시·리롤 숨김 */
 const RELIC_ANCIENT_DEBRIS = 13;
 const RELIC_ANCIENT_TRIBE_JOIN = 19;
+const RELIC_MILITARY_LEVY = 39;
+const RELIC_PROPHECY_DIE = 40;
 
 const SymbolCard = ({
     symbol,
@@ -166,6 +168,8 @@ const SymbolSelection = () => {
         skipSelection,
         rerollSymbols,
         symbolSelectionRelicSourceId,
+        symbolSelectionSymbolSourceId,
+        board,
     } = useGameStore();
     const language = useSettingsStore((s) => s.language);
     const relics = useRelicStore((s) => s.relics);
@@ -193,15 +197,24 @@ const SymbolSelection = () => {
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
     const hasFreeReroll = (freeSelectionRerolls ?? 0) > 0;
     const visibleRerollCost = hasFreeReroll ? 0 : rerollCost;
-    const canReroll = (hasFreeReroll || gold >= rerollCost) && (rerollsLeft === null || rerollsLeft > 0);
+    const hasPlague = board?.some((col) => col?.some((cell) => cell?.definition?.id === 78)) ?? false;
+    const canReroll = !hasPlague && (hasFreeReroll || gold >= rerollCost) && (rerollsLeft === null || rerollsLeft > 0);
 
     const hideRerollFromRelicSource =
         symbolSelectionRelicSourceId === RELIC_ANCIENT_DEBRIS ||
-        symbolSelectionRelicSourceId === RELIC_ANCIENT_TRIBE_JOIN;
+        symbolSelectionRelicSourceId === RELIC_ANCIENT_TRIBE_JOIN ||
+        symbolSelectionRelicSourceId === RELIC_MILITARY_LEVY ||
+        symbolSelectionRelicSourceId === RELIC_PROPHECY_DIE;
+    const hideRerollFromSymbolSource = symbolSelectionSymbolSourceId === S.tribal_village;
+    const symbolSource = symbolSelectionSymbolSourceId == null ? null : SYMBOLS[symbolSelectionSymbolSourceId] ?? null;
     const relicSourceLabelKey =
         hideRerollFromRelicSource && symbolSelectionRelicSourceId != null
             ? (`relic.${symbolSelectionRelicSourceId}.name` as const)
             : null;
+    const sourceLabelKey =
+        symbolSource != null
+            ? (`symbol.${symbolSource.key}.name` as const)
+            : relicSourceLabelKey;
 
     const handleCardClick = (symbolId: number) => {
         void audioManager.play('symbol_choice_chose');
@@ -236,32 +249,45 @@ const SymbolSelection = () => {
 
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
-                    {relicSourceLabelKey && (
-                        <div className="selection-relic-source-banner">{t(relicSourceLabelKey, language)}</div>
+                    {sourceLabelKey && (
+                        <div className="selection-relic-source-banner">{t(sourceLabelKey, language)}</div>
                     )}
                     <div className="selection-title">
-                        {t('game.chooseSymbol', language)}
+                        {t(hasPlague ? 'game.plagueOutbreak' : 'game.chooseSymbol', language)}
                     </div>
                     <div className="selection-cards">
-                        {symbolChoices.map((choice, i) => (
-                            isGameEventDefinition(choice) ? (
-                                <EventCard
-                                    key={`event-${choice.id}-${i}`}
-                                    event={choice}
-                                    onClick={() => handleEventCardClick(choice.id)}
-                                />
-                            ) : (
-                                <SymbolCard
-                                    key={`${choice.id}-${i}`}
-                                    symbol={choice}
-                                    unlockedKnowledgeUpgrades={unlockedKnowledgeUpgrades}
-                                    onClick={() => handleCardClick(choice.id)}
-                                />
-                            )
-                        ))}
+                        {hasPlague ? (
+                            [0, 1, 2].map((cardIndex) => (
+                                <div
+                                    key={`plague-blocked-${cardIndex}`}
+                                    className="selection-card-frame selection-plague-card-frame"
+                                >
+                                    <div className="selection-plague-blocked">
+                                        {cardIndex === 1 && t('game.plagueSelectionBlocked', language)}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            symbolChoices.map((choice, i) => (
+                                isGameEventDefinition(choice) ? (
+                                    <EventCard
+                                        key={`event-${choice.id}-${i}`}
+                                        event={choice}
+                                        onClick={() => handleEventCardClick(choice.id)}
+                                    />
+                                ) : (
+                                    <SymbolCard
+                                        key={`${choice.id}-${i}`}
+                                        symbol={choice}
+                                        unlockedKnowledgeUpgrades={unlockedKnowledgeUpgrades}
+                                        onClick={() => handleCardClick(choice.id)}
+                                    />
+                                )
+                            ))
+                        )}
                     </div>
                     <div className="selection-actions">
-                        {!hideRerollFromRelicSource && (
+                        {!hideRerollFromRelicSource && !hideRerollFromSymbolSource && (
                             <button
                                 className="selection-reroll-btn"
                                 data-audio-click="symbol_choice_reroll"

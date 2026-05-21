@@ -2,7 +2,12 @@ import { type CSSProperties } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getRewardDescription, REWARD_RARITY_COLOR, type RewardDefinition } from '../game/data/rewardDefinitions';
+import { SYMBOLS } from '../game/data/symbolDefinitions';
+import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
+import { RELICS } from '../game/data/relicDefinitions';
 import { EffectText } from './EffectText';
+
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 const LOOT_TIER_TITLE: Record<string, string> = {
     small: '전리품 개봉',
@@ -10,35 +15,32 @@ const LOOT_TIER_TITLE: Record<string, string> = {
     large: '빛나는 전리품 개봉',
 };
 
-const STAT_ICON: Record<string, string> = {
-    food: '🌾',
-    gold: '🪙',
-    knowledge: '📖',
-};
-
 const RewardCard = ({
     reward,
     era,
+    lootSymbolId,
     onClick,
 }: {
     reward: RewardDefinition;
     era: number;
+    lootSymbolId: number | undefined;
     onClick: () => void;
 }) => {
     const rarityColor = REWARD_RARITY_COLOR[reward.rarity];
     const desc = getRewardDescription(reward, era);
-
-    const statIcon = reward.grantsRelic
-        ? '✨'
-        : reward.food
-        ? STAT_ICON.food
-        : reward.gold
-        ? STAT_ICON.gold
-        : STAT_ICON.knowledge;
+    const grantedRelic = reward.grantedRelicIds?.length
+        ? RELICS[reward.grantedRelicIds[0]!]
+        : null;
+    const lootSymbol = lootSymbolId == null ? null : SYMBOLS[lootSymbolId];
+    const spriteUrl = grantedRelic?.sprite && grantedRelic.sprite !== '-' && grantedRelic.sprite !== '-.png'
+        ? `${ASSET_BASE_URL}assets/relics/${grantedRelic.sprite}`
+        : lootSymbol
+        ? getSymbolSpriteUrl(lootSymbol)
+        : null;
 
     return (
         <div
-            className="selection-card-frame"
+            className="selection-card-frame loot-reward-card-frame"
             style={{
                 '--card-glow': `${rarityColor}cc`,
                 '--selection-era-color': rarityColor,
@@ -65,13 +67,16 @@ const RewardCard = ({
                     {reward.rarity}
                 </div>
 
-                {/* 아이콘 */}
-                <div
-                    className="selection-card-sprite-placeholder"
-                    style={{ fontSize: '52px', lineHeight: 1, marginBottom: '4px' }}
-                >
-                    {statIcon}
-                </div>
+                {spriteUrl ? (
+                    <img
+                        className="selection-card-sprite loot-reward-card-sprite"
+                        src={spriteUrl}
+                        alt=""
+                        aria-hidden
+                    />
+                ) : (
+                    <div className="selection-card-sprite-placeholder" />
+                )}
 
                 {/* 이름 */}
                 <div className="selection-card-name">{reward.name}</div>
@@ -130,6 +135,7 @@ const LootRewardSelection = () => {
                                 key={`${reward.id}-${i}`}
                                 reward={reward}
                                 era={era}
+                                lootSymbolId={pendingLootSlot?.symbolId}
                                 onClick={() => selectLootReward(reward.id)}
                             />
                         ))}
