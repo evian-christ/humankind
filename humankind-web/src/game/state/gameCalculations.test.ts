@@ -63,6 +63,7 @@ import {
     getHudTurnStartPassiveTotals,
     getInflatedGoldCost,
     getEraFromLevel,
+    getKnowledgeResearchCutoffLevel,
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
 } from './gameCalculations';
@@ -101,6 +102,15 @@ describe('getEraFromLevel', () => {
         expect(getEraFromLevel(20)).toBe(3);
         expect(getEraFromLevel(29)).toBe(3);
         expect(getEraFromLevel(30)).toBe(4);
+    });
+});
+
+describe('getKnowledgeResearchCutoffLevel', () => {
+    it('tracks the level that has already spent its research picks', () => {
+        expect(getKnowledgeResearchCutoffLevel(10, 2)).toBe(8);
+        expect(getKnowledgeResearchCutoffLevel(30, 3)).toBe(27);
+        expect(getKnowledgeResearchCutoffLevel(10, 0)).toBe(10);
+        expect(getKnowledgeResearchCutoffLevel(1, 3)).toBe(0);
     });
 });
 
@@ -359,6 +369,33 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             [],
             30,
         )).toBe(false);
+    });
+
+    it('uses research cutoff level separately from the reached player level', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            NOMADIC_TRADITION_UPGRADE_ID,
+            [PASTORALISM_UPGRADE_ID],
+            10,
+            8,
+        )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            FEUDALISM_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+            10,
+            8,
+        )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            ELECTRICITY_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID],
+            30,
+            27,
+        )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            AGI_PROJECT_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID],
+            30,
+            27,
+        )).toBe(true);
     });
 
     it('requires Fisheries for Compass', () => {

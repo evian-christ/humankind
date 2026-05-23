@@ -365,4 +365,21 @@ describe('selectionLogic', () => {
 
         expect(result.choices.filter(isGameEventDefinition).some((event) => event.key === 'capital_relocation')).toBe(true);
     });
+
+    it('forces at least one event choice when Royal Colony has been destroyed', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+
+        const result = generateChoices({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID],
+            ownedRelicDefIds: [],
+            ownedSymbolDefIds: [],
+            forceTerrainInNextSymbolChoices: false,
+            forceEventsInNextSymbolChoices: true,
+        });
+
+        expect(result.choices.some(isGameEventDefinition)).toBe(true);
+        expect(result.consumedForceEvents).toBe(true);
+    });
 });

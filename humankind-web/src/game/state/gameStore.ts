@@ -88,6 +88,10 @@ export type GameEventLogKind =
     | 'turn_end'
     | 'combat'
     | 'relic'
+    | 'selection'
+    | 'research'
+    | 'shop'
+    | 'board_action'
     | 'system';
 
 export interface GameEventLogEntry {
@@ -264,8 +268,6 @@ export interface GameState {
     activateClickableRelic: (instanceId: string) => void;
     /** 소·양: 평원 인접·idle 시 도축(보드 제거; 소 +10 Food, 양 +5 Food/+5 Gold; 파괴 보상은 집계 반영) */
     butcherPastureAnimalAt: (x: number, y: number) => void;
-    /** 말: 근접 유닛 인접·idle 시 소모하여 해당 유닛을 기사로 훈련 */
-    trainHorseUnitAt: (x: number, y: number) => void;
     /** 부족 마을: idle 시 소모하여 심볼 선택 페이즈를 연속 발동 */
     consumeTribalVillageAt: (x: number, y: number) => void;
 
@@ -555,9 +557,11 @@ export const useGameStore = create<GameState>((set, get) => ({
                 leaderProgressLevel: state.leaderProgressLevel,
                 choiceCount: getStandardSymbolChoiceCount(state.board),
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
+                forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
             });
             const choices = res.choices;
             if (res.consumedForceTerrain) set({ forceTerrainInNextSymbolChoices: false });
+            if (res.consumedForceEvents) set({ forceEventsInNextSymbolChoices: false });
             set({
                 phase: 'selection',
                 symbolChoices: choices,

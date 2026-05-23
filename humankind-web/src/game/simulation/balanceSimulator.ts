@@ -74,6 +74,7 @@ import { createStartingBoard, BOARD_HEIGHT, BOARD_WIDTH } from '../state/gameSto
 import {
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
+    getKnowledgeResearchCutoffLevel,
     getKnowledgeRequiredForLevel,
     isUpgradeLegalForKnowledgePick,
 } from '../state/gameCalculations';
@@ -502,12 +503,18 @@ const chooseUpgrade = (
     strategy: BalanceUpgradeStrategy,
     pickStrategy: BalancePickStrategy,
     rng: SeededRng,
+    researchCutoffLevel = state.level,
 ): number | null => {
     if (strategy === 'none') return null;
     const legal = Object.keys(KNOWLEDGE_UPGRADES)
         .map(Number)
         .filter((id) => id !== TERRITORIAL_REORG_UPGRADE_ID)
-        .filter((id) => isUpgradeLegalForKnowledgePick(id, state.unlockedKnowledgeUpgrades, state.level))
+        .filter((id) => isUpgradeLegalForKnowledgePick(
+            id,
+            state.unlockedKnowledgeUpgrades,
+            state.level,
+            researchCutoffLevel,
+        ))
         .sort((a, b) => a - b);
     if (legal.length === 0) return null;
     if (strategy === 'random') return rng.pick(legal);
@@ -719,7 +726,9 @@ const simulateTurn = (
     state.playerSymbols = generated.playerSymbols.filter((s) => !removedIds.has(s.instanceId));
 
     for (let i = 0; i < prog.gainedResearchPicks; i++) {
-        const upgradeId = chooseUpgrade(state, config.upgradeStrategy, config.pickStrategy, rng);
+        const remainingResearchPicks = prog.gainedResearchPicks - i;
+        const researchCutoffLevel = getKnowledgeResearchCutoffLevel(state.level, remainingResearchPicks);
+        const upgradeId = chooseUpgrade(state, config.upgradeStrategy, config.pickStrategy, rng, researchCutoffLevel);
         if (upgradeId == null) break;
         applyUpgrade(state, upgradeId);
     }

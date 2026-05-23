@@ -1,33 +1,38 @@
 import { type CSSProperties } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { getRewardDescription, REWARD_RARITY_COLOR, type RewardDefinition } from '../game/data/rewardDefinitions';
+import {
+    getRewardDescription,
+    getRewardName,
+    getRewardRarityLabel,
+    REWARD_RARITY_COLOR,
+    type RewardDefinition,
+} from '../game/data/rewardDefinitions';
 import { SYMBOLS } from '../game/data/symbolDefinitions';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 import { RELICS } from '../game/data/relicDefinitions';
 import { EffectText } from './EffectText';
+import { t } from '../i18n';
+import type { Language } from '../game/state/settingsStore';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
-
-const LOOT_TIER_TITLE: Record<string, string> = {
-    small: '전리품 개봉',
-    medium: '대형 전리품 개봉',
-    large: '빛나는 전리품 개봉',
-};
 
 const RewardCard = ({
     reward,
     era,
+    language,
     lootSymbolId,
     onClick,
 }: {
     reward: RewardDefinition;
     era: number;
+    language: Language;
     lootSymbolId: number | undefined;
     onClick: () => void;
 }) => {
     const rarityColor = REWARD_RARITY_COLOR[reward.rarity];
-    const desc = getRewardDescription(reward, era);
+    const desc = getRewardDescription(reward, era, language);
+    const rewardName = getRewardName(reward, language);
     const grantedRelic = reward.grantedRelicIds?.length
         ? RELICS[reward.grantedRelicIds[0]!]
         : null;
@@ -64,7 +69,7 @@ const RewardCard = ({
                         display: 'inline-block',
                     }}
                 >
-                    {reward.rarity}
+                    {getRewardRarityLabel(reward.rarity, language)}
                 </div>
 
                 {spriteUrl ? (
@@ -79,7 +84,7 @@ const RewardCard = ({
                 )}
 
                 {/* 이름 */}
-                <div className="selection-card-name">{reward.name}</div>
+                <div className="selection-card-name">{rewardName}</div>
 
                 {/* 설명 */}
                 <div className="selection-card-desc">
@@ -106,12 +111,10 @@ const LootRewardSelection = () => {
     const S_IDS = { loot: 60, greater_loot: 61, radiant_loot: 62 };
     const tierTitle =
         pendingLootSlot?.symbolId === S_IDS.radiant_loot
-            ? LOOT_TIER_TITLE.large
+            ? t('lootReward.title.large', language)
             : pendingLootSlot?.symbolId === S_IDS.greater_loot
-            ? LOOT_TIER_TITLE.medium
-            : LOOT_TIER_TITLE.small;
-
-    void language; // i18n 확장 대비
+            ? t('lootReward.title.medium', language)
+            : t('lootReward.title.small', language);
 
     return (
         <div className="selection-overlay">
@@ -127,7 +130,7 @@ const LootRewardSelection = () => {
                             marginTop: '-8px',
                         }}
                     >
-                        보상을 선택하세요
+                        {t('lootReward.choose', language)}
                     </div>
                     <div className="selection-cards">
                         {lootRewardChoices.map((reward, i) => (
@@ -135,6 +138,7 @@ const LootRewardSelection = () => {
                                 key={`${reward.id}-${i}`}
                                 reward={reward}
                                 era={era}
+                                language={language}
                                 lootSymbolId={pendingLootSlot?.symbolId}
                                 onClick={() => selectLootReward(reward.id)}
                             />

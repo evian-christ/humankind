@@ -481,8 +481,8 @@ describe('symbolEffectResolution', () => {
 
         expect(baseResult.food).toBe(2);
         expect(baseResult.gold).toBe(2);
-        expect(upgradedResult.food).toBe(5);
-        expect(upgradedResult.gold).toBe(6);
+        expect(upgradedResult.food).toBe(3);
+        expect(upgradedResult.gold).toBe(4);
     });
 
     it('adds board grassland count to wheat payout with Three-field System', () => {

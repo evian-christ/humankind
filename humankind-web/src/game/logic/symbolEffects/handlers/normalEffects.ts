@@ -459,8 +459,8 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
 
         case S.horse: {
             const hasMilitaryScience = upgrades.includes(MILITARY_SCIENCE_UPGRADE_ID);
-            state.food += hasMilitaryScience ? 5 : 2;
-            state.gold += hasMilitaryScience ? 6 : 2;
+            state.food += hasMilitaryScience ? 3 : 2;
+            state.gold += hasMilitaryScience ? 4 : 2;
             return true;
         }
 

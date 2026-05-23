@@ -5,7 +5,14 @@ import { ENEMIES } from '../game/data/enemyDefinitions';
 import { GAME_EVENT_CATEGORY_ORDER, GAME_EVENTS } from '../game/data/eventDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { LEADERS } from '../game/data/leaders';
-import { REWARDS, REWARD_RARITY_COLOR, REWARD_RARITY_ORDER, getRewardDescriptionAllEras } from '../game/data/rewardDefinitions';
+import {
+    REWARDS,
+    REWARD_RARITY_COLOR,
+    REWARD_RARITY_ORDER,
+    getRewardDescriptionAllEras,
+    getRewardName,
+    getRewardRarityLabel,
+} from '../game/data/rewardDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
 import { getDisplayUnitStats } from '../game/data/unitUpgrades';
@@ -367,9 +374,9 @@ const DataBrowser = () => {
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(r =>
-                r.name.toLowerCase().includes(q) ||
-                getRewardDescriptionAllEras(r).toLowerCase().includes(q) ||
-                r.rarity.toLowerCase().includes(q) ||
+                getRewardName(r, language).toLowerCase().includes(q) ||
+                getRewardDescriptionAllEras(r, language).toLowerCase().includes(q) ||
+                getRewardRarityLabel(r.rarity, language).toLowerCase().includes(q) ||
                 String(r.id).includes(q),
             );
         }
@@ -380,9 +387,9 @@ const DataBrowser = () => {
                 let va: unknown, vb: unknown;
                 switch (column) {
                     case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = a.name; vb = b.name; break;
+                    case 'name': va = getRewardName(a, language); vb = getRewardName(b, language); break;
                     case 'rarity': va = REWARD_RARITY_ORDER.indexOf(a.rarity); vb = REWARD_RARITY_ORDER.indexOf(b.rarity); break;
-                    case 'desc': va = getRewardDescriptionAllEras(a); vb = getRewardDescriptionAllEras(b); break;
+                    case 'desc': va = getRewardDescriptionAllEras(a, language); vb = getRewardDescriptionAllEras(b, language); break;
                     default: va = a.id; vb = b.id;
                 }
                 return genericCompare(va, vb, dir);
@@ -392,7 +399,7 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [search, rewardSort]);
+    }, [language, search, rewardSort]);
 
     // 시대별 카운트
     const eraCounts = useMemo(() => {
@@ -876,7 +883,7 @@ const DataBrowser = () => {
                             {filteredRewards.map(r => (
                                 <tr key={r.id} className="databrowser-row">
                                     <td className="databrowser-cell--id">{r.id}</td>
-                                    <td className="databrowser-cell--name">{r.name}</td>
+                                    <td className="databrowser-cell--name">{getRewardName(r, language)}</td>
                                     <td className="databrowser-cell--era">
                                         <span style={{
                                             color: REWARD_RARITY_COLOR[r.rarity],
@@ -885,11 +892,11 @@ const DataBrowser = () => {
                                             letterSpacing: '0.5px',
                                             textShadow: `0 0 6px ${REWARD_RARITY_COLOR[r.rarity]}80`,
                                         }}>
-                                            [{r.rarity}]
+                                            [{getRewardRarityLabel(r.rarity, language)}]
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--desc">
-                                        <EffectText text={getRewardDescriptionAllEras(r)} />
+                                        <EffectText text={getRewardDescriptionAllEras(r, language)} />
                                     </td>
                                 </tr>
                             ))}

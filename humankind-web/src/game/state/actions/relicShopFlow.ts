@@ -37,6 +37,18 @@ export const createRelicShopFlowActions = ({ get, set }: RelicShopFlowDeps) => (
                 relicHalfPriceRelicId: s.relicHalfPriceRelicId === relicId ? null : s.relicHalfPriceRelicId,
             };
         });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'shop',
+            delta: { food: 0, gold: -effectiveCost, knowledge: 0 },
+            meta: {
+                action: 'buy_relic',
+                relicId,
+                cost: effectiveCost,
+                baseCost: def.cost,
+                halfPrice: hasGoldenTrade && isHalfPrice,
+            },
+        });
 
         if (def.id === RELIC_ID.TEN_COMMANDMENTS) {
             // Unlock is passive; no immediate state patch required.

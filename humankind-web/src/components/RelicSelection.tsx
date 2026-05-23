@@ -128,7 +128,7 @@ const RelicSelection = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="relic-sold-out">품절</div>
+                                        <div className="relic-sold-out">{t('game.relicShopSoldOut', language)}</div>
                                     )}
                                 </div>
                             ))}

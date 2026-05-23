@@ -86,6 +86,26 @@ describe('combatResolution', () => {
         expect(result.animation).toEqual({ ax: 4, ay: 3, tx: 0, ty: 0, atkDmg: 4, counterDmg: 0 });
     });
 
+    it('lets enemy ranged units target player units across the whole board', () => {
+        const board = createEmptyBoard();
+        board[4][3] = createInstance(Sym.enemy_archer, 'enemy_archer');
+        board[0][0] = createInstance(Sym.warrior, 'unit_a');
+        board[4][2] = createInstance(Sym.warrior, 'unit_b');
+
+        const result = resolveCombatStep({
+            board,
+            width: 5,
+            height: 4,
+            event: { ax: 4, ay: 3 },
+            getAdjacentCoords,
+            getEffectiveMaxHP,
+        });
+
+        expect(board[0][0]?.enemy_hp).toBe(6);
+        expect(board[4][2]?.enemy_hp).toBe(8);
+        expect(result.animation).toEqual({ ax: 4, ay: 3, tx: 0, ty: 0, atkDmg: 2, counterDmg: 0 });
+    });
+
     it('collects only defeated enemy symbols for loot rewards', () => {
         const board = createEmptyBoard();
         const enemy = createInstance(Sym.enemy_warrior, 'enemy');

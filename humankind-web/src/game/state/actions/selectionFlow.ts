@@ -53,6 +53,7 @@ import {
     scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import {
+    getKnowledgeResearchCutoffLevel,
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
 } from '../gameCalculations';
@@ -256,9 +257,22 @@ export const createSelectionFlowActions = ({
         const def = SYMBOLS[symbolId];
         if (!def) return;
 
+        const choiceIds = state.symbolChoices.map((choice) => choice.id);
+
         set({
             playerSymbols: [...state.playerSymbols, createInstance(def, state.unlockedKnowledgeUpgrades || [])],
             ...resolveAfterSelection(state, phaseAfterTurnFlowComplete),
+        });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'selection',
+            symbolId,
+            meta: {
+                action: 'select_symbol',
+                choiceIds,
+                sourceRelicId: state.symbolSelectionRelicSourceId,
+                sourceSymbolId: state.symbolSelectionSymbolSourceId ?? null,
+            },
         });
         saveGameState(get());
     },
@@ -372,6 +386,7 @@ export const createSelectionFlowActions = ({
             knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge;
             patch.bonusXpPerTurn = state.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta;
             patch.forceTerrainInNextSymbolChoices = state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices;
+            patch.forceEventsInNextSymbolChoices = state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices;
             patch.freeSelectionRerolls = (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls;
             patch.isRelicShopOpen = state.isRelicShopOpen || symAgg.openRelicShop;
             if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
@@ -387,6 +402,18 @@ export const createSelectionFlowActions = ({
                 ...state,
                 ...patch,
             }, phaseAfterTurnFlowComplete),
+        });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'selection',
+            delta: { food: foodDelta, gold: goldDelta, knowledge: knowledgeDelta },
+            meta: {
+                action: 'select_event',
+                eventId,
+                eventKey: event.key,
+                sourceRelicId: state.symbolSelectionRelicSourceId,
+                sourceSymbolId: state.symbolSelectionSymbolSourceId ?? null,
+            },
         });
         saveGameState(get());
     },
@@ -410,6 +437,16 @@ export const createSelectionFlowActions = ({
             ...resolveAfterSelection(state, phaseAfterTurnFlowComplete),
             gold: state.gold + skipGold,
             relicFloats: relicFloatsNext,
+        });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'selection',
+            delta: { food: 0, gold: skipGold, knowledge: 0 },
+            meta: {
+                action: 'skip_selection',
+                sourceRelicId: state.symbolSelectionRelicSourceId,
+                sourceSymbolId: state.symbolSelectionSymbolSourceId ?? null,
+            },
         });
     },
 
@@ -445,6 +482,15 @@ export const createSelectionFlowActions = ({
                 forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
                 forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
             });
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'selection',
+                meta: {
+                    action: 'reroll',
+                    free: true,
+                    choices: choiceResolution.choices.map((choice) => choice.id),
+                },
+            });
             return;
         }
 
@@ -457,6 +503,17 @@ export const createSelectionFlowActions = ({
             forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
             rerollsThisTurn: state.rerollsThisTurn + 1,
         });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'selection',
+            delta: { food: 0, gold: -rerollCost, knowledge: 0 },
+            meta: {
+                action: 'reroll',
+                free: false,
+                cost: rerollCost,
+                choices: choiceResolution.choices.map((choice) => choice.id),
+            },
+        });
     },
 
     selectUpgrade: (upgradeId: number) => {
@@ -465,12 +522,25 @@ export const createSelectionFlowActions = ({
         if (pts <= 0) return;
 
         const pickLevel = state.level;
+        const researchCutoffLevel = getKnowledgeResearchCutoffLevel(pickLevel, pts);
         const uid = Number(upgradeId);
         const unlockedNorm = (state.unlockedKnowledgeUpgrades || []).map((x) => Number(x));
         if (!KNOWLEDGE_UPGRADES[uid]) return;
-        if (!isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel)) return;
+        if (!isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel, researchCutoffLevel)) return;
 
         const nextResearchPts = Math.max(0, pts - 1);
+        const appendResearchLog = (extra: Record<string, unknown> = {}) => {
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'research',
+                meta: {
+                    action: 'select_upgrade',
+                    upgradeId: uid,
+                    remainingResearchPoints: nextResearchPts,
+                    ...extra,
+                },
+            });
+        };
 
         if (uid === TERRITORIAL_REORG_UPGRADE_ID) {
             set({
@@ -481,6 +551,7 @@ export const createSelectionFlowActions = ({
                 levelUpResearchPoints: nextResearchPts,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
             });
+            appendResearchLog({ opensDestroySelection: true });
             return;
         }
 
@@ -592,6 +663,7 @@ export const createSelectionFlowActions = ({
                 destroySelectionMaxSymbols: 1,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
             });
+            appendResearchLog({ opensDestroySelection: true, source: 'edict' });
             return;
         }
 
@@ -602,6 +674,7 @@ export const createSelectionFlowActions = ({
                 returnPhaseAfterDevKnowledgeUpgrade: null,
                 symbolSelectionRelicSourceId: null,
             }));
+            appendResearchLog({ returnPhase: state.returnPhaseAfterDevKnowledgeUpgrade });
             return;
         }
 
@@ -623,6 +696,7 @@ export const createSelectionFlowActions = ({
             forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
             forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
         }));
+        appendResearchLog();
     },
 
     confirmDestroySymbols: (instanceIds: string[]) => {
@@ -656,6 +730,21 @@ export const createSelectionFlowActions = ({
             state.unlockedKnowledgeUpgrades || [],
         );
         const goldAdd = instanceIds.length * 10;
+        const appendDestroyLog = (extra: Record<string, unknown> = {}) => {
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'board_action',
+                delta: { food: dFood, gold: dGold + (extra.goldAdd === true ? goldAdd : 0), knowledge: dKnowledge },
+                meta: {
+                    action: 'destroy_symbols',
+                    source: src,
+                    selectedInstanceIds: instanceIds,
+                    selectedSymbolIds: removed.map((symbol) => symbol.definition.id),
+                    addSymbolIds: symAgg.addSymbolDefIds,
+                    ...extra,
+                },
+            });
+        };
 
         const afterSetRelicRefresh = () => {
             if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
@@ -688,6 +777,7 @@ export const createSelectionFlowActions = ({
                 ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
             }));
             afterSetRelicRefresh();
+            appendDestroyLog({ territorialAfterEdictPending: terr });
             return;
         }
 
@@ -706,6 +796,7 @@ export const createSelectionFlowActions = ({
                     bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
                 });
                 afterSetRelicRefresh();
+                appendDestroyLog({ goldAdd: true, chainedToEdict: true });
                 return;
             }
             set(withSelectionPhaseFreeReroll(state, {
@@ -720,6 +811,7 @@ export const createSelectionFlowActions = ({
                 bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
             }));
             afterSetRelicRefresh();
+            appendDestroyLog({ goldAdd: true });
         }
     },
 
@@ -812,6 +904,19 @@ export const createSelectionFlowActions = ({
             destroySelectionMaxSymbols: 3,
         });
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'board_action',
+            slot: { x, y },
+            symbolId: sym.definition.id,
+            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
+            meta: {
+                action: 'oblivion_furnace_destroy',
+                relicInstanceId: relicInstId,
+                selectedInstanceIds: instanceIds,
+                addSymbolIds: symAgg.addSymbolDefIds,
+            },
+        });
     },
 
     cancelOblivionFurnacePick: () => {

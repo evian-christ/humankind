@@ -5,6 +5,7 @@ import { isLeaderUnlockActive } from '../../data/leaders';
 import {
     CAPITAL_RELOCATION_MIN_SYMBOLS,
     GAME_EVENTS,
+    isGameEventDefinition,
     type GameEventDefinition,
 } from '../../data/eventDefinitions';
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
@@ -333,7 +334,7 @@ export function generateChoices(ctx: SelectionContext): GenerateChoicesResult {
     let consumedForceEvents = false;
 
     if (ctx.forceEventsInNextSymbolChoices) {
-        const hasEvent = finalChoices.some((c) => 'key' in c);
+        const hasEvent = finalChoices.some(isGameEventDefinition);
         if (!hasEvent) {
             const events = getEligibleEvents(ctx);
             if (events.length > 0) {

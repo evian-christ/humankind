@@ -141,33 +141,6 @@ describe('gameStore pasture butchering', () => {
         expect(next.gold).toBe(10);
     });
 
-    it('consumes horse and trains an adjacent melee unit into cavalry', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const board = createEmptyBoard();
-        const horse = createInstance(Sym.horse, 'horse');
-        const warrior = createInstance(Sym.warrior, 'warrior');
-        warrior.enemy_hp = 7;
-        board[1][1] = horse;
-        board[2][1] = warrior;
-
-        useGameStore.setState({
-            board,
-            playerSymbols: [horse, warrior],
-            phase: 'idle',
-            lastEffects: [],
-        });
-
-        useGameStore.getState().trainHorseUnitAt(1, 1);
-
-        const next = useGameStore.getState();
-        expect(next.board[1][1]).toBeNull();
-        expect(next.board[2][1]?.definition.id).toBe(Sym.cavalry.id);
-        expect(next.board[2][1]?.enemy_hp).toBe(7);
-        expect(next.playerSymbols.some((sym) => sym.instanceId === 'horse')).toBe(false);
-        expect(next.playerSymbols.find((sym) => sym.instanceId === 'warrior')?.definition.id).toBe(Sym.cavalry.id);
-    });
-
     it('opens radiant loot choice and can grant a relic reward', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');

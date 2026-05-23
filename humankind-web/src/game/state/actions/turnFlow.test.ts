@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameState } from '../gameStore';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
+import { isGameEventDefinition } from '../../data/eventDefinitions';
 import { prepareTurn } from '../../logic/turn/turnPreparation';
 import { useRelicStore } from '../relicStore';
 
@@ -120,7 +121,6 @@ const makeState = (): GameState => {
         cancelEdictPick: () => {},
         activateClickableRelic: () => {},
         butcherPastureAnimalAt: () => {},
-        trainHorseUnitAt: () => {},
         consumeTribalVillageAt: () => {},
 
         openLootAt: () => {},
@@ -271,6 +271,43 @@ describe('turnFlow actions', () => {
             expect(harness.get().board[1][0]).toBeNull();
             expect(harness.get().playerSymbols.some((s) => s.instanceId === enemy.instanceId)).toBe(false);
             expect(harness.get().playerSymbols.filter((s) => s.definition.id === S.loot)).toHaveLength(1);
+        } finally {
+            vi.clearAllTimers();
+            vi.useRealTimers();
+        }
+    });
+
+    it('offers an event choice after Royal Colony destroys itself during turn processing', () => {
+        vi.useFakeTimers();
+        try {
+            const colony = createInstance(SYMBOLS[S.royal_colony]!, []);
+            const board = createEmptyBoard();
+            board[0][0] = colony;
+            const harness = createHarness(
+                {
+                    phase: 'spinning',
+                    board,
+                    playerSymbols: [colony],
+                    era: 2,
+                    turn: 1,
+                },
+                {
+                    processSingleSymbolEffects: (symbol) => {
+                        if (symbol.definition.id === S.royal_colony) {
+                            symbol.is_marked_for_destruction = true;
+                            return { food: 0, gold: 0, knowledge: 0, forceEventsInNextChoices: true };
+                        }
+                        return { food: 0, gold: 0, knowledge: 0 };
+                    },
+                },
+            );
+
+            harness.actions.startProcessing();
+            vi.runAllTimers();
+
+            expect(harness.get().phase).toBe('selection');
+            expect(harness.get().playerSymbols.some((s) => s.instanceId === colony.instanceId)).toBe(false);
+            expect(harness.get().symbolChoices.some(isGameEventDefinition)).toBe(true);
         } finally {
             vi.clearAllTimers();
             vi.useRealTimers();

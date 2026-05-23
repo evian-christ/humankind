@@ -1,7 +1,6 @@
 import { NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
+import { S, SymbolType } from '../../data/symbolDefinitions';
 import { generateChoices as generateChoicesSelection } from '../../logic/selection/selectionLogic';
-import { isMeleeUnit, resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import type { GameState } from '../gameStore';
 import { RELICS } from '../../data/relicDefinitions';
 import {
@@ -94,7 +93,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: prev.turn,
-            kind: 'system',
+            kind: 'board_action',
             slot: { x, y },
             symbolId: sid,
             delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
@@ -105,67 +104,6 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             },
         });
     },
-    trainHorseUnitAt: (x: number, y: number) => {
-        const prev = get();
-        if (prev.phase !== 'idle') return;
-        const horse = prev.board[x]?.[y];
-        if (!horse || horse.definition.id !== S.horse || horse.is_marked_for_destruction) return;
-        const trainedCavalryId = S.cavalry;
-
-        const targetCoord = getAdjacentCoords(x, y).find(({ x: ax, y: ay }) => {
-            const candidate = prev.board[ax]?.[ay];
-            return !!candidate &&
-                !candidate.is_marked_for_destruction &&
-                isMeleeUnit(candidate.definition) &&
-                candidate.definition.id !== trainedCavalryId;
-        });
-        if (!targetCoord) return;
-
-        const target = prev.board[targetCoord.x][targetCoord.y];
-        const cavalryDef = resolveUpgradedUnitDefinition(
-            SYMBOLS[trainedCavalryId]!,
-            prev.unlockedKnowledgeUpgrades || [],
-        );
-        if (!target) return;
-
-        const prevMax = target.definition.base_hp ?? 0;
-        const nextMax = cavalryDef.base_hp ?? 0;
-        const currentHp = target.enemy_hp ?? prevMax;
-        const damageTaken = Math.max(0, prevMax - currentHp);
-        const upgradedTarget = {
-            ...target,
-            definition: cavalryDef,
-            remaining_attacks: cavalryDef.base_attack ? 3 : 0,
-            enemy_hp: Math.max(1, nextMax - damageTaken),
-        };
-
-        const newBoard = prev.board.map((col) => [...col]);
-        newBoard[x][y] = null;
-        newBoard[targetCoord.x][targetCoord.y] = upgradedTarget;
-        const newPlayerSymbols = prev.playerSymbols
-            .filter((symbol) => symbol.instanceId !== horse.instanceId)
-            .map((symbol) => symbol.instanceId === target.instanceId ? upgradedTarget : symbol);
-
-        set({
-            board: newBoard,
-            playerSymbols: newPlayerSymbols,
-        });
-
-        get().appendEventLog({
-            turn: prev.turn,
-            kind: 'system',
-            slot: { x, y },
-            symbolId: S.horse,
-            delta: { food: 0, gold: 0, knowledge: 0 },
-            meta: {
-                action: 'horse_train',
-                targetSlot: targetCoord,
-                fromSymbolId: target.definition.id,
-                toSymbolId: trainedCavalryId,
-            },
-        });
-    },
-
     openLootAt: (x: number, y: number) => {
         const prev = get();
         if (prev.phase !== 'idle') return;
@@ -179,6 +117,16 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             phase: 'loot_reward_selection',
             lootRewardChoices: generateLootRewardChoices(tier),
             pendingLootSlot: { x, y, symbolId: sid! },
+        });
+        get().appendEventLog({
+            turn: prev.turn,
+            kind: 'board_action',
+            slot: { x, y },
+            symbolId: sid,
+            meta: {
+                action: 'loot_reward_open',
+                tier,
+            },
         });
     },
     selectLootReward: (rewardId: number) => {
@@ -226,11 +174,11 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         get().appendEventLog({
             turn: prev.turn,
-            kind: 'system',
+            kind: 'board_action',
             slot: { x, y },
             symbolId,
             delta: { food, gold, knowledge },
-            meta: { action: 'loot_open', rewardKey: reward.key },
+            meta: { action: 'loot_reward_select', rewardId, rewardKey: reward.key },
         });
     },
     activateEdictAt: (x: number, y: number) => {
@@ -254,6 +202,13 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             phase: 'oblivion_furnace_board',
             pendingOblivionFurnaceRelicId: null,
             pendingEdictSource: { x, y, instanceId: edict.instanceId },
+        });
+        get().appendEventLog({
+            turn: prev.turn,
+            kind: 'board_action',
+            slot: { x, y },
+            symbolId: S.edict,
+            meta: { action: 'edict_pick_target' },
         });
     },
     confirmEdictDestroyAt: (x: number, y: number) => {
@@ -310,7 +265,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: state.turn,
-            kind: 'system',
+            kind: 'board_action',
             slot: { x: pending.x, y: pending.y },
             symbolId: S.edict,
             delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
@@ -404,7 +359,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         get().appendEventLog({
             turn: prev.turn,
-            kind: 'system',
+            kind: 'board_action',
             slot: { x, y },
             symbolId: sid,
             delta: { food: dFood, gold: dGold, knowledge: dKnowledge },

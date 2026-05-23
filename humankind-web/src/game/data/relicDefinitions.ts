@@ -396,7 +396,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         cost: 14,
         rarity: "common",
         type: SymbolType.NORMAL,
-        sprite: "-",
+        sprite: "040.png",
     },
 };
 

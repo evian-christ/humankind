@@ -9,7 +9,7 @@ import {
 import { createPortal } from 'react-dom';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { useGameStore } from '../game/state/gameStore';
-import { isUpgradeLegalForKnowledgePick } from '../game/state/gameCalculations';
+import { getKnowledgeResearchCutoffLevel, isUpgradeLegalForKnowledgePick } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
@@ -210,9 +210,7 @@ const KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED = '#2a2b2e';
 const KNOWLEDGE_TREE_CHIP_PILLAR_LOCKED = '#111111';
 const KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET = 8;
 const KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET = 1;
-const KNOWLEDGE_TREE_CHIP_PILLAR_CONFIRM_OFFSET = 7;
 const KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y = 5;
-const KNOWLEDGE_TREE_CHIP_CONFIRM_TRANSLATE_Y = 1;
 const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
 const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#b91c1c';
 const KNOWLEDGE_TREE_CHIP_DENIED_PILLAR = '#7f1d1d';
@@ -220,7 +218,7 @@ const KNOWLEDGE_TOOLTIP_PIN_DELAY_MS = 1000;
 const KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS = 180;
 
 function knowledgeTreeChipFrameShadow(
-    pressDepth: 'idle' | 'confirm' | 'pressed',
+    pressDepth: 'idle' | 'pressed',
     researched: boolean,
     locked: boolean,
     denied = false,
@@ -242,9 +240,6 @@ function knowledgeTreeChipFrameShadow(
     if (pressDepth === 'pressed') {
         return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 6px rgba(0,0,0,0.4)`;
     }
-    if (pressDepth === 'confirm') {
-        return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_CONFIRM_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_CONFIRM_OFFSET}px 9px rgba(0,0,0,0.4)`;
-    }
     return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 12px rgba(0,0,0,0.4)`;
 }
 
@@ -261,8 +256,6 @@ function knowledgeTreeChipFrameColor(researched: boolean, locked: boolean, denie
 /** Idle chip fill — same before/after research (border differentiates researched) */
 const KNOWLEDGE_TREE_CHIP_IDLE_BG = '#1b1b1c';
 
-/** Selected chip: dark gray + pressed look (not hue shift) */
-const KNOWLEDGE_TREE_CHIP_SELECTED_BG = '#3a3a3a';
 const KNOWLEDGE_TREE_CHIP_HOVER_BG = '#24262b';
 const KNOWLEDGE_CONNECTOR_IDLE_OPACITY = 0.16;
 const KNOWLEDGE_CONNECTOR_DIMMED_OPACITY = 0.08;
@@ -400,7 +393,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const phase = useGameStore((s) => s.phase);
     const language = useSettingsStore((s) => s.language);
 
-    const [confirmingId, setConfirmingId] = useState<number | null>(null);
+    const [pendingResearchId, setPendingResearchId] = useState<number | null>(null);
+    const [tutorialFocusId, setTutorialFocusId] = useState<number | null>(null);
     const [hoveredId, setHoveredId] = useState<number | null>(null);
     const [pinnedTooltipId, setPinnedTooltipId] = useState<number | null>(null);
     const [deniedChipId, setDeniedChipId] = useState<number | null>(null);
@@ -417,8 +411,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const [connectorLines, setConnectorLines] = useState<KnowledgeConnectorLine[]>([]);
     const [tooltipPosition, setTooltipPosition] = useState<KnowledgeUpgradeTooltipPosition | null>(null);
 
-    const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 17 && tutorialStep <= 21;
-    const activeFocusId = pinnedTooltipId ?? hoveredId ?? (tutorialRestrictsHover ? confirmingId : null);
+    const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 17 && tutorialStep <= 19;
+    const activeFocusId = pinnedTooltipId ?? hoveredId ?? (tutorialRestrictsHover ? tutorialFocusId : null);
     const detailId = activeFocusId;
     const detailUpgrade = detailId != null ? KNOWLEDGE_UPGRADES[detailId] : null;
     const detailUnlocked = detailId != null && unlockedUpgrades.includes(detailId);
@@ -427,6 +421,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const detailDirectPrereqs = detailId != null ? [...getKnowledgeUpgradeDirectPrerequisites(detailId)] : [];
     const detailDirectDependents = detailId != null ? [...getKnowledgeUpgradeDirectDependents(detailId)] : [];
     const hasResearchPoints = levelUpResearchPoints > 0;
+    const researchCutoffLevel = getKnowledgeResearchCutoffLevel(currentLevel, levelUpResearchPoints);
     const availableBackgroundHeightPx = getKnowledgeAvailableBackgroundHeightPx(currentLevel);
     const isPermanentlyLocked = useCallback((id: number): boolean => {
         const check = (currentId: number, memo: Map<number, boolean>): boolean => {
@@ -437,7 +432,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 return false;
             }
 
-            if (isKnowledgeUpgradeLockedByResearchCutoff(currentId, currentLevel)) {
+            if (isKnowledgeUpgradeLockedByResearchCutoff(currentId, researchCutoffLevel)) {
                 memo.set(currentId, true);
                 return true;
             }
@@ -455,21 +450,19 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         };
         
         return check(id, new Map<number, boolean>());
-    }, [currentLevel, unlockedUpgrades]);
+    }, [researchCutoffLevel, unlockedUpgrades]);
 
-    const tutorialResearchLocked = tutorialStep === 19;
     const canConfirmResearch = useCallback((id: number): boolean => (
-        !tutorialResearchLocked &&
         hasResearchPoints &&
         currentLevel >= getTierLevelForUpgrade(id) &&
         !unlockedUpgrades.includes(id) &&
         !isPermanentlyLocked(id) &&
-        isUpgradeLegalForKnowledgePick(id, unlockedUpgrades, currentLevel)
+        isUpgradeLegalForKnowledgePick(id, unlockedUpgrades, currentLevel, researchCutoffLevel)
     ), [
         currentLevel,
         hasResearchPoints,
         isPermanentlyLocked,
-        tutorialResearchLocked,
+        researchCutoffLevel,
         unlockedUpgrades,
     ]);
 
@@ -633,13 +626,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         if (!isOpen) return;
         const handler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                if (confirmingId !== null) setConfirmingId(null);
+                if (pendingResearchId !== null) setPendingResearchId(null);
                 else onClose();
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [confirmingId, isOpen, onClose]);
+    }, [isOpen, onClose, pendingResearchId]);
 
     // 패널 닫기 (오버레이 닫힐 때 선택 초기화)
     useEffect(() => {
@@ -653,7 +646,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 tooltipReleaseTimeoutRef.current = null;
             }
             queueMicrotask(() => {
-                setConfirmingId(null);
+                setPendingResearchId(null);
+                setTutorialFocusId(null);
                 setHoveredId(null);
                 setPinnedTooltipId(null);
                 setDeniedChipId(null);
@@ -738,27 +732,21 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             returnPhaseAfterDevKnowledgeUpgrade: phase,
         });
         useGameStore.getState().selectUpgrade(id);
-        if (tutorialStep === 20 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
-            setConfirmingId(null);
-            onTutorialStepChange?.(21);
+        if (tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+            setPendingResearchId(null);
+            setTutorialFocusId(null);
+            onTutorialStepChange?.(19);
             return;
         }
-        setConfirmingId(null);
+        setPendingResearchId(null);
     };
 
     const handleChipClick = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
-        if (confirmingId === id) {
-            unlockConfirmedUpgrade(id, e);
-            return;
-        }
         if (!canConfirmResearch(id)) {
             showDeniedChipFeedback(id, e);
             return;
         }
-        setConfirmingId(id);
-        if (tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
-            onTutorialStepChange?.(19);
-        }
+        setPendingResearchId(id);
     };
 
     const clearTooltipPinTimer = () => {
@@ -776,7 +764,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     };
 
     const handleChipMouseEnter = (id: number) => {
-        if (tutorialRestrictsHover) return;
+        const tutorialAllowsAncientResearchHover =
+            tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID;
+        if (tutorialStep === 18 && !tutorialAllowsAncientResearchHover) return;
+        if (tutorialRestrictsHover && !tutorialAllowsAncientResearchHover) return;
         if (pinnedTooltipId === id) {
             clearTooltipReleaseTimer();
             setHoveredId(id);
@@ -803,7 +794,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         } else {
             clearTooltipPinTimer();
         }
-        setConfirmingId((prev) => (prev === id ? null : prev));
     };
 
     const handleTooltipMouseEnter = () => {
@@ -1059,7 +1049,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 if (!upgrade) return null;
                                                 const unlocked = unlockedUpgrades.includes(id);
                                                 const lockedByResearchCutoff = isPermanentlyLocked(id);
-                                                const isConfirming = confirmingId === id;
                                                 const isDenied = deniedChipId === id;
                                                 const isHovered = hoveredId === id;
                                                 const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
@@ -1097,30 +1086,24 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             boxShadow: knowledgeTreeChipFrameShadow(
                                                                 lockedByResearchCutoff
                                                                     ? 'pressed'
-                                                                    : isConfirming
-                                                                        ? 'confirm'
-                                                                        : 'idle',
+                                                                    : 'idle',
                                                                 unlocked,
                                                                 lockedByResearchCutoff,
                                                                 isDenied,
                                                             ),
-                                                            background: isConfirming
-                                                                ? KNOWLEDGE_TREE_CHIP_SELECTED_BG
-                                                                : isHovered
+                                                            background: isHovered
                                                                     ? KNOWLEDGE_TREE_CHIP_HOVER_BG
                                                                 : lockedByResearchCutoff ? '#161616' : KNOWLEDGE_TREE_CHIP_IDLE_BG,
                                                             color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
                                                             cursor: 'pointer',
                                                             transform: lockedByResearchCutoff
                                                                 ? `translateY(${KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y}px)`
-                                                                : isConfirming
-                                                                    ? `translateY(${KNOWLEDGE_TREE_CHIP_CONFIRM_TRANSLATE_Y}px)`
-                                                                    : 'none',
+                                                                : 'none',
                                                             transition:
                                                                 'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
                                                         }}
                                                     >
-                                                        {upgradeSpriteUrl && !isConfirming && (
+                                                        {upgradeSpriteUrl && (
                                                             <img
                                                                 src={upgradeSpriteUrl}
                                                                 alt={name}
@@ -1138,12 +1121,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                                         : undefined,
                                                                     pointerEvents: 'none',
                                                                 }}
-                                                            />
-                                                        )}
-                                                        {isConfirming && (
-                                                            <span
-                                                                aria-hidden
-                                                                className="knowledge-upgrade-chip-confirm-mark"
                                                             />
                                                         )}
                                                         {unlocked && (
@@ -1362,6 +1339,48 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     )),
                     document.body,
                 )}
+            {pendingResearchId != null && (
+                <div
+                    className="knowledge-research-confirm-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-describedby="knowledge-research-confirm-message"
+                    onMouseDown={() => setPendingResearchId(null)}
+                >
+                    <div
+                        className="knowledge-research-confirm-panel"
+                        onMouseDown={(event) => event.stopPropagation()}
+                    >
+                        <div
+                            id="knowledge-research-confirm-message"
+                            className="settings-confirm-message knowledge-research-confirm-message"
+                        >
+                            {t('knowledgeUpgrade.researchConfirmMessage', language).replace(
+                                '{name}',
+                                t(`knowledgeUpgrade.${pendingResearchId}.name`, language)
+                                || KNOWLEDGE_UPGRADES[pendingResearchId]?.name
+                                || `#${pendingResearchId}`,
+                            )}
+                        </div>
+                        <div className="settings-confirm-actions">
+                            <button
+                                type="button"
+                                className="settings-confirm-btn knowledge-research-confirm-btn"
+                                onClick={(event) => unlockConfirmedUpgrade(pendingResearchId, event)}
+                            >
+                                {t('knowledgeUpgrade.researchConfirm', language)}
+                            </button>
+                            <button
+                                type="button"
+                                className="settings-confirm-btn settings-confirm-btn--cancel"
+                                onClick={() => setPendingResearchId(null)}
+                            >
+                                {t('knowledgeUpgrade.researchCancel', language)}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

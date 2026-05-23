@@ -58,6 +58,12 @@ export const getInflatedGoldCost = (
 export const getRerollCost = (level: number, discountMultiplier = 1): number =>
     getInflatedGoldCost(BASE_REROLL_GOLD_COST, level, discountMultiplier);
 
+export const getKnowledgeResearchCutoffLevel = (level: number, unspentResearchPoints: number): number => {
+    const normalizedLevel = Math.max(0, Math.floor(level));
+    const normalizedUnspent = Math.max(0, Math.floor(unspentResearchPoints));
+    return Math.max(0, normalizedLevel - normalizedUnspent);
+};
+
 export const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
     const level = Math.max(0, Math.min(29, Math.floor(currentLevel)));
     return KNOWLEDGE_LEVELUP_BASE + level * KNOWLEDGE_LEVELUP_STEP;
@@ -135,13 +141,14 @@ export function isUpgradeLegalForKnowledgePick(
     upgradeId: number,
     unlocked: number[],
     level: number,
+    researchCutoffLevel = level,
 ): boolean {
     const uid = Number(upgradeId);
     const have = new Set((unlocked ?? []).map((x) => Number(x)));
     const upgrade = KNOWLEDGE_UPGRADES[uid];
     if (!upgrade) return false;
     if (have.has(uid)) return false;
-    if (isKnowledgeUpgradeLockedByResearchCutoff(uid, level)) return false;
+    if (isKnowledgeUpgradeLockedByResearchCutoff(uid, researchCutoffLevel)) return false;
 
     const upgradeEra = upgradeEraBySymbolType(upgrade.type);
     if (upgradeEra == null) return false;

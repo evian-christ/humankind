@@ -388,13 +388,7 @@ const TUTORIAL_DIALOG_STEPS_KO = [
     '레벨 업을 할 때마다 이 곳에서 지식 업그레이드를 하나 연구할 수 있습니다.',
   ],
   [
-    '고대시대 업그레이드를 눌러보세요.',
-  ],
-  [
-    '고대시대를 연구하면 각종 고대시대 심볼들이 해금되어 심볼 풀에 추가됩니다.',
-  ],
-  [
-    '고대시대를 연구하세요.',
+    '클릭하여 고대시대를 연구하세요.',
   ],
   [
     '이전 화면으로 돌아가세요.',
@@ -473,13 +467,7 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'Each time you gain a level, you can research one Knowledge Upgrade here.',
   ],
   [
-    'Click the Ancient Era upgrade.',
-  ],
-  [
-    'Researching Ancient Era unlocks various ancient symbols and adds them to the symbol pool.',
-  ],
-  [
-    'Research Ancient Era.',
+    'Click to research Ancient Era.',
   ],
   [
     'Return to the previous screen.',
@@ -752,11 +740,13 @@ function App() {
   const tutorialMonumentProducesPrefix = language === 'ko' ? '기념비는' : 'Monument produces';
   const tutorialMonumentProducesSuffix = language === 'ko' ? '지식을 생산합니다.' : 'Knowledge.';
   const tutorialFinishLabel = language === 'ko' ? '종료' : 'Finish';
+  const tutorialExitLabel = language === 'ko' ? '튜토리얼 종료' : 'Exit Tutorial';
   const tutorialNextLabel = language === 'ko' ? '다음 >>' : 'Next >>';
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
+  const [knowledgeHudAttentionKey, setKnowledgeHudAttentionKey] = useState(0);
   const [tutorialDialogStep, setTutorialDialogStep] = useState(0);
   const [showGameOverProgress, setShowGameOverProgress] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
@@ -1035,13 +1025,13 @@ function App() {
   }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
 
   useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 21 || isKnowledgeOpen) return;
-    setTutorialDialogStep(22);
+    if (!isTutorialMode || tutorialDialogStep !== 19 || isKnowledgeOpen) return;
+    setTutorialDialogStep(20);
   }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
 
   useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 22 || !isRelicShopOpen) return;
-    setTutorialDialogStep(23);
+    if (!isTutorialMode || tutorialDialogStep !== 20 || !isRelicShopOpen) return;
+    setTutorialDialogStep(21);
   }, [isRelicShopOpen, isTutorialMode, tutorialDialogStep]);
 
   // 앱 최초 로드 시 저장된 해상도를 DOM에 적용
@@ -1068,8 +1058,12 @@ function App() {
     }
 
     const st = useGameStore.getState();
-    const canSpin = st.phase === 'idle' && (st.levelUpResearchPoints ?? 0) === 0;
-    if (!canSpin) return;
+    if (st.phase !== 'idle') return;
+    if ((st.levelUpResearchPoints ?? 0) > 0) {
+      void audioManager.unlock().then(() => audioManager.play('denied'));
+      setKnowledgeHudAttentionKey((key) => key + 1);
+      return;
+    }
 
     void audioManager.unlock();
     spinBoard();
@@ -1081,15 +1075,16 @@ function App() {
     if (target.closest('.pause-btn-top')) return true;
     if (target.closest('.pause-overlay')) return true;
     if (target.closest('.owned-symbols-modal')) return true;
+    if (target.closest('.tutorial-exit-button')) return true;
     if (target.closest('.tutorial-dialog-next')) return true;
     if ((tutorialDialogStep === 6 || tutorialDialogStep === 14) && target.closest('.spin-btn')) return true;
     if (tutorialDialogStep === 10 && target.closest('.selection-card-frame:first-child .selection-card')) return true;
     if (tutorialDialogStep === 11 && target.closest('.relic-shop-btn--owned-symbols')) return true;
     if (tutorialDialogStep === 16 && target.closest('.relic-shop-btn--knowledge')) return true;
     if (tutorialDialogStep === 18 && target.closest('.knowledge-upgrade-chip--ancient-era')) return true;
-    if (tutorialDialogStep === 20 && target.closest('.knowledge-upgrade-chip--ancient-era')) return true;
-    if (tutorialDialogStep === 21 && target.closest('.knowledge-upgrades-back-btn')) return true;
-    if (tutorialDialogStep === 22 && target.closest('.relic-shop-btn--relic')) return true;
+    if (tutorialDialogStep === 18 && target.closest('.knowledge-research-confirm-overlay')) return true;
+    if (tutorialDialogStep === 19 && target.closest('.knowledge-upgrades-back-btn')) return true;
+    if (tutorialDialogStep === 20 && target.closest('.relic-shop-btn--relic')) return true;
     return false;
   }, [isTutorialMode, tutorialDialogStep]);
 
@@ -1100,9 +1095,9 @@ function App() {
   }, [isTutorialInteractionAllowed]);
 
   const handleTutorialNext = useCallback(() => {
-    if (tutorialDialogStep === 24) {
+    if (tutorialDialogStep === 22) {
       if (isRelicShopOpen) toggleRelicShop();
-      setTutorialDialogStep(25);
+      setTutorialDialogStep(23);
       return;
     }
     setTutorialDialogStep((step) => Math.min(step + 1, tutorialDialogSteps.length - 1));
@@ -1114,6 +1109,11 @@ function App() {
     completeTutorial();
     returnToIntro();
   }, [completeTutorial, isRelicShopOpen, returnToIntro, toggleRelicShop]);
+
+  const handleOwnedSymbolsClose = useCallback(() => {
+    if (isTutorialMode && tutorialDialogStep === 12) return;
+    setOwnedSymbolsOpen(false);
+  }, [isTutorialMode, tutorialDialogStep]);
 
   const handleGameOverMainMenu = useCallback(() => {
     initializeGame();
@@ -1182,9 +1182,7 @@ function App() {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
       if (isTutorialMode && tutorialDialogStep !== 6 && tutorialDialogStep !== 14) return;
       const st = useGameStore.getState();
-      const rp = st.levelUpResearchPoints ?? 0;
-      const canSpin = st.phase === 'idle' && rp === 0;
-      if (!canSpin) return;
+      if (st.phase !== 'idle') return;
       e.preventDefault();
       handleSpinBoard();
     };
@@ -1206,7 +1204,7 @@ function App() {
   const gold = useGameStore((s) => s.gold);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
-  const canPressSpin = phase === 'idle' && (levelUpResearchPoints ?? 0) === 0;
+  const canPressSpin = phase === 'idle';
 
   // 스테이지 선택 화면
   if (preGameScreen === 'intro') {
@@ -1300,14 +1298,12 @@ function App() {
         isTutorialMode && tutorialDialogStep === 15 ? 'tutorial-highlight-knowledge-status' : '',
         isTutorialMode && tutorialDialogStep === 16 ? 'tutorial-highlight-knowledge-button' : '',
         isTutorialMode && tutorialDialogStep === 17 ? 'tutorial-highlight-knowledge-intro' : '',
-        isTutorialMode && tutorialDialogStep === 18 ? 'tutorial-highlight-ancient-chip' : '',
-        isTutorialMode && tutorialDialogStep === 19 ? 'tutorial-highlight-ancient-detail' : '',
-        isTutorialMode && tutorialDialogStep === 20 ? 'tutorial-highlight-ancient-research' : '',
-        isTutorialMode && tutorialDialogStep === 21 ? 'tutorial-highlight-knowledge-back' : '',
-        isTutorialMode && tutorialDialogStep === 22 ? 'tutorial-highlight-relic-shop-button' : '',
-        isTutorialMode && tutorialDialogStep === 23 ? 'tutorial-highlight-relics' : '',
-        isTutorialMode && tutorialDialogStep === 24 ? 'tutorial-highlight-relic-buy' : '',
-        isTutorialMode && tutorialDialogStep === 25 ? 'tutorial-highlight-finish' : '',
+        isTutorialMode && tutorialDialogStep === 18 ? 'tutorial-highlight-ancient-research' : '',
+        isTutorialMode && tutorialDialogStep === 19 ? 'tutorial-highlight-knowledge-back' : '',
+        isTutorialMode && tutorialDialogStep === 20 ? 'tutorial-highlight-relic-shop-button' : '',
+        isTutorialMode && tutorialDialogStep === 21 ? 'tutorial-highlight-relics' : '',
+        isTutorialMode && tutorialDialogStep === 22 ? 'tutorial-highlight-relic-buy' : '',
+        isTutorialMode && tutorialDialogStep === 23 ? 'tutorial-highlight-finish' : '',
       ].filter(Boolean).join(' ')}
       onPointerDownCapture={blockUnhandledTutorialInteraction}
       onClickCapture={blockUnhandledTutorialInteraction}
@@ -1424,8 +1420,13 @@ function App() {
             )}
           </button>
           <button
+            key={knowledgeHudAttentionKey}
             type="button"
-            className="relic-shop-btn relic-shop-btn--knowledge"
+            className={[
+              'relic-shop-btn',
+              'relic-shop-btn--knowledge',
+              knowledgeHudAttentionKey > 0 ? 'relic-shop-btn--knowledge-attention' : '',
+            ].filter(Boolean).join(' ')}
             aria-label={
               levelUpResearchPoints > 0
                 ? t('game.knowledgeHudButtonHintPending', language).replace(
@@ -1505,11 +1506,17 @@ function App() {
             className="spin-btn"
             onClick={handleSpinBoard}
             disabled={!canPressSpin}
+            data-audio-click={levelUpResearchPoints > 0 ? 'skip' : undefined}
             aria-label={t('game.spin', language)}
             title={t('game.spin', language)}
           >
             <span>SPIN</span>
           </button>
+          {knowledgeHudAttentionKey > 0 && (
+            <span key={knowledgeHudAttentionKey} className="spin-research-hint-float" aria-hidden="true">
+              Research to continue
+            </span>
+          )}
         </div>
       </div>
 
@@ -1623,7 +1630,7 @@ function App() {
       <SymbolPoolModal />
 
       {/* ===== OWNED SYMBOLS LIST (button ⋯) ===== */}
-      <OwnedSymbolsModal open={ownedSymbolsOpen} onClose={() => setOwnedSymbolsOpen(false)} />
+      <OwnedSymbolsModal open={ownedSymbolsOpen} onClose={handleOwnedSymbolsClose} />
 
       {/* ===== EFFECT / EVENT LOG (F12) ===== */}
       <EffectLogOverlay isOpen={isLogOpen} onClose={() => setIsLogOpen(false)} />
@@ -1652,13 +1659,23 @@ function App() {
       {isTutorialMode && tutorialDialogStep === 7 && (
         <TutorialBoardHighlights anchorRef={gameAreaRef} cells={[]} highlightBoard />
       )}
-      {isTutorialMode && tutorialDialogStep === 23 && (
+      {isTutorialMode && tutorialDialogStep === 21 && (
         <TutorialElementHighlight
           selectors={['.relic-sprite-in-case']}
           className="tutorial-relic-display-highlight"
           padX={64}
           padY={28}
         />
+      )}
+
+      {isTutorialMode && (
+        <button
+          type="button"
+          className="tutorial-exit-button"
+          onClick={handleTutorialFinish}
+        >
+          {tutorialExitLabel}
+        </button>
       )}
 
       {isTutorialMode && !(tutorialDialogStep === 15 && tutorialSpinStep !== 'monument_done') && (
@@ -1681,14 +1698,12 @@ function App() {
             tutorialDialogStep === 15 ? 'tutorial-dialog-overlay--knowledge-status' : '',
             tutorialDialogStep === 16 ? 'tutorial-dialog-overlay--knowledge-button' : '',
             tutorialDialogStep === 17 ? 'tutorial-dialog-overlay--knowledge-intro' : '',
-            tutorialDialogStep === 18 ? 'tutorial-dialog-overlay--ancient-chip' : '',
-            tutorialDialogStep === 19 ? 'tutorial-dialog-overlay--ancient-detail' : '',
-            tutorialDialogStep === 20 ? 'tutorial-dialog-overlay--ancient-research' : '',
-            tutorialDialogStep === 21 ? 'tutorial-dialog-overlay--knowledge-back' : '',
-            tutorialDialogStep === 22 ? 'tutorial-dialog-overlay--relic-shop-button' : '',
-            tutorialDialogStep === 23 ? 'tutorial-dialog-overlay--relics' : '',
-            tutorialDialogStep === 24 ? 'tutorial-dialog-overlay--relic-buy' : '',
-            tutorialDialogStep === 25 ? 'tutorial-dialog-overlay--finish' : '',
+            tutorialDialogStep === 18 ? 'tutorial-dialog-overlay--ancient-research' : '',
+            tutorialDialogStep === 19 ? 'tutorial-dialog-overlay--knowledge-back' : '',
+            tutorialDialogStep === 20 ? 'tutorial-dialog-overlay--relic-shop-button' : '',
+            tutorialDialogStep === 21 ? 'tutorial-dialog-overlay--relics' : '',
+            tutorialDialogStep === 22 ? 'tutorial-dialog-overlay--relic-buy' : '',
+            tutorialDialogStep === 23 ? 'tutorial-dialog-overlay--finish' : '',
           ].filter(Boolean).join(' ')}
           role="dialog"
           aria-modal="true"
@@ -1709,7 +1724,7 @@ function App() {
                 <p key={line}>{line}</p>
               ))
             )}
-            {tutorialDialogStep === 25 ? (
+            {tutorialDialogStep === 23 ? (
               <button
                 type="button"
                 className="tutorial-dialog-next tutorial-dialog-finish"
@@ -1717,7 +1732,7 @@ function App() {
               >
                 {tutorialFinishLabel}
               </button>
-            ) : ![6, 10, 11, 13, 14, 16, 18, 20, 21, 22].includes(tutorialDialogStep) && (
+            ) : ![6, 10, 11, 13, 14, 16, 18, 19, 20].includes(tutorialDialogStep) && (
               <button
                 type="button"
                 className="tutorial-dialog-next"

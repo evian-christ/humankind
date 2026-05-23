@@ -24,7 +24,6 @@ import {
     GAME_CURSOR_POINTER,
     boardHasAdjacentPlains,
     boardHasDestroyableAdjacentSymbol,
-    boardHasTrainableAdjacentMelee,
     isOpenableLoot,
 } from './renderers/rendererShared';
 import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
@@ -592,12 +591,6 @@ export class PixiGameApp {
                     (symDef.id === S.cattle || symDef.id === S.sheep) &&
                     !symbol.is_marked_for_destruction &&
                     boardHasAdjacentPlains(state.board, x, y);
-                const canTrainHorse =
-                    state.phase === 'idle' &&
-                    symDef.id === S.horse &&
-                    !symbol.is_marked_for_destruction &&
-                    boardHasTrainableAdjacentMelee(state.board, x, y, state.unlockedKnowledgeUpgrades);
-
                 const canOpenLoot =
                     state.phase === 'idle' &&
                     !symbol.is_marked_for_destruction &&
@@ -621,7 +614,7 @@ export class PixiGameApp {
                     this.onHoverSymbol(null);
                 };
 
-                if (canButcherPasture || canTrainHorse || canOpenLoot || canUseEdict || canConsumeTribalVillage) {
+                if (canButcherPasture || canOpenLoot || canUseEdict || canConsumeTribalVillage) {
                     const cellRoot = new PIXI.Container();
                     cellRoot.x = cellX;
                     cellRoot.y = cellY;
@@ -642,7 +635,7 @@ export class PixiGameApp {
                           ? t('lootOpen.button', lang)
                         : canConsumeTribalVillage
                           ? t('tribalVillage.button', lang)
-                          : t('horseTrain.button', lang);
+                          : t('lootOpen.button', lang);
                     const lbl = new PIXI.Text({
                         text: btnLabel,
                         style: new PIXI.TextStyle({
@@ -691,8 +684,6 @@ export class PixiGameApp {
                                 useGameStore.getState().butcherPastureAnimalAt(x, y);
                             } else if (canUseEdict) {
                                 useGameStore.getState().activateEdictAt(x, y);
-                            } else if (canTrainHorse) {
-                                useGameStore.getState().trainHorseUnitAt(x, y);
                             } else if (canConsumeTribalVillage) {
                                 useGameStore.getState().consumeTribalVillageAt(x, y);
                             } else {

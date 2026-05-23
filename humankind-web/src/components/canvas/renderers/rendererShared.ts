@@ -1,6 +1,5 @@
 import { BOARD_HEIGHT, BOARD_WIDTH } from '../../../game/state/gameStore';
 import { S, SymbolType } from '../../../game/data/symbolDefinitions';
-import { isMeleeUnit } from '../../../game/data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../../../game/types';
 
 export const ASSET_BASE_URL = import.meta.env.BASE_URL;
@@ -22,31 +21,6 @@ export function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][],
     }
     return false;
 }
-
-export function boardHasTrainableAdjacentMelee(
-    board: (PlayerSymbolInstance | null)[][],
-    x: number,
-    y: number,
-    _unlockedKnowledgeUpgrades: readonly number[],
-): boolean {
-    const trainedCavalryId = S.cavalry;
-
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
-            const candidate = board[nx][ny];
-            if (candidate && !candidate.is_marked_for_destruction && isMeleeUnit(candidate.definition) && candidate.definition.id !== trainedCavalryId) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
 
 export function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
     for (let dx = -1; dx <= 1; dx++) {

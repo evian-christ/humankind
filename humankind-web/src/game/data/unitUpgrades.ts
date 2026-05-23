@@ -11,7 +11,14 @@ import {
 } from './knowledgeUpgrades';
 import { S } from './symbolIdRegistry';
 
-export const RANGED_UNIT_IDS = new Set<number>([S.archer, S.crossbowman, S.cannon]);
+export const RANGED_UNIT_IDS = new Set<number>([
+    S.archer,
+    S.crossbowman,
+    S.cannon,
+    S.enemy_archer,
+    S.enemy_crossbowman,
+    S.enemy_cannon,
+]);
 export const MELEE_UNIT_IDS = new Set<number>([S.warrior, S.cavalry, S.infantry]);
 
 const withSharedMeleeStats = (definition: SymbolDefinition, upgrades: ReadonlySet<number>): SymbolDefinition => ({

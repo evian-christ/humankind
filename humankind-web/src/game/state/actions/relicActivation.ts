@@ -116,8 +116,10 @@ export const createRelicActivationActions = ({
                 religionUnlocked: state.religionUnlocked,
                 upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
                 ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+                ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
                 choiceCount: getStandardSymbolChoiceCount(state.board),
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
+                forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
             });
             set({
                 phase: 'selection',
@@ -131,6 +133,10 @@ export const createRelicActivationActions = ({
                     state.forceTerrainInNextSymbolChoices && res.consumedForceTerrain
                         ? false
                         : state.forceTerrainInNextSymbolChoices,
+                forceEventsInNextSymbolChoices:
+                    state.forceEventsInNextSymbolChoices && res.consumedForceEvents
+                        ? false
+                        : state.forceEventsInNextSymbolChoices,
             });
             get().appendEventLog({
                 turn: state.turn,

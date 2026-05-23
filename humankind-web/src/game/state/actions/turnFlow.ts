@@ -318,6 +318,15 @@ export const createTurnFlowActions = ({
                     });
 
                     const effectDestroyedIds = collectRemovedSymbolInstanceIds(prev.board, cleanBoard);
+                    const effectDestroyedSymbols = generated.playerSymbols.filter(
+                        (s) => effectDestroyedIds.has(s.instanceId) || s.is_marked_for_destruction,
+                    );
+                    const forceTerrainForNextChoices =
+                        prev.forceTerrainInNextSymbolChoices ||
+                        effectDestroyedSymbols.some((s) => s.definition.id === S.pioneer);
+                    const forceEventsForNextChoices =
+                        prev.forceEventsInNextSymbolChoices ||
+                        effectDestroyedSymbols.some((s) => s.definition.id === S.royal_colony);
                     const filteredSymbols = generated.playerSymbols.filter((s) => !effectDestroyedIds.has(s.instanceId));
                     const selCtx = {
                         era: prog.newEra,
@@ -328,8 +337,8 @@ export const createTurnFlowActions = ({
                         leaderId: prev.leaderId,
                         leaderProgressLevel: prev.leaderProgressLevel,
                         choiceCount: getStandardSymbolChoiceCount(generated.board),
-                        forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices,
-                        forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices,
+                        forceTerrainInNextSymbolChoices: forceTerrainForNextChoices,
+                        forceEventsInNextSymbolChoices: forceEventsForNextChoices,
                     };
                     const nextChoiceRes = prev.edictRemovalPending
                         ? { choices: [] as SymbolDefinition[], consumedForceTerrain: false, consumedForceEvents: false }
@@ -356,13 +365,13 @@ export const createTurnFlowActions = ({
                         phase: nextPhase,
                         symbolChoices: nextChoiceRes.choices,
                         forceTerrainInNextSymbolChoices:
-                            prev.forceTerrainInNextSymbolChoices && nextChoiceRes.consumedForceTerrain
+                            forceTerrainForNextChoices && nextChoiceRes.consumedForceTerrain
                                 ? false
-                                : prev.forceTerrainInNextSymbolChoices,
+                                : forceTerrainForNextChoices,
                         forceEventsInNextSymbolChoices:
-                            prev.forceEventsInNextSymbolChoices && nextChoiceRes.consumedForceEvents
+                            forceEventsForNextChoices && nextChoiceRes.consumedForceEvents
                                 ? false
-                                : prev.forceEventsInNextSymbolChoices,
+                                : forceEventsForNextChoices,
                         levelUpResearchPoints: (prev.levelUpResearchPoints ?? 0) + prog.gainedResearchPicks,
                         relicFloats: [...(prev.relicFloats ?? []), ...relicOwnEffectFloats],
                         knowledgeUpgradeFloats:
@@ -440,6 +449,16 @@ export const createTurnFlowActions = ({
                             turn: finalState.turn,
                             food: finalState.food,
                             edictRemovalPending: finalState.edictRemovalPending,
+                        });
+                        get().appendEventLog({
+                            turn: finalState.turn,
+                            kind: 'turn_end',
+                            delta: { food: phaseResolution.foodDelta, gold: 0, knowledge: 0 },
+                            meta: {
+                                action: 'resolve_turn_end',
+                                nextPhase: phaseResolution.nextPhase,
+                                isFoodPaymentTurn: phaseResolution.isFoodPaymentTurn,
+                            },
                         });
 
                         if (phaseResolution.nextPhase === 'game_over') {
@@ -799,6 +818,24 @@ export const createTurnFlowActions = ({
                 getEffectiveMaxHP,
                 unlockedKnowledgeUpgrades: get().unlockedKnowledgeUpgrades,
             });
+            if (result.animation) {
+                const attacker = board[ax]?.[ay];
+                const target = board[result.animation.tx]?.[result.animation.ty];
+                get().appendEventLog({
+                    turn: get().turn,
+                    kind: 'combat',
+                    slot: { x: ax, y: ay },
+                    symbolId: attacker?.definition.id,
+                    delta: { food: 0, gold: 0, knowledge: 0 },
+                    meta: {
+                        action: 'attack',
+                        targetSlot: { x: result.animation.tx, y: result.animation.ty },
+                        targetSymbolId: target?.definition.id,
+                        damage: result.animation.atkDmg,
+                        targetDestroyed: !!target?.is_marked_for_destruction,
+                    },
+                });
+            }
 
             const effectSpeed = useSettingsStore.getState().effectSpeed;
             const combatPlan = buildCombatPresentationPlan(effectSpeed);

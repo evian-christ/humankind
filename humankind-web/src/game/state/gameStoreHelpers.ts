@@ -3,7 +3,6 @@ import type { PlayerSymbolInstance } from '../types';
 import { CARAVANSERAI_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID } from '../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import { RELIC_ID } from '../logic/relics/relicIds';
-import { randomBaseNormalSymbolId } from '../logic/symbolEffects/core';
 import { useRelicStore } from './relicStore';
 import type { GamePhase } from './gameStore';
 
@@ -192,12 +191,6 @@ export const aggregateCollectionDestroyEffects = (
             case S.pottery:
             case S.tax_storehouse:
                 out.food += sym.effect_counter || 0;
-                break;
-            case S.tribal_village:
-                out.addSymbolDefIds.push(
-                    randomBaseNormalSymbolId(),
-                    randomBaseNormalSymbolId(),
-                );
                 break;
             case S.relic_caravan:
                 out.refreshRelicShop = true;

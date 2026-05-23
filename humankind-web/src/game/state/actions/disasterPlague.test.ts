@@ -188,7 +188,6 @@ describe('Disaster Plague (ID 78) Tests', () => {
                 cancelEdictPick: () => {},
                 activateClickableRelic: () => {},
                 butcherPastureAnimalAt: () => {},
-                trainHorseUnitAt: () => {},
                 consumeTribalVillageAt: () => {},
                 openLootAt: () => {},
                 selectLootReward: () => {},

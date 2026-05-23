@@ -14,10 +14,25 @@ import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 
 const BASE_W = 1920;
 const BASE_H = 1080;
-const SPRITE_PX = 32;
+const OWNED_SYMBOL_CELL_SCALE = 0.5;
+const OWNED_SYMBOL_SPRITE_FILL = 0.98;
+const OWNED_SYMBOL_GRID_GAP = 4;
 const TOOLTIP_W = 280;
 const TOOLTIP_H = 180;
 const TOOLTIP_MARGIN = 12;
+
+const SYMBOL_TYPE_ORDER = [
+    SymbolType.TERRAIN,
+    SymbolType.NORMAL,
+    SymbolType.ANCIENT,
+    SymbolType.UNIT,
+    SymbolType.MEDIEVAL,
+    SymbolType.MODERN,
+    SymbolType.RELIGION,
+    SymbolType.SPECIAL,
+    SymbolType.ENEMY,
+    SymbolType.DISASTER,
+];
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -29,6 +44,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.SPECIAL]: 'era.specialSymbol',
     [SymbolType.UNIT]: 'era.unit',
     [SymbolType.ENEMY]: 'era.enemy',
+    [SymbolType.DISASTER]: 'era.disaster',
 };
 
 type Props = {
@@ -44,12 +60,13 @@ type HoveredOwnedSymbol = {
     top: number;
 } | null;
 
+type OwnedSymbolSort = 'acquired' | 'type' | 'name' | 'count';
+
 function computeBoardMetrics(resW: number, resH: number) {
     const scale = Math.min(resW / BASE_W, resH / BASE_H);
-    const cellWidth  = BOARD_CELL_WIDTH_PX  * scale;
-    const cellHeight = BOARD_CELL_HEIGHT_PX * scale;
-    const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
-    const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
+    const cellWidth  = BOARD_CELL_WIDTH_PX * scale * OWNED_SYMBOL_CELL_SCALE;
+    const cellHeight = BOARD_CELL_HEIGHT_PX * scale * OWNED_SYMBOL_CELL_SCALE;
+    const spriteSize = Math.min(cellWidth, cellHeight) * OWNED_SYMBOL_SPRITE_FILL;
 
     return {
         cellWidth,
@@ -67,6 +84,8 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     const panelRef = useRef<HTMLDivElement | null>(null);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredOwnedSymbol>(null);
     const [panelSize, setPanelSize] = useState({ w: 0, h: 0 });
+    const [sortBy, setSortBy] = useState<OwnedSymbolSort>('acquired');
+    const [sortDescending, setSortDescending] = useState(false);
 
     const metrics = useMemo(
         () => computeBoardMetrics(resolutionWidth, resolutionHeight),
@@ -98,6 +117,60 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
         ro?.observe(el);
         return () => ro?.disconnect();
     }, [open]);
+
+    const ownedSymbolCounts = useMemo(() => {
+        const counts = new Map<number, number>();
+        for (const symbol of playerSymbols) {
+            counts.set(symbol.definition.id, (counts.get(symbol.definition.id) ?? 0) + 1);
+        }
+        return counts;
+    }, [playerSymbols]);
+
+    const typeSummaries = useMemo(() => {
+        const counts = new Map<number, number>();
+        for (const symbol of playerSymbols) {
+            counts.set(symbol.definition.type, (counts.get(symbol.definition.type) ?? 0) + 1);
+        }
+
+        return SYMBOL_TYPE_ORDER
+            .filter((type) => counts.has(type))
+            .map((type) => ({ type, count: counts.get(type) ?? 0 }));
+    }, [playerSymbols]);
+
+    const sortedSymbols = useMemo(() => {
+        const typeRank = new Map(SYMBOL_TYPE_ORDER.map((type, index) => [type, index]));
+        const decorated = playerSymbols.map((symbol, acquiredIndex) => ({ symbol, acquiredIndex }));
+
+        decorated.sort((left, right) => {
+            const leftDef = left.symbol.definition;
+            const rightDef = right.symbol.definition;
+            let result = 0;
+
+            if (sortBy === 'type') {
+                result =
+                    (typeRank.get(leftDef.type) ?? SYMBOL_TYPE_ORDER.length) -
+                    (typeRank.get(rightDef.type) ?? SYMBOL_TYPE_ORDER.length);
+            } else if (sortBy === 'name') {
+                result = t(`symbol.${leftDef.key}.name`, language).localeCompare(
+                    t(`symbol.${rightDef.key}.name`, language),
+                    language,
+                );
+            } else if (sortBy === 'count') {
+                result = (ownedSymbolCounts.get(leftDef.id) ?? 0) - (ownedSymbolCounts.get(rightDef.id) ?? 0);
+            }
+
+            if (result === 0 && sortBy !== 'acquired') {
+                result = leftDef.id - rightDef.id;
+            }
+            if (result === 0) {
+                result = left.acquiredIndex - right.acquiredIndex;
+            }
+
+            return sortDescending ? -result : result;
+        });
+
+        return decorated.map(({ symbol }) => symbol);
+    }, [language, ownedSymbolCounts, playerSymbols, sortBy, sortDescending]);
 
     const updateHoveredSymbol = useCallback((symbolId: number, symbolType: number, e: React.MouseEvent<HTMLDivElement>) => {
         const panel = panelRef.current;
@@ -149,21 +222,22 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                 inset: 0,
                 zIndex: 10001,
                 display: 'flex',
-                flexDirection: 'column',
-                background: 'rgba(0,0,0,0.94)',
-                padding: '24px 28px 28px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(0,0,0,0.75)',
+                padding: '42px',
                 overflow: 'hidden',
             }}
             onClick={onClose}
         >
             <div
+                className="owned-symbols-panel"
                 ref={panelRef}
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: '100%',
-                    height: '100%',
-                    background: 'rgba(11, 15, 20, 0.92)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    width: 'min(1180px, calc(100vw - 84px))',
+                    height: 'min(790px, calc(100vh - 84px))',
+                    minHeight: '420px',
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
@@ -171,9 +245,9 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                 }}
             >
                 <div
+                    className="owned-symbols-header"
                     style={{
                         padding: '22px 28px',
-                        borderBottom: '1px solid rgba(255,255,255,0.08)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -182,11 +256,8 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                     }}
                 >
                     <div
+                        className="owned-symbols-title"
                         style={{
-                            color: '#e5e7eb',
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            fontSize: '34px',
                             fontFamily: 'Mulmaru, sans-serif',
                         }}
                     >
@@ -196,11 +267,8 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                         className="owned-symbols-close-btn"
                         onClick={onClose}
                         style={{
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid rgba(255,255,255,0.14)',
-                            color: '#cbd5e1',
-                            padding: '10px 18px',
-                            fontSize: 22,
+                            padding: '9px 16px',
+                            fontSize: 20,
                             fontFamily: 'Mulmaru, sans-serif',
                         }}
                     >
@@ -209,8 +277,57 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                 </div>
 
                 <div
+                    className="owned-symbols-toolbar"
                     style={{
-                        padding: '28px',
+                        padding: '14px 28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 16,
+                        flexWrap: 'wrap',
+                        flexShrink: 0,
+                    }}
+                >
+                    <div className="owned-symbols-type-summary" aria-label={t('ownedSymbols.types', language)}>
+                        {typeSummaries.map(({ type, count }) => (
+                            <span
+                                key={type}
+                                className="owned-symbols-type-pill"
+                                style={{ '--owned-symbol-type-color': getSymbolColorHex(type) } as React.CSSProperties}
+                            >
+                                {t(ERA_NAME_KEYS[type] ?? 'era.ancient', language)}
+                                <strong>{count}</strong>
+                            </span>
+                        ))}
+                    </div>
+                    <div className="owned-symbols-sort-controls">
+                        <label htmlFor="owned-symbol-sort">{t('ownedSymbols.sort', language)}</label>
+                        <select
+                            id="owned-symbol-sort"
+                            value={sortBy}
+                            onChange={(event) => setSortBy(event.target.value as OwnedSymbolSort)}
+                        >
+                            <option value="acquired">{t('ownedSymbols.sort.acquired', language)}</option>
+                            <option value="type">{t('ownedSymbols.sort.type', language)}</option>
+                            <option value="name">{t('ownedSymbols.sort.name', language)}</option>
+                            <option value="count">{t('ownedSymbols.sort.count', language)}</option>
+                        </select>
+                        <button
+                            type="button"
+                            className={sortDescending ? 'owned-symbols-sort-direction owned-symbols-sort-direction--desc' : 'owned-symbols-sort-direction'}
+                            aria-label={t(sortDescending ? 'ownedSymbols.sort.desc' : 'ownedSymbols.sort.asc', language)}
+                            title={t(sortDescending ? 'ownedSymbols.sort.desc' : 'ownedSymbols.sort.asc', language)}
+                            onClick={() => setSortDescending((value) => !value)}
+                        >
+                            <span aria-hidden="true" />
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    onScroll={() => setHoveredSymbol(null)}
+                    style={{
+                        padding: '22px 28px 28px',
                         overflowY: 'auto',
                         flex: 1,
                     }}
@@ -229,15 +346,16 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                         </div>
                     ) : (
                         <div
+                            className="owned-symbols-grid"
                             style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: 14,
-                                alignItems: 'flex-start',
-                                alignContent: 'flex-start',
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
+                                gap: OWNED_SYMBOL_GRID_GAP,
+                                alignItems: 'start',
+                                alignContent: 'start',
                             }}
                         >
-                            {playerSymbols.map((sym, idx) => {
+                            {sortedSymbols.map((sym, idx) => {
                                 const def = sym.definition;
                                 const spriteUrl = getSymbolSpriteUrl(def);
 
@@ -248,13 +366,14 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                         onMouseEnter={(e) => updateHoveredSymbol(def.id, def.type, e)}
                                         onMouseLeave={() => setHoveredSymbol(null)}
                                         style={{
-                                            width: metrics.cellWidth,
-                                            height: metrics.cellHeight,
+                                            width: '100%',
+                                            aspectRatio: `${metrics.cellWidth} / ${metrics.cellHeight}`,
                                             position: 'relative',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             cursor: 'help',
+                                            borderColor: `${getSymbolColorHex(def.type)}55`,
                                         }}
                                     >
                                         {spriteUrl ? (
@@ -262,8 +381,8 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                                 src={spriteUrl}
                                                 alt={t(`symbol.${def.key}.name`, language)}
                                                 style={{
-                                                    width: metrics.spriteSize,
-                                                    height: metrics.spriteSize,
+                                                    width: `${OWNED_SYMBOL_SPRITE_FILL * 100}%`,
+                                                    height: `${OWNED_SYMBOL_SPRITE_FILL * 100}%`,
                                                     objectFit: 'contain',
                                                     imageRendering: 'pixelated',
                                                 }}

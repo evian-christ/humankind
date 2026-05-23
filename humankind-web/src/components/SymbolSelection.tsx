@@ -241,10 +241,18 @@ const SymbolSelection = () => {
         >
             <button
                 className="selection-peek-handle"
+                type="button"
                 onClick={() => setIsPeeked((v) => !v)}
+                aria-expanded={!isPeeked}
                 title={isPeeked ? t('game.returnToSelection', language) : t('game.peekBoard', language)}
             >
-                {isPeeked ? `▲ ${t('game.returnToSelection', language)}` : `▼ ${t('game.peekBoard', language)}`}
+                <span className="selection-peek-handle-label">
+                    {isPeeked ? t('game.returnToSelection', language) : t('game.peekBoard', language)}
+                </span>
+                <span
+                    className={`selection-peek-handle-chevron${isPeeked ? ' selection-peek-handle-chevron--up' : ''}`}
+                    aria-hidden="true"
+                />
             </button>
 
             <div className="selection-panel-wrapper">
@@ -252,7 +260,7 @@ const SymbolSelection = () => {
                     {sourceLabelKey && (
                         <div className="selection-relic-source-banner">{t(sourceLabelKey, language)}</div>
                     )}
-                    <div className="selection-title">
+                    <div className="selection-title selection-title--plain">
                         {t(hasPlague ? 'game.plagueOutbreak' : 'game.chooseSymbol', language)}
                     </div>
                     <div className="selection-cards">

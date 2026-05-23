@@ -11,6 +11,7 @@ import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
+    ELECTRICITY_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
@@ -18,6 +19,8 @@ import {
     IRON_WORKING_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    NOMADIC_TRADITION_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
     TOTAL_MOBILIZATION_UPGRADE_ID,
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -120,7 +123,6 @@ const makeState = (): GameState => {
         cancelEdictPick: () => {},
         activateClickableRelic: () => {},
         butcherPastureAnimalAt: () => {},
-        trainHorseUnitAt: () => {},
         consumeTribalVillageAt: () => {},
 
         openLootAt: () => {},
@@ -313,6 +315,26 @@ describe('selectionFlow actions', () => {
         expect(harness.get().board[2]?.[0]?.instanceId).toBe(symbols[2]!.instanceId);
     });
 
+    it('preserves Royal Colony event forcing when Capital Relocation destroys it', () => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const colony = createInstance(SYMBOLS[S.royal_colony]!, []);
+        const other = createInstance(SYMBOLS[S.wild_seeds]!, []);
+        const kept = createInstance(SYMBOLS[S.wheat]!, []);
+        const symbols = [colony, other, kept];
+        const board = createEmptyBoard();
+        board[0][0] = colony;
+        board[1][0] = other;
+        board[2][0] = kept;
+        const harness = createHarness({
+            playerSymbols: symbols,
+            board,
+        });
+
+        harness.actions.selectEvent(13);
+
+        expect(harness.get().forceEventsInNextSymbolChoices).toBe(true);
+    });
+
     it('charges the inflated reroll cost by knowledge level', () => {
         const harness = createHarness({
             level: 20,
@@ -340,6 +362,34 @@ describe('selectionFlow actions', () => {
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
         expect(harness.get().bonusXpPerTurn).toBe(2);
         expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('keeps pre-transition upgrades researchable while transition research points remain', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 2,
+            level: 10,
+            unlockedKnowledgeUpgrades: [PASTORALISM_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(NOMADIC_TRADITION_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(NOMADIC_TRADITION_UPGRADE_ID);
+        expect(harness.get().levelUpResearchPoints).toBe(1);
+    });
+
+    it('keeps modern upgrades researchable after jumping to level 30 with unspent points', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 3,
+            level: 30,
+            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(ELECTRICITY_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(ELECTRICITY_UPGRADE_ID);
+        expect(harness.get().levelUpResearchPoints).toBe(2);
     });
 
     it('grants the first selection reroll when Election System is researched', () => {

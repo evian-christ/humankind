@@ -1,6 +1,8 @@
 import { type EraScaledTuple, eraScaleIndex } from './eventDefinitions';
 import { RELICS } from './relicDefinitions';
 import { RELIC_ID } from '../logic/relics/relicIds';
+import type { Language } from '../state/settingsStore';
+import { t } from '../../i18n';
 
 /** 보상의 타입. 각 전리품 등급은 같은 타입의 보상만 제공한다. */
 export type RewardRarity = '일반' | '대형' | '초대형';
@@ -25,6 +27,12 @@ export const REWARD_RARITY_COLOR: Record<RewardRarity, string> = {
     '대형': '#60a5fa',
     '초대형': '#fbbf24',
 };
+
+const REWARD_RARITY_LABEL_KEYS = [
+    'lootReward.rarity.common',
+    'lootReward.rarity.rare',
+    'lootReward.rarity.legendary',
+] as const;
 
 export interface RewardDefinition {
     id: number;
@@ -113,6 +121,17 @@ export const REWARDS: Record<number, RewardDefinition> = {
     },
 };
 
+export function getRewardName(reward: RewardDefinition, language: Language): string {
+    const key = `reward.${reward.key}.name`;
+    const translated = t(key, language);
+    return translated === key ? reward.name : translated;
+}
+
+export function getRewardRarityLabel(rarity: RewardRarity, language: Language): string {
+    const key = REWARD_RARITY_LABEL_KEYS[REWARD_RARITY_ORDER.indexOf(rarity)];
+    return key == null ? rarity : t(key, language);
+}
+
 /** 특정 시대의 실제 보상 수치를 반환 */
 export function getRewardAmounts(
     reward: RewardDefinition,
@@ -127,15 +146,15 @@ export function getRewardAmounts(
 }
 
 /** 게임 내 플레이어에게 보여줄 설명 (현재 시대 기준) */
-export function getRewardDescription(reward: RewardDefinition, era: number): string {
-    if (reward.grantsRelic) return '랜덤 유물 1개 획득.';
-    if (reward.grantedRelicIds) return getGrantedRelicDescription(reward.grantedRelicIds);
+export function getRewardDescription(reward: RewardDefinition, era: number, language: Language): string {
+    if (reward.grantsRelic) return t('lootReward.desc.randomRelic', language);
+    if (reward.grantedRelicIds) return getGrantedRelicDescription(reward.grantedRelicIds, language);
     const { food, gold, knowledge } = getRewardAmounts(reward, era);
     const parts: string[] = [];
-    if (food) parts.push(`식량 ${food}`);
-    if (gold) parts.push(`골드 ${gold}`);
-    if (knowledge) parts.push(`지식 ${knowledge}`);
-    return parts.join(', ') + ' 획득.';
+    if (food) parts.push(`${t('resource.food', language)} ${food}`);
+    if (gold) parts.push(`${t('resource.gold', language)} ${gold}`);
+    if (knowledge) parts.push(`${t('resource.knowledge', language)} ${knowledge}`);
+    return t('lootReward.desc.gain', language).replace('{items}', parts.join(', '));
 }
 
 /** 가중치 테이블에서 보상 타입 1개를 랜덤 선택 */
@@ -187,24 +206,30 @@ export function generateLootRewardChoices(tier: LootTier): RewardDefinition[] {
 }
 
 /** 데이터 브라우저용 설명 — 세 시대 수치를 모두 x/y/z 형식으로 표시 */
-export function getRewardDescriptionAllEras(reward: RewardDefinition): string {
-    if (reward.grantsRelic) return '랜덤 유물 1개 획득.';
-    if (reward.grantedRelicIds) return getGrantedRelicDescription(reward.grantedRelicIds);
+export function getRewardDescriptionAllEras(reward: RewardDefinition, language: Language): string {
+    if (reward.grantsRelic) return t('lootReward.desc.randomRelic', language);
+    if (reward.grantedRelicIds) return getGrantedRelicDescription(reward.grantedRelicIds, language);
     const [a, m, mo] = [1, 2, 3].map((e) => getRewardAmounts(reward, e));
     const parts: string[] = [];
-    if (reward.food)      parts.push(`식량 ${a.food}/${m.food}/${mo.food}`);
-    if (reward.gold)      parts.push(`골드 ${a.gold}/${m.gold}/${mo.gold}`);
-    if (reward.knowledge) parts.push(`지식 ${a.knowledge}/${m.knowledge}/${mo.knowledge}`);
-    return parts.join(', ') + ' 획득.';
+    if (reward.food)      parts.push(`${t('resource.food', language)} ${a.food}/${m.food}/${mo.food}`);
+    if (reward.gold)      parts.push(`${t('resource.gold', language)} ${a.gold}/${m.gold}/${mo.gold}`);
+    if (reward.knowledge) parts.push(`${t('resource.knowledge', language)} ${a.knowledge}/${m.knowledge}/${mo.knowledge}`);
+    return t('lootReward.desc.gain', language).replace('{items}', parts.join(', '));
 }
 
-function getGrantedRelicDescription(relicIds: number[]): string {
+function getGrantedRelicDescription(relicIds: number[], language: Language): string {
     const counts = new Map<number, number>();
     relicIds.forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1));
 
     const parts = [...counts.entries()].map(([id, count]) => {
-        const relicName = RELICS[id]?.name ?? '유물';
-        return `${relicName} ${count}개`;
+        const relicNameKey = `relic.${id}.name`;
+        const translatedRelicName = t(relicNameKey, language);
+        const relicName = translatedRelicName === relicNameKey
+            ? RELICS[id]?.name ?? t('lootReward.relicFallback', language)
+            : translatedRelicName;
+        return t('lootReward.desc.relicCount', language)
+            .replace('{name}', relicName)
+            .replace('{count}', String(count));
     });
-    return parts.join(' 및 ') + ' 획득.';
+    return t('lootReward.desc.gain', language).replace('{items}', parts.join(t('lootReward.desc.and', language)));
 }

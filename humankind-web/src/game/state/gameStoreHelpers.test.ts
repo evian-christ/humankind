@@ -7,7 +7,6 @@ import {
     placeOralTraditionAtBoardCenter,
 } from './gameStoreHelpers';
 import { S, SYMBOLS } from '../data/symbolDefinitions';
-import { SymbolType } from '../data/symbolTypes';
 
 describe('gameStoreHelpers starting layout', () => {
     it('creates a starting board with oral tradition and four wild seeds in fixed slots', () => {
@@ -54,13 +53,12 @@ describe('gameStoreHelpers starting layout', () => {
         expect(placedIds).toHaveLength(2);
     });
 
-    it('grants two random normal symbols when tribal village is destroyed from collection', () => {
+    it('does not grant random symbols when tribal village is destroyed from collection', () => {
         const removed = [createInstance(SYMBOLS[S.tribal_village]!, [])];
 
         const result = aggregateCollectionDestroyEffects(removed, false, []);
 
-        expect(result.addSymbolDefIds).toHaveLength(2);
-        expect(result.addSymbolDefIds.every((id) => SYMBOLS[id]?.type === SymbolType.NORMAL)).toBe(true);
+        expect(result.addSymbolDefIds).toEqual([]);
     });
 
     it('releases tax storehouse food when destroyed from collection', () => {
