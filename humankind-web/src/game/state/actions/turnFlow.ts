@@ -1,7 +1,7 @@
 import { t } from '../../../i18n';
 import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
-import { SYMBOLS, S, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { decrementActiveStatuses, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { useSettingsStore } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
@@ -79,6 +79,28 @@ const getRelicFloatDelta = (float: { text: string; color?: string }) => {
     if (float.color === '#60a5fa') return { food: 0, gold: 0, knowledge: value };
     return { food: value, gold: 0, knowledge: 0 };
 };
+
+const collectMarkedSymbolSnapshots = (board: GameState['board']) => {
+    const snapshots: Array<{ id: number; instanceId: string; x: number; y: number }> = [];
+    for (let x = 0; x < board.length; x++) {
+        const col = board[x];
+        if (!col) continue;
+        for (let y = 0; y < col.length; y++) {
+            const symbol = col[y];
+            if (!symbol?.is_marked_for_destruction) continue;
+            snapshots.push({
+                id: symbol.definition.id,
+                instanceId: symbol.instanceId,
+                x,
+                y,
+            });
+        }
+    }
+    return snapshots;
+};
+
+const getDestructionSourceSymbolId = (snapshots: ReturnType<typeof collectMarkedSymbolSnapshots>) =>
+    snapshots.find((snapshot) => SYMBOLS[snapshot.id]?.type === SymbolType.DISASTER)?.id;
 
 interface TurnFlowDeps {
     get: GameStoreGet;
@@ -175,6 +197,34 @@ export const createTurnFlowActions = ({
             lootMergeFx: null,
             rerollsThisTurn: 0,
         });
+
+        if (prepared.pendingNewThreatFloats.length > 0) {
+            const threatSymbols = prepared.pendingNewThreatFloats.flatMap((threat) => {
+                const symbol = prepared.board[threat.x]?.[threat.y];
+                return symbol
+                    ? [{
+                          id: symbol.definition.id,
+                          instanceId: symbol.instanceId,
+                          x: threat.x,
+                          y: threat.y,
+                          key: threat.key,
+                          label: threat.label,
+                      }]
+                    : [];
+            });
+            const firstThreat = threatSymbols[0];
+            get().appendEventLog({
+                turn: prepared.turn,
+                kind: 'threat',
+                symbolId: firstThreat?.id,
+                meta: {
+                    action: 'threat_added',
+                    threatKeys: [...new Set(threatSymbols.map((threat) => threat.key))],
+                    threatLabels: [...new Set(threatSymbols.map((threat) => threat.label))],
+                    threatSymbols,
+                },
+            });
+        }
         saveGameState(get());
     },
 
@@ -311,6 +361,7 @@ export const createTurnFlowActions = ({
 
                 const eraBeforeKnowledgeFinish = get().era;
                 const relicsForHistory = useRelicStore.getState().relics;
+                const destroyedDuringProcessing = collectMarkedSymbolSnapshots(get().board);
 
                 set((prev) => {
                     const finishUpgrades = prev.unlockedKnowledgeUpgrades || [];
@@ -414,6 +465,18 @@ export const createTurnFlowActions = ({
                                 : prev.knowledgeUpgradeFloats,
                     };
                 });
+
+                if (destroyedDuringProcessing.length > 0) {
+                    get().appendEventLog({
+                        turn: get().turn,
+                        kind: 'board_action',
+                        symbolId: getDestructionSourceSymbolId(destroyedDuringProcessing),
+                        meta: {
+                            action: 'destroyed_symbols',
+                            destroyedSymbols: destroyedDuringProcessing,
+                        },
+                    });
+                }
 
                 relicOwnEffectFloats.forEach((float) => {
                     const relic = relicsForHistory.find((item) => item.instanceId === float.relicInstanceId);
@@ -873,11 +936,11 @@ export const createTurnFlowActions = ({
                 event: { ax, ay },
                 getAdjacentCoords,
                 getEffectiveMaxHP,
-                unlockedKnowledgeUpgrades: get().unlockedKnowledgeUpgrades,
             });
             if (result.animation) {
                 const attacker = board[ax]?.[ay];
                 const target = board[result.animation.tx]?.[result.animation.ty];
+                const targetDestroyed = !!target?.is_marked_for_destruction;
                 get().appendEventLog({
                     turn: get().turn,
                     kind: 'combat',
@@ -889,7 +952,15 @@ export const createTurnFlowActions = ({
                         targetSlot: { x: result.animation.tx, y: result.animation.ty },
                         targetSymbolId: target?.definition.id,
                         damage: result.animation.atkDmg,
-                        targetDestroyed: !!target?.is_marked_for_destruction,
+                        targetDestroyed,
+                        destroyedSymbols: targetDestroyed && target
+                            ? [{
+                                  id: target.definition.id,
+                                  instanceId: target.instanceId,
+                                  x: result.animation.tx,
+                                  y: result.animation.ty,
+                              }]
+                            : [],
                     },
                 });
             }

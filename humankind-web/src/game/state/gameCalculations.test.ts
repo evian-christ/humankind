@@ -6,6 +6,7 @@ import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     ARCHITECTURE_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
     MERCANTILISM_UPGRADE_ID,
     CURRENCY_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
@@ -51,10 +52,12 @@ import {
     IRON_WORKING_UPGRADE_ID,
     MATHEMATICS_UPGRADE_ID,
     MECHANICS_UPGRADE_ID,
+    MERCENARIES_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
+    TRIBAL_FEDERATION_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
     WRITING_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
@@ -62,12 +65,16 @@ import {
     getGoldInflationMultiplier,
     getHudTurnStartPassiveTotals,
     getInflatedGoldCost,
+    getInflationAdjustedGoldReward,
     getEraFromLevel,
+    formatTimelineYear,
     createKnowledgeResearchCreditsForLevelGain,
     consumeKnowledgeResearchCreditForUpgrade,
     getKnowledgeResearchCutoffLevel,
     getKnowledgeResearchLockedThroughLevel,
+    getTimelineYearForTurn,
     getRerollCost,
+    getTrojanGoldLootReward,
     isUpgradeLegalForKnowledgePick,
     normalizeKnowledgeResearchCredits,
 } from './gameCalculations';
@@ -88,6 +95,20 @@ describe('gold inflation costs', () => {
         expect(getInflatedGoldCost(20, 20, 0.5)).toBe(27);
     });
 
+    it('applies the same inflation curve to one-time gold rewards', () => {
+        expect(getInflationAdjustedGoldReward(25, 0)).toBe(25);
+        expect(getInflationAdjustedGoldReward(25, 10)).toBe(42);
+        expect(getInflationAdjustedGoldReward(25, 20)).toBe(67);
+        expect(getInflationAdjustedGoldReward(25, 30)).toBe(101);
+    });
+
+    it('keeps Trojan Gold Loot display and activation on the same reward value', () => {
+        expect(getTrojanGoldLootReward(0)).toBe(25);
+        expect(getTrojanGoldLootReward(10)).toBe(42);
+        expect(getTrojanGoldLootReward(20)).toBe(67);
+        expect(getTrojanGoldLootReward(30)).toBe(101);
+    });
+
     it('replaces the old reroll step curve with the shared gold inflation curve', () => {
         expect(getRerollCost(0)).toBe(2);
         expect(getRerollCost(10)).toBe(3);
@@ -106,6 +127,26 @@ describe('getEraFromLevel', () => {
         expect(getEraFromLevel(20)).toBe(3);
         expect(getEraFromLevel(29)).toBe(3);
         expect(getEraFromLevel(30)).toBe(4);
+    });
+});
+
+describe('timeline year display', () => {
+    it('maps turn anchors calibrated from expected level pacing', () => {
+        expect(getTimelineYearForTurn(0)).toBe(-12000);
+        expect(getTimelineYearForTurn(10)).toBe(-700);
+        expect(getTimelineYearForTurn(15)).toBe(500);
+        expect(getTimelineYearForTurn(24)).toBe(1800);
+        expect(getTimelineYearForTurn(30)).toBe(2100);
+    });
+
+    it('clamps out-of-range turns to the supported 30-turn timeline', () => {
+        expect(getTimelineYearForTurn(-1)).toBe(-12000);
+        expect(getTimelineYearForTurn(31)).toBe(2100);
+    });
+
+    it('formats BC and AD labels for the HUD language', () => {
+        expect(formatTimelineYear(-12000, 'en')).toBe('12,000 BC');
+        expect(formatTimelineYear(2100, 'ko')).toBe('2,100년');
     });
 });
 
@@ -725,10 +766,16 @@ describe('getHudTurnStartPassiveTotals', () => {
         })).toEqual({ food: 1, gold: 1, knowledge: 2 });
     });
 
+    it('applies Chiefdom passive food production', () => {
+        expect(getHudTurnStartPassiveTotals({
+            unlockedKnowledgeUpgrades: [CHIEFDOM_UPGRADE_ID],
+        })).toEqual({ food: 1, gold: 0, knowledge: 2 });
+    });
+
     it('applies Feudalism passive food production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [FEUDAL_CORN_UPGRADE_ID],
-        })).toEqual({ food: 2, gold: 0, knowledge: 2 });
+        })).toEqual({ food: 1, gold: 0, knowledge: 2 });
     });
 
     it('applies Architecture passive knowledge production', () => {
@@ -740,7 +787,19 @@ describe('getHudTurnStartPassiveTotals', () => {
     it('applies Nationalism passive knowledge production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [NATIONALISM_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 0, knowledge: 5 });
+        })).toEqual({ food: 0, gold: 0, knowledge: 4 });
+    });
+
+    it('applies Tribal Federation passive food production', () => {
+        expect(getHudTurnStartPassiveTotals({
+            unlockedKnowledgeUpgrades: [TRIBAL_FEDERATION_UPGRADE_ID],
+        })).toEqual({ food: 1, gold: 0, knowledge: 2 });
+    });
+
+    it('applies Mercenaries passive gold production', () => {
+        expect(getHudTurnStartPassiveTotals({
+            unlockedKnowledgeUpgrades: [MERCENARIES_UPGRADE_ID],
+        })).toEqual({ food: 0, gold: 2, knowledge: 2 });
     });
 
     it('applies Exploration passive gold production', () => {

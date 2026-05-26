@@ -4,6 +4,7 @@ import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     ARCHITECTURE_UPGRADE_ID,
+    CASTLE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     MERCANTILISM_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
@@ -69,6 +70,30 @@ const getAdjacentCoords = (x: number, y: number) => {
 };
 
 describe('symbolEffectResolution', () => {
+    it('prevents barbarian invasion enemies from plundering food with Castle', () => {
+        const board = createEmptyBoard();
+        const enemy = createInstance(Sym.enemy_warrior, 'enemy');
+        enemy.spawnedByBarbarianInvasion = true;
+        enemy.barbarianInvasionTurnsRemaining = 3;
+        board[1][1] = enemy;
+
+        const result = processSingleSymbolEffects(enemy, board, 1, 1, { upgrades: [CASTLE_UPGRADE_ID] });
+
+        expect(result).toEqual({ food: 0, gold: 0, knowledge: 0 });
+    });
+
+    it('lets barbarian invasion enemies plunder food after Castle grace expires', () => {
+        const board = createEmptyBoard();
+        const enemy = createInstance(Sym.enemy_warrior, 'enemy');
+        enemy.spawnedByBarbarianInvasion = true;
+        enemy.barbarianInvasionTurnsRemaining = 0;
+        board[1][1] = enemy;
+
+        const result = processSingleSymbolEffects(enemy, board, 1, 1, { upgrades: [CASTLE_UPGRADE_ID] });
+
+        expect(result.food).toBe(-3);
+    });
+
     it('collects terrain disabled by flood and initializes flood counter', () => {
         const board = createEmptyBoard();
         const flood = createInstance(SYMBOLS[S.flood]!, 'flood');

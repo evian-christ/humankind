@@ -1,5 +1,6 @@
 import { useGameStore } from '../game/state/gameStore';
-import { getInflatedGoldCost } from '../game/state/gameCalculations';
+import { getInflatedGoldCost, getTrojanGoldLootReward } from '../game/state/gameCalculations';
+import { RELIC_ID } from '../game/logic/relics/relicIds';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getRelicRarityColorHex, type RelicRarity } from '../game/data/relicDefinitions';
 import { t } from '../i18n';
@@ -23,6 +24,11 @@ const renderRelicDesc = (desc: string) => {
             <EffectText text={line} />
         </div>
     ));
+};
+
+const getDisplayedRelicDesc = (relicId: number, desc: string, level: number) => {
+    if (relicId !== RELIC_ID.TROY_GOLD_LOOT) return desc;
+    return desc.replace('{gold}', String(getTrojanGoldLootReward(level)));
 };
 
 const RelicSelection = () => {
@@ -124,7 +130,11 @@ const RelicSelection = () => {
                                                 {t(`relic.${relic.id}.name`, language)}
                                             </div>
                                             <div className="relic-card-desc">
-                                                {renderRelicDesc(t(`relic.${relic.id}.desc`, language))}
+                                                {renderRelicDesc(getDisplayedRelicDesc(
+                                                    relic.id,
+                                                    t(`relic.${relic.id}.desc`, language),
+                                                    level,
+                                                ))}
                                             </div>
                                         </div>
                                     ) : (

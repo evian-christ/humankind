@@ -24,7 +24,7 @@ import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
 import { LEADERS, MAX_LEADER_LEVEL, getLeaderXpRequiredForLevel, leaderHasPortraitSprite, type LeaderId, type LeaderProgressAwardResult } from './game/data/leaders';
-import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
+import { calculateFoodCost, formatTimelineYear, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel, getTimelineYearForTurn } from './game/state/gameCalculations';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, HISTORY_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 import { audioManager } from './audio/audioManager';
 import type { AudioPlaybackHandle } from './audio/audioManager';
@@ -1248,6 +1248,8 @@ function App() {
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
   const turnsUntilPayment = turn % 10 === 0 ? 10 : 10 - (turn % 10);
   const nextCost = calculateFoodCost(turn + turnsUntilPayment);
+  const timelineYearLabel = formatTimelineYear(getTimelineYearForTurn(turn), language);
+  const turnYearLabel = `${t('game.turn', language)} ${turn}, ${timelineYearLabel}`;
 
   const activeState = useGameStore.getState();
   const hudPassiveTotals = hoveredStat ? getHudTurnStartPassiveTotals(activeState) : null;
@@ -1357,6 +1359,10 @@ function App() {
         </div>
 
         <div className="hud-top-right">
+          <div className="turn-year-mini" aria-label={turnYearLabel} title={turnYearLabel}>
+            <span className="turn-year-mini-turn">{t('game.turn', language)} {turn}</span>
+            <span className="turn-year-mini-year">{timelineYearLabel}</span>
+          </div>
           <button
             className="pause-btn-top"
             onClick={() => setMenuOpen(true)}

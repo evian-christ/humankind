@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../game/state/gameStore';
-import { getHudTurnStartPassiveTotals } from '../game/state/gameCalculations';
+import { getHudTurnStartPassiveTotals, getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
+import { RELIC_ID } from '../game/logic/relics/relicIds';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat } from './canvas/types';
@@ -44,6 +45,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const [hoveredHudStat, setHoveredHudStat] = useState<HoveredHudStat | null>(null);
     const language = useSettingsStore((s) => s.language);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
+    const level = useGameStore((s) => s.level);
 
     suppressBoardTooltipsRef.current = suppressBoardTooltips;
 
@@ -332,6 +334,11 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
 
     const showBoardTooltips = !suppressBoardTooltips;
 
+    const getDisplayedRelicDesc = (relicId: number, desc: string) => {
+        if (relicId !== RELIC_ID.TROY_GOLD_LOOT) return desc;
+        return desc.replace('{gold}', String(getTrojanGoldLootReward(level)));
+    };
+
     const hudPassiveTotals = hoveredHudStat ? getHudTurnStartPassiveTotals(useGameStore.getState()) : null;
     const hudStatTooltip = showBoardTooltips && hoveredHudStat && hudPassiveTotals && (() => {
         const n =
@@ -409,7 +416,10 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                     <div className="symbol-tooltip" style={{ ...getRelicTooltipStyle(hoveredRelic), display: 'flex', flexDirection: 'column' }}>
                         <div className="symbol-tooltip-name" style={{ color: '#dcfce7' }}>{t(`relic.${info.definition.id}.name`, language)}</div>
                         <div className="symbol-tooltip-desc">
-                            {t(`relic.${info.definition.id}.desc`, language).split('\n').map((line: string, i: number) => (
+                            {getDisplayedRelicDesc(
+                                info.definition.id,
+                                t(`relic.${info.definition.id}.desc`, language),
+                            ).split('\n').map((line: string, i: number) => (
                                 <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
                             ))}
                         </div>

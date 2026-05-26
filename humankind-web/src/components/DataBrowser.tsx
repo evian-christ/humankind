@@ -16,6 +16,8 @@ import {
 } from '../game/data/rewardDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
+import { getTrojanGoldLootReward } from '../game/state/gameCalculations';
+import { RELIC_ID } from '../game/logic/relics/relicIds';
 import { getDisplayUnitStats } from '../game/data/unitUpgrades';
 import { getEventDescription, getEventDescriptionAllEras, t } from '../i18n';
 import { EffectText } from './EffectText';
@@ -88,6 +90,7 @@ const DataBrowser = () => {
     const developerMode = useSettingsStore((s) => s.developerMode);
     const { devAddSymbol } = useGameStore();
     const era = useGameStore((s) => s.era);
+    const level = useGameStore((s) => s.level);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades || []);
 
     // Per-tab sort state
@@ -114,6 +117,12 @@ const DataBrowser = () => {
         if (category === 'threat') return language === 'ko' ? '위협' : 'Threat';
         return category;
     }, [language]);
+
+    const getDisplayedRelicDesc = useCallback((relicId: number) => {
+        const desc = t(`relic.${relicId}.desc`, language);
+        if (relicId !== RELIC_ID.TROY_GOLD_LOOT) return desc;
+        return desc.replace('{gold}', String(getTrojanGoldLootReward(level)));
+    }, [language, level]);
 
     const toggleSort = useCallback((setter: React.Dispatch<React.SetStateAction<SortState | null>>) =>
         (col: string) => {
@@ -201,7 +210,7 @@ const DataBrowser = () => {
     const filteredRelics = useMemo(() => {
         let list = Object.values(RELICS).filter(r => {
             const name = t(`relic.${r.id}.name`, language).toLowerCase();
-            const desc = t(`relic.${r.id}.desc`, language).toLowerCase();
+            const desc = getDisplayedRelicDesc(r.id).toLowerCase();
             const q = search.toLowerCase();
             return search === '' || name.includes(q) || desc.includes(q) || String(r.id).includes(q);
         });
@@ -214,7 +223,7 @@ const DataBrowser = () => {
                     case 'name': va = t(`relic.${a.id}.name`, language); vb = t(`relic.${b.id}.name`, language); break;
                     case 'era': va = RELIC_RARITY_ORDER.indexOf(a.rarity); vb = RELIC_RARITY_ORDER.indexOf(b.rarity); break;
                     case 'cost': va = a.cost; vb = b.cost; break;
-                    case 'desc': va = t(`relic.${a.id}.desc`, language); vb = t(`relic.${b.id}.desc`, language); break;
+                    case 'desc': va = getDisplayedRelicDesc(a.id); vb = getDisplayedRelicDesc(b.id); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     default: va = a.id; vb = b.id;
                 }
@@ -224,7 +233,7 @@ const DataBrowser = () => {
             list.sort((a, b) => a.id - b.id);
         }
         return list;
-    }, [search, relicSort, language]);
+    }, [search, relicSort, language, getDisplayedRelicDesc]);
 
     // 적 유닛 목록
     const filteredEnemies = useMemo(() => {
@@ -715,7 +724,7 @@ const DataBrowser = () => {
                                         </span>
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
-                                    <td className="databrowser-cell--desc"><EffectText text={t(`relic.${r.id}.desc`, language)} /></td>
+                                    <td className="databrowser-cell--desc"><EffectText text={getDisplayedRelicDesc(r.id)} /></td>
                                     <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         {r.sprite && r.sprite !== '-' && r.sprite !== '-.png' ? (
                                             <>

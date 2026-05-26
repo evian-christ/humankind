@@ -14,6 +14,8 @@ import {
     NATIONALISM_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
     MERCANTILISM_UPGRADE_ID,
+    MERCENARIES_UPGRADE_ID,
+    TRIBAL_FEDERATION_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
@@ -32,6 +34,43 @@ const BASE_REROLL_GOLD_COST = 2;
 const GOLD_INFLATION_LEVEL_CAP = 30;
 const GOLD_INFLATION_LINEAR_PER_LEVEL = 0.05;
 const GOLD_INFLATION_QUADRATIC_PER_LEVEL = 0.0017;
+
+// Turn-only fiction timeline for HUD display.
+// Calibrated from expected successful-run pacing: Lv.10 around turn 15, Lv.20 around turn 24.
+// The player's actual level and researched upgrades do not directly alter the displayed year.
+export const TIMELINE_YEAR_ANCHORS = [
+    { turn: 0, year: -12000 },
+    { turn: 1, year: -10000 },
+    { turn: 2, year: -8000 },
+    { turn: 3, year: -6500 },
+    { turn: 4, year: -5000 },
+    { turn: 5, year: -3800 },
+    { turn: 6, year: -3000 },
+    { turn: 7, year: -2200 },
+    { turn: 8, year: -1600 },
+    { turn: 9, year: -1100 },
+    { turn: 10, year: -700 },
+    { turn: 11, year: -350 },
+    { turn: 12, year: 1 },
+    { turn: 13, year: 200 },
+    { turn: 14, year: 350 },
+    { turn: 15, year: 500 },
+    { turn: 16, year: 700 },
+    { turn: 17, year: 900 },
+    { turn: 18, year: 1100 },
+    { turn: 19, year: 1250 },
+    { turn: 20, year: 1400 },
+    { turn: 21, year: 1500 },
+    { turn: 22, year: 1600 },
+    { turn: 23, year: 1700 },
+    { turn: 24, year: 1800 },
+    { turn: 25, year: 1850 },
+    { turn: 26, year: 1900 },
+    { turn: 27, year: 1950 },
+    { turn: 28, year: 2000 },
+    { turn: 29, year: 2050 },
+    { turn: 30, year: 2100 },
+] as const;
 
 export interface HudTurnStartPassiveState {
     unlockedKnowledgeUpgrades: number[];
@@ -58,8 +97,53 @@ export const getInflatedGoldCost = (
     return Math.max(1, discountedCost);
 };
 
+export const getInflationAdjustedGoldReward = (baseReward: number, level: number): number => {
+    const normalizedBaseReward = Math.max(0, Math.floor(baseReward));
+    if (normalizedBaseReward === 0) return 0;
+
+    return Math.max(1, Math.round(normalizedBaseReward * getGoldInflationMultiplier(level)));
+};
+
+export const getTrojanGoldLootReward = (level: number): number => {
+    return getInflationAdjustedGoldReward(25, level);
+};
+
 export const getRerollCost = (level: number, discountMultiplier = 1): number =>
     getInflatedGoldCost(BASE_REROLL_GOLD_COST, level, discountMultiplier);
+
+export const getTimelineYearForTurn = (turn: number): number => {
+    const first = TIMELINE_YEAR_ANCHORS[0]!;
+    const last = TIMELINE_YEAR_ANCHORS[TIMELINE_YEAR_ANCHORS.length - 1]!;
+    const normalizedTurn = Number.isFinite(turn)
+        ? Math.max(first.turn, Math.min(last.turn, turn))
+        : first.turn;
+
+    for (let i = 1; i < TIMELINE_YEAR_ANCHORS.length; i += 1) {
+        const previous = TIMELINE_YEAR_ANCHORS[i - 1]!;
+        const next = TIMELINE_YEAR_ANCHORS[i]!;
+        if (normalizedTurn > next.turn) continue;
+
+        const span = next.turn - previous.turn;
+        const ratio = span <= 0 ? 0 : (normalizedTurn - previous.turn) / span;
+        const rounded = Math.round(previous.year + (next.year - previous.year) * ratio);
+        if (rounded === 0) return previous.year < 0 ? -1 : 1;
+        return rounded;
+    }
+
+    return last.year;
+};
+
+export const formatTimelineYear = (year: number, language: 'en' | 'ko' = 'en'): string => {
+    const normalizedYear = Math.trunc(year);
+    const numberFormatter = new Intl.NumberFormat(language === 'ko' ? 'ko-KR' : 'en-US');
+    if (normalizedYear < 0) {
+        const value = numberFormatter.format(Math.abs(normalizedYear));
+        return language === 'ko' ? `BC ${value}년` : `${value} BC`;
+    }
+
+    const value = numberFormatter.format(Math.max(1, normalizedYear));
+    return language === 'ko' ? `${value}년` : `AD ${value}`;
+};
 
 export const getKnowledgeResearchCutoffLevel = (level: number, unspentResearchPoints: number): number => {
     const normalizedLevel = Math.max(0, Math.floor(level));
@@ -225,7 +309,7 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(LAW_CODE_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
-        (upgrades.includes(NATIONALISM_UPGRADE_ID) ? 3 : 0) +
+        (upgrades.includes(NATIONALISM_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0);
     const baseGold =
@@ -234,16 +318,18 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(EXPLORATION_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(MERCANTILISM_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(MERCENARIES_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0);
     const gold = (state.qinCurrencyStandardTurnsRemaining ?? 0) > 0 ? baseGold * 2 : baseGold;
     const food =
-        (upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
+        (upgrades.includes(TRIBAL_FEDERATION_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0) +
-        (upgrades.includes(FEUDAL_CORN_UPGRADE_ID) ? 2 : 0) +
+        (upgrades.includes(FEUDAL_CORN_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(BUTTRESS_UPGRADE_ID) ? 2 : 0);
     return {
         food,

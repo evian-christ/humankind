@@ -3,15 +3,19 @@ import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     BALLISTICS_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     INTERCHANGEABLE_PARTS_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
     MECHANICS_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
+    STATE_LABOR_UPGRADE_ID,
     TRIBAL_FEDERATION_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
     TOTAL_MOBILIZATION_UPGRADE_ID,
@@ -89,6 +93,12 @@ const OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
     SACRIFICIAL_RITE_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
+]);
+const SINGLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
+    CHIEFDOM_UPGRADE_ID,
+    STATE_LABOR_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
 ]);
 const MILITARY_LEVY_GRANT_UPGRADE_IDS = new Set<number>([
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -204,6 +214,29 @@ const removeSymbolsFromBoard = (
 ): GameState['board'] =>
     board.map((col) => col.map((cell) => (cell && removedIds.has(cell.instanceId) ? null : cell)));
 
+const findBoardSlotByInstanceId = (board: GameState['board'], instanceId: string) => {
+    for (let x = 0; x < board.length; x++) {
+        const col = board[x];
+        if (!col) continue;
+        for (let y = 0; y < col.length; y++) {
+            if (col[y]?.instanceId === instanceId) return { x, y };
+        }
+    }
+    return null;
+};
+
+const makeDestroyedSymbolSnapshots = (
+    symbols: readonly PlayerSymbolInstance[],
+    board: GameState['board'],
+) => symbols.map((symbol) => {
+    const slot = findBoardSlotByInstanceId(board, symbol.instanceId);
+    return {
+        id: symbol.definition.id,
+        instanceId: symbol.instanceId,
+        ...(slot ?? {}),
+    };
+});
+
 const isBoardDestroyBlockedType = (type: SymbolType) =>
     type === SymbolType.ENEMY || type === SymbolType.DISASTER;
 
@@ -290,6 +323,8 @@ export const createSelectionFlowActions = ({
         let foodDelta = 0;
         let goldDelta = 0;
         let knowledgeDelta = 0;
+        let destroyedSymbols: ReturnType<typeof makeDestroyedSymbolSnapshots> = [];
+        let addedSymbolIds: number[] = [];
 
         if (event.reward) {
             foodDelta += event.reward.food ?? 0;
@@ -309,6 +344,7 @@ export const createSelectionFlowActions = ({
                 const def = SYMBOLS[enemyId];
                 return def ? createInstance(def, state.unlockedKnowledgeUpgrades || []) : null;
             }).filter((sym): sym is PlayerSymbolInstance => sym != null);
+            addedSymbolIds = enemySymbols.map((symbol) => symbol.definition.id);
             patch.playerSymbols = [...state.playerSymbols, ...enemySymbols];
         } else if (event.key === 'grassland_festival') {
             foodDelta += GRASSLAND_FESTIVAL_FOOD[eraIdx];
@@ -326,6 +362,7 @@ export const createSelectionFlowActions = ({
             foodDelta += FOREST_HARVEST_FOOD[eraIdx];
             const forestDef = SYMBOLS[S.forest];
             if (forestDef) {
+                addedSymbolIds = [forestDef.id];
                 patch.playerSymbols = [
                     ...state.playerSymbols,
                     createInstance(forestDef, state.unlockedKnowledgeUpgrades || []),
@@ -348,6 +385,7 @@ export const createSelectionFlowActions = ({
             foodDelta += MILITARY_DRAFT_FOOD[eraIdx];
             const def = SYMBOLS[S.enemy_warrior];
             if (def) {
+                addedSymbolIds = [def.id];
                 patch.playerSymbols = [
                     ...(patch.playerSymbols ?? state.playerSymbols),
                     createInstance(def, state.unlockedKnowledgeUpgrades || []),
@@ -358,6 +396,7 @@ export const createSelectionFlowActions = ({
             if (def) {
                 const enemy = createInstance(def, state.unlockedKnowledgeUpgrades || []);
                 enemy.enemy_hp = 1;
+                addedSymbolIds = [def.id];
                 patch.playerSymbols = [
                     ...(patch.playerSymbols ?? state.playerSymbols),
                     enemy,
@@ -373,7 +412,9 @@ export const createSelectionFlowActions = ({
         } else if (event.key === 'capital_relocation') {
             const removed = pickRandomSymbols(state.playerSymbols, CAPITAL_RELOCATION_DESTROY_COUNT);
             const removedIds = new Set(removed.map((symbol) => symbol.instanceId));
+            destroyedSymbols = makeDestroyedSymbolSnapshots(removed, state.board);
             const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
+            addedSymbolIds = symAgg.addSymbolDefIds;
             const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
             const baseFiltered = state.playerSymbols.filter((symbol) => !removedIds.has(symbol.instanceId));
             patch.playerSymbols = appendSymbolDefIdsToPlayer(
@@ -414,6 +455,8 @@ export const createSelectionFlowActions = ({
                 eventKey: event.key,
                 sourceRelicId: state.symbolSelectionRelicSourceId,
                 sourceSymbolId: state.symbolSelectionSymbolSourceId ?? null,
+                destroyedSymbols,
+                addSymbolIds: addedSymbolIds,
             },
         });
         saveGameState(get());
@@ -574,7 +617,14 @@ export const createSelectionFlowActions = ({
             const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
             if (oblDef) {
                 const rs = useRelicStore.getState();
-                for (let i = 0; i < 2; i++) rs.addRelic(oblDef);
+                for (let i = 0; i < 3; i++) rs.addRelic(oblDef);
+            }
+        }
+
+        if (SINGLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS.has(uid)) {
+            const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
+            if (oblDef) {
+                useRelicStore.getState().addRelic(oblDef);
             }
         }
 
@@ -582,7 +632,8 @@ export const createSelectionFlowActions = ({
             const militaryLevyDef = RELICS[RELIC_ID.MILITARY_LEVY];
             if (militaryLevyDef) {
                 const rs = useRelicStore.getState();
-                for (let i = 0; i < 2; i++) rs.addRelic(militaryLevyDef);
+                const count = uid === TOTAL_MOBILIZATION_UPGRADE_ID ? 4 : 2;
+                for (let i = 0; i < count; i++) rs.addRelic(militaryLevyDef);
             }
         }
 
@@ -712,6 +763,7 @@ export const createSelectionFlowActions = ({
         const src = state.pendingDestroySource;
 
         const removed = state.playerSymbols.filter((s) => instanceIds.includes(s.instanceId));
+        const destroyedSymbols = makeDestroyedSymbolSnapshots(removed, state.board);
         const skipEd69 = src === EDICT_SYMBOL_ID;
         const symAgg = aggregateCollectionDestroyEffects(removed, skipEd69, state.unlockedKnowledgeUpgrades || []);
         const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
@@ -747,6 +799,7 @@ export const createSelectionFlowActions = ({
                     source: src,
                     selectedInstanceIds: instanceIds,
                     selectedSymbolIds: removed.map((symbol) => symbol.definition.id),
+                    destroyedSymbols,
                     addSymbolIds: symAgg.addSymbolDefIds,
                     ...extra,
                 },
@@ -921,6 +974,7 @@ export const createSelectionFlowActions = ({
                 action: 'oblivion_furnace_destroy',
                 relicInstanceId: relicInstId,
                 selectedInstanceIds: instanceIds,
+                destroyedSymbols: makeDestroyedSymbolSnapshots(removed, state.board),
                 addSymbolIds: symAgg.addSymbolDefIds,
             },
         });

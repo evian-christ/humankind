@@ -8,6 +8,7 @@ import {
 import { useRelicStore } from '../relicStore';
 import type { GameState } from '../gameStore';
 import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { getTrojanGoldLootReward } from '../gameCalculations';
 import { getStandardSymbolChoiceCount } from '../gameStoreHelpers';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
@@ -72,7 +73,7 @@ export const createRelicActivationActions = ({
         }
 
         if (defId === RELIC_ID.TROY_GOLD_LOOT) {
-            const goldGain = getEraReward(state.era, [25, 50, 100]);
+            const goldGain = getTrojanGoldLootReward(state.level);
             set((s) => ({
                 gold: s.gold + goldGain,
                 relicFloats: [

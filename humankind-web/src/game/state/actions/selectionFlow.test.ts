@@ -10,18 +10,24 @@ import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
+    INQUISITION_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
+    RESTRUCTURING_UPGRADE_ID,
+    SACRIFICIAL_RITE_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
     TOTAL_MOBILIZATION_UPGRADE_ID,
@@ -515,10 +521,10 @@ describe('selectionFlow actions', () => {
     });
 
     it.each([
-        ['Tribal Federation', TRIBAL_FEDERATION_UPGRADE_ID, 4, []],
-        ['Mercenaries', MERCENARIES_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID]],
-        ['Total Mobilization', TOTAL_MOBILIZATION_UPGRADE_ID, 22, [MODERN_AGE_UPGRADE_ID]],
-    ])('grants 2 Military Levies when %s is researched', (_name, upgradeId, level, unlockedKnowledgeUpgrades) => {
+        ['Tribal Federation', TRIBAL_FEDERATION_UPGRADE_ID, 4, [], 2],
+        ['Mercenaries', MERCENARIES_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 2],
+        ['Total Mobilization', TOTAL_MOBILIZATION_UPGRADE_ID, 22, [MODERN_AGE_UPGRADE_ID], 4],
+    ])('grants Military Levies when %s is researched', (_name, upgradeId, level, unlockedKnowledgeUpgrades, count) => {
         const harness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
@@ -531,7 +537,31 @@ describe('selectionFlow actions', () => {
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(upgradeId);
         expect(
             useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.MILITARY_LEVY),
-        ).toHaveLength(2);
+        ).toHaveLength(count);
+    });
+
+    it.each([
+        ['Sacrificial Rite', SACRIFICIAL_RITE_UPGRADE_ID, 4, [], 3],
+        ['Inquisition', INQUISITION_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 3],
+        ['Restructuring', RESTRUCTURING_UPGRADE_ID, 23, [MODERN_AGE_UPGRADE_ID], 3],
+        ['Chiefdom', CHIEFDOM_UPGRADE_ID, 4, [], 1],
+        ['State Labor', STATE_LABOR_UPGRADE_ID, 9, [], 1],
+        ['Feudalism', FEUDAL_CORN_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 1],
+        ['Nationalism', NATIONALISM_UPGRADE_ID, 19, [FEUDALISM_UPGRADE_ID], 1],
+    ])('grants Furnaces of Oblivion when %s is researched', (_name, upgradeId, level, unlockedKnowledgeUpgrades, count) => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level,
+            unlockedKnowledgeUpgrades,
+        });
+
+        harness.actions.selectUpgrade(upgradeId);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(upgradeId);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
+        ).toHaveLength(count);
     });
 
     it('unlocks religion only when Theology is researched', () => {

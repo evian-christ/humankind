@@ -271,6 +271,33 @@ describe('gameStore pasture butchering', () => {
         expect(useRelicStore.getState().relics).toHaveLength(0);
     });
 
+    it('scales Trojan Gold Loot with gold inflation before the era changes', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+
+        useRelicStore.getState().resetRelics();
+        useRelicStore.getState().addRelic(RELICS[RELIC_ID.TROY_GOLD_LOOT]!);
+        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
+
+        useGameStore.setState({
+            phase: 'idle',
+            era: 1,
+            level: 10,
+            gold: 0,
+            relicFloats: [],
+        });
+
+        useGameStore.getState().activateClickableRelic(relicInstanceId);
+
+        const next = useGameStore.getState();
+        expect(next.gold).toBe(42);
+        expect(next.relicFloats.at(-1)).toMatchObject({
+            relicInstanceId,
+            text: '+42',
+            color: '#fbbf24',
+        });
+    });
+
     it('activates Prophecy Die into an event-only selection', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
