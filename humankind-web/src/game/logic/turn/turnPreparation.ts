@@ -1,10 +1,18 @@
 import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
 import { getEnemyDefinitionForLevel, getEnemyPoolForLevel } from '../../data/enemyPools';
+import {
+    BARBARIAN_INVASION_GRACE_TURNS,
+    BARBARIAN_INVASION_THREAT_STEP,
+    getActiveStatusIdsForTurn,
+} from '../../data/statusDefinitions';
 import type { BoardGrid, BoardCoord, ThreatLabelKey, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
 
 const createEmptyBoard = (width: number, height: number): BoardGrid => {
     return Array(width).fill(null).map(() => Array(height).fill(null));
 };
+
+const increaseBarbarianInvasionThreat = (current: number): number =>
+    Math.min(100, Number((current + BARBARIAN_INVASION_THREAT_STEP).toFixed(1)));
 
 const placeOralTraditionAtBoardCenter = (
     board: BoardGrid,
@@ -80,22 +88,35 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     const newPlayerSymbols = [...playerSymbols];
     const spinUpgrades = unlockedKnowledgeUpgrades || [];
     const newThreats: { instanceId: string; label: string; key: ThreatLabelKey }[] = [];
+    let nextBarbarianSymbolThreat = barbarianSymbolThreat;
 
     if (turn > 0) {
-        if (rng.next() * 100 < 5) {
-            const pool = getEnemyPoolForLevel(level);
-            const enemyId = rng.pick(pool);
-            const enemyDef = getEnemyDefinitionForLevel(enemyId, level);
-            if (enemyDef) {
-                const inst = createSymbolInstance(enemyDef, spinUpgrades);
-                inst.spawnedByBarbarianInvasion = true;
-                inst.barbarianInvasionTurnsRemaining = 3;
-                newPlayerSymbols.push(inst);
-                const key = 'threat.barbarian_invasion';
-                newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(key), key });
+        if (turn < BARBARIAN_INVASION_GRACE_TURNS) {
+            nextBarbarianSymbolThreat = 0;
+        } else {
+            const currentBarbarianSymbolThreat = increaseBarbarianInvasionThreat(barbarianSymbolThreat);
+            let spawnedBarbarianInvasion = false;
+            if (rng.next() * 100 < currentBarbarianSymbolThreat) {
+                const pool = getEnemyPoolForLevel(level);
+                const enemyId = rng.pick(pool);
+                const enemyDef = getEnemyDefinitionForLevel(enemyId, level);
+                if (enemyDef) {
+                    const inst = createSymbolInstance(enemyDef, spinUpgrades);
+                    inst.spawnedByBarbarianInvasion = true;
+                    inst.barbarianInvasionTurnsRemaining = 3;
+                    newPlayerSymbols.push(inst);
+                    const key = 'threat.barbarian_invasion';
+                    newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(key), key });
+                    spawnedBarbarianInvasion = true;
+                }
             }
+            nextBarbarianSymbolThreat = spawnedBarbarianInvasion
+                ? 0
+                : currentBarbarianSymbolThreat;
         }
+    }
 
+    if (turn > 0) {
         if (rng.next() * 100 < 3) {
             const floodId = S.flood;
             const earthquakeId = S.earthquake;
@@ -178,11 +199,12 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     return {
         playerSymbols: anchoredSymbols,
         threatState: {
-            barbarianSymbolThreat: turn > 0 ? 5 : barbarianSymbolThreat,
+            barbarianSymbolThreat: turn > 0 ? nextBarbarianSymbolThreat : barbarianSymbolThreat,
             barbarianCampThreat: 0,
             naturalDisasterThreat: turn > 0 ? 3 : naturalDisasterThreat,
         },
         pendingNewThreatFloats,
+        activeStatusIds: getActiveStatusIdsForTurn(turn),
         prevBoard: board,
         board: anchoredBoard,
         turn: turn + 1,
