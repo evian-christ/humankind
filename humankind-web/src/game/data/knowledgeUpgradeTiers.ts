@@ -149,16 +149,12 @@ export function getKnowledgeUpgradeUnlockLevel(upgradeId: number): number | null
     return KNOWLEDGE_UPGRADE_UNLOCK_LEVEL_BY_ID.get(Number(upgradeId)) ?? null;
 }
 
-export function getKnowledgeResearchLockedBeforeLevel(currentLevel: number): number {
-    const level = Math.floor(currentLevel);
-    if (level >= 30) return 30;
-    if (level >= 20) return 20;
-    if (level >= 10) return 10;
-    return 0;
+export function getKnowledgeResearchLockedBeforeLevel(lockedThroughLevel: number): number {
+    return Math.max(0, Math.floor(lockedThroughLevel));
 }
 
-export function isKnowledgeUpgradeLockedByResearchCutoff(upgradeId: number, currentLevel: number): boolean {
+export function isKnowledgeUpgradeLockedByResearchCutoff(upgradeId: number, lockedThroughLevel: number): boolean {
     const unlockLevel = getKnowledgeUpgradeUnlockLevel(upgradeId);
-    const lockedBeforeLevel = getKnowledgeResearchLockedBeforeLevel(currentLevel);
-    return unlockLevel != null && lockedBeforeLevel > 0 && unlockLevel < lockedBeforeLevel;
+    const lockedBeforeLevel = getKnowledgeResearchLockedBeforeLevel(lockedThroughLevel);
+    return unlockLevel != null && lockedBeforeLevel > 0 && unlockLevel <= lockedBeforeLevel;
 }
