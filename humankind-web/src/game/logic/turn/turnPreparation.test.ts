@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { STATUS_ID } from '../../data/statusDefinitions';
 import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import type { GameRng } from './rng';
@@ -86,6 +87,70 @@ describe('prepareTurn', () => {
 
         expect(result.board[2][1]?.instanceId).toBe(oral.instanceId);
         expect(result.turn).toBe(1);
+    });
+
+    it('reports active statuses for the prepared spin', () => {
+        const createInstance = createInstanceFactory();
+
+        const firstPreparedTurn = prepareTurn({
+            board: createEmptyBoard(),
+            playerSymbols: [createInstance(Sym.wheat)],
+            turn: 0,
+            level: 1,
+            era: 0,
+            boardWidth: 5,
+            boardHeight: 4,
+            unlockedKnowledgeUpgrades: [],
+            threatState: {
+                barbarianSymbolThreat: 0,
+                barbarianCampThreat: 0,
+                naturalDisasterThreat: 0,
+            },
+            rng: makeRng(),
+            createSymbolInstance: createInstance,
+            getThreatLabel: (key) => key,
+        });
+        expect(firstPreparedTurn.activeStatusIds).toEqual([STATUS_ID.CLAN_FORMATION]);
+
+        const lastGracePreparedTurn = prepareTurn({
+            board: createEmptyBoard(),
+            playerSymbols: [createInstance(Sym.wheat)],
+            turn: 4,
+            level: 1,
+            era: 0,
+            boardWidth: 5,
+            boardHeight: 4,
+            unlockedKnowledgeUpgrades: [],
+            threatState: {
+                barbarianSymbolThreat: 0,
+                barbarianCampThreat: 0,
+                naturalDisasterThreat: 0,
+            },
+            rng: makeRng(),
+            createSymbolInstance: createInstance,
+            getThreatLabel: (key) => key,
+        });
+        expect(lastGracePreparedTurn.activeStatusIds).toEqual([STATUS_ID.CLAN_FORMATION]);
+
+        const expiredPreparedTurn = prepareTurn({
+            board: createEmptyBoard(),
+            playerSymbols: [createInstance(Sym.wheat)],
+            turn: 5,
+            level: 1,
+            era: 0,
+            boardWidth: 5,
+            boardHeight: 4,
+            unlockedKnowledgeUpgrades: [],
+            threatState: {
+                barbarianSymbolThreat: 0,
+                barbarianCampThreat: 0,
+                naturalDisasterThreat: 0,
+            },
+            rng: makeRng(),
+            createSymbolInstance: createInstance,
+            getThreatLabel: (key) => key,
+        });
+        expect(expiredPreparedTurn.activeStatusIds).toEqual([]);
     });
 
     it('does not drop a symbol displaced by first-turn Oral Tradition anchoring', () => {
@@ -189,5 +254,70 @@ describe('prepareTurn', () => {
             barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
         });
+    });
+
+    it('forces a selected natural disaster on the next prepared turn', () => {
+        const createInstance = createInstanceFactory();
+
+        const result = prepareTurn({
+            board: createEmptyBoard(),
+            playerSymbols: [createInstance(Sym.wheat)],
+            turn: 2,
+            level: 1,
+            era: 1,
+            boardWidth: 5,
+            boardHeight: 4,
+            unlockedKnowledgeUpgrades: [],
+            threatState: {
+                barbarianSymbolThreat: 0,
+                barbarianCampThreat: 0,
+                naturalDisasterThreat: 0,
+            },
+            rng: makeRng(),
+            createSymbolInstance: createInstance,
+            getThreatLabel: (key) => key,
+            forcedNaturalDisasterId: S.heatwave,
+        });
+
+        expect(result.playerSymbols.some((sym) => sym.definition.id === S.heatwave)).toBe(true);
+        expect(result.pendingNewThreatFloats.some((float) => float.key === 'threat.heatwave')).toBe(true);
+    });
+
+    it.each([
+        [S.plague, 'threat.plague'],
+        [S.heatwave, 'threat.heatwave'],
+    ] as const)('spawns one instance of disaster %i when randomly picked', (disasterId, threatKey) => {
+        const createInstance = createInstanceFactory();
+        const rng: GameRng = {
+            ...makeRng(),
+            next: () => 0,
+            pick: <T,>(items: readonly T[]): T => {
+                if (items.length === 0) throw new Error('empty');
+                const match = items.find((item) => item === disasterId);
+                return match ?? items[0]!;
+            },
+        };
+
+        const result = prepareTurn({
+            board: createEmptyBoard(),
+            playerSymbols: [createInstance(Sym.wheat)],
+            turn: 2,
+            level: 1,
+            era: 1,
+            boardWidth: 5,
+            boardHeight: 4,
+            unlockedKnowledgeUpgrades: [],
+            threatState: {
+                barbarianSymbolThreat: 0,
+                barbarianCampThreat: 0,
+                naturalDisasterThreat: 0,
+            },
+            rng,
+            createSymbolInstance: createInstance,
+            getThreatLabel: (key) => key,
+        });
+
+        expect(result.playerSymbols.filter((sym) => sym.definition.id === disasterId)).toHaveLength(1);
+        expect(result.pendingNewThreatFloats.filter((float) => float.key === threatKey)).toHaveLength(1);
     });
 });
