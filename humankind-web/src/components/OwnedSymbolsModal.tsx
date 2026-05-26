@@ -224,7 +224,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(0,0,0,0.75)',
+                background: 'transparent',
                 padding: '42px',
                 overflow: 'hidden',
             }}
@@ -235,8 +235,8 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                 ref={panelRef}
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: 'min(1180px, calc(100vw - 84px))',
-                    height: 'min(790px, calc(100vh - 84px))',
+                    width: 'min(1220px, calc(100vw - 72px))',
+                    height: 'min(820px, calc(100vh - 72px))',
                     minHeight: '420px',
                     display: 'flex',
                     flexDirection: 'column',

@@ -7,7 +7,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
-import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat } from './canvas/types';
+import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
 import { useRelicStore } from '../game/state/relicStore';
@@ -39,6 +39,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const suppressBoardTooltipsRef = useRef(suppressBoardTooltips);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredSymbol | null>(null);
     const [hoveredRelic, setHoveredRelic] = useState<HoveredRelic | null>(null);
+    const [hoveredStatus, setHoveredStatus] = useState<HoveredStatus | null>(null);
     const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
     const [hoveredHudStat, setHoveredHudStat] = useState<HoveredHudStat | null>(null);
     const language = useSettingsStore((s) => s.language);
@@ -54,6 +55,11 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const setHoveredRelicStable = useCallback((val: HoveredRelic | null) => {
         if (suppressBoardTooltipsRef.current) return;
         setHoveredRelic(val);
+    }, []);
+
+    const setHoveredStatusStable = useCallback((val: HoveredStatus | null) => {
+        if (suppressBoardTooltipsRef.current) return;
+        setHoveredStatus(val);
     }, []);
 
     const setHoveredUpgradeStable = useCallback((val: HoveredUpgrade | null) => {
@@ -90,6 +96,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             canvasRef.current,
             setHoveredSymbolStable,
             setHoveredRelicStable,
+            setHoveredStatusStable,
             setHoveredUpgradeStable,
             setHoveredHudStatStable,
         );
@@ -132,12 +139,13 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 appRef.current = null;
             }
         };
-    }, [setHoveredSymbolStable, setHoveredRelicStable, setHoveredUpgradeStable, setHoveredHudStatStable]);
+    }, [setHoveredSymbolStable, setHoveredRelicStable, setHoveredStatusStable, setHoveredUpgradeStable, setHoveredHudStatStable]);
 
     useEffect(() => {
         if (!suppressBoardTooltips) return;
         setHoveredSymbol(null);
         setHoveredRelic(null);
+        setHoveredStatus(null);
         setHoveredUpgrade(null);
         setHoveredHudStat(null);
         appRef.current?.clearHudHover();
@@ -170,6 +178,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             pendingNewThreatFloats: initial.pendingNewThreatFloats,
             unlockedKnowledgeUpgrades: initial.unlockedKnowledgeUpgrades,
             bonusXpPerTurn: initial.bonusXpPerTurn,
+            activeStatusIds: initial.activeStatusIds,
+            activeStatuses: initial.activeStatuses,
         };
 
         const unsub1 = useGameStore.subscribe((state) => {
@@ -195,7 +205,9 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 state.combatShaking !== prev.combatShaking ||
                 state.pendingNewThreatFloats !== prev.pendingNewThreatFloats ||
                 state.unlockedKnowledgeUpgrades !== prev.unlockedKnowledgeUpgrades ||
-                state.bonusXpPerTurn !== prev.bonusXpPerTurn;
+                state.bonusXpPerTurn !== prev.bonusXpPerTurn ||
+                state.activeStatusIds !== prev.activeStatusIds ||
+                state.activeStatuses !== prev.activeStatuses;
 
             if (!needs) return;
 
@@ -220,6 +232,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 pendingNewThreatFloats: state.pendingNewThreatFloats,
                 unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
                 bonusXpPerTurn: state.bonusXpPerTurn,
+                activeStatusIds: state.activeStatusIds,
+                activeStatuses: state.activeStatuses,
             };
 
             appRef.current.renderBoard(state, useSettingsStore.getState());
@@ -279,6 +293,17 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         if (top + TOOLTIP_H > 1080) top = 1080 - TOOLTIP_H - TOOLTIP_MARGIN;
         if (top < 0) top = 0;
         return { left: `${left}px`, top: `${top}px` };
+    };
+
+    const getStatusTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
+        if (!hoveredItem) return { display: 'none' };
+        let left = hoveredItem.screenX;
+        if (left + TOOLTIP_W > 1920) left = hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN;
+        const top = hoveredItem.screenY - TOOLTIP_MARGIN;
+        if (top < TOOLTIP_MARGIN) {
+            return { left: `${left}px`, top: `${hoveredItem.screenY + TOOLTIP_MARGIN}px` };
+        }
+        return { left: `${left}px`, top: `${top}px`, transform: 'translateY(-100%)' };
     };
 
     /** 지식 업그레이드 툴팁: 해당 스프라이트 좌측에 고정 표시 */
@@ -401,6 +426,21 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                     </div>
                 );
             })()}
+
+            {showBoardTooltips && hoveredStatus && (
+                <div className="symbol-tooltip" style={{ ...getStatusTooltipStyle(hoveredStatus), display: 'flex', flexDirection: 'column' }}>
+                    <div className="symbol-tooltip-name" style={{ color: '#fde68a' }}>
+                        {language === 'ko' ? hoveredStatus.status.nameKo : hoveredStatus.status.name}
+                    </div>
+                    <div className="symbol-tooltip-desc">
+                        {(language === 'ko' ? hoveredStatus.status.descriptionKo : hoveredStatus.status.description)
+                            .split('\n')
+                            .map((line: string, i: number) => (
+                                <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
+                            ))}
+                    </div>
+                </div>
+            )}
 
             {showBoardTooltips && hoveredUpgrade && (
                 <div className="symbol-tooltip" style={{ ...getUpgradeTooltipStyle(hoveredUpgrade), display: 'flex', flexDirection: 'column' }}>

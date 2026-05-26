@@ -2,6 +2,7 @@ import {
     useCallback,
     useEffect,
     useLayoutEffect,
+    useMemo,
     useRef,
     useState,
     type MouseEvent as ReactMouseEvent,
@@ -9,7 +10,11 @@ import {
 import { createPortal } from 'react-dom';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { useGameStore } from '../game/state/gameStore';
-import { getKnowledgeResearchCutoffLevel, isUpgradeLegalForKnowledgePick } from '../game/state/gameCalculations';
+import {
+    isKnowledgeUpgradeCoveredByResearchCredits,
+    isUpgradeLegalForKnowledgePick,
+    normalizeKnowledgeResearchCredits,
+} from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
@@ -21,7 +26,6 @@ import {
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../game/data/knowledgeUpgrades';
 import {
-    isKnowledgeUpgradeLockedByResearchCutoff,
     KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID,
     KNOWLEDGE_UPGRADE_TIER_ROWS,
 } from '../game/data/knowledgeUpgradeTiers';
@@ -390,6 +394,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const leaderProgressLevel = useGameStore((s) => s.leaderProgressLevel);
     const currentLevel = useGameStore((s) => s.level);
     const levelUpResearchPoints = useGameStore((s) => s.levelUpResearchPoints ?? 0);
+    const knowledgeResearchCredits = useGameStore((s) => s.knowledgeResearchCredits ?? []);
     const phase = useGameStore((s) => s.phase);
     const language = useSettingsStore((s) => s.language);
 
@@ -421,7 +426,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const detailDirectPrereqs = detailId != null ? [...getKnowledgeUpgradeDirectPrerequisites(detailId)] : [];
     const detailDirectDependents = detailId != null ? [...getKnowledgeUpgradeDirectDependents(detailId)] : [];
     const hasResearchPoints = levelUpResearchPoints > 0;
-    const researchCutoffLevel = getKnowledgeResearchCutoffLevel(currentLevel, levelUpResearchPoints);
+    const researchCredits = useMemo(
+        () => normalizeKnowledgeResearchCredits(currentLevel, levelUpResearchPoints, knowledgeResearchCredits),
+        [currentLevel, knowledgeResearchCredits, levelUpResearchPoints],
+    );
     const availableBackgroundHeightPx = getKnowledgeAvailableBackgroundHeightPx(currentLevel);
     const isPermanentlyLocked = useCallback((id: number): boolean => {
         const check = (currentId: number, memo: Map<number, boolean>): boolean => {
@@ -432,7 +440,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 return false;
             }
 
-            if (isKnowledgeUpgradeLockedByResearchCutoff(currentId, researchCutoffLevel)) {
+            if (
+                hasResearchPoints &&
+                !isKnowledgeUpgradeCoveredByResearchCredits(currentId, researchCredits)
+            ) {
                 memo.set(currentId, true);
                 return true;
             }
@@ -450,19 +461,25 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         };
         
         return check(id, new Map<number, boolean>());
-    }, [researchCutoffLevel, unlockedUpgrades]);
+    }, [hasResearchPoints, researchCredits, unlockedUpgrades]);
+    const isLockedByCurrentLevel = useCallback((id: number): boolean => (
+        !unlockedUpgrades.includes(id) && getTierLevelForUpgrade(id) > currentLevel
+    ), [currentLevel, unlockedUpgrades]);
+    const isVisuallyLocked = useCallback((id: number): boolean => (
+        isPermanentlyLocked(id) || isLockedByCurrentLevel(id)
+    ), [isLockedByCurrentLevel, isPermanentlyLocked]);
 
     const canConfirmResearch = useCallback((id: number): boolean => (
         hasResearchPoints &&
         currentLevel >= getTierLevelForUpgrade(id) &&
         !unlockedUpgrades.includes(id) &&
         !isPermanentlyLocked(id) &&
-        isUpgradeLegalForKnowledgePick(id, unlockedUpgrades, currentLevel, researchCutoffLevel)
+        isUpgradeLegalForKnowledgePick(id, unlockedUpgrades, currentLevel, researchCredits)
     ), [
         currentLevel,
         hasResearchPoints,
         isPermanentlyLocked,
-        researchCutoffLevel,
+        researchCredits,
         unlockedUpgrades,
     ]);
 
@@ -500,16 +517,16 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     from: prereqId,
                     to: upgradeId,
                     x1: xForCol(sourcePos.colIdx),
-                    y1: bottomAnchorY(sourcePos.rowIdx, activeFocusId === prereqId || isPermanentlyLocked(prereqId)),
+                    y1: bottomAnchorY(sourcePos.rowIdx, activeFocusId === prereqId || isVisuallyLocked(prereqId)),
                     x2: xForCol(targetPos.colIdx),
-                    y2: topAnchorY(targetPos.rowIdx, activeFocusId === upgradeId || isPermanentlyLocked(upgradeId)),
+                    y2: topAnchorY(targetPos.rowIdx, activeFocusId === upgradeId || isVisuallyLocked(upgradeId)),
                     prerequisiteCount: prerequisites.length,
                 });
             }
         }
 
         setConnectorLines(next);
-    }, [activeFocusId, isPermanentlyLocked]);
+    }, [activeFocusId, isVisuallyLocked]);
 
     const updateDetailTooltipPosition = useCallback(() => {
         if (detailId == null) {
@@ -1048,7 +1065,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const upgrade = KNOWLEDGE_UPGRADES[id];
                                                 if (!upgrade) return null;
                                                 const unlocked = unlockedUpgrades.includes(id);
-                                                const lockedByResearchCutoff = isPermanentlyLocked(id);
+                                                const visuallyLocked = isVisuallyLocked(id);
                                                 const isDenied = deniedChipId === id;
                                                 const isHovered = hoveredId === id;
                                                 const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
@@ -1058,7 +1075,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const chipFilter = activeFocusId != null && !isSelectionRelated
                                                     ? 'brightness(0.28) saturate(0.8)'
                                                     : 'none';
-                                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked, lockedByResearchCutoff, isDenied);
+                                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked, visuallyLocked, isDenied);
                                                 const upgradeSpriteUrl = resolveUpgradeSprite(upgrade.sprite);
                                                 return (
                                                     <button
@@ -1071,6 +1088,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                         ].filter(Boolean).join(' ')}
                                                         title={name}
                                                         data-knowledge-upgrade-id={id}
+                                                        aria-disabled={visuallyLocked && !unlocked}
                                                         onClick={(e) => handleChipClick(id, e)}
                                                         onMouseEnter={() => handleChipMouseEnter(id)}
                                                         onMouseLeave={() => handleChipMouseLeave(id)}
@@ -1084,19 +1102,19 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             borderRadius: 0,
                                                             filter: chipFilter,
                                                             boxShadow: knowledgeTreeChipFrameShadow(
-                                                                lockedByResearchCutoff
+                                                                visuallyLocked
                                                                     ? 'pressed'
                                                                     : 'idle',
                                                                 unlocked,
-                                                                lockedByResearchCutoff,
+                                                                visuallyLocked,
                                                                 isDenied,
                                                             ),
                                                             background: isHovered
                                                                     ? KNOWLEDGE_TREE_CHIP_HOVER_BG
-                                                                : lockedByResearchCutoff ? '#161616' : KNOWLEDGE_TREE_CHIP_IDLE_BG,
+                                                                : visuallyLocked ? '#161616' : KNOWLEDGE_TREE_CHIP_IDLE_BG,
                                                             color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
-                                                            cursor: 'pointer',
-                                                            transform: lockedByResearchCutoff
+                                                            cursor: visuallyLocked && !unlocked ? 'not-allowed' : 'pointer',
+                                                            transform: visuallyLocked
                                                                 ? `translateY(${KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y}px)`
                                                                 : 'none',
                                                             transition:
@@ -1116,7 +1134,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                                     height: 'calc(100% - 24px)',
                                                                     objectFit: 'contain',
                                                                     imageRendering: 'pixelated',
-                                                                    filter: lockedByResearchCutoff
+                                                                    filter: visuallyLocked
                                                                         ? 'grayscale(1) saturate(0) brightness(0.65)'
                                                                         : undefined,
                                                                     pointerEvents: 'none',

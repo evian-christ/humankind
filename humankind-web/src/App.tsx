@@ -25,7 +25,7 @@ import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
 import { LEADERS, MAX_LEADER_LEVEL, getLeaderXpRequiredForLevel, leaderHasPortraitSprite, type LeaderId, type LeaderProgressAwardResult } from './game/data/leaders';
 import { calculateFoodCost, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel } from './game/state/gameCalculations';
-import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, HISTORY_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 import { audioManager } from './audio/audioManager';
 import type { AudioPlaybackHandle } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
@@ -760,6 +760,7 @@ function App() {
   const wasInGameOverPhaseRef = useRef(false);
   const relicHudTooltip = useViewportClampedBottomHudTooltip();
   const knowledgeHudTooltip = useViewportClampedBottomHudTooltip();
+  const historyHudTooltip = useViewportClampedBottomHudTooltip();
   const ownedSymbolsHudTooltip = useViewportClampedBottomHudTooltip();
 
   useEffect(() => {
@@ -982,7 +983,11 @@ function App() {
 
   // 본게임 벗어나면 캔버스 준비 플래그 리셋 (다음 진입 시 검은 화면 → 로드 후 페이드)
   useEffect(() => {
-    if (preGameScreen !== null) setGameCanvasReady(false);
+    if (preGameScreen !== null) {
+      setGameCanvasReady(false);
+    } else {
+      setKnowledgeHudAttentionKey(0);
+    }
   }, [preGameScreen]);
 
   useEffect(() => {
@@ -1237,6 +1242,7 @@ function App() {
 
   // ===== 본게임 =====
   const eraName = t(ERA_NAME_KEYS[era] ?? 'era.ancient', language);
+  const historyLabel = language === 'ko' ? '히스토리' : 'History';
 
   const knowledgeRequired = getKnowledgeRequiredForLevel(Math.min(level, 29));
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
@@ -1471,6 +1477,54 @@ function App() {
               </span>
             </span>
           </button>
+        </div>
+        <div className="spin-area">
+          <button
+            type="button"
+            className="spin-btn"
+            onClick={handleSpinBoard}
+            disabled={!canPressSpin}
+            data-audio-click={levelUpResearchPoints > 0 ? 'skip' : undefined}
+            aria-label={t('game.spin', language)}
+            title={t('game.spin', language)}
+          >
+            <span>SPIN</span>
+          </button>
+          {knowledgeHudAttentionKey > 0 && (
+            <span key={knowledgeHudAttentionKey} className="spin-research-hint-float" aria-hidden="true">
+              {t('game.researchToContinue', language)}
+            </span>
+          )}
+        </div>
+        <div className="bottom-action-bar-right">
+          <button
+            className="relic-shop-btn relic-shop-btn--history"
+            type="button"
+            aria-label={historyLabel}
+            title={historyLabel}
+            {...historyHudTooltip.bindButtonHoverHandlers}
+            onClick={() => setIsLogOpen(true)}
+          >
+            <span className="relic-shop-btn-icon-layer" aria-hidden="true">
+              <img src={HISTORY_ICON_URL} alt="" draggable={false} style={{ imageRendering: 'pixelated' }} />
+            </span>
+            <span
+              ref={historyHudTooltip.tooltipRef}
+              className="bottom-action-hud-tooltip"
+              aria-hidden="true"
+              style={
+                {
+                  '--bottom-hud-tooltip-shift': `${historyHudTooltip.shiftPx}px`,
+                } as React.CSSProperties
+              }
+            >
+              <span className="hud-stat-tooltip">
+                <span className="hud-stat-tooltip-inner">
+                  <span style={{ color: '#e5e5e5' }}>{historyLabel}</span>
+                </span>
+              </span>
+            </span>
+          </button>
           <button
             className="relic-shop-btn relic-shop-btn--owned-symbols"
             type="button"
@@ -1499,24 +1553,6 @@ function App() {
               </span>
             </span>
           </button>
-        </div>
-        <div className="spin-area">
-          <button
-            type="button"
-            className="spin-btn"
-            onClick={handleSpinBoard}
-            disabled={!canPressSpin}
-            data-audio-click={levelUpResearchPoints > 0 ? 'skip' : undefined}
-            aria-label={t('game.spin', language)}
-            title={t('game.spin', language)}
-          >
-            <span>SPIN</span>
-          </button>
-          {knowledgeHudAttentionKey > 0 && (
-            <span key={knowledgeHudAttentionKey} className="spin-research-hint-float" aria-hidden="true">
-              Research to continue
-            </span>
-          )}
         </div>
       </div>
 
