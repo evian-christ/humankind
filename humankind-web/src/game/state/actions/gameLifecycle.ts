@@ -12,6 +12,7 @@ import {
 } from '../gameStoreHelpers';
 import { useRelicStore } from '../relicStore';
 import { clearSavedGame } from '../saveGame';
+import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 
@@ -53,12 +54,15 @@ const createCommonResetPatch = () => ({
     bonusXpPerTurn: 0,
     qinCurrencyStandardTurnsRemaining: 0,
     levelUpResearchPoints: 0,
+    knowledgeResearchCredits: [],
     isRelicShopOpen: false,
     hasNewRelicShopStock: false,
     rerollsThisTurn: 0,
     barbarianSymbolThreat: 0,
     barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
+    activeStatusIds: getActiveStatusIdsFromStates(createActiveStatusesForTurn(0)),
+    activeStatuses: createActiveStatusesForTurn(0),
     pendingNewThreatFloats: [],
     pendingDestroySource: null,
     pendingOblivionFurnaceRelicId: null,
