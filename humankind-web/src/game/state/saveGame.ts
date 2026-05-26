@@ -1,10 +1,13 @@
 import { RELICS } from '../data/relicDefinitions';
 import { SYMBOLS } from '../data/symbolDefinitions';
+import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../data/statusDefinitions';
+import type { ActiveStatusState } from '../data/statusDefinitions';
 import { GAME_EVENTS, isGameEventDefinition } from '../data/eventDefinitions';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
 import type { GamePhase, GameState, GameEventLogEntry } from './gameStore';
 import { createEmptyBoard } from './gameStoreHelpers';
+import { normalizeKnowledgeResearchCredits, type KnowledgeResearchCredit } from './gameCalculations';
 import { useRelicStore, type RelicInstance } from './relicStore';
 
 const SAVE_KEY = 'humankind.save.v1';
@@ -62,6 +65,7 @@ interface SavedGame {
         bonusXpPerTurn: number;
         qinCurrencyStandardTurnsRemaining?: number;
         levelUpResearchPoints: number;
+        knowledgeResearchCredits?: KnowledgeResearchCredit[];
         isRelicShopOpen: boolean;
         hasNewRelicShopStock: boolean;
         rerollsThisTurn: number;
@@ -69,6 +73,8 @@ interface SavedGame {
         barbarianSymbolThreat: number;
         barbarianCampThreat: number;
         naturalDisasterThreat: number;
+        activeStatusIds?: number[];
+        activeStatuses?: ActiveStatusState[];
         pendingDestroySource: GameState['pendingDestroySource'];
         pendingOblivionFurnaceRelicId: string | null;
         pendingEdictSource: GameState['pendingEdictSource'];
@@ -237,6 +243,7 @@ export function saveGameState(state: GameState): void {
             bonusXpPerTurn: state.bonusXpPerTurn,
             qinCurrencyStandardTurnsRemaining: state.qinCurrencyStandardTurnsRemaining,
             levelUpResearchPoints: state.levelUpResearchPoints,
+            knowledgeResearchCredits: state.knowledgeResearchCredits ?? [],
             isRelicShopOpen: state.isRelicShopOpen,
             hasNewRelicShopStock: state.hasNewRelicShopStock,
             rerollsThisTurn: state.rerollsThisTurn,
@@ -244,6 +251,8 @@ export function saveGameState(state: GameState): void {
             barbarianSymbolThreat: state.barbarianSymbolThreat,
             barbarianCampThreat: state.barbarianCampThreat,
             naturalDisasterThreat: state.naturalDisasterThreat,
+            activeStatusIds: state.activeStatusIds,
+            activeStatuses: state.activeStatuses,
             pendingDestroySource: state.pendingDestroySource,
             pendingOblivionFurnaceRelicId: state.pendingOblivionFurnaceRelicId,
             pendingEdictSource: state.pendingEdictSource,
@@ -282,6 +291,20 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             .map(deserializeRelic)
             .filter((relic): relic is RelicInstance => relic != null);
         useRelicStore.getState().hydrateRelics(relics);
+        const knowledgeResearchCredits = normalizeKnowledgeResearchCredits(
+            save.state.level,
+            save.state.levelUpResearchPoints,
+            save.state.knowledgeResearchCredits,
+        );
+
+        const activeStatuses =
+            save.state.activeStatuses ??
+            (save.state.activeStatusIds
+                ? save.state.activeStatusIds.map((id) => ({
+                    id,
+                    remainingTurns: Math.max(1, createActiveStatusesForTurn(save.state.turn).find((status) => status.id === id)?.remainingTurns ?? 1),
+                }))
+                : createActiveStatusesForTurn(save.state.turn));
 
         return {
             leaderId: save.state.leaderId,
@@ -324,7 +347,8 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             unlockedKnowledgeUpgrades: save.state.unlockedKnowledgeUpgrades,
             bonusXpPerTurn: save.state.bonusXpPerTurn,
             qinCurrencyStandardTurnsRemaining: save.state.qinCurrencyStandardTurnsRemaining ?? 0,
-            levelUpResearchPoints: save.state.levelUpResearchPoints,
+            levelUpResearchPoints: knowledgeResearchCredits.length,
+            knowledgeResearchCredits,
             isRelicShopOpen: save.state.isRelicShopOpen,
             hasNewRelicShopStock: save.state.hasNewRelicShopStock,
             rerollsThisTurn: save.state.rerollsThisTurn,
@@ -332,6 +356,8 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             barbarianSymbolThreat: save.state.barbarianSymbolThreat,
             barbarianCampThreat: save.state.barbarianCampThreat,
             naturalDisasterThreat: save.state.naturalDisasterThreat,
+            activeStatusIds: getActiveStatusIdsFromStates(activeStatuses),
+            activeStatuses,
             pendingNewThreatFloats: [],
             pendingDestroySource: save.state.pendingDestroySource,
             pendingOblivionFurnaceRelicId: save.state.pendingOblivionFurnaceRelicId,
