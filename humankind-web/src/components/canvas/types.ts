@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
+import type { StatusDefinition } from '../../game/data/statusDefinitions';
 import type { RelicInstance } from '../../game/state/relicStore';
 
 export interface HoveredSymbol {
@@ -10,6 +11,12 @@ export interface HoveredSymbol {
 
 export interface HoveredRelic {
     relicInfo: RelicInstance;
+    screenX: number;
+    screenY: number;
+}
+
+export interface HoveredStatus {
+    status: StatusDefinition;
     screenX: number;
     screenY: number;
 }
