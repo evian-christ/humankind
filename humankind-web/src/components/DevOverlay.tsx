@@ -7,6 +7,7 @@ import { RELIC_LIST } from '../game/data/relicDefinitions';
 import { t } from '../i18n';
 
 const allSymbolsList = Object.values(SYMBOLS).sort((a, b) => a.type - b.type || a.id - b.id);
+const naturalDisasterDevIds = [S.flood, S.earthquake, S.drought, S.plague, S.heatwave];
 
 const btnStyle = (color: string): React.CSSProperties => ({
     background: color,
@@ -76,7 +77,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, barbarianSymbolThreat, naturalDisasterThreat } = useGameStore();
+    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, devTriggerNaturalDisaster, barbarianSymbolThreat, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
     const developerMode = useSettingsStore(s => s.developerMode);
@@ -137,12 +138,12 @@ const DevOverlay = () => {
                 >X</button>
             </div>
 
-            {/* Open Screen */}
+            {/* Dev actions */}
             <div style={{
                 padding: '10px 14px',
                 borderBottom: '1px solid #333',
             }}>
-                <div style={{ color: '#888', fontSize: '11px', marginBottom: '8px', letterSpacing: '1px' }}>OPEN SCREEN</div>
+                <div style={{ color: '#888', fontSize: '11px', marginBottom: '8px', letterSpacing: '1px' }}>DEV ACTIONS</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                         onClick={() => devForceScreen('symbol')}
@@ -183,6 +184,27 @@ const DevOverlay = () => {
                     >
                         <span style={{ fontSize: '18px' }}>📚</span>
                         <span>연구 포인트 +1</span>
+                    </button>
+                    <button
+                        onClick={() => devForceScreen('levelWithResearch')}
+                        style={{
+                            flex: '1',
+                            minWidth: '140px',
+                            background: '#7c3aed',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '7px 4px',
+                            fontSize: '12px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '3px',
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>Lv</span>
+                        <span>레벨 +1</span>
+                        <span style={{ fontSize: '10px', opacity: 0.85 }}>(연구 포인트 +1)</span>
                     </button>
                 </div>
             </div>
@@ -237,6 +259,26 @@ const DevOverlay = () => {
                     <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span>자연재해</span>
                         <span>{naturalDisasterThreat}%</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '8px' }}>
+                        {naturalDisasterDevIds.map((id) => {
+                            const def = SYMBOLS[id];
+                            if (!def) return null;
+                            const queued = pendingDevNaturalDisasterId === id;
+                            return (
+                                <button
+                                    key={id}
+                                    onClick={() => devTriggerNaturalDisaster(id)}
+                                    style={{
+                                        ...btnStyle(queued ? '#ca8a04' : '#7c2d12'),
+                                        padding: '4px 7px',
+                                    }}
+                                >
+                                    {queued ? 'NEXT ' : ''}
+                                    {t(`symbol.${def.key}.name`, language)}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

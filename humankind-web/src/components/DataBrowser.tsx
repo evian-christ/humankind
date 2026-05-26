@@ -5,6 +5,7 @@ import { ENEMIES } from '../game/data/enemyDefinitions';
 import { GAME_EVENT_CATEGORY_ORDER, GAME_EVENTS } from '../game/data/eventDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { LEADERS } from '../game/data/leaders';
+import { STATUSES } from '../game/data/statusDefinitions';
 import {
     REWARDS,
     REWARD_RARITY_COLOR,
@@ -20,7 +21,7 @@ import { getEventDescription, getEventDescriptionAllEras, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
-type Tab = 'symbols' | 'relics' | 'knowledgeUpgrades' | 'events' | 'enemies' | 'leaders' | 'rewards';
+type Tab = 'symbols' | 'relics' | 'knowledgeUpgrades' | 'events' | 'enemies' | 'leaders' | 'rewards' | 'statuses';
 type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
@@ -97,10 +98,21 @@ const DataBrowser = () => {
     const [enemySort, setEnemySort] = useState<SortState | null>(null);
     const [leaderSort, setLeaderSort] = useState<SortState | null>(null);
     const [rewardSort, setRewardSort] = useState<SortState | null>(null);
+    const [statusSort, setStatusSort] = useState<SortState | null>(null);
 
     const tl = useCallback((key: string, fallback: string) => {
         const translated = t(key, language);
         return translated === key ? fallback : translated;
+    }, [language]);
+    const localLabel = useCallback((key: string, fallback: string, ko: string) =>
+        language === 'ko' ? ko : tl(key, fallback), [language, tl]);
+    const statusText = useCallback((status: typeof STATUSES[number], field: 'name' | 'description') => {
+        if (field === 'name') return language === 'ko' ? status.nameKo : status.name;
+        return language === 'ko' ? status.descriptionKo : status.description;
+    }, [language]);
+    const statusCategoryLabel = useCallback((category: typeof STATUSES[number]['category']) => {
+        if (category === 'threat') return language === 'ko' ? '위협' : 'Threat';
+        return category;
     }, [language]);
 
     const toggleSort = useCallback((setter: React.Dispatch<React.SetStateAction<SortState | null>>) =>
@@ -401,6 +413,43 @@ const DataBrowser = () => {
         return list;
     }, [language, search, rewardSort]);
 
+    const filteredStatuses = useMemo(() => {
+        let list = Object.values(STATUSES);
+
+        if (search.trim()) {
+            const q = search.toLowerCase();
+            list = list.filter(status => {
+                const name = statusText(status, 'name').toLowerCase();
+                const desc = statusText(status, 'description').toLowerCase();
+                const category = statusCategoryLabel(status.category).toLowerCase();
+                return name.includes(q) ||
+                    desc.includes(q) ||
+                    category.includes(q) ||
+                    String(status.id).includes(q);
+            });
+        }
+
+        if (statusSort) {
+            const { column, dir } = statusSort;
+            list = [...list].sort((a, b) => {
+                let va: unknown, vb: unknown;
+                switch (column) {
+                    case 'id': va = a.id; vb = b.id; break;
+                    case 'name': va = statusText(a, 'name'); vb = statusText(b, 'name'); break;
+                    case 'category': va = statusCategoryLabel(a.category); vb = statusCategoryLabel(b.category); break;
+                    case 'duration': va = a.durationTurns ?? -1; vb = b.durationTurns ?? -1; break;
+                    case 'desc': va = statusText(a, 'description'); vb = statusText(b, 'description'); break;
+                    default: va = a.id; vb = b.id;
+                }
+                return genericCompare(va, vb, dir);
+            });
+        } else {
+            list.sort((a, b) => a.id - b.id);
+        }
+
+        return list;
+    }, [search, statusCategoryLabel, statusSort, statusText]);
+
     // 시대별 카운트
     const eraCounts = useMemo(() => {
         const counts: Record<string, number> = {};
@@ -422,6 +471,7 @@ const DataBrowser = () => {
     const enSortHandler = toggleSort(setEnemySort);
     const leaderSortHandler = toggleSort(setLeaderSort);
     const rewardSortHandler = toggleSort(setRewardSort);
+    const statusSortHandler = toggleSort(setStatusSort);
 
     return (
         <div className="databrowser">
@@ -471,6 +521,12 @@ const DataBrowser = () => {
                     onClick={() => setTab('leaders')}
                 >
                     지도자 ({Object.keys(LEADERS).length})
+                </button>
+                <button
+                    className={`databrowser-tab ${tab === 'statuses' ? 'databrowser-tab--active' : ''}`}
+                    onClick={() => setTab('statuses')}
+                >
+                    {localLabel('dataBrowser.statuses', 'Statuses', '상태')} ({Object.keys(STATUSES).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'rewards' ? 'databrowser-tab--active' : ''}`}
@@ -869,6 +925,33 @@ const DataBrowser = () => {
 
 
 
+                {tab === 'statuses' && (
+                    <table className="databrowser-table">
+                        <thead>
+                            <tr>
+                                <SortTh column="id" label="ID" sort={statusSort} onSort={statusSortHandler} className="databrowser-th--id" />
+                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={statusSort} onSort={statusSortHandler} className="databrowser-th--name" />
+                                <SortTh column="category" label={t('dataBrowser.colCategory', language)} sort={statusSort} onSort={statusSortHandler} className="databrowser-th--era" />
+                                <SortTh column="duration" label={localLabel('dataBrowser.colDuration', 'Duration', '지속')} sort={statusSort} onSort={statusSortHandler} className="databrowser-th--stat" />
+                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={statusSort} onSort={statusSortHandler} className="databrowser-th--desc" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredStatuses.map(status => (
+                                <tr key={status.id} className="databrowser-row">
+                                    <td className="databrowser-cell--id">{status.id}</td>
+                                    <td className="databrowser-cell--name">{statusText(status, 'name')}</td>
+                                    <td className="databrowser-cell--type">{statusCategoryLabel(status.category)}</td>
+                                    <td className="databrowser-cell--stat">{status.durationTurns ?? '-'}</td>
+                                    <td className="databrowser-cell--desc">
+                                        <EffectText text={statusText(status, 'description')} />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+
                 {tab === 'rewards' && (
                     <table className="databrowser-table">
                         <thead>
@@ -909,6 +992,7 @@ const DataBrowser = () => {
                     (tab === 'knowledgeUpgrades' && filteredKnowledgeUpgrades.length === 0) ||
                     (tab === 'events' && filteredEvents.length === 0) ||
                     (tab === 'enemies' && filteredEnemies.length === 0) ||
+                    (tab === 'statuses' && filteredStatuses.length === 0) ||
                     (tab === 'rewards' && filteredRewards.length === 0)) && (
                         <div className="databrowser-empty">{t('dataBrowser.noResults', language)}</div>
                     )}
