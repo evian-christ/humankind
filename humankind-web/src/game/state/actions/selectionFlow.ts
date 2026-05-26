@@ -53,9 +53,10 @@ import {
     scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import {
-    getKnowledgeResearchCutoffLevel,
+    consumeKnowledgeResearchCreditForUpgrade,
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
+    normalizeKnowledgeResearchCredits,
 } from '../gameCalculations';
 import { saveGameState } from '../saveGame';
 import type { GamePhase, GameState } from '../gameStore';
@@ -518,17 +519,21 @@ export const createSelectionFlowActions = ({
 
     selectUpgrade: (upgradeId: number) => {
         const state = get();
-        const pts = state.levelUpResearchPoints ?? 0;
-        if (pts <= 0) return;
+        const researchCredits = normalizeKnowledgeResearchCredits(
+            state.level,
+            state.levelUpResearchPoints ?? 0,
+            state.knowledgeResearchCredits,
+        );
+        if (researchCredits.length <= 0) return;
 
         const pickLevel = state.level;
-        const researchCutoffLevel = getKnowledgeResearchCutoffLevel(pickLevel, pts);
         const uid = Number(upgradeId);
         const unlockedNorm = (state.unlockedKnowledgeUpgrades || []).map((x) => Number(x));
         if (!KNOWLEDGE_UPGRADES[uid]) return;
-        if (!isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel, researchCutoffLevel)) return;
+        if (!isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel, researchCredits)) return;
 
-        const nextResearchPts = Math.max(0, pts - 1);
+        const nextResearchCredits = consumeKnowledgeResearchCreditForUpgrade(uid, researchCredits);
+        const nextResearchPts = nextResearchCredits.length;
         const appendResearchLog = (extra: Record<string, unknown> = {}) => {
             get().appendEventLog({
                 turn: state.turn,
@@ -549,6 +554,7 @@ export const createSelectionFlowActions = ({
                 pendingDestroySource: TERRITORIAL_REORG_UPGRADE_ID,
                 destroySelectionMaxSymbols: 3,
                 levelUpResearchPoints: nextResearchPts,
+                knowledgeResearchCredits: nextResearchCredits,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
             });
             appendResearchLog({ opensDestroySelection: true });
@@ -652,6 +658,7 @@ export const createSelectionFlowActions = ({
                 ? [...(state.relicFloats ?? []), ...mouseionRelicFloat]
                 : state.relicFloats,
             levelUpResearchPoints: nextResearchPts,
+            knowledgeResearchCredits: nextResearchCredits,
         };
 
         if (edictAfterUpgrade) {
