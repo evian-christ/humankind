@@ -265,14 +265,16 @@ export function isUpgradeLegalForKnowledgePick(
     upgradeId: number,
     unlocked: number[],
     level: number,
-    researchCutoffLevel = level,
+    researchGate: number | readonly KnowledgeResearchCredit[] = 0,
 ): boolean {
     const uid = Number(upgradeId);
     const have = new Set((unlocked ?? []).map((x) => Number(x)));
     const upgrade = KNOWLEDGE_UPGRADES[uid];
     if (!upgrade) return false;
     if (have.has(uid)) return false;
-    if (isKnowledgeUpgradeLockedByResearchCutoff(uid, researchCutoffLevel)) return false;
+    if (typeof researchGate !== 'number') {
+        if (!isKnowledgeUpgradeCoveredByResearchCredits(uid, researchGate)) return false;
+    } else if (isKnowledgeUpgradeLockedByResearchCutoff(uid, researchGate)) return false;
 
     const upgradeEra = upgradeEraBySymbolType(upgrade.type);
     if (upgradeEra == null) return false;
