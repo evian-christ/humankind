@@ -2,6 +2,7 @@ import { t } from '../../../i18n';
 import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
 import { SYMBOLS, S, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { decrementActiveStatuses, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { useSettingsStore } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
@@ -47,9 +48,11 @@ import {
 import { createTurnRunScheduler } from './turnRunScheduler';
 import { clearSavedGame, saveGameState } from '../saveGame';
 import {
+    createKnowledgeResearchCreditsForLevelGain,
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
     getKnowledgeRequiredForLevel,
+    normalizeKnowledgeResearchCredits,
 } from '../gameCalculations';
 import type { GamePhase, GameState } from '../gameStore';
 
@@ -129,6 +132,7 @@ export const createTurnFlowActions = ({
             rng: createMathRng(),
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => t(key, useSettingsStore.getState().language),
+            forcedNaturalDisasterId: state.pendingDevNaturalDisasterId,
         });
 
         set({
@@ -136,6 +140,7 @@ export const createTurnFlowActions = ({
             barbarianSymbolThreat: prepared.threatState.barbarianSymbolThreat,
             barbarianCampThreat: prepared.threatState.barbarianCampThreat,
             naturalDisasterThreat: prepared.threatState.naturalDisasterThreat,
+            pendingDevNaturalDisasterId: null,
             pendingNewThreatFloats: prepared.pendingNewThreatFloats,
             prevBoard: prepared.prevBoard,
             board: prepared.board,
@@ -345,6 +350,15 @@ export const createTurnFlowActions = ({
                         : generateChoicesSelection(selCtx);
                     const nextPhase: GamePhase = agiVictory ? 'victory' : 'processing';
 
+                    const nextResearchCredits = [
+                        ...normalizeKnowledgeResearchCredits(
+                            prev.level,
+                            prev.levelUpResearchPoints ?? 0,
+                            prev.knowledgeResearchCredits,
+                        ),
+                        ...createKnowledgeResearchCreditsForLevelGain(prev.level, prog.newLevel),
+                    ];
+
                     return {
                         food: prev.food + finalRunningTotals.food,
                         gold: prev.gold + finalRunningTotals.gold,
@@ -372,7 +386,8 @@ export const createTurnFlowActions = ({
                             forceEventsForNextChoices && nextChoiceRes.consumedForceEvents
                                 ? false
                                 : forceEventsForNextChoices,
-                        levelUpResearchPoints: (prev.levelUpResearchPoints ?? 0) + prog.gainedResearchPicks,
+                        levelUpResearchPoints: nextResearchCredits.length,
+                        knowledgeResearchCredits: nextResearchCredits,
                         relicFloats: [...(prev.relicFloats ?? []), ...relicOwnEffectFloats],
                         knowledgeUpgradeFloats:
                             knowledgeOwnEffectFloats.length > 0
@@ -485,9 +500,16 @@ export const createTurnFlowActions = ({
                             get().refreshRelicShop(true);
                         }
 
+                        const nextActiveStatuses = decrementActiveStatuses(finalState.activeStatuses ?? []);
+                        const statusPatch = {
+                            activeStatuses: nextActiveStatuses,
+                            activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
+                        };
+
                         if (phaseResolution.nextPhase === 'destroy_selection' && phaseResolution.destroySelection) {
                             set({
                                 ...phaseResolution.destroySelection,
+                                ...statusPatch,
                                 phase: 'destroy_selection' as GamePhase,
                             });
                             saveGameState(get());
@@ -495,6 +517,7 @@ export const createTurnFlowActions = ({
                         }
 
                         set({
+                            ...statusPatch,
                             phase: 'selection' as GamePhase,
                             symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
                             freeSelectionRerolls: Math.max(
@@ -636,7 +659,7 @@ export const createTurnFlowActions = ({
                 if (result.freeSelectionRerolls) {
                     set((s) => ({
                         freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + result.freeSelectionRerolls!,
-                    }));
+                     }));
                 }
 
                 set({

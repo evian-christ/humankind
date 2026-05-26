@@ -72,11 +72,13 @@ import { runPostEffectsHooks } from '../logic/turn/postEffectsHooks';
 import { resolveTurnEndPhase } from '../logic/turn/phaseResolution';
 import { createStartingBoard, BOARD_HEIGHT, BOARD_WIDTH } from '../state/gameStoreHelpers';
 import {
+    consumeKnowledgeResearchCreditForUpgrade,
+    createKnowledgeResearchCreditsForLevelGain,
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
-    getKnowledgeResearchCutoffLevel,
     getKnowledgeRequiredForLevel,
     isUpgradeLegalForKnowledgePick,
+    type KnowledgeResearchCredit,
 } from '../state/gameCalculations';
 import { prepareTurn } from '../logic/turn/turnPreparation';
 import type { GameRng } from '../logic/turn/rng';
@@ -144,6 +146,7 @@ interface SimulationState {
     board: BoardGrid;
     playerSymbols: PlayerSymbolInstance[];
     unlockedKnowledgeUpgrades: number[];
+    knowledgeResearchCredits: KnowledgeResearchCredit[];
     religionUnlocked: boolean;
     bonusXpPerTurn: number;
     qinCurrencyStandardTurnsRemaining: number;
@@ -355,6 +358,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             board: start.board,
             playerSymbols: start.playerSymbols,
             unlockedKnowledgeUpgrades: [],
+            knowledgeResearchCredits: [],
             religionUnlocked: false,
             bonusXpPerTurn: 0,
             qinCurrencyStandardTurnsRemaining: 0,
@@ -381,6 +385,7 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             .filter((def): def is SymbolDefinition => !!def)
             .map((def) => createSimulationInstance(def, [])),
         unlockedKnowledgeUpgrades: [],
+        knowledgeResearchCredits: [],
         religionUnlocked: false,
         bonusXpPerTurn: 0,
         qinCurrencyStandardTurnsRemaining: 0,
@@ -503,7 +508,7 @@ const chooseUpgrade = (
     strategy: BalanceUpgradeStrategy,
     pickStrategy: BalancePickStrategy,
     rng: SeededRng,
-    researchCutoffLevel = state.level,
+    researchCredits: readonly KnowledgeResearchCredit[] = [],
 ): number | null => {
     if (strategy === 'none') return null;
     const legal = Object.keys(KNOWLEDGE_UPGRADES)
@@ -513,7 +518,7 @@ const chooseUpgrade = (
             id,
             state.unlockedKnowledgeUpgrades,
             state.level,
-            researchCutoffLevel,
+            researchCredits,
         ))
         .sort((a, b) => a - b);
     if (legal.length === 0) return null;
@@ -693,6 +698,7 @@ const simulateTurn = (
         },
     });
 
+    const previousLevel = state.level;
     const prog = applyKnowledgeAndLevelUps(
         {
             level: state.level,
@@ -722,15 +728,21 @@ const simulateTurn = (
     state.knowledge = prog.newKnowledge;
     state.level = prog.newLevel;
     state.era = prog.newEra;
+    state.knowledgeResearchCredits = [
+        ...state.knowledgeResearchCredits,
+        ...createKnowledgeResearchCreditsForLevelGain(previousLevel, prog.newLevel),
+    ];
     state.board = generated.board;
     state.playerSymbols = generated.playerSymbols.filter((s) => !removedIds.has(s.instanceId));
 
-    for (let i = 0; i < prog.gainedResearchPicks; i++) {
-        const remainingResearchPicks = prog.gainedResearchPicks - i;
-        const researchCutoffLevel = getKnowledgeResearchCutoffLevel(state.level, remainingResearchPicks);
-        const upgradeId = chooseUpgrade(state, config.upgradeStrategy, config.pickStrategy, rng, researchCutoffLevel);
+    while (state.knowledgeResearchCredits.length > 0) {
+        const upgradeId = chooseUpgrade(state, config.upgradeStrategy, config.pickStrategy, rng, state.knowledgeResearchCredits);
         if (upgradeId == null) break;
         applyUpgrade(state, upgradeId);
+        state.knowledgeResearchCredits = consumeKnowledgeResearchCreditForUpgrade(
+            upgradeId,
+            state.knowledgeResearchCredits,
+        );
     }
 
     if (post.agiVictory) return 'victory';

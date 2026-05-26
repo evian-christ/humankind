@@ -33,7 +33,7 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import type { PlayerSymbolInstance } from '../../types';
-import { processSingleSymbolEffects } from '../symbolEffects';
+import { DEFAULT_RELIC_EFFECTS, processSingleSymbolEffects } from '../symbolEffects';
 import { commitLootMerge } from './turnPipeline';
 import {
     buildFoodBySlotKey,
@@ -671,6 +671,23 @@ describe('symbolEffectResolution', () => {
         const result = processSingleSymbolEffects(stargazer, board, 0, 0, { upgrades: [] });
 
         expect(result.knowledge).toBe(16);
+    });
+
+    it('gives Stone Tablet 2 knowledge per owned relic', () => {
+        const board = createEmptyBoard();
+        const tablet = createInstance(Sym.stone_tablet, 'tablet');
+        board[0][0] = tablet;
+
+        const result = processSingleSymbolEffects(
+            tablet,
+            board,
+            0,
+            0,
+            { upgrades: [] },
+            { ...DEFAULT_RELIC_EFFECTS, relicCount: 4 },
+        );
+
+        expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 8 });
     });
 
     it('produces food per two adjacent empty slots by default for Oasis', () => {

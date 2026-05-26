@@ -169,7 +169,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
 
         case S.stone_tablet:
-            state.knowledge += relicEffects.relicCount * 5;
+            state.knowledge += relicEffects.relicCount * 2;
             return true;
 
         case S.wild_seeds:

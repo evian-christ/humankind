@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameState } from '../gameStore';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
+import { STATUS_ID } from '../../data/statusDefinitions';
 import { isGameEventDefinition } from '../../data/eventDefinitions';
 import { prepareTurn } from '../../logic/turn/turnPreparation';
 import { useRelicStore } from '../relicStore';
@@ -78,6 +79,9 @@ const makeState = (): GameState => {
         barbarianSymbolThreat: 0,
         barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
+        pendingDevNaturalDisasterId: null,
+        activeStatusIds: [],
+        activeStatuses: [],
         pendingNewThreatFloats: [],
         pendingDestroySource: null,
         pendingOblivionFurnaceRelicId: null,
@@ -112,6 +116,7 @@ const makeState = (): GameState => {
         devRemoveSymbol: () => {},
         devSetStat: () => {},
         devForceScreen: () => {},
+        devTriggerNaturalDisaster: () => {},
         confirmDestroySymbols: () => {},
         finishDestroySelection: () => {},
         confirmOblivionFurnaceDestroyAt: () => {},
@@ -209,6 +214,7 @@ describe('turnFlow actions', () => {
                 naturalDisasterThreat: 3,
             },
             pendingNewThreatFloats: [{ x: 0, y: 0, label: 'test' }],
+            activeStatusIds: [1],
         });
 
         const harness = createHarness();
@@ -271,6 +277,63 @@ describe('turnFlow actions', () => {
             expect(harness.get().board[1][0]).toBeNull();
             expect(harness.get().playerSymbols.some((s) => s.instanceId === enemy.instanceId)).toBe(false);
             expect(harness.get().playerSymbols.filter((s) => s.definition.id === S.loot)).toHaveLength(1);
+        } finally {
+            vi.clearAllTimers();
+            vi.useRealTimers();
+        }
+    });
+
+    it('grants separate level 9 and level 10 research credits when jumping from level 8 to 10', () => {
+        vi.useFakeTimers();
+        try {
+            const harness = createHarness(
+                {
+                    phase: 'spinning',
+                    level: 8,
+                    era: 1,
+                    knowledge: 0,
+                    levelUpResearchPoints: 0,
+                    knowledgeResearchCredits: [],
+                    turn: 1,
+                },
+                {
+                    processSingleSymbolEffects: () => ({ food: 0, gold: 0, knowledge: 183 }),
+                },
+            );
+
+            harness.actions.startProcessing();
+            vi.runAllTimers();
+
+            expect(harness.get().level).toBe(10);
+            expect(harness.get().levelUpResearchPoints).toBe(2);
+            expect(harness.get().knowledgeResearchCredits).toEqual([
+                { grantLevel: 9, minLevel: 1, maxLevel: 9 },
+                { grantLevel: 10, minLevel: 10, maxLevel: 10 },
+            ]);
+        } finally {
+            vi.clearAllTimers();
+            vi.useRealTimers();
+        }
+    });
+
+    it('decrements active statuses after processing and before selection', () => {
+        vi.useFakeTimers();
+        try {
+            const harness = createHarness({
+                phase: 'spinning',
+                turn: 1,
+                activeStatusIds: [STATUS_ID.CLAN_FORMATION],
+                activeStatuses: [{ id: STATUS_ID.CLAN_FORMATION, remainingTurns: 5 }],
+            });
+
+            harness.actions.startProcessing();
+            vi.runAllTimers();
+
+            expect(harness.get().phase).toBe('selection');
+            expect(harness.get().activeStatuses).toEqual([
+                { id: STATUS_ID.CLAN_FORMATION, remainingTurns: 4 },
+            ]);
+            expect(harness.get().activeStatusIds).toEqual([STATUS_ID.CLAN_FORMATION]);
         } finally {
             vi.clearAllTimers();
             vi.useRealTimers();
