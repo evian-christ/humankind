@@ -78,6 +78,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         rng,
         createSymbolInstance,
         getThreatLabel,
+        forcedNaturalDisasterId = null,
     } = input;
 
     const {
@@ -116,12 +117,18 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         }
     }
 
-    if (turn > 0) {
-        if (rng.next() * 100 < 3) {
+    if (turn > 0 || forcedNaturalDisasterId !== null) {
+        const shouldSpawnNaturalDisaster = forcedNaturalDisasterId !== null || rng.next() * 100 < 3;
+        if (shouldSpawnNaturalDisaster) {
             const floodId = S.flood;
             const earthquakeId = S.earthquake;
             const droughtId = S.drought;
-            const pick = rng.pick([floodId, earthquakeId, droughtId]);
+            const plagueId = S.plague;
+            const heatwaveId = S.heatwave;
+            const naturalDisasterIds: readonly number[] = [floodId, earthquakeId, droughtId, plagueId, heatwaveId];
+            const pick = naturalDisasterIds.includes(forcedNaturalDisasterId ?? -1)
+                ? forcedNaturalDisasterId!
+                : rng.pick(naturalDisasterIds);
 
             const addDisaster = (
                 symId: number,
@@ -148,9 +155,13 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
                     const key = 'threat.earthquake';
                     newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(key), key });
                 }
-            } else {
+            } else if (pick === droughtId) {
                 const count = rng.int(3, 6);
                 for (let i = 0; i < count; i++) addDisaster(droughtId, 5, 8, 'threat.drought');
+            } else if (pick === plagueId) {
+                addDisaster(plagueId, 2, 4, 'threat.plague');
+            } else if (pick === heatwaveId) {
+                addDisaster(heatwaveId, 4, 7, 'threat.heatwave');
             }
         }
     }

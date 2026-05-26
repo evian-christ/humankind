@@ -29,7 +29,13 @@ export interface TurnThreatState {
     naturalDisasterThreat: number;
 }
 
-export type ThreatLabelKey = 'threat.barbarian_invasion' | 'threat.flood' | 'threat.earthquake' | 'threat.drought';
+export type ThreatLabelKey =
+    | 'threat.barbarian_invasion'
+    | 'threat.flood'
+    | 'threat.earthquake'
+    | 'threat.drought'
+    | 'threat.plague'
+    | 'threat.heatwave';
 
 export interface PendingThreatFloat extends BoardCoord {
     label: string;
@@ -58,6 +64,7 @@ export interface TurnPreparationInput {
     rng: GameRng;
     createSymbolInstance: CreateSymbolInstance;
     getThreatLabel: ThreatLabelResolver;
+    forcedNaturalDisasterId?: number | null;
 }
 
 export interface TurnPreparationOutput {
@@ -67,6 +74,7 @@ export interface TurnPreparationOutput {
     turn: number;
     threatState: TurnThreatState;
     pendingNewThreatFloats: PendingThreatFloat[];
+    activeStatusIds: number[];
 }
 
 export interface PhaseResolutionInput {
