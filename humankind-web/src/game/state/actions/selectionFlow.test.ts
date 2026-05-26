@@ -16,11 +16,13 @@ import {
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
+    HUNTING_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
+    STATE_LABOR_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
     TOTAL_MOBILIZATION_UPGRADE_ID,
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -78,6 +80,8 @@ const makeState = (): GameState => {
         barbarianSymbolThreat: 0,
         barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
+        pendingDevNaturalDisasterId: null,
+        activeStatusIds: [],
         pendingNewThreatFloats: [],
         pendingDestroySource: null,
         pendingOblivionFurnaceRelicId: null,
@@ -114,6 +118,7 @@ const makeState = (): GameState => {
         devRemoveSymbol: () => {},
         devSetStat: () => {},
         devForceScreen: () => {},
+        devTriggerNaturalDisaster: () => {},
         confirmDestroySymbols: () => {},
         finishDestroySelection: () => {},
         confirmOblivionFurnaceDestroyAt: () => {},
@@ -353,7 +358,7 @@ describe('selectionFlow actions', () => {
         const harness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
-            level: 5,
+            level: 1,
         });
 
         harness.actions.selectUpgrade(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
@@ -378,10 +383,72 @@ describe('selectionFlow actions', () => {
         expect(harness.get().levelUpResearchPoints).toBe(1);
     });
 
+    it('keeps an earlier research credit usable after researching an era transition first', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 2,
+            level: 10,
+            unlockedKnowledgeUpgrades: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(FEUDALISM_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(FEUDALISM_UPGRADE_ID);
+        expect(harness.get().levelUpResearchPoints).toBe(1);
+
+        harness.actions.selectUpgrade(HUNTING_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(HUNTING_UPGRADE_ID);
+        expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('locks upgrades at or below the remaining research point cutoff', () => {
+        const lockedHarness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 10,
+        });
+
+        lockedHarness.actions.selectUpgrade(HUNTING_UPGRADE_ID);
+
+        expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(HUNTING_UPGRADE_ID);
+        expect(lockedHarness.get().levelUpResearchPoints).toBe(1);
+
+        lockedHarness.actions.selectUpgrade(STATE_LABOR_UPGRADE_ID);
+
+        expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(STATE_LABOR_UPGRADE_ID);
+        expect(lockedHarness.get().levelUpResearchPoints).toBe(1);
+
+        const availableHarness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 10,
+            unlockedKnowledgeUpgrades: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+        });
+
+        availableHarness.actions.selectUpgrade(FEUDALISM_UPGRADE_ID);
+
+        expect(availableHarness.get().unlockedKnowledgeUpgrades).toContain(FEUDALISM_UPGRADE_ID);
+        expect(availableHarness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('does not lock earlier Ancient upgrades before an era transition', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 4,
+        });
+
+        harness.actions.selectUpgrade(HUNTING_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(HUNTING_UPGRADE_ID);
+        expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
     it('keeps modern upgrades researchable after jumping to level 30 with unspent points', () => {
         const harness = createHarness({
             phase: 'idle',
-            levelUpResearchPoints: 3,
+            levelUpResearchPoints: 5,
             level: 30,
             unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
         });
@@ -389,14 +456,14 @@ describe('selectionFlow actions', () => {
         harness.actions.selectUpgrade(ELECTRICITY_UPGRADE_ID);
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(ELECTRICITY_UPGRADE_ID);
-        expect(harness.get().levelUpResearchPoints).toBe(2);
+        expect(harness.get().levelUpResearchPoints).toBe(4);
     });
 
     it('grants the first selection reroll when Election System is researched', () => {
         const harness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
-            level: 26,
+            level: 22,
             era: 3,
             gold: 0,
             unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
@@ -471,7 +538,7 @@ describe('selectionFlow actions', () => {
         const fisheriesHarness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
-            level: 5,
+            level: 2,
         });
 
         fisheriesHarness.actions.selectUpgrade(FISHERIES_UPGRADE_ID);
@@ -482,7 +549,7 @@ describe('selectionFlow actions', () => {
         const theologyHarness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
-            level: 5,
+            level: 7,
         });
 
         theologyHarness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);

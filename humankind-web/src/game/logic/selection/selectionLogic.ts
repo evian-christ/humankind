@@ -40,6 +40,8 @@ export interface SelectionContext {
     forceTerrainInNextSymbolChoices: boolean;
     /** 왕도개척(54): 다음 선택지에 이벤트 1개 이상 강제 */
     forceEventsInNextSymbolChoices?: boolean;
+    /** Explicit terrain-only selections should still work after Modern Age removes terrain from standard choices. */
+    includeModernTerrain?: boolean;
 }
 
 export type SelectionChoice = SymbolDefinition | GameEventDefinition;
@@ -142,7 +144,7 @@ const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
 };
 
 /** 심볼을 시대별로 그룹화 (적 심볼은 이벤트로만 등장하므로 선택 풀에서 제외) */
-export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel'>): Record<number, SymbolDefinition[]> {
+export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel' | 'includeModernTerrain'>): Record<number, SymbolDefinition[]> {
     const result: Record<number, SymbolDefinition[]> = {};
     const hasRelic = (relicId: number) => ctx.ownedRelicDefIds.includes(relicId);
 
@@ -166,7 +168,7 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
 
         if (feudal && sym.type === SymbolType.ANCIENT) continue;
         if (modernAge && sym.type === SymbolType.MEDIEVAL) continue;
-        if (modernAge && sym.type === SymbolType.TERRAIN) continue;
+        if (modernAge && sym.type === SymbolType.TERRAIN && !ctx.includeModernTerrain) continue;
 
         // 업그레이드로 해금되는 심볼들 예외 처리
         let isUnlocked = !EXCLUDED_FROM_BASE_POOL.has(sym.id);
@@ -219,13 +221,14 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
 }
 
 /** 현재 시대에 등장 가능한 심볼 플랫 풀 빌드 (균등 확률용) */
-export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel'>): SymbolDefinition[] {
+export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel' | 'includeModernTerrain'>): SymbolDefinition[] {
     const symbolsByEra = getSymbolsByEra({
         religionUnlocked: ctx.religionUnlocked,
         upgrades: ctx.upgrades,
         ownedRelicDefIds: ctx.ownedRelicDefIds,
         leaderId: ctx.leaderId,
         leaderProgressLevel: ctx.leaderProgressLevel,
+        includeModernTerrain: ctx.includeModernTerrain,
     });
     const flat: SymbolDefinition[] = [];
     const feudal = ctx.upgrades?.includes(FEUDALISM_UPGRADE_ID);
@@ -238,7 +241,7 @@ export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnloc
         if (cat === SymbolType.MEDIEVAL && !feudal) continue;
         if (cat === SymbolType.MODERN && !modernAge) continue;
         if (modernAge && cat === SymbolType.MEDIEVAL) continue;
-        if (modernAge && cat === SymbolType.TERRAIN) continue;
+        if (modernAge && cat === SymbolType.TERRAIN && !ctx.includeModernTerrain) continue;
         flat.push(...syms);
     }
 
@@ -247,7 +250,7 @@ export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnloc
 
 /** 지형 심볼만 3개 (영토 정비 보너스 선택용) */
 export function generateTerrainOnlyChoices(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds'>): SymbolDefinition[] {
-    const pool = buildFlatPool(ctx).filter((s) => s.type === SymbolType.TERRAIN);
+    const pool = buildFlatPool({ ...ctx, includeModernTerrain: true }).filter((s) => s.type === SymbolType.TERRAIN);
     const choices: SymbolDefinition[] = [];
     for (let i = 0; i < 3; i++) {
         if (pool.length > 0) {

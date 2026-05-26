@@ -11,7 +11,7 @@ import {
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
-import { buildFlatPool, generateChoices, generateEventOnlyChoices } from './selectionLogic';
+import { buildFlatPool, generateChoices, generateEventOnlyChoices, generateTerrainOnlyChoices } from './selectionLogic';
 
 describe('selectionLogic', () => {
     afterEach(() => {
@@ -114,6 +114,23 @@ describe('selectionLogic', () => {
 
         expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
         expect(pool.some((sym) => sym.type === SymbolType.TERRAIN)).toBe(false);
+    });
+
+    it('still offers random terrain-only choices after modern age', () => {
+        const randomValues = [0, 0.26, 0.51];
+        let call = 0;
+        vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
+
+        const choices = generateTerrainOnlyChoices({
+            era: 3,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(choices).toHaveLength(3);
+        expect(choices.every((sym) => sym.type === SymbolType.TERRAIN)).toBe(true);
+        expect(new Set(choices.map((sym) => sym.id)).size).toBeGreaterThan(1);
     });
 
     it('only offers immediate resource events for the current era', () => {
