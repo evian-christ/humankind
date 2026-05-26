@@ -63,9 +63,13 @@ import {
     getHudTurnStartPassiveTotals,
     getInflatedGoldCost,
     getEraFromLevel,
+    createKnowledgeResearchCreditsForLevelGain,
+    consumeKnowledgeResearchCreditForUpgrade,
     getKnowledgeResearchCutoffLevel,
+    getKnowledgeResearchLockedThroughLevel,
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
+    normalizeKnowledgeResearchCredits,
 } from './gameCalculations';
 
 describe('gold inflation costs', () => {
@@ -114,7 +118,88 @@ describe('getKnowledgeResearchCutoffLevel', () => {
     });
 });
 
+describe('getKnowledgeResearchLockedThroughLevel', () => {
+    it('only locks previous-era upgrades after enough transition picks are spent', () => {
+        expect(getKnowledgeResearchLockedThroughLevel(4, 1)).toBe(0);
+        expect(getKnowledgeResearchLockedThroughLevel(10, 2)).toBe(0);
+        expect(getKnowledgeResearchLockedThroughLevel(10, 1)).toBe(9);
+        expect(getKnowledgeResearchLockedThroughLevel(14, 1)).toBe(9);
+        expect(getKnowledgeResearchLockedThroughLevel(20, 2)).toBe(9);
+        expect(getKnowledgeResearchLockedThroughLevel(20, 1)).toBe(19);
+        expect(getKnowledgeResearchLockedThroughLevel(30, 5)).toBe(19);
+        expect(getKnowledgeResearchLockedThroughLevel(30, 1)).toBe(29);
+    });
+});
+
+describe('knowledge research credits', () => {
+    it('restores missing pre-transition credits when point count and credits drift apart', () => {
+        const credits = normalizeKnowledgeResearchCredits(
+            10,
+            2,
+            [{ grantLevel: 10, minLevel: 10, maxLevel: 10 }],
+        );
+
+        expect(credits).toEqual([
+            { grantLevel: 9, minLevel: 1, maxLevel: 9 },
+            { grantLevel: 10, minLevel: 10, maxLevel: 10 },
+        ]);
+        expect(isUpgradeLegalForKnowledgePick(
+            HUNTING_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+            10,
+            credits,
+        )).toBe(true);
+    });
+
+    it('tracks pre-transition and transition picks separately', () => {
+        const credits = createKnowledgeResearchCreditsForLevelGain(8, 10);
+
+        expect(isUpgradeLegalForKnowledgePick(
+            FEUDALISM_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+            10,
+            credits,
+        )).toBe(true);
+
+        const remaining = consumeKnowledgeResearchCreditForUpgrade(FEUDALISM_UPGRADE_ID, credits);
+
+        expect(isUpgradeLegalForKnowledgePick(
+            HUNTING_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, FEUDALISM_UPGRADE_ID],
+            10,
+            remaining,
+        )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            FEUDALISM_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+            10,
+            remaining,
+        )).toBe(false);
+    });
+});
+
 describe('isUpgradeLegalForKnowledgePick', () => {
+    it('locks upgrades at or below the current locked-through level', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            HUNTING_UPGRADE_ID,
+            [],
+            10,
+            9,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            STATE_LABOR_UPGRADE_ID,
+            [],
+            10,
+            9,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            FEUDALISM_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+            10,
+            9,
+        )).toBe(true);
+    });
+
     it('does not require Ancient Era for upgrades that only depend on their visible prerequisite line', () => {
         expect(isUpgradeLegalForKnowledgePick(
             IRRIGATION_UPGRADE_ID,
@@ -338,7 +423,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('locks earlier research tiers at era transition levels', () => {
+    it('locks earlier research tiers at explicit locked-through levels', () => {
         expect(isUpgradeLegalForKnowledgePick(
             NOMADIC_TRADITION_UPGRADE_ID,
             [PASTORALISM_UPGRADE_ID],
@@ -348,6 +433,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             NOMADIC_TRADITION_UPGRADE_ID,
             [PASTORALISM_UPGRADE_ID],
             10,
+            9,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             NATIONALISM_UPGRADE_ID,
@@ -356,8 +442,9 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
             NATIONALISM_UPGRADE_ID,
-            [],
+            [FEUDALISM_UPGRADE_ID],
             20,
+            19,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             ELECTRICITY_UPGRADE_ID,
@@ -366,35 +453,42 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
             ELECTRICITY_UPGRADE_ID,
-            [],
+            [MODERN_AGE_UPGRADE_ID],
             30,
+            29,
         )).toBe(false);
     });
 
-    it('uses research cutoff level separately from the reached player level', () => {
+    it('uses locked-through level separately from the reached player level', () => {
         expect(isUpgradeLegalForKnowledgePick(
             NOMADIC_TRADITION_UPGRADE_ID,
             [PASTORALISM_UPGRADE_ID],
             10,
-            8,
+            0,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
             FEUDALISM_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
-            8,
+            9,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
             ELECTRICITY_UPGRADE_ID,
             [MODERN_AGE_UPGRADE_ID],
             30,
-            27,
+            19,
         )).toBe(true);
+        expect(isUpgradeLegalForKnowledgePick(
+            ELECTRICITY_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID],
+            30,
+            29,
+        )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             AGI_PROJECT_UPGRADE_ID,
             [MODERN_AGE_UPGRADE_ID],
             30,
-            27,
+            29,
         )).toBe(true);
     });
 
