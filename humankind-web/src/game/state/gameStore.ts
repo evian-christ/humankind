@@ -99,6 +99,7 @@ export type GameEventLogKind =
     | 'selection'
     | 'research'
     | 'shop'
+    | 'threat'
     | 'board_action'
     | 'system';
 

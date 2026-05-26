@@ -17,7 +17,7 @@ const C_GOLD = '#fbbf24';
 const C_KNOW = '#60a5fa';
 const C_BAD = '#fb7185';
 
-type HistoryFilter = 'all' | 'resources' | 'choices' | 'symbol' | 'relic' | 'combat' | 'growth' | 'shop' | 'board';
+type HistoryFilter = 'all' | 'resources' | 'choices' | 'symbol' | 'relic' | 'combat' | 'threat' | 'growth' | 'shop' | 'board';
 
 const FILTERS: Array<{ id: HistoryFilter; ko: string; en: string }> = [
     { id: 'all', ko: '전체', en: 'All' },
@@ -26,6 +26,7 @@ const FILTERS: Array<{ id: HistoryFilter; ko: string; en: string }> = [
     { id: 'symbol', ko: '심볼', en: 'Symbols' },
     { id: 'relic', ko: '유물', en: 'Relics' },
     { id: 'combat', ko: '전투', en: 'Combat' },
+    { id: 'threat', ko: '위협', en: 'Threats' },
     { id: 'growth', ko: '연구', en: 'Research' },
     { id: 'shop', ko: '상점', en: 'Shop' },
     { id: 'board', ko: '보드 변화', en: 'Board' },
@@ -42,6 +43,7 @@ const KIND_COLORS: Record<GameEventLogKind, string> = {
     selection: '#4b5563',
     research: '#3b82f6',
     shop: '#ffd400',
+    threat: '#9f4a3a',
     board_action: '#82b994',
     system: '#aeb6bf',
 };
@@ -57,6 +59,7 @@ const KIND_LABELS: Record<GameEventLogKind, { ko: string; en: string }> = {
     selection: { ko: '선택', en: 'Choice' },
     research: { ko: '연구', en: 'Research' },
     shop: { ko: '상점', en: 'Shop' },
+    threat: { ko: '위협', en: 'Threat' },
     board_action: { ko: '보드', en: 'Board' },
     system: { ko: '시스템', en: 'System' },
 };
@@ -123,6 +126,50 @@ const summarizeGenerated = (ids: unknown, language: Language) => {
         .join(', ');
 };
 
+type DestroyedSymbolSnapshot = { id: number; x?: number; y?: number };
+
+const getDestroyedSymbols = (entry: GameEventLogEntry): DestroyedSymbolSnapshot[] => {
+    const meta = isRecord(entry.meta) ? entry.meta : {};
+    const raw = meta.destroyedSymbols;
+    if (!Array.isArray(raw)) return [];
+
+    return raw.flatMap((item) => {
+        if (!isRecord(item)) return [];
+        const id = asNumber(item.id);
+        if (id == null) return [];
+        const x = asNumber(item.x);
+        const y = asNumber(item.y);
+        return [{ id, ...(x == null ? {} : { x }), ...(y == null ? {} : { y }) }];
+    });
+};
+
+const getThreatSymbols = (entry: GameEventLogEntry): DestroyedSymbolSnapshot[] => {
+    const meta = isRecord(entry.meta) ? entry.meta : {};
+    const raw = meta.threatSymbols;
+    if (!Array.isArray(raw)) return [];
+
+    return raw.flatMap((item) => {
+        if (!isRecord(item)) return [];
+        const id = asNumber(item.id);
+        if (id == null) return [];
+        const x = asNumber(item.x);
+        const y = asNumber(item.y);
+        return [{ id, ...(x == null ? {} : { x }), ...(y == null ? {} : { y }) }];
+    });
+};
+
+const getAddedSymbolIds = (entry: GameEventLogEntry): number[] => {
+    const meta = isRecord(entry.meta) ? entry.meta : {};
+    const ids = [
+        ...(Array.isArray(meta.addSymbolIds) ? meta.addSymbolIds : []),
+        ...(Array.isArray(meta.spawnOnBoard) ? meta.spawnOnBoard : []),
+    ];
+    return ids.flatMap((id) => {
+        const value = asNumber(id);
+        return value == null ? [] : [value];
+    });
+};
+
 const hasDelta = (entry: GameEventLogEntry) =>
     Boolean(entry.delta && (entry.delta.food !== 0 || entry.delta.gold !== 0 || entry.delta.knowledge !== 0));
 
@@ -133,6 +180,7 @@ const matchesFilter = (entry: GameEventLogEntry, filter: HistoryFilter) => {
     if (filter === 'symbol') return entry.kind === 'symbol_effect';
     if (filter === 'relic') return entry.kind === 'relic';
     if (filter === 'combat') return entry.kind === 'combat';
+    if (filter === 'threat') return entry.kind === 'threat';
     if (filter === 'growth') return entry.kind === 'research';
     if (filter === 'shop') return entry.kind === 'shop';
     if (filter === 'board') return entry.kind === 'board_action' || entry.kind === 'turn_start' || entry.kind === 'turn_end';
@@ -151,6 +199,7 @@ const getEntryFallbackMark = (entry: GameEventLogEntry) => {
     const meta = isRecord(entry.meta) ? entry.meta : {};
     if (entry.kind === 'selection' && asString(meta.action) === 'select_event') return '!';
     if (entry.kind === 'combat') return '!';
+    if (entry.kind === 'threat') return '!';
     if (entry.kind === 'relic' || entry.kind === 'shop') return '*';
     if (entry.kind === 'research') return '+';
     if (entry.kind === 'selection') return '?';
@@ -197,6 +246,77 @@ const EntryVisual = ({ entry, language }: { entry: GameEventLogEntry; language: 
     );
 };
 
+const DestroyedSymbolSprites = ({ entry, language }: { entry: GameEventLogEntry; language: Language }) => {
+    const destroyed = getDestroyedSymbols(entry);
+    if (destroyed.length === 0) return null;
+
+    return (
+        <span
+            className="effect-history-destroyed-symbols"
+            aria-label={text(language, '파괴된 심볼', 'Destroyed symbols')}
+        >
+            {destroyed.map((symbol, index) => {
+                const definition = SYMBOLS[symbol.id];
+                const spriteUrl = definition ? getSymbolSpriteUrl(definition) : '';
+                const name = symbolName(symbol.id, language);
+                const key = `${symbol.id}-${symbol.x ?? 'x'}-${symbol.y ?? 'y'}-${index}`;
+                return (
+                    <span className="effect-history-destroyed-symbol" key={key} title={name}>
+                        {spriteUrl ? <img src={spriteUrl} alt="" draggable={false} /> : <span>{symbol.id}</span>}
+                    </span>
+                );
+            })}
+        </span>
+    );
+};
+
+const ThreatSymbolSprites = ({ entry, language }: { entry: GameEventLogEntry; language: Language }) => {
+    const threats = getThreatSymbols(entry);
+    if (threats.length === 0) return null;
+
+    return (
+        <span
+            className="effect-history-threat-symbols"
+            aria-label={text(language, '발생한 위협', 'Spawned threats')}
+        >
+            {threats.map((symbol, index) => {
+                const definition = SYMBOLS[symbol.id];
+                const spriteUrl = definition ? getSymbolSpriteUrl(definition) : '';
+                const name = symbolName(symbol.id, language);
+                const key = `${symbol.id}-${symbol.x ?? 'x'}-${symbol.y ?? 'y'}-${index}`;
+                return (
+                    <span className="effect-history-threat-symbol" key={key} title={name}>
+                        {spriteUrl ? <img src={spriteUrl} alt="" draggable={false} /> : <span>{symbol.id}</span>}
+                    </span>
+                );
+            })}
+        </span>
+    );
+};
+
+const AddedSymbolSprites = ({ entry, language }: { entry: GameEventLogEntry; language: Language }) => {
+    const added = getAddedSymbolIds(entry);
+    if (added.length === 0) return null;
+
+    return (
+        <span
+            className="effect-history-added-symbols"
+            aria-label={text(language, '추가된 심볼', 'Added symbols')}
+        >
+            {added.map((id, index) => {
+                const definition = SYMBOLS[id];
+                const spriteUrl = definition ? getSymbolSpriteUrl(definition) : '';
+                const name = symbolName(id, language);
+                return (
+                    <span className="effect-history-added-symbol" key={`${id}-${index}`} title={name}>
+                        {spriteUrl ? <img src={spriteUrl} alt="" draggable={false} /> : <span>{id}</span>}
+                    </span>
+                );
+            })}
+        </span>
+    );
+};
+
 const shouldShowKindBar = (entry: GameEventLogEntry) =>
     entry.kind !== 'turn_start' &&
     entry.kind !== 'processing_start' &&
@@ -209,6 +329,19 @@ const getEntryTitle = (entry: GameEventLogEntry, language: Language) => {
     const meta = isRecord(entry.meta) ? entry.meta : {};
     const action = asString(meta.action);
     const subject = symbolName(entry.symbolId, language);
+
+    if (entry.kind === 'threat') {
+        const threatNames = getThreatSymbols(entry)
+            .map((symbol) => symbolName(symbol.id, language))
+            .filter(Boolean);
+        const uniqueNames = [...new Set(threatNames)];
+        if (uniqueNames.length === 1 && threatNames.length > 1) {
+            return text(language, `${uniqueNames[0]} ${threatNames.length}개 발생`, `${uniqueNames[0]} x${threatNames.length} appeared`);
+        }
+        return subject
+            ? text(language, `${subject} 발생`, `${subject} appeared`)
+            : text(language, '위협 발생', 'Threat appeared');
+    }
 
     if (entry.kind === 'selection') {
         if (action === 'select_symbol') return text(language, `${subject} 선택`, `Picked ${subject}`);
@@ -253,6 +386,13 @@ const getEntryTitle = (entry: GameEventLogEntry, language: Language) => {
     }
 
     if (entry.kind === 'board_action') {
+        if (action === 'destroyed_symbols') {
+            return subject
+                ? text(language, `${subject}로 인한 파괴`, `Destroyed by ${subject}`)
+                : text(language, '심볼 파괴', 'Symbols destroyed');
+        }
+        if (action === 'loot_reward_open') return text(language, '전리품 개봉', 'Opened loot');
+        if (action === 'loot_reward_select') return text(language, '전리품 보상', 'Loot reward');
         return text(language, `${subject || '보드'} 변화`, `${formatAction(action) || 'Board action'} ${subject}`.trim());
     }
 
@@ -265,6 +405,7 @@ const getEntryTitle = (entry: GameEventLogEntry, language: Language) => {
 
 const getEntrySubtitle = (entry: GameEventLogEntry, language: Language) => {
     const meta = isRecord(entry.meta) ? entry.meta : {};
+    const action = asString(meta.action);
     const parts: string[] = [];
 
     if (entry.slot) parts.push(slotLabel(entry.slot, language));
@@ -288,6 +429,22 @@ const getEntrySubtitle = (entry: GameEventLogEntry, language: Language) => {
 
     const spawnSymbols = summarizeGenerated(meta.spawnOnBoard, language);
     if (spawnSymbols) parts.push(text(language, `보드에 등장: ${spawnSymbols}`, `Spawns ${spawnSymbols}`));
+
+    const threatLabels = Array.isArray(meta.threatLabels)
+        ? meta.threatLabels.map(asString).filter((label): label is string => !!label)
+        : [];
+    if (entry.kind === 'threat' && threatLabels.length > 0) parts.push([...new Set(threatLabels)].join(', '));
+
+    const threatSymbols = getThreatSymbols(entry)
+        .map((symbol) => symbolName(symbol.id, language))
+        .filter(Boolean);
+    if (threatSymbols.length > 0) parts.push(text(language, `발생: ${threatSymbols.join(', ')}`, `Appeared: ${threatSymbols.join(', ')}`));
+
+    const destroyedSymbols = getDestroyedSymbols(entry)
+        .map((symbol) => symbolName(symbol.id, language))
+        .filter(Boolean)
+        .join(', ');
+    if (destroyedSymbols) parts.push(text(language, `파괴: ${destroyedSymbols}`, `Destroyed: ${destroyedSymbols}`));
 
     const sourceRelicId = asNumber(meta.sourceRelicId);
     if (sourceRelicId) parts.push(text(language, `출처: ${relicName(sourceRelicId, language)}`, `From ${relicName(sourceRelicId, language)}`));
@@ -585,7 +742,12 @@ const EffectLogOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                                                                     {getEntrySubtitle(entry, language) || text(language, '추가 변화 없음', 'No extra change')}
                                                                 </span>
                                                             </span>
-                                                            <DeltaBadges delta={entry.delta} compact />
+                                                            <span className="effect-history-entry-side">
+                                                                <DestroyedSymbolSprites entry={entry} language={language} />
+                                                                <ThreatSymbolSprites entry={entry} language={language} />
+                                                                <AddedSymbolSprites entry={entry} language={language} />
+                                                                <DeltaBadges delta={entry.delta} compact />
+                                                            </span>
                                                         </button>
                                                         {isExpanded && detailLines.length > 0 && (
                                                             <div className="effect-history-entry-detail">

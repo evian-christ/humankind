@@ -37,6 +37,13 @@ const LOOT_TIER_MAP: Record<number, LootTier> = {
 const isBoardDestroyBlockedType = (type: SymbolType) =>
     type === SymbolType.ENEMY || type === SymbolType.DISASTER;
 
+const destroyedSymbol = (symbol: { definition: { id: number }; instanceId: string }, x: number, y: number) => ({
+    id: symbol.definition.id,
+    instanceId: symbol.instanceId,
+    x,
+    y,
+});
+
 export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: BoardInteractionDeps) => ({
     butcherPastureAnimalAt: (x: number, y: number) => {
         const prev = get();
@@ -101,6 +108,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
                 action: sid === S.cattle ? 'cattle_butcher' : 'sheep_butcher',
                 butcherFood,
                 butcherGoldFlat,
+                destroyedSymbols: [destroyedSymbol(sym, x, y)],
             },
         });
     },
@@ -178,7 +186,12 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             slot: { x, y },
             symbolId,
             delta: { food, gold, knowledge },
-            meta: { action: 'loot_reward_select', rewardId, rewardKey: reward.key },
+            meta: {
+                action: 'loot_reward_select',
+                rewardId,
+                rewardKey: reward.key,
+                destroyedSymbols: [destroyedSymbol(loot, x, y)],
+            },
         });
     },
     activateEdictAt: (x: number, y: number) => {
@@ -273,6 +286,10 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
                 action: 'edict_destroy',
                 targetSlot: { x, y },
                 targetSymbolId: target.definition.id,
+                destroyedSymbols: [
+                    destroyedSymbol(edict, pending.x, pending.y),
+                    destroyedSymbol(target, x, y),
+                ],
             },
         });
     },
@@ -365,6 +382,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
             meta: {
                 action: 'tribal_village_consume',
+                destroyedSymbols: [destroyedSymbol(sym, x, y)],
             },
         });
     },
