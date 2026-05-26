@@ -10,13 +10,14 @@ import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
 import { getSymbolColor, SymbolType, S } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
-import type { HoveredSymbol, HoveredRelic, HoveredUpgrade, HoveredHudStat, CellLayout, ReelState } from './types';
+import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat, CellLayout, ReelState } from './types';
 import { loadGameAssets } from './AssetLoader';
 import { BoardRenderer } from './renderers/BoardRenderer';
 import { CombatRenderer } from './renderers/CombatRenderer';
 import { FloatingTextRenderer } from './renderers/FloatingTextRenderer';
 import { HudRenderer } from './renderers/HudRenderer';
 import { RelicRenderer } from './renderers/RelicRenderer';
+import { StatusRenderer } from './renderers/StatusRenderer';
 import { UpgradeRenderer } from './renderers/UpgradeRenderer';
 import { audioManager, type AudioPlaybackHandle } from '../../audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from '../../audio/audioCues';
@@ -111,6 +112,7 @@ export class PixiGameApp {
     private combatRenderer: CombatRenderer;
     private hudRenderer: HudRenderer;
     private relicRenderer: RelicRenderer;
+    private statusRenderer: StatusRenderer;
     private upgradeRenderer: UpgradeRenderer;
 
     // Callbacks
@@ -181,6 +183,7 @@ export class PixiGameApp {
         canvas: HTMLDivElement,
         onHoverSymbol: (symbol: HoveredSymbol | null) => void,
         onHoverRelic: (relic: HoveredRelic | null) => void,
+        onHoverStatus: (status: HoveredStatus | null) => void,
         onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void,
         onHoverHudStat: (stat: HoveredHudStat | null) => void
     ) {
@@ -201,6 +204,11 @@ export class PixiGameApp {
             hitContainer: this.hitContainer,
             floatingTextRenderer: this.floatingTextRenderer,
             onHoverRelic,
+        });
+        this.statusRenderer = new StatusRenderer({
+            bgContainer: this.bgContainer,
+            hitContainer: this.hitContainer,
+            onHoverStatus,
         });
         this.upgradeRenderer = new UpgradeRenderer(onHoverUpgrade);
         audioManager.registerCue('spin_loop', DEFAULT_AUDIO_CUES.spin_loop);
@@ -937,6 +945,13 @@ export class PixiGameApp {
         this.floatingTextRenderer.resetKnowledgeUpgradeFloatCountIfEmpty(state);
 
         this.hudRenderer.render(scale, w);
+        this.statusRenderer.render(
+            state,
+            scale,
+            startX + gridOffsetX,
+            startY + gridOffsetY + BOARD_HEIGHT * cellHeight + (BOARD_HEIGHT - 1) * rowGap,
+            w,
+        );
         this.relicRenderer.render(state, scale, w);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
@@ -975,6 +990,7 @@ export class PixiGameApp {
         }
 
         this.relicRenderer.syncHoverAfterRebuild();
+        this.statusRenderer.syncHoverAfterRebuild();
         this.upgradeRenderer.syncHoverAfterRebuild();
 
         if (this.hudHoverSnapshot && this.onHoverHudStat) {
