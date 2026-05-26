@@ -150,7 +150,7 @@ export default function DemoStartScreen() {
         ×
       </button>
       <div className="main-menu-version" aria-label="alpha version">
-        a1.3.3
+        a1.4.0
       </div>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
