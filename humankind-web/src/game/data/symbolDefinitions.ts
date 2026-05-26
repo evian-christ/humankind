@@ -135,7 +135,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Produces Gold equal to the Food produced by a random adjacent symbol.", sprite: "034.png" }),
     def('monument', { name: "Monument", type: SymbolType.NORMAL, description: "+5 Knowledge.", sprite: "035.png" }),
     def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
-    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+5 Knowledge per relic owned.", sprite: "037.png" }),
+    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+2 Knowledge per relic owned.", sprite: "037.png" }),
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
 
     // Ancient
