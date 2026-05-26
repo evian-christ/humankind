@@ -124,6 +124,7 @@ const translations: Record<Language, Record<string, string>> = {
         'knowledgeUpgrade.researchCancel': 'Cancel',
         'knowledgeUpgrade.researchConfirm': 'Research',
         'game.knowledgeUpgradeTreeTitle': 'Knowledge Upgrades',
+        'game.researchToContinue': 'Research to continue',
         'game.levelUpResearchPointsLabel': 'Research points',
         'game.spendLevelUpResearchPointsFirst': 'Spend research points in Knowledge Upgrades first.',
         'game.levelUpResearchPointsRequired': 'Research points required',
@@ -319,6 +320,8 @@ const translations: Record<Language, Record<string, string>> = {
         'threat.flood': 'Flood',
         'threat.earthquake': 'Earthquake',
         'threat.drought': 'Drought',
+        'threat.plague': 'Plague',
+        'threat.heatwave': 'Heatwave',
 
         // Era Unlock
         'eraUnlock.title': 'Medieval Era Begins',
@@ -1076,6 +1079,7 @@ const translations: Record<Language, Record<string, string>> = {
         'game.relicPanelTitle': '유물',
         'game.relicShopBuyDiscountAria': '구매, 할인가 {sale} 골드 (정가 {original})',
         'game.chooseUpgrade': '지식 업그레이드 선택',
+        'game.researchToContinue': '연구 포인트를 소진하세요',
         'knowledgeUpgrade.researchConfirmTitle': '지식 업그레이드 연구',
         'knowledgeUpgrade.researchConfirmMessage': '"{name}" 연구할까요?',
         'knowledgeUpgrade.researchCancel': '취소',
@@ -1268,6 +1272,8 @@ const translations: Record<Language, Record<string, string>> = {
         'threat.flood': '홍수 발생',
         'threat.earthquake': '지진 발생',
         'threat.drought': '가뭄 발생',
+        'threat.plague': '전염병 발생',
+        'threat.heatwave': '폭염 발생',
 
         // Era Unlock
         'eraUnlock.title': '중세 시대가 열립니다',
