@@ -15,6 +15,7 @@ export const STARTING_WILD_SEED_ANCHORS = [
     { x: 1, y: 2 },
     { x: 4, y: 1 },
     { x: 3, y: 2 },
+    { x: 2, y: 3 },
 ] as const;
 
 let instanceCounter = 0;

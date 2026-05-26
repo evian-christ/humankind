@@ -12,12 +12,20 @@ import {
 import type { RewardDefinition } from '../data/rewardDefinitions';
 import type { LeaderProgressAwardResult } from '../data/leaders';
 import type { PlayerSymbolInstance } from '../types';
-import { getEraFromLevel } from './gameCalculations';
+import {
+    createKnowledgeResearchCreditForLevel,
+    createKnowledgeResearchCreditsForLevelGain,
+    getEraFromLevel,
+    normalizeKnowledgeResearchCredits,
+    type KnowledgeResearchCredit,
+} from './gameCalculations';
 import {
     ELECTION_SYSTEM_UPGRADE_ID,
     TERRITORIAL_REORG_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
+import { createActiveStatusesForTurn, getActiveStatusIdsFromStates, getActiveStatusIdsForTurn } from '../data/statusDefinitions';
+import type { ActiveStatusState } from '../data/statusDefinitions';
 import {
     BOARD_HEIGHT,
     BOARD_WIDTH,
@@ -186,8 +194,10 @@ export interface GameState {
     /** 진시황 전용 이벤트 화폐 통일: 남은 기본 골드 생산량 2배 턴 수 */
     qinCurrencyStandardTurnsRemaining: number;
 
-    /** Unused research picks: +1 per level gained, -1 when confirming a knowledge upgrade (no per-level queue). */
+    /** Unused research picks shown in the UI. Kept in sync with knowledgeResearchCredits. */
     levelUpResearchPoints: number;
+    /** Research pick tickets with the upgrade tier range each unspent point can pay for. */
+    knowledgeResearchCredits?: KnowledgeResearchCredit[];
     /** 유물 상점 오버레이 열림 여부 */
     isRelicShopOpen: boolean;
     /** 자동 재입고 이후 아직 확인하지 않은 신규 입고 배지 */
@@ -201,6 +211,9 @@ export interface GameState {
     barbarianSymbolThreat: number;
     barbarianCampThreat: number;
     naturalDisasterThreat: number;
+    pendingDevNaturalDisasterId: number | null;
+    activeStatusIds: number[];
+    activeStatuses?: ActiveStatusState[];
     /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
     pendingNewThreatFloats: PendingThreatFloat[];
     /** destroy_selection 진입 시 출처 (22 영토 정비 / 69 칙령) */
@@ -251,7 +264,8 @@ export interface GameState {
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
     devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
-    devForceScreen: (screen: 'symbol' | 'upgrade') => void;
+    devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => void;
+    devTriggerNaturalDisaster: (symbolId: number) => void;
     confirmDestroySymbols: (instanceIds: string[]) => void;
     finishDestroySelection: () => void;
     /** 망각의 화로: 보드 (x,y) 심볼 파괴 확정 */
@@ -409,6 +423,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     qinCurrencyStandardTurnsRemaining: 0,
 
     levelUpResearchPoints: 0,
+    knowledgeResearchCredits: [],
     isRelicShopOpen: false,
     hasNewRelicShopStock: false,
     rerollsThisTurn: 0,
@@ -417,6 +432,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     barbarianSymbolThreat: 0,
     barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
+    pendingDevNaturalDisasterId: null,
+    activeStatusIds: getActiveStatusIdsForTurn(0),
+    activeStatuses: createActiveStatusesForTurn(0),
     pendingNewThreatFloats: [],
     pendingDestroySource: null,
     pendingOblivionFurnaceRelicId: null,
@@ -538,13 +556,19 @@ export const useGameStore = create<GameState>((set, get) => ({
             return;
         }
         if (stat === 'turn') {
-            set({ turn: Math.max(0, Math.round(value)) });
+            const nextTurn = Math.max(0, Math.round(value));
+            const activeStatuses = createActiveStatusesForTurn(nextTurn);
+            set({
+                turn: nextTurn,
+                activeStatuses,
+                activeStatusIds: getActiveStatusIdsFromStates(activeStatuses),
+            });
             return;
         }
         set({ [stat]: Math.max(0, value) });
     },
 
-    devForceScreen: (screen: 'symbol' | 'upgrade') => {
+    devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => {
         const state = get();
         if (screen === 'symbol') {
             const res = generateChoicesSelection({
@@ -572,9 +596,38 @@ export const useGameStore = create<GameState>((set, get) => ({
                 ),
             });
         } else if (screen === 'upgrade') {
+            const nextCredits = [
+                ...(state.knowledgeResearchCredits ?? []),
+                createKnowledgeResearchCreditForLevel(Math.max(1, state.level)),
+            ];
             set({
-                levelUpResearchPoints: (state.levelUpResearchPoints ?? 0) + 1,
+                levelUpResearchPoints: nextCredits.length,
+                knowledgeResearchCredits: nextCredits,
+            });
+        } else if (screen === 'levelWithResearch') {
+            const nextLevel = Math.min(30, Math.max(0, Math.round(state.level)) + 1);
+            if (nextLevel === state.level) return;
+
+            const nextCredits = [
+                ...normalizeKnowledgeResearchCredits(
+                    state.level,
+                    state.levelUpResearchPoints ?? 0,
+                    state.knowledgeResearchCredits,
+                ),
+                ...createKnowledgeResearchCreditsForLevelGain(state.level, nextLevel),
+            ];
+            set({
+                level: nextLevel,
+                era: getEraFromLevel(nextLevel),
+                levelUpResearchPoints: nextCredits.length,
+                knowledgeResearchCredits: nextCredits,
             });
         }
+    },
+
+    devTriggerNaturalDisaster: (symbolId: number) => {
+        const naturalDisasterIds: readonly number[] = [S.flood, S.earthquake, S.drought, S.plague, S.heatwave];
+        if (!naturalDisasterIds.includes(symbolId)) return;
+        set({ pendingDevNaturalDisasterId: symbolId });
     },
 }));
