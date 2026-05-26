@@ -62,6 +62,24 @@ export type GameStoreGet = () => GameState;
 const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
     upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
 
+const getRelicFloatDelta = (float: { text: string; color?: string }) => {
+    const numbers = [...float.text.matchAll(/[+-]?\d+/g)].map((match) => Number(match[0])).filter(Number.isFinite);
+    if (numbers.length === 0) return { food: 0, gold: 0, knowledge: 0 };
+
+    if (numbers.length >= 3) {
+        return {
+            food: numbers[0] ?? 0,
+            gold: numbers[1] ?? 0,
+            knowledge: numbers[2] ?? 0,
+        };
+    }
+
+    const value = numbers[0] ?? 0;
+    if (float.color === '#fbbf24') return { food: 0, gold: value, knowledge: 0 };
+    if (float.color === '#60a5fa') return { food: 0, gold: 0, knowledge: value };
+    return { food: value, gold: 0, knowledge: 0 };
+};
+
 interface TurnFlowDeps {
     get: GameStoreGet;
     set: GameStoreSet;
@@ -292,6 +310,7 @@ export const createTurnFlowActions = ({
                 }
 
                 const eraBeforeKnowledgeFinish = get().era;
+                const relicsForHistory = useRelicStore.getState().relics;
 
                 set((prev) => {
                     const finishUpgrades = prev.unlockedKnowledgeUpgrades || [];
@@ -394,6 +413,21 @@ export const createTurnFlowActions = ({
                                 ? [...(prev.knowledgeUpgradeFloats ?? []), ...knowledgeOwnEffectFloats]
                                 : prev.knowledgeUpgradeFloats,
                     };
+                });
+
+                relicOwnEffectFloats.forEach((float) => {
+                    const relic = relicsForHistory.find((item) => item.instanceId === float.relicInstanceId);
+                    if (!relic) return;
+                    get().appendEventLog({
+                        turn: get().turn,
+                        kind: 'relic',
+                        delta: getRelicFloatDelta(float),
+                        meta: {
+                            relicId: relic.definition.id,
+                            action: 'passive_relic_effect',
+                            amount: float.text,
+                        },
+                    });
                 });
 
                 const eraAfter = get().era;
@@ -659,7 +693,7 @@ export const createTurnFlowActions = ({
                 if (result.freeSelectionRerolls) {
                     set((s) => ({
                         freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + result.freeSelectionRerolls!,
-                     }));
+                    }));
                 }
 
                 set({
