@@ -41,7 +41,7 @@ export class RelicRenderer {
         }
     }
 
-    public render(state: GameState, scale: number, screenWidth: number) {
+    public render(state: GameState, scale: number, screenWidth: number, fontFamily: string) {
         const relics = useRelicStore.getState().relics;
         if (relics.length === 0) return;
 
@@ -74,10 +74,10 @@ export class RelicRenderer {
 
             this.renderIcon(relicPanel, relic, iconX, iconY, iconSize, shakeX, shakeY);
             this.renderHitArea(relic, worldIconX, worldIconY, iconSize);
-            this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale);
+            this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale, fontFamily);
         }
 
-        this.floatingTextRenderer.renderRelicFloats(state, relicCenterByInstanceId, iconSize);
+        this.floatingTextRenderer.renderRelicFloats(state, relicCenterByInstanceId, iconSize, fontFamily);
     }
 
     private buildLayout(relics: RelicInstance[], iconSize: number, gapX: number, gapY: number, iconsPerRow: number) {
@@ -147,7 +147,7 @@ export class RelicRenderer {
         this.hitContainer.addChild(hitArea);
     }
 
-    private renderCounter(panel: PIXI.Container, relic: RelicInstance, iconX: number, iconY: number, iconSize: number, scale: number) {
+    private renderCounter(panel: PIXI.Container, relic: RelicInstance, iconX: number, iconY: number, iconSize: number, scale: number, fontFamily: string) {
         const rid = relic.definition.id;
         let counterStr: string | null = null;
         if (rid === 3 || rid === 9) counterStr = String(relic.effect_counter);
@@ -161,7 +161,7 @@ export class RelicRenderer {
                 fill: '#d1d5db',
                 fontSize: 26 * scale,
                 fontWeight: 'bold',
-                fontFamily: 'Mulmaru',
+                fontFamily,
                 stroke: { color: '#000000', width: 3 },
             }),
         });

@@ -1,4 +1,5 @@
 import { BOARD_HEIGHT, BOARD_WIDTH } from '../../../game/state/gameStore';
+import type { Language } from '../../../game/state/settingsStore';
 import { S, SymbolType } from '../../../game/data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../../game/types';
 
@@ -6,6 +7,12 @@ export const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 export const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, pointer`;
 export const GAME_CURSOR_HELP = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, help`;
+export const DEFAULT_GAME_FONT_FAMILY = 'Mulmaru';
+export const ZH_GAME_FONT_FAMILY = 'Noto Sans SC';
+
+export function getGameFontFamily(language: Language): string {
+    return language === 'zh' ? ZH_GAME_FONT_FAMILY : DEFAULT_GAME_FONT_FAMILY;
+}
 
 export const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19, 24, 37, 39, 40]);
 

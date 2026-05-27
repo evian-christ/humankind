@@ -150,6 +150,8 @@ describe('timeline year display', () => {
         expect(formatTimelineYear(-10000, 'en')).toBe('10,000 BC');
         expect(formatTimelineYear(-10000, 'ko')).toBe('BC10,000년');
         expect(formatTimelineYear(2100, 'ko')).toBe('2,100년');
+        expect(formatTimelineYear(-10000, 'zh')).toBe('公元前10,000年');
+        expect(formatTimelineYear(2100, 'zh')).toBe('公元2,100年');
     });
 });
 

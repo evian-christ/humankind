@@ -206,15 +206,18 @@ export const getTimelineYearForTurn = (turn: number): number => {
     return last.year;
 };
 
-export const formatTimelineYear = (year: number, language: 'en' | 'ko' = 'en'): string => {
+export const formatTimelineYear = (year: number, language: 'en' | 'ko' | 'zh' = 'en'): string => {
     const normalizedYear = Math.trunc(year);
-    const numberFormatter = new Intl.NumberFormat(language === 'ko' ? 'ko-KR' : 'en-US');
+    const locale = language === 'ko' ? 'ko-KR' : language === 'zh' ? 'zh-CN' : 'en-US';
+    const numberFormatter = new Intl.NumberFormat(locale);
     if (normalizedYear < 0) {
         const value = numberFormatter.format(Math.abs(normalizedYear));
+        if (language === 'zh') return `公元前${value}年`;
         return language === 'ko' ? `BC${value}년` : `${value} BC`;
     }
 
     const value = numberFormatter.format(Math.max(1, normalizedYear));
+    if (language === 'zh') return `公元${value}年`;
     return language === 'ko' ? `${value}년` : `AD ${value}`;
 };
 

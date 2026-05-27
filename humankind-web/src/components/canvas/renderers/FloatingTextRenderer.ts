@@ -15,6 +15,7 @@ const THREAT_FLOAT_UP = 85;
 
 interface BoardFloatLayout extends CellLayout {
     scale: number;
+    fontFamily: string;
 }
 
 export class FloatingTextRenderer {
@@ -93,7 +94,7 @@ export class FloatingTextRenderer {
                 const tempTexts = lines.map((line) => {
                     const txt = new PIXI.Text({
                         text: line.text,
-                        style: new PIXI.TextStyle({ fill: line.color, fontSize: effectFontSize, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 3 } }),
+                        style: new PIXI.TextStyle({ fill: line.color, fontSize: effectFontSize, fontFamily: layout.fontFamily, stroke: { color: '#000000', width: 3 } }),
                     });
                     txt.anchor.set(0, 0);
                     return txt;
@@ -126,7 +127,7 @@ export class FloatingTextRenderer {
                         fill: COUNTER_FLOAT_COLOR,
                         fontSize: effectFontSize,
                         fontWeight: 'bold',
-                        fontFamily: 'Mulmaru',
+                        fontFamily: layout.fontFamily,
                         stroke: { color: '#000000', width: 3 },
                     }),
                 });
@@ -170,7 +171,7 @@ export class FloatingTextRenderer {
                     fill: f.color ?? '#ef4444',
                     fontSize,
                     fontWeight: 'bold',
-                    fontFamily: 'Mulmaru',
+                    fontFamily: layout.fontFamily,
                     stroke: { color: '#000000', width: 4 },
                 }),
             });
@@ -206,7 +207,7 @@ export class FloatingTextRenderer {
                     fill: '#ff3333',
                     fontSize: threatFloatFontSize,
                     fontWeight: 'bold',
-                    fontFamily: 'Mulmaru',
+                    fontFamily: layout.fontFamily,
                     stroke: { color: '#000000', width: 4 },
                 }),
             });
@@ -225,6 +226,7 @@ export class FloatingTextRenderer {
         state: GameState,
         relicCenterByInstanceId: Map<string, { x: number; y: number }>,
         iconSize: number,
+        fontFamily: string,
     ) {
         if (!state.relicFloats || state.relicFloats.length === 0) {
             this.prevRelicFloatCount = 0;
@@ -245,7 +247,7 @@ export class FloatingTextRenderer {
                     fill: f.color ?? '#ffffff',
                     fontSize,
                     fontWeight: 'bold',
-                    fontFamily: 'Mulmaru',
+                    fontFamily,
                     stroke: { color: '#000000', width: 4 },
                 }),
             });

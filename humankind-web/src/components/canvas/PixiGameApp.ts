@@ -938,7 +938,7 @@ export class PixiGameApp {
             }
         }
 
-        const floatLayout = { ...this.cellLayout!, scale };
+        const floatLayout = { ...this.cellLayout!, scale, fontFamily };
         this.floatingTextRenderer.renderBoardEffectFloats(state, floatLayout);
         this.floatingTextRenderer.renderCombatFloats(state, floatLayout);
         this.floatingTextRenderer.renderThreatFloats(state, floatLayout);
@@ -951,8 +951,9 @@ export class PixiGameApp {
             startX + gridOffsetX,
             startY + gridOffsetY + BOARD_HEIGHT * cellHeight + (BOARD_HEIGHT - 1) * rowGap,
             w,
+            fontFamily,
         );
-        this.relicRenderer.render(state, scale, w);
+        this.relicRenderer.render(state, scale, w, fontFamily);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
 

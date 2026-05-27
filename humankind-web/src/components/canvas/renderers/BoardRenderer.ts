@@ -4,6 +4,7 @@ import type { GameState } from '../../../game/state/gameStore';
 import type { SettingsState } from '../../../game/state/settingsStore';
 import { computeBoardPixelLayout } from '../../../game/layout/boardPixelLayout';
 import type { CellLayout } from '../types';
+import { getGameFontFamily } from './rendererShared';
 
 export interface BoardRenderFrame {
     width: number;
@@ -34,7 +35,7 @@ export class BoardRenderer {
         this.boardContainer = args.boardContainer;
     }
 
-    public beginFrame(app: PIXI.Application, _state: GameState, _settings: SettingsState): BoardRenderFrame | null {
+    public beginFrame(app: PIXI.Application, _state: GameState, settings: SettingsState): BoardRenderFrame | null {
         if (!app.renderer) return null;
 
         const width = app.screen?.width || 1920;
@@ -54,7 +55,7 @@ export class BoardRenderer {
             colGap: viewLayout.colGap,
             rowGap: 0,
             scale: viewLayout.scale,
-            fontFamily: 'Mulmaru',
+            fontFamily: getGameFontFamily(settings.language),
         };
 
         this.renderBackground(frame);

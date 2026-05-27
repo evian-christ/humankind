@@ -36,7 +36,7 @@ export class StatusRenderer {
         }
     }
 
-    public render(state: GameState, scale: number, boardLeft: number, boardBottom: number, screenWidth: number) {
+    public render(state: GameState, scale: number, boardLeft: number, boardBottom: number, screenWidth: number, fontFamily: string) {
         const activeStatuses = state.activeStatuses ?? (
             state.activeStatusIds.length > 0
                 ? state.activeStatusIds.map((id) => ({
@@ -78,7 +78,7 @@ export class StatusRenderer {
 
             this.renderFrame(panel, iconX, iconY, iconSize, scale);
             this.renderIcon(panel, status, iconX, iconY, iconSize);
-            this.renderCounter(panel, remainingTurns, iconX, iconY, iconSize, scale);
+            this.renderCounter(panel, remainingTurns, iconX, iconY, iconSize, scale, fontFamily);
             this.renderHitArea(status, worldIconX, worldIconY, iconSize);
 
             iconX += iconSize + gapX;
@@ -145,6 +145,7 @@ export class StatusRenderer {
         iconY: number,
         iconSize: number,
         scale: number,
+        fontFamily: string,
     ) {
         if (remainingTurns <= 0) return;
 
@@ -154,7 +155,7 @@ export class StatusRenderer {
                 fill: '#d1d5db',
                 fontSize: 26 * scale,
                 fontWeight: 'bold',
-                fontFamily: 'Mulmaru',
+                fontFamily,
                 stroke: { color: '#000000', width: 3 },
             }),
         });

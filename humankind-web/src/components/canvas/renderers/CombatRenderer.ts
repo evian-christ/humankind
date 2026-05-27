@@ -7,6 +7,7 @@ import { audioManager } from '../../../audio/audioManager';
 import type { CellLayout, CombatBounce } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { getSymbolSpriteUrl } from '../../../game/data/symbolSpritePaths';
+import { getGameFontFamily } from './rendererShared';
 
 const RANGED_ATTACKER_KEYS = new Set(['archer', 'crossbowman', 'cannon']);
 
@@ -44,7 +45,9 @@ export class CombatRenderer {
     public trigger(anim: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number }, cellLayout: CellLayout | null) {
         if (!cellLayout) return;
 
-        const effectSpeed = useSettingsStore.getState().effectSpeed;
+        const settings = useSettingsStore.getState();
+        const effectSpeed = settings.effectSpeed;
+        const fontFamily = getGameFontFamily(settings.language);
         const bounceDuration = COMBAT_BOUNCE_DURATION[effectSpeed];
         if (bounceDuration === 0) return;
 
@@ -80,13 +83,13 @@ export class CombatRenderer {
             sp.height = spriteSize;
             bounceSprite = sp;
         } else {
-            const lang = useSettingsStore.getState().language;
+            const lang = settings.language;
             const symName = t(`symbol.${attackerDef?.key ?? 'warrior'}.name`, lang);
             const rarityColor = attackerDef ? getSymbolColor(attackerDef.type) : 0xffffff;
             const container = new PIXI.Container();
             const txt = new PIXI.Text({
                 text: symName,
-                style: new PIXI.TextStyle({ fill: rarityColor, fontSize: 32, fontFamily: 'Mulmaru', stroke: { color: '#000000', width: 2 } }),
+                style: new PIXI.TextStyle({ fill: rarityColor, fontSize: 32, fontFamily, stroke: { color: '#000000', width: 2 } }),
             });
             txt.anchor.set(0.5);
             container.addChild(txt);
@@ -126,6 +129,7 @@ export class CombatRenderer {
         if (!this.combatBounce) return false;
 
         const b = this.combatBounce;
+        const fontFamily = getGameFontFamily(useSettingsStore.getState().language);
         b.elapsed += dt;
         const halfDur = b.duration / 2;
         const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -144,7 +148,7 @@ export class CombatRenderer {
                         fill: '#ef4444',
                         fontSize: 34,
                         fontWeight: 'bold',
-                        fontFamily: 'Mulmaru',
+                        fontFamily,
                         stroke: { color: '#000000', width: 3 },
                     }),
                 });
