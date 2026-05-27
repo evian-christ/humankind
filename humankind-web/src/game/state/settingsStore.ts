@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { audioManager } from '../../audio/audioManager';
 
-export type Language = 'en' | 'ko';
+export type Language = 'en' | 'ko' | 'zh';
 export type EffectSpeed = '1x' | '2x' | '4x' | 'instant';
 export type SpinSpeed = '1x' | '2x' | '4x' | 'instant';
 
@@ -126,7 +126,7 @@ const storage = (): Storage | null => {
     }
 };
 
-const isLanguage = (value: unknown): value is Language => value === 'en' || value === 'ko';
+const isLanguage = (value: unknown): value is Language => value === 'en' || value === 'ko' || value === 'zh';
 const isEffectSpeed = (value: unknown): value is EffectSpeed =>
     value === '1x' || value === '2x' || value === '4x' || value === 'instant';
 const isSpinSpeed = (value: unknown): value is SpinSpeed =>
@@ -375,6 +375,8 @@ function applyLanguageToDOM(lang: Language) {
     const root = document.getElementById('root');
     if (!root) return;
     root.setAttribute('data-lang', lang);
+    const fontFamily = lang === 'zh' ? 'Noto Sans SC' : 'Mulmaru';
+    document.fonts?.load(`16px "${fontFamily}"`).catch(() => {});
 }
 
 function scheduleFrame(callback: () => void) {

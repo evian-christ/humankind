@@ -11,6 +11,7 @@ import { clearLeaderProgress } from '../game/data/leaders';
 const LANGUAGE_OPTIONS: { value: Language; labelKey: string }[] = [
     { value: 'en', labelKey: 'settings.lang.en' },
     { value: 'ko', labelKey: 'settings.lang.ko' },
+    { value: 'zh', labelKey: 'settings.lang.zh' },
 ];
 
 const EFFECT_SPEED_OPTIONS: { value: EffectSpeed; label: string }[] = [

@@ -258,7 +258,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                     <div
                         className="owned-symbols-title"
                         style={{
-                            fontFamily: 'Mulmaru, sans-serif',
+                            fontFamily: 'var(--game-font-family), sans-serif',
                         }}
                     >
                         {t('ownedSymbols.title', language)} ({playerSymbols.length})
@@ -269,7 +269,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                         style={{
                             padding: '9px 16px',
                             fontSize: 20,
-                            fontFamily: 'Mulmaru, sans-serif',
+                            fontFamily: 'var(--game-font-family), sans-serif',
                         }}
                     >
                         {t('ownedSymbols.close', language)}
@@ -339,7 +339,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                 textAlign: 'center',
                                 padding: '72px 28px',
                                 fontSize: 30,
-                                fontFamily: 'Mulmaru, sans-serif',
+                                fontFamily: 'var(--game-font-family), sans-serif',
                             }}
                         >
                             {t('ownedSymbols.empty', language)}
@@ -388,7 +388,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                                                 }}
                                             />
                                         ) : (
-                                            <div style={{ fontSize: 18, opacity: 0.6, fontFamily: 'Mulmaru, sans-serif' }}>
+                                            <div style={{ fontSize: 18, opacity: 0.6, fontFamily: 'var(--game-font-family), sans-serif' }}>
                                                 ?
                                             </div>
                                         )}

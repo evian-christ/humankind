@@ -230,7 +230,7 @@ export const UpgradeCardDescSymbols = ({
                         : { prefix: '-', color: '#f87171', text: t('knowledgeUpgrade.symbolRelation.pool_remove', language) };
                     return (
                         <div key={rel} style={{ display: 'flex', flexDirection: 'column', gap: groupRowGap }}>
-                            <div style={{ fontSize: relLabelFontPx, color: '#94a3b8', fontFamily: 'Mulmaru, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ fontSize: relLabelFontPx, color: '#94a3b8', fontFamily: 'var(--game-font-family), sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <span style={{ color: relInfo.color, fontWeight: '900', fontSize: relPrefixFontPx }}>{relInfo.prefix}</span>
                                 {relInfo.text}
                             </div>

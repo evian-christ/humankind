@@ -5,22 +5,44 @@ import { t } from '../i18n';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
-const TYPE_META: Record<number, { label: string; labelKo: string; color: string }> = {
-    [SymbolType.RELIGION]: { label: 'Religion',  labelKo: '종교',     color: '#c084fc' },
-    [SymbolType.NORMAL]:   { label: 'Normal',    labelKo: '일반',     color: '#e5e7eb' },
-    [SymbolType.MEDIEVAL]: { label: 'Medieval',  labelKo: '중세',     color: '#fb923c' },
-    [SymbolType.MODERN]:   { label: 'Modern',    labelKo: '현대',     color: '#60a5fa' },
-    [SymbolType.TERRAIN]:  { label: 'Terrain',   labelKo: '지형',     color: '#4ade80' },
-    [SymbolType.ANCIENT]:  { label: 'Ancient',   labelKo: '고대',     color: '#fbbf24' },
-    [SymbolType.UNIT]:     { label: 'Unit',      labelKo: '유닛',     color: '#38bdf8' },
-    [SymbolType.SPECIAL]:  { label: 'Special',   labelKo: '특수',     color: '#c084fc' },
+const TYPE_META: Record<number, { labelKey: string; color: string }> = {
+    [SymbolType.RELIGION]: { labelKey: 'era.special', color: '#c084fc' },
+    [SymbolType.NORMAL]: { labelKey: 'era.normal', color: '#e5e7eb' },
+    [SymbolType.MEDIEVAL]: { labelKey: 'era.medieval', color: '#fb923c' },
+    [SymbolType.MODERN]: { labelKey: 'era.modern', color: '#60a5fa' },
+    [SymbolType.TERRAIN]: { labelKey: 'era.terrain', color: '#4ade80' },
+    [SymbolType.ANCIENT]: { labelKey: 'era.ancient', color: '#fbbf24' },
+    [SymbolType.UNIT]: { labelKey: 'era.unit', color: '#38bdf8' },
+    [SymbolType.SPECIAL]: { labelKey: 'era.specialSymbol', color: '#c084fc' },
+    [SymbolType.ENEMY]: { labelKey: 'era.enemy', color: '#ef4444' },
+    [SymbolType.DISASTER]: { labelKey: 'era.disaster', color: '#a855f7' },
+};
+
+const typeOrder = [
+    SymbolType.RELIGION,
+    SymbolType.NORMAL,
+    SymbolType.ANCIENT,
+    SymbolType.UNIT,
+    SymbolType.SPECIAL,
+    SymbolType.MEDIEVAL,
+    SymbolType.MODERN,
+    SymbolType.TERRAIN,
+    SymbolType.ENEMY,
+    SymbolType.DISASTER,
+];
+
+const replaceParams = (template: string, params: Record<string, string | number>): string => {
+    return Object.entries(params).reduce(
+        (out, [key, value]) => out.replaceAll(`{${key}}`, String(value)),
+        template,
+    );
 };
 
 const SymbolPoolModal = () => {
     const [open, setOpen] = useState(false);
     const { era, religionUnlocked } = useGameStore();
-    const language = useSettingsStore(s => s.language);
-    const developerMode = useSettingsStore(s => s.developerMode);
+    const language = useSettingsStore((s) => s.language);
+    const developerMode = useSettingsStore((s) => s.developerMode);
 
     useRegisterBoardTooltipBlock('symbol-pool-modal', open);
 
@@ -49,7 +71,6 @@ const SymbolPoolModal = () => {
     const totalPool = probabilities.length;
     const probPerSymbol = totalPool > 0 ? (100 / totalPool).toFixed(2) : '0.00';
 
-    // Group by symbolType for section headers
     const grouped = useMemo(() => {
         const map: Record<number, typeof probabilities> = {};
         for (const row of probabilities) {
@@ -59,18 +80,16 @@ const SymbolPoolModal = () => {
         return map;
     }, [probabilities]);
 
-    const typeOrder = [
-        SymbolType.RELIGION,
-        SymbolType.NORMAL,
-        SymbolType.ANCIENT,
-        SymbolType.UNIT,
-        SymbolType.SPECIAL,
-        SymbolType.MEDIEVAL,
-        SymbolType.MODERN,
-        SymbolType.TERRAIN,
-    ];
-
     if (!open) return null;
+
+    const subtitle = replaceParams(t('symbolPool.subtitle', language), {
+        era,
+        religion: t(religionUnlocked ? 'symbolPool.religionUnlocked' : 'symbolPool.religionLocked', language),
+        total: totalPool,
+    });
+    const probabilityLabel = replaceParams(t('symbolPool.probPerSymbol', language), {
+        probability: probPerSymbol,
+    });
 
     return (
         <div
@@ -86,7 +105,7 @@ const SymbolPoolModal = () => {
             onClick={() => setOpen(false)}
         >
             <div
-                onClick={e => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
                 style={{
                     width: '580px',
                     maxHeight: '82vh',
@@ -95,12 +114,11 @@ const SymbolPoolModal = () => {
                     borderRadius: '8px',
                     display: 'flex',
                     flexDirection: 'column',
-                    fontFamily: 'Mulmaru, monospace',
+                    fontFamily: 'var(--game-font-family), monospace',
                     overflow: 'hidden',
                     boxShadow: '0 0 40px rgba(0,0,0,0.8)',
                 }}
             >
-                {/* Header */}
                 <div style={{
                     padding: '14px 18px',
                     borderBottom: '1px solid #374151',
@@ -112,10 +130,10 @@ const SymbolPoolModal = () => {
                 }}>
                     <div>
                         <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#f9fafb' }}>
-                            📊 심볼 풀 확률 (F3)
+                            {t('symbolPool.title', language)}
                         </span>
                         <span style={{ marginLeft: '12px', fontSize: '12px', color: '#9ca3af' }}>
-                            시대 {era} · {religionUnlocked ? '종교 해금' : '종교 미해금'} · 총 {totalPool}개
+                            {subtitle}
                         </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -127,7 +145,7 @@ const SymbolPoolModal = () => {
                             borderRadius: '4px',
                             padding: '2px 8px',
                         }}>
-                            1픽당 각 {probPerSymbol}%
+                            {probabilityLabel}
                         </span>
                         <button
                             onClick={() => setOpen(false)}
@@ -139,11 +157,12 @@ const SymbolPoolModal = () => {
                                 fontSize: '14px',
                                 borderRadius: '4px',
                             }}
-                        >✕</button>
+                        >
+                            ×
+                        </button>
                     </div>
                 </div>
 
-                {/* Table */}
                 <div style={{ overflowY: 'auto', flex: 1 }}>
                     <table style={{
                         width: '100%',
@@ -153,27 +172,29 @@ const SymbolPoolModal = () => {
                     }}>
                         <thead style={{ position: 'sticky', top: 0, background: '#1f2937', zIndex: 1 }}>
                             <tr>
-                                <th style={thStyle}>ID</th>
-                                <th style={thStyle}>이름</th>
-                                <th style={thStyle}>타입</th>
-                                <th style={{ ...thStyle, textAlign: 'right', width: '120px' }}>확률</th>
+                                <th style={thStyle}>{t('symbolPool.id', language)}</th>
+                                <th style={thStyle}>{t('symbolPool.name', language)}</th>
+                                <th style={thStyle}>{t('symbolPool.type', language)}</th>
+                                <th style={{ ...thStyle, textAlign: 'right', width: '120px' }}>
+                                    {t('symbolPool.probability', language)}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {totalPool === 0 && (
                                 <tr>
                                     <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
-                                        심볼 풀이 비어 있습니다.
+                                        {t('symbolPool.empty', language)}
                                     </td>
                                 </tr>
                             )}
-                            {typeOrder.map(typeId => {
+                            {typeOrder.map((typeId) => {
                                 const rows = grouped[typeId];
                                 if (!rows || rows.length === 0) return null;
-                                const meta = TYPE_META[typeId] ?? { label: `Type ${typeId}`, labelKo: `타입 ${typeId}`, color: '#9ca3af' };
+                                const meta = TYPE_META[typeId] ?? { labelKey: 'symbolPool.type', color: '#9ca3af' };
+                                const typeLabel = t(meta.labelKey, language);
                                 return (
                                     <>
-                                        {/* Section header */}
                                         <tr key={`section-${typeId}`}>
                                             <td colSpan={4} style={{
                                                 padding: '6px 16px',
@@ -185,7 +206,10 @@ const SymbolPoolModal = () => {
                                                 borderBottom: `1px solid ${meta.color}33`,
                                                 borderTop: '1px solid #2d3748',
                                             }}>
-                                                ▸ {meta.labelKo} ({meta.label}) — {rows.length}개
+                                                {replaceParams(t('symbolPool.sectionSummary', language), {
+                                                    type: typeLabel,
+                                                    count: rows.length,
+                                                })}
                                             </td>
                                         </tr>
                                         {rows.map((row, idx) => (
@@ -211,7 +235,7 @@ const SymbolPoolModal = () => {
                                                         borderRadius: '3px',
                                                         padding: '1px 6px',
                                                     }}>
-                                                        {meta.labelKo}
+                                                        {typeLabel}
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '6px 16px', textAlign: 'right' }}>
@@ -244,7 +268,6 @@ const SymbolPoolModal = () => {
                     </table>
                 </div>
 
-                {/* Footer */}
                 <div style={{
                     padding: '8px 18px',
                     borderTop: '1px solid #374151',
@@ -253,7 +276,7 @@ const SymbolPoolModal = () => {
                     background: '#1f2937',
                     flexShrink: 0,
                 }}>
-                    균등 확률 = 1 ÷ 풀 총 심볼 수 · 한 슬롯 기준 · F3으로 닫기
+                    {t('symbolPool.footer', language)}
                 </div>
             </div>
         </div>

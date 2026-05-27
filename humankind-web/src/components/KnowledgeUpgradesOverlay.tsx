@@ -1017,7 +1017,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                             transform: 'translateY(-50%)',
                                             zIndex: 2,
                                             width: `${TIER_LABEL_W}px`,
-                                            fontFamily: 'Mulmaru, sans-serif',
+                                            fontFamily: 'var(--game-font-family), sans-serif',
                                             fontSize: '20px',
                                             letterSpacing: '0.12em',
                                             color: labelColor,
@@ -1273,7 +1273,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             padding: '4px 8px',
                                                             background: unlocked ? 'rgba(22,101,52,0.55)' : 'rgba(127,29,29,0.6)',
                                                             color: unlocked ? '#bbf7d0' : '#fecaca',
-                                                            fontFamily: 'Mulmaru, sans-serif',
+                                                            fontFamily: 'var(--game-font-family), sans-serif',
                                                             fontSize: '12px',
                                                         }}
                                                     >
@@ -1294,7 +1294,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                         padding: '4px 8px',
                                                         background: 'rgba(30,41,59,0.7)',
                                                         color: '#cbd5e1',
-                                                        fontFamily: 'Mulmaru, sans-serif',
+                                                        fontFamily: 'var(--game-font-family), sans-serif',
                                                         fontSize: '12px',
                                                     }}
                                                 >

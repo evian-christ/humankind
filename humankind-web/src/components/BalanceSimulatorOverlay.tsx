@@ -16,7 +16,7 @@ const panelStyle: CSSProperties = {
     background: 'rgba(9, 11, 18, 0.96)',
     border: '1px solid rgba(148, 163, 184, 0.45)',
     color: '#e5e7eb',
-    fontFamily: 'Mulmaru, monospace',
+    fontFamily: 'var(--game-font-family), monospace',
     boxShadow: '0 18px 60px rgba(0,0,0,0.45)',
 };
 

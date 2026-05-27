@@ -40,7 +40,7 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const showAtk = def.base_attack !== undefined && def.base_attack > 0;
     const showHp = def.base_hp !== undefined && def.base_hp > 0;
     const hpValue = sym.enemy_hp ?? def.base_hp;
-    const font = { fontFamily: 'Mulmaru, sans-serif' as const, lineHeight: 1 as const };
+    const font = { fontFamily: 'var(--game-font-family), sans-serif' as const, lineHeight: 1 as const };
     const statShadow =
         '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
 

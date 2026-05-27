@@ -14,9 +14,15 @@ import { t } from '../i18n';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 const DIFFICULTY_OPTIONS = ['NORMAL', 'HARD', 'PRO'] as const;
+type DifficultyOption = (typeof DIFFICULTY_OPTIONS)[number];
+
+const DIFFICULTY_LABEL_KEYS: Record<DifficultyOption, string> = {
+  NORMAL: 'pregame.difficulty.normal',
+  HARD: 'pregame.difficulty.hard',
+  PRO: 'pregame.difficulty.pro',
+};
 
 type LeaderPortraitVariant = 'full' | 'mini';
-type DifficultyOption = (typeof DIFFICULTY_OPTIONS)[number];
 const ENABLED_DIFFICULTIES: ReadonlySet<DifficultyOption> = new Set(['NORMAL']);
 
 function leaderPortraitSrc(id: LeaderId, variant: LeaderPortraitVariant = 'full'): string | null {
@@ -198,7 +204,7 @@ export default function LeaderSelectScreen() {
                 ) : null}
               </div>
               <div className="leader-select-summary-level">
-                {t('leaderProgress.currentLevel', language).replace('{level}', String(previewProgress.level))}
+                Lv. {previewProgress.level}
               </div>
 
               <section className="leader-difficulty" aria-label={t('pregame.difficultySelect', language)}>
@@ -225,7 +231,7 @@ export default function LeaderSelectScreen() {
                           setSelectedDifficulty(difficulty);
                         }}
                       >
-                        {difficulty}
+                        {t(DIFFICULTY_LABEL_KEYS[difficulty], language)}
                       </button>
                     );
                   })}

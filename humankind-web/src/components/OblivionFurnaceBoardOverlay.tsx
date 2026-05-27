@@ -152,7 +152,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                     gap: 12,
                     pointerEvents: 'auto',
                     zIndex: 4,
-                    fontFamily: 'Mulmaru, sans-serif',
+                    fontFamily: 'var(--game-font-family), sans-serif',
                     color: '#f5f5f5',
                     textShadow: '0 1px 3px rgba(0,0,0,0.85)',
                 }}
@@ -227,7 +227,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                                     top: '50%',
                                     transform: 'translate(-50%, -50%)',
                                     zIndex: 3,
-                                    fontFamily: 'Mulmaru, sans-serif',
+                                    fontFamily: 'var(--game-font-family), sans-serif',
                                     fontSize: btnFs,
                                     fontWeight: 800,
                                     padding: `${Math.max(8, 10 * layout.scale)}px ${Math.max(18, 22 * layout.scale)}px`,

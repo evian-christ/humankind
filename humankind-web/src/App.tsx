@@ -134,6 +134,10 @@ const GAME_OVER_AUDIO_FADE_OUT_MS = 1000;
 const GAME_OVER_MUSIC_FADE_IN_MS = 4200;
 const XP_FILL_FADE_OUT_MS = 120;
 
+const uiText = (language: Language, ko: string, en: string, zh: string) => (
+  language === 'ko' ? ko : language === 'zh' ? zh : en
+);
+
 function getGameplayBgmPlaylist(level: number) {
   return GAMEPLAY_BGM_PLAYLISTS.find((playlist) => level >= playlist.minLevel && level <= playlist.maxLevel) ?? null;
 }
@@ -321,7 +325,7 @@ function EndgameLeaderProgressReveal({
         </div>
         {award.levelsGained > 0 ? (
           <div className="endgame-level-gained">
-            {language === 'ko' ? `레벨 +${award.levelsGained}` : `Level +${award.levelsGained}`}
+            {uiText(language, `레벨 +${award.levelsGained}`, `Level +${award.levelsGained}`, `等级 +${award.levelsGained}`)}
           </div>
         ) : null}
       </div>
@@ -487,8 +491,35 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
   ],
 ];
 
+const TUTORIAL_DIALOG_STEPS_ZH: string[][] = [
+  ['欢迎来到教程。', '这里会介绍开始游戏所需的基本规则。'],
+  ['你的目标是帮助文明生存、发展，并走向繁荣。'],
+  ['人民每隔几回合就会需要食物。'],
+  ['现在你的食物为 0，所以先生产一些食物吧。'],
+  ['这里给你两个玉米符号。'],
+  ['每个玉米放到棋盘上时会提供 2 食物。', '将鼠标悬停在玉米上可以查看详情。'],
+  ['按下“旋转”按钮推进回合。'],
+  ['每次旋转都会把你的符号放到棋盘上，并触发它们的效果。'],
+  ['两个玉米各生产 2 食物，所以你获得了 4 食物。', '像这样收集食物才能生存。'],
+  ['每次旋转后，你可以从三个随机符号中选择一个。'],
+  ['请选择纪念碑。'],
+  ['现在查看你拥有的符号。'],
+  ['纪念碑会生产知识。'],
+  ['返回上一个画面。'],
+  ['按下“旋转”按钮推进回合。'],
+  ['你已经积累了足够知识，达到等级 2。'],
+  ['打开知识升级窗口。'],
+  ['每次升级后，你都可以在这里研究一个知识升级。'],
+  ['点击研究“古代”。'],
+  ['返回上一个画面。'],
+  ['打开遗物商店。'],
+  ['遗物拥有多种强力效果，可以帮助你走向繁荣。'],
+  ['遗物需要用金币购买，所以尽量多收集金币。'],
+  ['基础教程到此结束。', '现在带领你的文明走向繁荣吧！'],
+];
+
 const getTutorialDialogSteps = (language: Language) => (
-  language === 'ko' ? TUTORIAL_DIALOG_STEPS_KO : TUTORIAL_DIALOG_STEPS_EN
+  language === 'ko' ? TUTORIAL_DIALOG_STEPS_KO : language === 'zh' ? TUTORIAL_DIALOG_STEPS_ZH : TUTORIAL_DIALOG_STEPS_EN
 );
 
 const TUTORIAL_CORN_CELLS = [
@@ -735,13 +766,13 @@ function App() {
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const tutorialDialogSteps = useMemo(() => getTutorialDialogSteps(language), [language]);
-  const tutorialDialogLabel = language === 'ko' ? '튜토리얼 안내' : 'Tutorial guide';
-  const tutorialMonumentGainedText = language === 'ko' ? '기념비를 획득했습니다!' : 'You gained a Monument!';
-  const tutorialMonumentProducesPrefix = language === 'ko' ? '기념비는' : 'Monument produces';
-  const tutorialMonumentProducesSuffix = language === 'ko' ? '지식을 생산합니다.' : 'Knowledge.';
-  const tutorialFinishLabel = language === 'ko' ? '종료' : 'Finish';
-  const tutorialExitLabel = language === 'ko' ? '튜토리얼 종료' : 'Exit Tutorial';
-  const tutorialNextLabel = language === 'ko' ? '다음 >>' : 'Next >>';
+  const tutorialDialogLabel = uiText(language, '튜토리얼 안내', 'Tutorial guide', '教程指南');
+  const tutorialMonumentGainedText = uiText(language, '기념비를 획득했습니다!', 'You gained a Monument!', '你获得了纪念碑！');
+  const tutorialMonumentProducesPrefix = uiText(language, '기념비는', 'Monument produces', '纪念碑会生产');
+  const tutorialMonumentProducesSuffix = uiText(language, '지식을 생산합니다.', 'Knowledge.', '知识。');
+  const tutorialFinishLabel = uiText(language, '종료', 'Finish', '完成');
+  const tutorialExitLabel = uiText(language, '튜토리얼 종료', 'Exit Tutorial', '退出教程');
+  const tutorialNextLabel = uiText(language, '다음 >>', 'Next >>', '下一步 >>');
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -1242,7 +1273,7 @@ function App() {
 
   // ===== 본게임 =====
   const eraName = t(ERA_NAME_KEYS[era] ?? 'era.ancient', language);
-  const historyLabel = language === 'ko' ? '히스토리' : 'History';
+  const historyLabel = uiText(language, '히스토리', 'History', '历史');
 
   const knowledgeRequired = getKnowledgeRequiredForLevel(Math.min(level, 29));
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
@@ -1602,7 +1633,7 @@ function App() {
                 className="endgame-btn"
                 onClick={handleGameOverContinue}
               >
-                {language === 'ko' ? '계속 >>' : 'Continue >>'}
+                {uiText(language, '계속 >>', 'Continue >>', '继续 >>')}
               </button>
               </>
             )}
@@ -1618,7 +1649,7 @@ function App() {
             <div className="endgame-subtitle">{t('game.turn', language)} {turn}</div>
             {lastLeaderProgressAward ? (
               <div className="endgame-leader-xp">
-                <span>{language === 'ko' ? '지도자 경험치' : 'Leader XP'}</span>
+                <span>{uiText(language, '지도자 경험치', 'Leader XP', '领袖经验值')}</span>
                 <strong>+{lastLeaderProgressAward?.xpAwarded}</strong>
                 <small>
                   {t('leaderProgress.currentLevel', language).replace('{level}', String(lastLeaderProgressAward?.next.level ?? 1))}
@@ -1654,7 +1685,7 @@ function App() {
                   className="endgame-btn endgame-btn--victory"
                   onClick={handleVictoryContinue}
                 >
-                  {language === 'ko' ? '\uacc4\uc18d >>' : 'Continue >>'}
+                  {uiText(language, '계속 >>', 'Continue >>', '继续 >>')}
                 </button>
               </>
             )}

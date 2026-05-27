@@ -18,7 +18,7 @@ export default function DemoStartScreen() {
   const shouldHighlightTutorial = !hasCompletedTutorial;
   const [playOptionsOpen, setPlayOptionsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const quitLabel = language === 'ko' ? '나가기' : 'Quit';
+  const quitLabel = language === 'ko' ? '나가기' : language === 'zh' ? '退出' : 'Quit';
 
   const handleQuit = () => {
     void (async () => {

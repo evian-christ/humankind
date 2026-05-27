@@ -98,7 +98,7 @@ export default function LeaderProgressScreen() {
         onClick={handleBack}
         aria-label={t('game.back', language)}
       >
-        <span aria-hidden="true">{'<'}</span>
+        <span aria-hidden="true">←</span>
       </button>
 
       {selectedLeader ? (
@@ -125,7 +125,7 @@ export default function LeaderProgressScreen() {
                   </h1>
                 </div>
                 <div className="leader-detail-level">
-                  {t('leaderProgress.currentLevel', language).replace('{level}', String(currentLevel))}
+                  Lv. {currentLevel}
                 </div>
               </div>
               <div className="leader-detail-xp">

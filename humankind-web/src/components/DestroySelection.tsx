@@ -139,7 +139,7 @@ const DestroySelection = () => {
             <div className="selection-panel-wrapper">
                 <div className="selection-panel" style={{ width: '80vw', minWidth: '400px', maxWidth: '800px', padding: '30px', alignItems: 'center' }}>
                     <div className="selection-title">{t(titleKey, language)}</div>
-                    <div style={{ color: '#aaa', fontSize: '18px', textAlign: 'center', marginBottom: '20px', fontFamily: 'Mulmaru, sans-serif' }}>
+                    <div style={{ color: '#aaa', fontSize: '18px', textAlign: 'center', marginBottom: '20px', fontFamily: 'var(--game-font-family), sans-serif' }}>
                         {t('destroySelection.shortDesc', language)}
                     </div>
 

@@ -110,7 +110,7 @@ const DevOverlay = () => {
             height: '100%',
             background: 'rgba(0,0,0,0.92)',
             color: '#e0e0e0',
-            fontFamily: 'Mulmaru, monospace',
+            fontFamily: 'var(--game-font-family), monospace',
             fontSize: '14px',
             zIndex: 9999,
             display: 'flex',
