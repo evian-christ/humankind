@@ -55,7 +55,9 @@ import {
     PLAINS_PASTURE_PER_SHEEP,
     eraScaleIndex,
 } from '../game/data/eventDefinitions';
-const translations: Record<Language, Record<string, string>> = {
+import { ZH_TRANSLATIONS } from './zh';
+
+const translations: Partial<Record<Language, Record<string, string>>> & Record<'en' | 'ko', Record<string, string>> = {
     en: {
         // Pause Menu
         'pause.title': 'PAUSED',
@@ -72,6 +74,7 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.spinSpeed': 'Spin Speed',
         'settings.lang.en': 'English',
         'settings.lang.ko': 'Korean',
+        'settings.lang.zh': 'Chinese',
         'settings.tab.gameplay': 'Gameplay',
         'settings.tab.graphics': 'Graphics',
         'settings.tab.general': 'General',
@@ -1032,6 +1035,7 @@ const translations: Record<Language, Record<string, string>> = {
         'settings.spinSpeed': '스핀 속도',
         'settings.lang.en': '영어',
         'settings.lang.ko': '한국어',
+        'settings.lang.zh': '중국어',
         'settings.tab.gameplay': '게임플레이',
         'settings.tab.graphics': '그래픽',
         'settings.tab.general': '일반',
@@ -1965,6 +1969,11 @@ const translations: Record<Language, Record<string, string>> = {
     },
 };
 
+translations.zh = {
+    ...translations.en,
+    ...ZH_TRANSLATIONS,
+};
+
 /** 지식 카드 ‘적용 전’: 해당 업그레이드 ID를 제외한 보유 연구 기준 */
 export function unlocksExcluding(unlocked: readonly number[] | undefined, omitId: number): number[] {
     return (unlocked ?? []).map(Number).filter((id) => id !== omitId);
@@ -1984,6 +1993,11 @@ function cropThreeFieldDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgri
             ? `밀: 10턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +1.`
             : `쌀: 20턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +1.`;
     }
+    if (lang === 'zh') {
+        return symbolKey === 'wheat'
+            ? `小麦：每 10 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：每回合 +1。`
+            : `稻米：每 20 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：每回合 +1。`;
+    }
     return symbolKey === 'wheat'
         ? `Wheat: every 10 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +1/turn.`
         : `Rice: every 20 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +1/turn.`;
@@ -1998,6 +2012,11 @@ function cropAgriculturalSurplusDesc(symbolKey: 'wheat' | 'rice', lang: Language
             ? `밀: 10턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +2.`
             : `쌀: 20턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원마다: 턴 +2.`;
     }
+    if (lang === 'zh') {
+        return symbolKey === 'wheat'
+            ? `小麦：每 10 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：每回合 +2。`
+            : `稻米：每 20 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：每回合 +2。`;
+    }
     return symbolKey === 'wheat'
         ? `Wheat: every 10 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +2/turn.`
         : `Rice: every 20 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: +2/turn.`;
@@ -2011,6 +2030,11 @@ function cropModernAgricultureDesc(symbolKey: 'wheat' | 'rice', lang: Language, 
         return symbolKey === 'wheat'
             ? `밀: 10턴마다: 식량 +${food}+보드 위 초원 수. 보드 위 초원 1개당: 턴 +1.`
             : `쌀: 20턴마다: 식량 +${food}+보드 위 초원 수. 보드 위 초원 1개당: 턴 +1.`;
+    }
+    if (lang === 'zh') {
+        return symbolKey === 'wheat'
+            ? `小麦：每 10 回合获得 ${food} 食物 + 棋盘上的草原数量。棋盘上每个草原：每回合 +1。`
+            : `稻米：每 20 回合获得 ${food} 食物 + 棋盘上的草原数量。棋盘上每个草原：每回合 +1。`;
     }
     return symbolKey === 'wheat'
         ? `Wheat: every 10 turns: ${food} Food + number of Grasslands on the board. Per Grassland on the board: +1/turn.`
@@ -2037,11 +2061,17 @@ export function getBoardSymbolTooltipDesc(
         const hasPast = have.has(PASTORALISM_UPGRADE_ID);
         const hasNomadicTradition = have.has(NOMADIC_TRADITION_UPGRADE_ID);
         if (hasNomadicTradition && hasPast) {
+            if (lang === 'zh') {
+                return '+1 食物；10% 概率生产牛。与平原相邻时可屠宰；屠宰时：+15 食物。';
+            }
             return lang === 'ko'
                 ? '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +15.'
                 : '+1 Food; 10% chance to produce Cattle. When adjacent to Plains, can butcher; on butcher: +15 Food.';
         }
         if (hasNomadicTradition) {
+            if (lang === 'zh') {
+                return '+1 食物。与平原相邻时可屠宰；屠宰时：+15 食物。';
+            }
             return lang === 'ko'
                 ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +15.'
                 : '+1 Food. When adjacent to Plains, can butcher; on butcher: +15 Food.';
@@ -2052,6 +2082,11 @@ export function getBoardSymbolTooltipDesc(
     if (symbolKey === 'sheep') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         if (have.has(NOMADIC_TRADITION_UPGRADE_ID)) {
+            if (lang === 'zh') {
+                return have.has(PASTORALISM_UPGRADE_ID)
+                    ? '+1 食物；10% 概率生产羊。与平原相邻时可屠宰；屠宰时：+5 食物，+10 金币。'
+                    : '+1 食物。与平原相邻时可屠宰；屠宰时：+5 食物，+10 金币。';
+            }
             return have.has(PASTORALISM_UPGRADE_ID)
                 ? lang === 'ko'
                     ? '식량 +1; 10% 확률로 양 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +10.'
@@ -2068,11 +2103,17 @@ export function getBoardSymbolTooltipDesc(
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         const base = have.has(PASTORALISM_UPGRADE_ID) ? 2 : 1;
         if (have.has(PASTURE_MANAGEMENT_UPGRADE_ID)) {
+            if (lang === 'zh') {
+                return `+${base} 食物 + 计数器。相邻的牛或羊被屠宰时：计数器 +1。`;
+            }
             return lang === 'ko'
                 ? `식량 +${base}+카운터. 인접한 소 또는 양이 도축될 때: 카운터 +1.`
                 : `+${base} Food + Counter. When adjacent Cattle or Sheep is butchered: +1 Counter.`;
         }
         if (have.has(PASTORALISM_UPGRADE_ID)) {
+            if (lang === 'zh') {
+                return '+2 食物。';
+            }
             return lang === 'ko'
                 ? `식량 +2.`
                 : `+2 Food.`;
