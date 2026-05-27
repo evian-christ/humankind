@@ -36,40 +36,109 @@ const GOLD_INFLATION_LINEAR_PER_LEVEL = 0.05;
 const GOLD_INFLATION_QUADRATIC_PER_LEVEL = 0.0017;
 
 // Turn-only fiction timeline for HUD display.
-// Calibrated from expected successful-run pacing: Lv.10 around turn 15, Lv.20 around turn 24.
-// The player's actual level and researched upgrades do not directly alter the displayed year.
+// Source of truth: anchors_temp.ts keeps the full 0-100 turn year curve.
 export const TIMELINE_YEAR_ANCHORS = [
-    { turn: 0, year: -12000 },
-    { turn: 1, year: -10000 },
-    { turn: 2, year: -8000 },
-    { turn: 3, year: -6500 },
-    { turn: 4, year: -5000 },
-    { turn: 5, year: -3800 },
-    { turn: 6, year: -3000 },
-    { turn: 7, year: -2200 },
-    { turn: 8, year: -1600 },
-    { turn: 9, year: -1100 },
-    { turn: 10, year: -700 },
-    { turn: 11, year: -350 },
-    { turn: 12, year: 1 },
-    { turn: 13, year: 200 },
-    { turn: 14, year: 350 },
-    { turn: 15, year: 500 },
-    { turn: 16, year: 700 },
-    { turn: 17, year: 900 },
-    { turn: 18, year: 1100 },
-    { turn: 19, year: 1250 },
-    { turn: 20, year: 1400 },
-    { turn: 21, year: 1500 },
-    { turn: 22, year: 1600 },
-    { turn: 23, year: 1700 },
-    { turn: 24, year: 1800 },
-    { turn: 25, year: 1850 },
-    { turn: 26, year: 1900 },
-    { turn: 27, year: 1950 },
-    { turn: 28, year: 2000 },
-    { turn: 29, year: 2050 },
-    { turn: 30, year: 2100 },
+    { turn: 0, year: -10000 },
+    { turn: 1, year: -8500 },
+    { turn: 2, year: -7200 },
+    { turn: 3, year: -6100 },
+    { turn: 4, year: -5100 },
+    { turn: 5, year: -4200 },
+    { turn: 6, year: -3400 },
+    { turn: 7, year: -2700 },
+    { turn: 8, year: -2100 },
+    { turn: 9, year: -1650 },
+    { turn: 10, year: -1350 },
+    { turn: 11, year: -1090 },
+    { turn: 12, year: -860 },
+    { turn: 13, year: -660 },
+    { turn: 14, year: -485 },
+    { turn: 15, year: -330 },
+    { turn: 16, year: -195 },
+    { turn: 17, year: -80 },
+    { turn: 18, year: 15 },
+    { turn: 19, year: 90 },
+    { turn: 20, year: 150 },
+    { turn: 21, year: 195 },
+    { turn: 22, year: 238 },
+    { turn: 23, year: 278 },
+    { turn: 24, year: 315 },
+    { turn: 25, year: 350 },
+    { turn: 26, year: 383 },
+    { turn: 27, year: 414 },
+    { turn: 28, year: 444 },
+    { turn: 29, year: 472 },
+    { turn: 30, year: 500 },
+    { turn: 31, year: 528 },
+    { turn: 32, year: 556 },
+    { turn: 33, year: 584 },
+    { turn: 34, year: 612 },
+    { turn: 35, year: 640 },
+    { turn: 36, year: 668 },
+    { turn: 37, year: 696 },
+    { turn: 38, year: 724 },
+    { turn: 39, year: 752 },
+    { turn: 40, year: 780 },
+    { turn: 41, year: 806 },
+    { turn: 42, year: 832 },
+    { turn: 43, year: 858 },
+    { turn: 44, year: 884 },
+    { turn: 45, year: 910 },
+    { turn: 46, year: 936 },
+    { turn: 47, year: 962 },
+    { turn: 48, year: 988 },
+    { turn: 49, year: 1014 },
+    { turn: 50, year: 1040 },
+    { turn: 51, year: 1064 },
+    { turn: 52, year: 1088 },
+    { turn: 53, year: 1112 },
+    { turn: 54, year: 1136 },
+    { turn: 55, year: 1160 },
+    { turn: 56, year: 1184 },
+    { turn: 57, year: 1208 },
+    { turn: 58, year: 1232 },
+    { turn: 59, year: 1256 },
+    { turn: 60, year: 1280 },
+    { turn: 61, year: 1302 },
+    { turn: 62, year: 1324 },
+    { turn: 63, year: 1346 },
+    { turn: 64, year: 1368 },
+    { turn: 65, year: 1390 },
+    { turn: 66, year: 1412 },
+    { turn: 67, year: 1434 },
+    { turn: 68, year: 1456 },
+    { turn: 69, year: 1478 },
+    { turn: 70, year: 1500 },
+    { turn: 71, year: 1521 },
+    { turn: 72, year: 1542 },
+    { turn: 73, year: 1563 },
+    { turn: 74, year: 1584 },
+    { turn: 75, year: 1605 },
+    { turn: 76, year: 1626 },
+    { turn: 77, year: 1647 },
+    { turn: 78, year: 1668 },
+    { turn: 79, year: 1689 },
+    { turn: 80, year: 1710 },
+    { turn: 81, year: 1730 },
+    { turn: 82, year: 1750 },
+    { turn: 83, year: 1770 },
+    { turn: 84, year: 1790 },
+    { turn: 85, year: 1810 },
+    { turn: 86, year: 1830 },
+    { turn: 87, year: 1850 },
+    { turn: 88, year: 1870 },
+    { turn: 89, year: 1890 },
+    { turn: 90, year: 1910 },
+    { turn: 91, year: 1929 },
+    { turn: 92, year: 1948 },
+    { turn: 93, year: 1967 },
+    { turn: 94, year: 1986 },
+    { turn: 95, year: 2005 },
+    { turn: 96, year: 2024 },
+    { turn: 97, year: 2043 },
+    { turn: 98, year: 2062 },
+    { turn: 99, year: 2081 },
+    { turn: 100, year: 2100 },
 ] as const;
 
 export interface HudTurnStartPassiveState {
@@ -115,8 +184,12 @@ export const getTimelineYearForTurn = (turn: number): number => {
     const first = TIMELINE_YEAR_ANCHORS[0]!;
     const last = TIMELINE_YEAR_ANCHORS[TIMELINE_YEAR_ANCHORS.length - 1]!;
     const normalizedTurn = Number.isFinite(turn)
-        ? Math.max(first.turn, Math.min(last.turn, turn))
+        ? Math.max(first.turn, turn)
         : first.turn;
+
+    if (normalizedTurn > last.turn) {
+        return last.year + Math.floor(normalizedTurn - last.turn) * 10;
+    }
 
     for (let i = 1; i < TIMELINE_YEAR_ANCHORS.length; i += 1) {
         const previous = TIMELINE_YEAR_ANCHORS[i - 1]!;
@@ -138,7 +211,7 @@ export const formatTimelineYear = (year: number, language: 'en' | 'ko' = 'en'): 
     const numberFormatter = new Intl.NumberFormat(language === 'ko' ? 'ko-KR' : 'en-US');
     if (normalizedYear < 0) {
         const value = numberFormatter.format(Math.abs(normalizedYear));
-        return language === 'ko' ? `BC ${value}년` : `${value} BC`;
+        return language === 'ko' ? `BC${value}년` : `${value} BC`;
     }
 
     const value = numberFormatter.format(Math.max(1, normalizedYear));

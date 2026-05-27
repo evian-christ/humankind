@@ -131,21 +131,24 @@ describe('getEraFromLevel', () => {
 });
 
 describe('timeline year display', () => {
-    it('maps turn anchors calibrated from expected level pacing', () => {
-        expect(getTimelineYearForTurn(0)).toBe(-12000);
-        expect(getTimelineYearForTurn(10)).toBe(-700);
-        expect(getTimelineYearForTurn(15)).toBe(500);
-        expect(getTimelineYearForTurn(24)).toBe(1800);
-        expect(getTimelineYearForTurn(30)).toBe(2100);
+    it('maps turn anchors from the full 0-100 fiction timeline', () => {
+        expect(getTimelineYearForTurn(0)).toBe(-10000);
+        expect(getTimelineYearForTurn(10)).toBe(-1350);
+        expect(getTimelineYearForTurn(15)).toBe(-330);
+        expect(getTimelineYearForTurn(24)).toBe(315);
+        expect(getTimelineYearForTurn(30)).toBe(500);
+        expect(getTimelineYearForTurn(100)).toBe(2100);
     });
 
-    it('clamps out-of-range turns to the supported 30-turn timeline', () => {
-        expect(getTimelineYearForTurn(-1)).toBe(-12000);
-        expect(getTimelineYearForTurn(31)).toBe(2100);
+    it('clamps before the first turn and advances by 10 years per turn after turn 100', () => {
+        expect(getTimelineYearForTurn(-1)).toBe(-10000);
+        expect(getTimelineYearForTurn(101)).toBe(2110);
+        expect(getTimelineYearForTurn(105)).toBe(2150);
     });
 
     it('formats BC and AD labels for the HUD language', () => {
-        expect(formatTimelineYear(-12000, 'en')).toBe('12,000 BC');
+        expect(formatTimelineYear(-10000, 'en')).toBe('10,000 BC');
+        expect(formatTimelineYear(-10000, 'ko')).toBe('BC10,000년');
         expect(formatTimelineYear(2100, 'ko')).toBe('2,100년');
     });
 });
