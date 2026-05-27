@@ -2497,8 +2497,8 @@ button.spin-btn:disabled:active {
 
 .tutorial-dialog-overlay--owned-symbols-button {
   align-items: flex-end;
-  justify-content: flex-start;
-  padding-left: 260px;
+  justify-content: flex-end;
+  padding-right: 48px;
   padding-bottom: 166px;
 }
 
@@ -2514,7 +2514,7 @@ button.spin-btn:disabled:active {
   background: transparent;
   align-items: flex-start;
   justify-content: flex-end;
-  padding-top: 126px;
+  padding-top: 90px;
   padding-right: 260px;
 }
 
@@ -2678,7 +2678,7 @@ button.spin-btn:disabled:active {
 .tutorial-exit-button {
   position: fixed;
   right: clamp(20px, 2vw, 36px);
-  bottom: clamp(20px, 2vw, 36px);
+  top: clamp(20px, 2vw, 36px);
   z-index: 10003;
   padding: 11px 17px;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -2759,13 +2759,17 @@ button.spin-btn:disabled:active {
   z-index: 640;
 }
 
-.tutorial-highlight-spin-button .bottom-action-bar-left {
-  opacity: 0.32;
+.tutorial-highlight-spin-button .bottom-action-bar-left,
+.tutorial-highlight-spin-button .bottom-action-bar-right {
+  opacity: 0.18;
+  filter: brightness(0.42);
 }
 
 .tutorial-highlight-spin-button .spin-btn {
   position: relative;
   z-index: 1;
+  opacity: 1;
+  filter: none;
   outline: 2px solid rgba(255, 246, 201, 0.92);
   outline-offset: 8px;
   box-shadow:
@@ -2841,7 +2845,7 @@ button.spin-btn:disabled:active {
 }
 
 .tutorial-highlight-owned-monument .owned-symbols-modal {
-  background: transparent !important;
+  background: rgba(0, 0, 0, 0.64) !important;
 }
 
 .tutorial-highlight-owned-monument .owned-symbol-item {
@@ -2859,7 +2863,7 @@ button.spin-btn:disabled:active {
 }
 
 .tutorial-highlight-owned-close .owned-symbols-modal {
-  background: transparent !important;
+  background: rgba(0, 0, 0, 0.64) !important;
 }
 
 .tutorial-highlight-owned-close .owned-symbols-close-btn {
