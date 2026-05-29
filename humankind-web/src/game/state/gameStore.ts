@@ -264,7 +264,7 @@ export interface GameState {
     spinTutorialMonumentStep: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn' | 'bonusXpPerTurn', value: number) => void;
     devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => void;
     devTriggerNaturalDisaster: (symbolId: number) => void;
     confirmDestroySymbols: (instanceIds: string[]) => void;
@@ -550,7 +550,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
     },
 
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => {
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn' | 'bonusXpPerTurn', value: number) => {
         if (stat === 'level') {
             const L = Math.max(0, Math.min(30, Math.round(value)));
             set({ level: L, era: getEraFromLevel(L) });

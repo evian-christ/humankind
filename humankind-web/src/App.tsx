@@ -30,6 +30,7 @@ import { audioManager } from './audio/audioManager';
 import type { AudioPlaybackHandle } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
 import { boardCellLocalRect, computeBoardPixelLayout } from './game/layout/boardPixelLayout';
+import { S } from './game/data/symbolDefinitions';
 
 const CustomCursor = () => {
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -1032,11 +1033,17 @@ function App() {
   }, [isTutorialMode, setupTutorialCornStep, tutorialDialogStep]);
 
   useEffect(() => {
-    if (isTutorialMode && tutorialDialogStep === 9) setupTutorialSelectionStep();
-  }, [isTutorialMode, setupTutorialSelectionStep, tutorialDialogStep]);
+    if (isTutorialMode && tutorialDialogStep === 9 && tutorialSpinStep === 'corn_done') {
+      setupTutorialSelectionStep();
+    }
+  }, [isTutorialMode, setupTutorialSelectionStep, tutorialDialogStep, tutorialSpinStep]);
 
   useEffect(() => {
     if (!isTutorialMode || tutorialDialogStep !== 10 || phase === 'selection') return;
+    const hasMonument = useGameStore
+      .getState()
+      .playerSymbols.some((symbol) => symbol.definition.id === S.monument);
+    if (!hasMonument) return;
     setTutorialDialogStep(11);
   }, [isTutorialMode, phase, tutorialDialogStep]);
 
@@ -1136,7 +1143,15 @@ function App() {
       setTutorialDialogStep(23);
       return;
     }
-    setTutorialDialogStep((step) => Math.min(step + 1, tutorialDialogSteps.length - 1));
+    setTutorialDialogStep((step) => {
+      if ((step === 7 || step === 8) && useGameStore.getState().tutorialSpinStep !== 'corn_done') {
+        return step;
+      }
+      if (step === 9 && useGameStore.getState().phase !== 'selection') {
+        return step;
+      }
+      return Math.min(step + 1, tutorialDialogSteps.length - 1);
+    });
   }, [isRelicShopOpen, toggleRelicShop, tutorialDialogStep, tutorialDialogSteps.length]);
 
   const handleTutorialFinish = useCallback(() => {
@@ -1241,6 +1256,10 @@ function App() {
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
   const canPressSpin = phase === 'idle';
+  const tutorialNextDisabled =
+    isTutorialMode &&
+    (((tutorialDialogStep === 7 || tutorialDialogStep === 8) && tutorialSpinStep !== 'corn_done') ||
+      (tutorialDialogStep === 9 && phase !== 'selection'));
 
   // 스테이지 선택 화면
   if (preGameScreen === 'intro') {
@@ -1810,6 +1829,8 @@ function App() {
                 type="button"
                 className="tutorial-dialog-next"
                 onClick={handleTutorialNext}
+                disabled={tutorialNextDisabled}
+                aria-disabled={tutorialNextDisabled}
               >
                 {tutorialNextLabel}
               </button>

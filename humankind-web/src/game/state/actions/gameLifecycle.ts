@@ -253,6 +253,8 @@ export const createGameLifecycleActions = ({
     },
 
     setupTutorialSelectionStep: () => {
+        const state = get();
+        if (!state.isTutorialMode || state.tutorialSpinStep !== 'corn_done' || state.phase !== 'idle') return;
         const monument = SYMBOLS[S.monument];
         const corn = SYMBOLS[S.corn];
         const mountain = SYMBOLS[S.mountain];

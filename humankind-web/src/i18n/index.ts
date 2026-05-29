@@ -11,6 +11,7 @@ import {
     ELECTRICITY_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
@@ -43,6 +44,7 @@ import {
 } from '../game/data/knowledgeUpgrades';
 import {
     BORDER_RAID_REWARD,
+    BORDER_RAID_ENEMY_COUNT,
     DESERT_CARAVAN_FOOD,
     EVERY_TERRAIN_BOUNTY_EACH,
     MILITARY_DRAFT_FOOD,
@@ -223,7 +225,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.57.mushroom': '+9 Food, +9 Knowledge; if not adjacent to Forest: destroy.',
         'knowledgeUpgrade.symbolDescAfter.60.rainforest': '+5 Food, +5 Gold, +5 Knowledge.',
         'knowledgeUpgrade.symbolDescAfter.60.expedition': 'When adjacent to Rainforest: +1-10 Food, +1-10 Gold, and +1-10 Knowledge.',
-        'knowledgeUpgrade.symbolDescAfter.26.mountain': '+2 Food; when adjacent to enemy units: they lose 3 HP each spin.',
+        'knowledgeUpgrade.symbolDescAfter.26.mountain': '+2 Food, +4 Knowledge.',
         'knowledgeUpgrade.symbolDescAfter.3.sheep':
             '+1 Food; 10% chance to produce Sheep. Butcher when adjacent to Plains: +5 Food, +5 Gold.',
         'knowledgeUpgrade.symbolDescAfter.3.cattle':
@@ -290,6 +292,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'pregame.leaderPlay': 'Play',
         'pregame.leaderDetails': 'Details',
         'pregame.difficultySelect': 'Difficulty',
+        'pregame.difficulty.normal': 'Normal',
+        'pregame.difficulty.hard': 'Hard',
+        'pregame.difficulty.pro': 'Pro',
         'pregame.draftTitle': 'Choose your starting symbols',
         'pregame.draftProgress': 'Pick {current} / {total}',
         'pregame.picks': 'picks',
@@ -392,6 +397,10 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'dataBrowser.knowledgeUpgrades': 'Knowledge Upgrades',
         'dataBrowser.intensity': 'Intensity',
         'dataBrowser.enemies': 'Enemies',
+        'dataBrowser.rewards': 'Rewards',
+        'dataBrowser.statuses': 'Statuses',
+        'status.clan_formation.name': 'Clan Formation',
+        'status.clan_formation.desc': 'Barbarian invasion chance is fixed at 0%.',
         'eventCategory.basic': 'Basic',
         'eventCategory.conditional': 'Conditional',
         'eventCategory.leader': 'Leader',
@@ -432,9 +441,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'event.currency_standardization.desc': 'For the next 5 turns, double Gold base production.',
         'event.currency_standardization.availability': '-',
         'event.border_raid.name': 'Barbarian Suppression',
-        'event.border_raid.desc.ancient': `Gain ${BORDER_RAID_REWARD[0]} Food and ${BORDER_RAID_REWARD[0]} Gold immediately. Summon 3 barbarian units.`,
-        'event.border_raid.desc.medieval': `Gain ${BORDER_RAID_REWARD[1]} Food and ${BORDER_RAID_REWARD[1]} Gold immediately. Summon 3 barbarian units.`,
-        'event.border_raid.desc.modern': `Gain ${BORDER_RAID_REWARD[2]} Food and ${BORDER_RAID_REWARD[2]} Gold immediately. Summon 3 barbarian units.`,
+        'event.border_raid.desc.ancient': `Gain ${BORDER_RAID_REWARD[0]} Food and ${BORDER_RAID_REWARD[0]} Gold immediately. Summon ${BORDER_RAID_ENEMY_COUNT} barbarian units.`,
+        'event.border_raid.desc.medieval': `Gain ${BORDER_RAID_REWARD[1]} Food and ${BORDER_RAID_REWARD[1]} Gold immediately. Summon ${BORDER_RAID_ENEMY_COUNT} barbarian units.`,
+        'event.border_raid.desc.modern': `Gain ${BORDER_RAID_REWARD[2]} Food and ${BORDER_RAID_REWARD[2]} Gold immediately. Summon ${BORDER_RAID_ENEMY_COUNT} barbarian units.`,
         'event.border_raid.availability': '-',
         'event.grassland_festival.name': 'Grassland Festival',
         'event.grassland_festival.desc.ancient': `Gain ${GRASSLAND_FESTIVAL_FOOD[0]} Food immediately.`,
@@ -587,6 +596,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.agi_core.name': 'AGI Core',
         'symbol.wild_seeds.name': 'Wild Seeds',
         'symbol.wild_seeds.desc': '+1 Food. Destroyed after 5 turns.',
+        'symbol.bronze_tribute_chest.name': 'Bronze Tribute Chest',
+        'symbol.bronze_tribute_chest.desc': '+1 Gold. Destroyed after 3 turns.',
         'symbol.heqet.name': 'Heqet',
         'symbol.heqet.desc': '+1 Food; adjacent to Grassland: +1 additional Food; adjacent to Wheat: +2 Knowledge.',
         'symbol.expedition.name': 'Expedition',
@@ -612,8 +623,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.fish.desc': 'When adjacent to Sea: +2 Food.',
         'symbol.sea.desc': '+1 Gold per 3 adjacent symbols.',
         'symbol.stone.desc': '+1 Gold; when a Mountain is in the same column: +2 additional Gold.',
-        'symbol.grassland.desc': '+1 Food.',
-        'symbol.grassland.descWithIrrigation': '+2 Food.',
+        'symbol.grassland.desc': '+2 Food.',
+        'symbol.grassland.descWithIrrigation': '+3 Food.',
         'symbol.grassland.descWithThreeField': '+5 Food.',
         'symbol.monument.desc': '+5 Knowledge.',
         'symbol.oasis.desc': '+2 Food per 2 adjacent empty slots.',
@@ -626,7 +637,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.campfire.desc': 'Gain Food equal to the Food produced this turn by the highest-producing adjacent symbol. Destroyed.',
         'symbol.pottery.desc': '+4 Food stored per turn; on destroy: gain Food equal to stored Counter.',
         'symbol.tribal_village.desc': 'Consume to trigger symbol selection phase 2 times.',
-        'symbol.merchant.desc': 'Produces Gold equal to the Food produced by a random adjacent symbol.',
+        'symbol.merchant.desc': 'Produces Gold equal to the highest Food produced by an adjacent symbol.',
         'symbol.horse.desc': '+2 Food, +2 Gold.',
         'symbol.crab.desc': 'When adjacent to Sea or Harbor: +1 Food, +2 Gold.',
         'symbol.library.desc': '+1 Knowledge per adjacent symbol.',
@@ -698,7 +709,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.expedition.desc': 'When adjacent to Rainforest: produces a random 1-10 Food, Gold, or Knowledge.',
         'symbol.dye.desc': '+1 Gold; on destroy: +10 Gold.',
         'symbol.papyrus.desc': '+1 Knowledge; on destroy: +10 Knowledge.',
-        'symbol.caravanserai.desc': '+10 per symbol destroyed this turn; matches the destroyed symbol\'s production type.',
+        'symbol.caravanserai.desc': '+10 per symbol destroyed this turn; matches the destroyed symbol\'s production type. Not destroyed by Desert.',
 
         // ── Relics ──
         'relic.1.name': 'Clovis Spear Point',
@@ -901,7 +912,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.5.name': 'Agriculture',
         'knowledgeUpgrade.5.desc': 'Upgrades Wheat and Rice.',
         'knowledgeUpgrade.26.name': 'Medieval Age',
-        'knowledgeUpgrade.26.desc': 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2.',
+        'knowledgeUpgrade.26.desc': 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2. Upgrades Mountain.',
         'knowledgeUpgrade.51.name': 'Modern Age',
         'knowledgeUpgrade.51.desc': 'Medieval symbols no longer appear. Unlocks all Modern symbols. Terrain symbols no longer appear.',
         'knowledgeUpgrade.63.name': 'AGI Project',
@@ -916,7 +927,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.41.islam': '+3 Food per Knowledge-producing symbol on the board. Destroyed if two or more Religion symbols are on the board.',
         'knowledgeUpgrade.symbolDescAfter.41.buddhism': '+4 Food per empty slot on the board. Destroyed if two or more Religion symbols are on the board.',
         'knowledgeUpgrade.symbolDescAfter.41.hinduism': 'If there are no duplicate symbols on the board: +1 Food per symbol on the board. Destroyed if two or more Religion symbols are on the board.',
-        'knowledgeUpgrade.symbolDescAfter.37.merchant': 'Produces Gold equal to the highest Food produced by an adjacent symbol.',
+        'knowledgeUpgrade.symbolDescAfter.37.merchant': 'Produces Gold equal to the highest Food produced by a symbol on the board.',
         'knowledgeUpgrade.symbolDescAfter.40.library': '+2 Knowledge per adjacent symbol.',
         'knowledgeUpgrade.59.name': 'Scientific Theory',
         'knowledgeUpgrade.59.desc': 'Upgrades Library.',
@@ -1020,6 +1031,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.obsolete.14.desc': 'Each time you enter a new era, gain 1 Ancient Relic Debris and 1 Pioneer.',
     },
     ko: {
+        'pregame.difficulty.normal': '보통',
+        'pregame.difficulty.hard': '어려움',
+        'pregame.difficulty.pro': '프로',
         // Pause Menu
         'pause.title': '일시정지',
         'pause.resume': '계속하기',
@@ -1179,7 +1193,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.57.mushroom': '식량 +9, 지식 +9; 숲이 인접하지 않으면: 파괴.',
         'knowledgeUpgrade.symbolDescAfter.60.rainforest': '식량 +5, 골드 +5, 지식 +5.',
         'knowledgeUpgrade.symbolDescAfter.60.expedition': '열대우림 인접 시: 식량, 골드, 지식을 각각 1~10씩 생산합니다.',
-        'knowledgeUpgrade.symbolDescAfter.26.mountain': '식량 +2; 적 유닛 인접 시: 매 스핀 체력 3 감소.',
+        'knowledgeUpgrade.symbolDescAfter.26.mountain': '식량 +2, 지식 +4.',
         'knowledgeUpgrade.symbolDescAfter.3.sheep':
             '식량 +1; 10% 확률로 양 생산; 10% 확률로 양모 생산. 평원 인접 시 도축 시 식량 +5, 골드 +5.',
         'knowledgeUpgrade.symbolDescAfter.3.cattle':
@@ -1345,6 +1359,10 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'dataBrowser.knowledgeUpgrades': '지식 업그레이드',
         'dataBrowser.intensity': '강도',
         'dataBrowser.enemies': '적 유닛',
+        'dataBrowser.rewards': '보상',
+        'dataBrowser.statuses': '상태',
+        'status.clan_formation.name': '씨족 형성기',
+        'status.clan_formation.desc': '야만인 침략 확률이 0%로 고정됩니다.',
         'eventCategory.basic': '기본',
         'eventCategory.conditional': '조건부',
         'eventCategory.leader': '지도자',
@@ -1385,9 +1403,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'event.currency_standardization.desc': '다음 5턴 동안 골드 기본 생산량이 두 배가 됩니다.',
         'event.currency_standardization.availability': '-',
         'event.border_raid.name': '야만인 소탕',
-        'event.border_raid.desc.ancient': `즉시 식량 ${BORDER_RAID_REWARD[0]}과 골드 ${BORDER_RAID_REWARD[0]}을 획득합니다. 야만인 유닛 3개를 추가합니다.`,
-        'event.border_raid.desc.medieval': `즉시 식량 ${BORDER_RAID_REWARD[1]}과 골드 ${BORDER_RAID_REWARD[1]}을 획득합니다. 야만인 유닛 3개를 추가합니다.`,
-        'event.border_raid.desc.modern': `즉시 식량 ${BORDER_RAID_REWARD[2]}과 골드 ${BORDER_RAID_REWARD[2]}을 획득합니다. 야만인 유닛 3개를 추가합니다.`,
+        'event.border_raid.desc.ancient': `즉시 식량 ${BORDER_RAID_REWARD[0]}과 골드 ${BORDER_RAID_REWARD[0]}을 획득합니다. 야만인 유닛 ${BORDER_RAID_ENEMY_COUNT}개를 추가합니다.`,
+        'event.border_raid.desc.medieval': `즉시 식량 ${BORDER_RAID_REWARD[1]}과 골드 ${BORDER_RAID_REWARD[1]}을 획득합니다. 야만인 유닛 ${BORDER_RAID_ENEMY_COUNT}개를 추가합니다.`,
+        'event.border_raid.desc.modern': `즉시 식량 ${BORDER_RAID_REWARD[2]}과 골드 ${BORDER_RAID_REWARD[2]}을 획득합니다. 야만인 유닛 ${BORDER_RAID_ENEMY_COUNT}개를 추가합니다.`,
         'event.border_raid.availability': '-',
         'event.grassland_festival.name': '초원 축제',
         'event.grassland_festival.desc.ancient': `즉시 식량 ${GRASSLAND_FESTIVAL_FOOD[0]}을 획득합니다.`,
@@ -1539,6 +1557,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.agi_core.name': 'AGI 코어',
         'symbol.wild_seeds.name': '야생 씨앗',
         'symbol.wild_seeds.desc': '식량 +1. 5턴 후 파괴.',
+        'symbol.bronze_tribute_chest.name': '청동 공물함',
+        'symbol.bronze_tribute_chest.desc': '골드 +1. 3턴 후 파괴.',
         'symbol.heqet.name': '헤케트',
         'symbol.heqet.desc': '식량 +1; 초원과 인접 시: 추가 식량 +1; 밀과 인접 시: 지식 +2.',
         'symbol.expedition.name': '탐사대',
@@ -1564,8 +1584,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.fish.desc': '보드에 배치된 바다가 1개: 식량 +1; 2개: 식량 +2; 3개 이상: 식량 +4.',
         'symbol.sea.desc': '인접한 심볼 3개당: 골드 +1.',
         'symbol.stone.desc': '골드 +1; 같은 열에 산이 있으면: 골드 +2 추가.',
-        'symbol.grassland.desc': '식량 +1.',
-        'symbol.grassland.descWithIrrigation': '식량 +2.',
+        'symbol.grassland.desc': '식량 +2.',
+        'symbol.grassland.descWithIrrigation': '식량 +3.',
         'symbol.grassland.descWithThreeField': '식량 +5.',
         'symbol.monument.desc': '지식 +5.',
         'symbol.oasis.desc': '인접 빈 슬롯 2개당: 식량 +2.',
@@ -1578,7 +1598,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.campfire.desc': '이번 턴 식량 생산이 가장 높은 인접 심볼의 식량만큼 획득. 파괴.',
         'symbol.pottery.desc': '매 턴 저장 식량 +4; 파괴 시: 저장량만큼 식량 획득.',
         'symbol.tribal_village.desc': '소모하여 심볼 선택 페이즈 2회 발동.',
-        'symbol.merchant.desc': '무작위 인접 심볼의 식량 생산량 만큼 골드를 생산합니다.',
+        'symbol.merchant.desc': '인접한 심볼 중, 식량을 가장 많이 생산한 심볼의 식량 생산량 만큼 골드를 생산합니다.',
         'symbol.horse.desc': '식량 +2, 골드 +2.',
         'symbol.crab.desc': '보드에 배치된 바다가 1개: 식량 +1, 골드 +1; 2개: 식량 +2, 골드 +2; 3개 이상: 식량 +2, 골드 +2.',
         'symbol.library.desc': '인접한 심볼 하나당 지식 +1.',
@@ -1650,7 +1670,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.expedition.desc': '열대우림 인접 시: 식량, 골드, 지식 중 무작위로 1~10만큼 생산합니다.',
         'symbol.dye.desc': '골드 +1; 파괴 시: 골드 +10.',
         'symbol.papyrus.desc': '지식 +1; 파괴 시: 지식 +10.',
-        'symbol.caravanserai.desc': '이번 턴 파괴된 심볼 1개당 생산 +10. 생산 종류는 파괴된 심볼과 같습니다.',
+        'symbol.caravanserai.desc': '이번 턴 파괴된 심볼 1개당 생산 +10. 생산 종류는 파괴된 심볼과 같습니다. 사막에 의해 파괴되지 않습니다.',
 
         // ── Relics ──
         'relic.1.name': '클로비스 투창촉',
@@ -1849,7 +1869,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.5.name': '농업',
         'knowledgeUpgrade.5.desc': '밀과 쌀을 업그레이드합니다.',
         'knowledgeUpgrade.26.name': '중세시대',
-        'knowledgeUpgrade.26.desc': '고대 심볼이 더 이상 등장하지 않습니다. 중세 심볼을 모두 해금합니다. 지형 심볼 등장 확률이 x0.2로 감소합니다.',
+        'knowledgeUpgrade.26.desc': '고대 심볼이 더 이상 등장하지 않습니다. 중세 심볼을 모두 해금합니다. 지형 심볼 등장 확률이 x0.2로 감소합니다. 산이 업그레이드됩니다.',
         'knowledgeUpgrade.51.name': '현대 시대',
         'knowledgeUpgrade.51.desc': '중세 심볼이 더 이상 등장하지 않습니다. 현대 심볼을 모두 해금합니다. 지형 심볼이 더 이상 등장하지 않습니다.',
         'knowledgeUpgrade.63.name': 'AGI 프로젝트',
@@ -1864,7 +1884,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.41.islam': '보드 위 지식을 생산하는 심볼 하나당 식량 +3. 보드에 종교 심볼이 두 개 이상일 경우: 파괴.',
         'knowledgeUpgrade.symbolDescAfter.41.buddhism': '보드 위 빈 슬롯 1개당 식량 +4. 보드에 종교 심볼이 두 개 이상일 경우: 파괴.',
         'knowledgeUpgrade.symbolDescAfter.41.hinduism': '보드 위 같은 심볼이 없다면: 보드 위 심볼 1개당 식량 +1. 보드에 종교 심볼이 두 개 이상일 경우: 파괴.',
-        'knowledgeUpgrade.symbolDescAfter.37.merchant': '인접 심볼 중 가장 높은 식량 생산량 만큼 골드를 생산합니다.',
+        'knowledgeUpgrade.symbolDescAfter.37.merchant': '보드 위 식량을 가장 많이 생산한 심볼의 식량 생산량 만큼 골드를 생산합니다.',
         'knowledgeUpgrade.symbolDescAfter.40.library': '인접한 심볼 하나당 지식 +2.',
         'knowledgeUpgrade.59.name': '과학이론',
         'knowledgeUpgrade.59.desc': '도서관을 업그레이드 합니다.',
@@ -2189,6 +2209,12 @@ export function getBoardSymbolTooltipDesc(
             : have.has(MINING_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.6.rainforest', lang)
             : t('symbol.rainforest.desc', lang);
+    }
+    if (symbolKey === 'mountain') {
+        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
+        return have.has(FEUDALISM_UPGRADE_ID)
+            ? t('knowledgeUpgrade.symbolDescAfter.26.mountain', lang)
+            : t('symbol.mountain.desc', lang);
     }
     if (symbolKey === 'forest') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));

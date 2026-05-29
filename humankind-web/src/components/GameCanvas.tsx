@@ -440,10 +440,10 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             {showBoardTooltips && hoveredStatus && (
                 <div className="symbol-tooltip" style={{ ...getStatusTooltipStyle(hoveredStatus), display: 'flex', flexDirection: 'column' }}>
                     <div className="symbol-tooltip-name" style={{ color: '#fde68a' }}>
-                        {language === 'ko' ? hoveredStatus.status.nameKo : hoveredStatus.status.name}
+                        {t(`status.${hoveredStatus.status.key}.name`, language)}
                     </div>
                     <div className="symbol-tooltip-desc">
-                        {(language === 'ko' ? hoveredStatus.status.descriptionKo : hoveredStatus.status.description)
+                        {t(`status.${hoveredStatus.status.key}.desc`, language)
                             .split('\n')
                             .map((line: string, i: number) => (
                                 <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
