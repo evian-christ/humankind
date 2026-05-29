@@ -1,3 +1,4 @@
+import * as PIXI from 'pixi.js';
 import { BOARD_HEIGHT, BOARD_WIDTH } from '../../../game/state/gameStore';
 import type { Language } from '../../../game/state/settingsStore';
 import { S, SymbolType } from '../../../game/data/symbolDefinitions';
@@ -9,9 +10,25 @@ export const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v
 export const GAME_CURSOR_HELP = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, help`;
 export const DEFAULT_GAME_FONT_FAMILY = 'Mulmaru';
 export const ZH_GAME_FONT_FAMILY = 'Noto Sans SC';
+const DYNAMIC_CHILD_DESTROY_OPTIONS: Parameters<PIXI.Container['destroy']>[0] = {
+    children: true,
+    context: true,
+    style: true,
+};
 
 export function getGameFontFamily(language: Language): string {
     return language === 'zh' ? ZH_GAME_FONT_FAMILY : DEFAULT_GAME_FONT_FAMILY;
+}
+
+export function destroyPixiChild(child: PIXI.Container) {
+    child.destroy(DYNAMIC_CHILD_DESTROY_OPTIONS);
+}
+
+export function clearPixiContainer(container: PIXI.Container) {
+    const children = container.removeChildren();
+    for (const child of children) {
+        destroyPixiChild(child);
+    }
 }
 
 export const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19, 24, 37, 39, 40]);

@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { useGameStore } from '../../../game/state/gameStore';
+import { clearPixiContainer } from './rendererShared';
 
 export class HudRenderer {
     private container: PIXI.Container;
@@ -12,7 +13,7 @@ export class HudRenderer {
 
     public render(scale: number, width: number) {
         // UI rendering is now handled by React (App.tsx / .hud-top).
-        this.container.removeChildren();
+        clearPixiContainer(this.container);
         this.foodDemandLabel = null;
         this.foodDemandCenter = { x: width / 2, y: 44 * scale };
     }

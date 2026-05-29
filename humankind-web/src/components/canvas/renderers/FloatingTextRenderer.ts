@@ -3,6 +3,7 @@ import { audioManager } from '../../../audio/audioManager';
 import { useGameStore } from '../../../game/state/gameStore';
 import type { GameState } from '../../../game/state/gameStore';
 import type { CellLayout, FloatingEffect } from '../types';
+import { destroyPixiChild } from './rendererShared';
 
 const FLOAT_DURATION = 800;
 const FLOAT_DISTANCE = 30;
@@ -40,7 +41,7 @@ export class FloatingTextRenderer {
         for (const item of this.threatFloatingEffects) {
             for (const txt of item.texts) {
                 txt.parent?.removeChild(txt);
-                txt.destroy();
+                destroyPixiChild(txt);
             }
         }
         this.threatFloatingEffects = [];
@@ -282,7 +283,7 @@ export class FloatingTextRenderer {
             if (progress >= 1) {
                 for (const txt of f.texts) {
                     txt.parent?.removeChild(txt);
-                    txt.destroy();
+                    destroyPixiChild(txt);
                 }
                 this.floatingEffects.splice(i, 1);
             }
@@ -323,7 +324,7 @@ export class FloatingTextRenderer {
             if (elapsed >= THREAT_FLOAT_TOTAL_MS) {
                 for (const txt of t.texts) {
                     txt.parent?.removeChild(txt);
-                    txt.destroy();
+                    destroyPixiChild(txt);
                 }
                 this.threatFloatingEffects.splice(i, 1);
             }

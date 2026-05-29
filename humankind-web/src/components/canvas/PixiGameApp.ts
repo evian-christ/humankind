@@ -25,6 +25,7 @@ import {
     GAME_CURSOR_POINTER,
     boardHasAdjacentPlains,
     boardHasDestroyableAdjacentSymbol,
+    clearPixiContainer,
     isOpenableLoot,
 } from './renderers/rendererShared';
 import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
@@ -94,6 +95,7 @@ export class PixiGameApp {
     public app: PIXI.Application;
     private canvas: HTMLDivElement;
     private destroyed = false;
+    private contextLost = false;
     /** init() 완료 전 destroy 시 ResizePlugin 등이 미초기화라 Pixi destroy가 터질 수 있음 (React Strict Mode 등) */
     private pixiInitComplete = false;
 
@@ -133,6 +135,7 @@ export class PixiGameApp {
     private cellLayout: CellLayout | null = null;
     private contributorWobbleTime: number = 0;
     private contributorWobbleSoundCount = 0;
+    private transientRenderElapsedMs = 33;
 
     /** renderBoard가 히트영역을 갈아엎어도 포인터는 그대로일 수 있어, 마지막 호버를 저장 후 재동기화 */
     private symbolHoverCell: { x: number; y: number } | null = null;
@@ -175,6 +178,32 @@ export class PixiGameApp {
         // inner core (조금 더 밝게)
         g.circle(cx, cy, coreR);
         g.fill({ color, alpha: (0.26 + 0.18 * pulse01) * strength });
+    }
+
+    private readonly handleWebglContextLost = (event: Event) => {
+        event.preventDefault();
+        this.contextLost = true;
+    };
+
+    private readonly handleWebglContextRestored = () => {
+        this.contextLost = false;
+        requestAnimationFrame(() => {
+            if (!this.destroyed) {
+                this.renderBoard(useGameStore.getState(), useSettingsStore.getState());
+            }
+        });
+    };
+
+    private addContextListeners() {
+        const canvas = this.app.canvas;
+        canvas.addEventListener('webglcontextlost', this.handleWebglContextLost, false);
+        canvas.addEventListener('webglcontextrestored', this.handleWebglContextRestored, false);
+    }
+
+    private removeContextListeners() {
+        const canvas = this.app?.canvas;
+        canvas?.removeEventListener('webglcontextlost', this.handleWebglContextLost);
+        canvas?.removeEventListener('webglcontextrestored', this.handleWebglContextRestored);
     }
 
 
@@ -238,6 +267,7 @@ export class PixiGameApp {
         }
 
         this.canvas.appendChild(this.app.canvas);
+        this.addContextListeners();
         await loadGameAssets();
 
         if (this.destroyed) return;
@@ -261,6 +291,7 @@ export class PixiGameApp {
         if (this.app) {
             try {
                 if (this.pixiInitComplete && this.app.renderer) {
+                    this.removeContextListeners();
                     if (this.app.resizeTo) (this.app as unknown as { resizeTo?: unknown }).resizeTo = null;
                     this.app.destroy(true);
                 }
@@ -278,7 +309,7 @@ export class PixiGameApp {
     }
 
     public resize(width: number, height: number) {
-        if (!this.destroyed && this.app && this.app.renderer) {
+        if (!this.destroyed && !this.contextLost && this.app && this.app.renderer) {
             this.app.renderer.resize(width, height);
         }
     }
@@ -298,6 +329,8 @@ export class PixiGameApp {
 
         // Contributor wobble: phase 2일 때만 타이머 증가·렌더 (phase 3 진입 시 두 번째 wobble 방지)
         const state = useGameStore.getState();
+        let needsTransientRender = false;
+        let forceTransientRender = false;
         if (state.phase === 'processing' && state.effectPhase === 2 && state.activeContributors?.length > 0) {
             if (this.contributorWobbleSoundCount === 0) {
                 void audioManager.play('symbol_interact');
@@ -311,7 +344,7 @@ export class PixiGameApp {
                 void audioManager.play('symbol_interact');
                 this.contributorWobbleSoundCount = 2;
             }
-            this.renderBoard(state, useSettingsStore.getState());
+            needsTransientRender = true;
         } else {
             this.contributorWobbleTime = 0;
             this.contributorWobbleSoundCount = 0;
@@ -319,11 +352,22 @@ export class PixiGameApp {
 
         // Pre-combat shake (e.g., Clovis relic): 흔들림은 시간 기반이므로 매 프레임 렌더가 필요
         if (state.preCombatShakeTarget || state.preCombatShakeRelicDefId) {
-            this.renderBoard(state, useSettingsStore.getState());
+            needsTransientRender = true;
         }
 
         if (combatBounceFinished) {
-            this.renderBoard(state, useSettingsStore.getState());
+            needsTransientRender = true;
+            forceTransientRender = true;
+        }
+
+        if (needsTransientRender) {
+            this.transientRenderElapsedMs += dt;
+            if (forceTransientRender || this.transientRenderElapsedMs >= 33) {
+                this.transientRenderElapsedMs = 0;
+                this.renderBoard(state, useSettingsStore.getState());
+            }
+        } else {
+            this.transientRenderElapsedMs = 33;
         }
 
         // Reel spinning
@@ -389,8 +433,7 @@ export class PixiGameApp {
     private finishSpin() {
         this.spinActive = false;
         this.stopSpinLoop();
-        this.spinContainer.removeChildren();
-        for (const reel of this.reels) { reel.mask.destroy(); }
+        clearPixiContainer(this.spinContainer);
         this.reels = [];
         useGameStore.getState().startProcessing();
     }
@@ -425,18 +468,18 @@ export class PixiGameApp {
     }
 
     public renderBoard(state: GameState, settings: SettingsState) {
-        if (!this.app || !this.app.renderer || this.destroyed) return;
+        if (!this.app || !this.app.renderer || this.destroyed || this.contextLost) return;
 
         const w = this.app.screen?.width || 1920;
 
         this.combatRenderer.setShaking(state.combatShaking);
         this.floatingTextRenderer.resetThreatGateIfNeeded(state.phase);
 
-        this.boardContainer.removeChildren();
-        this.effectsContainer.removeChildren();
-        this.hitContainer.removeChildren();
-        this.bgContainer.removeChildren();
-        this.hudTopContainer.removeChildren();
+        clearPixiContainer(this.boardContainer);
+        clearPixiContainer(this.effectsContainer);
+        clearPixiContainer(this.hitContainer);
+        clearPixiContainer(this.bgContainer);
+        clearPixiContainer(this.hudTopContainer);
         this.floatingTextRenderer.clearThreats();
 
         this.combatRenderer.clearIfNoAnimation(!!state.combatAnimation);
@@ -465,7 +508,7 @@ export class PixiGameApp {
 
         // Spin initialization logic
         if (state.phase === 'spinning' && !this.spinActive) {
-            this.spinContainer.removeChildren();
+            clearPixiContainer(this.spinContainer);
             this.reels = [];
             this.spinElapsed = 0;
 

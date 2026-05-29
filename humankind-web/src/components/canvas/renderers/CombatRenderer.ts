@@ -7,7 +7,7 @@ import { audioManager } from '../../../audio/audioManager';
 import type { CellLayout, CombatBounce } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { getSymbolSpriteUrl } from '../../../game/data/symbolSpritePaths';
-import { getGameFontFamily } from './rendererShared';
+import { clearPixiContainer, destroyPixiChild, getGameFontFamily } from './rendererShared';
 
 const RANGED_ATTACKER_KEYS = new Set(['archer', 'crossbowman', 'cannon']);
 
@@ -28,7 +28,7 @@ export class CombatRenderer {
 
     public clearIfNoAnimation(hasCombatAnimation: boolean) {
         if (hasCombatAnimation) return;
-        this.container.removeChildren();
+        clearPixiContainer(this.container);
         this.container.x = 0;
     }
 
@@ -121,7 +121,7 @@ export class CombatRenderer {
         if (!this.combatBounce) return;
         const prev = this.combatBounce;
         if (prev.sprite.parent) prev.sprite.parent.removeChild(prev.sprite);
-        prev.sprite.destroy();
+        destroyPixiChild(prev.sprite);
         this.combatBounce = null;
     }
 
@@ -170,7 +170,7 @@ export class CombatRenderer {
         }
 
         if (b.sprite.parent) b.sprite.parent.removeChild(b.sprite);
-        b.sprite.destroy();
+        destroyPixiChild(b.sprite);
         this.combatBounce = null;
         return true;
     }
