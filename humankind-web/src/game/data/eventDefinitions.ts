@@ -10,6 +10,7 @@ export const CAPITAL_RELOCATION_MIN_SYMBOLS = 10;
 export const CAPITAL_RELOCATION_FOOD_REWARD = 25;
 export const CAPITAL_RELOCATION_KNOWLEDGE_REWARD = 15;
 export const BORDER_RAID_REWARD: EraScaledTuple = [10, 20, 40];
+export const BORDER_RAID_ENEMY_COUNT = 2;
 
 /** 지형 조건부 이벤트 시대 스케일 수치 — selectionFlow / i18n 공통 출처 */
 export const GRASSLAND_FESTIVAL_FOOD: EraScaledTuple = [10, 20, 40];
@@ -144,7 +145,7 @@ export const GAME_EVENTS: Record<number, GameEventDefinition> = {
         id: 11,
         key: 'border_raid',
         category: 'basic',
-        description: 'Gain Food and Gold immediately. Summon 3 barbarian units.',
+        description: 'Gain Food and Gold immediately. Summon 2 barbarian units.',
         availability: '-',
     },
     12: {

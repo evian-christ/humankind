@@ -4,20 +4,30 @@ import {
     buildFeudalismDescSymbols,
     buildModernAgeDescSymbols,
 } from './knowledgeUpgrades';
-import { SYMBOLS_BY_KEY, SymbolType, type SymbolKey } from './symbolDefinitions';
+import { isBasePool, SYMBOLS_BY_KEY, SymbolType, type SymbolKey } from './symbolDefinitions';
 
 describe('knowledgeUpgrades', () => {
     const ancientUnlockKeys = (leaderId: 'ramesses' | 'shihuang' | null, leaderProgressLevel: number) =>
         buildAncientSymbolsUnlockDescSymbols(leaderId, leaderProgressLevel).map((entry) => entry.symbolKey);
 
-    it('shows leader Ancient symbols only for the active unlocked leader', () => {
+    it('does not show leader-only Ancient symbols on the Ancient Age unlock', () => {
         expect(ancientUnlockKeys(null, 7)).not.toContain('heqet');
         expect(ancientUnlockKeys(null, 7)).not.toContain('foxtail_millet');
         expect(ancientUnlockKeys('ramesses', 6)).not.toContain('heqet');
-        expect(ancientUnlockKeys('ramesses', 7)).toContain('heqet');
+        expect(ancientUnlockKeys('ramesses', 7)).not.toContain('heqet');
         expect(ancientUnlockKeys('ramesses', 7)).not.toContain('foxtail_millet');
         expect(ancientUnlockKeys('shihuang', 7)).not.toContain('heqet');
-        expect(ancientUnlockKeys('shihuang', 7)).toContain('foxtail_millet');
+        expect(ancientUnlockKeys('shihuang', 7)).not.toContain('foxtail_millet');
+    });
+
+    it('shows normal Ancient symbols on the Ancient Age unlock while keeping them out of the base pool', () => {
+        expect(ancientUnlockKeys(null, 1)).toContain('bronze_tribute_chest');
+        expect(isBasePool(SYMBOLS_BY_KEY.bronze_tribute_chest)).toBe(false);
+        expect(
+            Object.values(SYMBOLS_BY_KEY)
+                .filter((symbol) => symbol.type === SymbolType.ANCIENT)
+                .every((symbol) => !isBasePool(symbol)),
+        ).toBe(true);
     });
 
     it('does not show terrain symbols as removed by the Modern Age upgrade', () => {
@@ -40,5 +50,12 @@ describe('knowledgeUpgrades', () => {
             .sort();
 
         expect(shownKeys).toEqual(medievalKeys);
+    });
+
+    it('shows Mountain as modified by the Medieval Age upgrade', () => {
+        expect(buildFeudalismDescSymbols()).toContainEqual({
+            symbolKey: 'mountain',
+            relation: 'effect_modify',
+        });
     });
 });

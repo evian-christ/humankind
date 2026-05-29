@@ -756,91 +756,91 @@ describe('getHudTurnStartPassiveTotals', () => {
     it('does not add passive production for Writing System, Currency, Education, or Scientific Theory', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [WRITING_SYSTEM_UPGRADE_ID, CURRENCY_UPGRADE_ID, EDUCATION_UPGRADE_ID, SCIENTIFIC_THEORY_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 0, knowledge: 2 });
+        })).toEqual({ food: 0, gold: 1, knowledge: 2 });
     });
 
     it('applies updated Mathematics and Printing Press passive production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [MATHEMATICS_UPGRADE_ID, PRINTING_PRESS_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 2, knowledge: 5 });
+        })).toEqual({ food: 1, gold: 3, knowledge: 5 });
     });
 
     it('applies State Labor passive production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [STATE_LABOR_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
+        })).toEqual({ food: 1, gold: 2, knowledge: 2 });
     });
 
     it('applies Chiefdom passive food production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [CHIEFDOM_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 0, knowledge: 2 });
+        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
     });
 
     it('applies Feudalism passive food production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [FEUDAL_CORN_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 0, knowledge: 2 });
+        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
     });
 
     it('applies Architecture passive knowledge production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [ARCHITECTURE_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 0, knowledge: 3 });
+        })).toEqual({ food: 0, gold: 1, knowledge: 3 });
     });
 
     it('applies Nationalism passive knowledge production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [NATIONALISM_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 0, knowledge: 4 });
+        })).toEqual({ food: 0, gold: 1, knowledge: 4 });
     });
 
     it('applies Tribal Federation passive food production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [TRIBAL_FEDERATION_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 0, knowledge: 2 });
+        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
     });
 
     it('applies Mercenaries passive gold production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [MERCENARIES_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 2, knowledge: 2 });
+        })).toEqual({ food: 0, gold: 3, knowledge: 2 });
     });
 
     it('applies Exploration passive gold production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [EXPLORATION_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 2, knowledge: 2 });
+        })).toEqual({ food: 0, gold: 3, knowledge: 2 });
     });
 
     it('doubles passive gold production during Qin Shi Huang Currency Standardization', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [EXPLORATION_UPGRADE_ID, MERCANTILISM_UPGRADE_ID],
             qinCurrencyStandardTurnsRemaining: 5,
-        })).toEqual({ food: 0, gold: 8, knowledge: 2 });
+        })).toEqual({ food: 0, gold: 10, knowledge: 2 });
     });
 
     it('applies Mercantilism passive gold production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [MERCANTILISM_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 2, knowledge: 2 });
+        })).toEqual({ food: 0, gold: 3, knowledge: 2 });
     });
 
     it('applies Urbanization passive food and gold production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [URBANIZATION_UPGRADE_ID],
-        })).toEqual({ food: 4, gold: 4, knowledge: 2 });
+        })).toEqual({ food: 4, gold: 5, knowledge: 2 });
     });
 
     it('applies Steam Power passive gold and knowledge production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [STEAM_POWER_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 4, knowledge: 4 });
+        })).toEqual({ food: 0, gold: 5, knowledge: 4 });
     });
 
     it('applies Electricity passive food, gold, and knowledge production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [ELECTRICITY_UPGRADE_ID],
-        })).toEqual({ food: 3, gold: 3, knowledge: 5 });
+        })).toEqual({ food: 3, gold: 4, knowledge: 5 });
     });
 });

@@ -30,6 +30,7 @@ import {
     CAPITAL_RELOCATION_DESTROY_COUNT,
     CAPITAL_RELOCATION_FOOD_REWARD,
     CAPITAL_RELOCATION_KNOWLEDGE_REWARD,
+    BORDER_RAID_ENEMY_COUNT,
     BORDER_RAID_REWARD,
     DESERT_CARAVAN_FOOD,
     EVERY_TERRAIN_BOUNTY_EACH,
@@ -339,7 +340,7 @@ export const createSelectionFlowActions = ({
             foodDelta += BORDER_RAID_REWARD[eraIdx];
             goldDelta += BORDER_RAID_REWARD[eraIdx];
             const enemyPool = getEnemyPoolForEra(state.era);
-            const enemySymbols = Array.from({ length: 3 }, () => {
+            const enemySymbols = Array.from({ length: BORDER_RAID_ENEMY_COUNT }, () => {
                 const enemyId = enemyPool[Math.floor(Math.random() * enemyPool.length)]!;
                 const def = SYMBOLS[enemyId];
                 return def ? createInstance(def, state.unlockedKnowledgeUpgrades || []) : null;
@@ -648,9 +649,6 @@ export const createSelectionFlowActions = ({
         let religionUnlocked = state.religionUnlocked;
         if (uid === THEOLOGY_UPGRADE_ID) religionUnlocked = true;
 
-        let bonusXpDelta = 0;
-        if (uid === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) bonusXpDelta = 2;
-
         const newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];
 
@@ -699,7 +697,7 @@ export const createSelectionFlowActions = ({
         const edictAfterUpgrade = state.edictRemovalPending;
         const baseUnlock = {
             unlockedKnowledgeUpgrades: newUnlocked,
-            bonusXpPerTurn: state.bonusXpPerTurn + bonusXpDelta,
+            bonusXpPerTurn: state.bonusXpPerTurn,
             religionUnlocked,
             board: newBoard,
             playerSymbols: newPlayerSymbols,

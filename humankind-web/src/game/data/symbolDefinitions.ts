@@ -45,7 +45,7 @@ const ENEMY_COMBAT_STATS = {
  */
 const SYMBOL_LIST: SymbolDefinition[] = [
     // Terrain
-    def('grassland', { name: "Grassland", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "001.png" }),
+    def('grassland', { name: "Grassland", type: SymbolType.TERRAIN, description: "+2 Food.", sprite: "001.png" }),
     def('plains', { name: "Plains", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "002.png" }),
     def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "+1 Gold per 3 adjacent symbols.", sprite: "003.png" }),
     def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +2 Gold; if Forest is the only terrain on the board: +2 Food.", sprite: "004.png" }),
@@ -118,7 +118,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('caravanserai', {
         name: "Caravanserai",
         type: SymbolType.NORMAL,
-        description: "+10 per symbol destroyed this turn; matches the destroyed symbol's production type.",
+        description: "+10 per symbol destroyed this turn; matches the destroyed symbol's production type. Not destroyed by Desert.",
         sprite: "028.png",
     }),
 
@@ -132,7 +132,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('salt', { name: "Salt", type: SymbolType.NORMAL, description: "+1 Food per adjacent terrain symbol.", sprite: "033.png" }),
 
     // Normal: common operations
-    def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Produces Gold equal to the Food produced by a random adjacent symbol.", sprite: "034.png" }),
+    def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Produces Gold equal to the highest Food produced by an adjacent symbol.", sprite: "034.png" }),
     def('monument', { name: "Monument", type: SymbolType.NORMAL, description: "+5 Knowledge.", sprite: "035.png" }),
     def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
     def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+2 Knowledge per relic owned.", sprite: "037.png" }),
@@ -147,6 +147,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('tribal_village', { name: "Tribal Village", type: SymbolType.ANCIENT, description: "Consume this: triggers 2 consecutive symbol selection phases.", sprite: "044.png" }),
     def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+4 Knowledge per 4 empty slots.", sprite: "045.png" }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.ANCIENT, description: "+1 Food. Destroyed after 5 turns.", sprite: "046.png" }),
+    def('bronze_tribute_chest', { name: "Bronze Tribute Chest", type: SymbolType.ANCIENT, description: "+1 Gold. Destroyed after 3 turns.", sprite: "086.png" }),
     def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +1 additional Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
     def('foxtail_millet', { name: "Foxtail Millet", type: SymbolType.ANCIENT, description: "+5 Food per 2 adjacent Terrain symbols.", sprite: "088.png" }),
 
@@ -298,7 +299,7 @@ export const EXCLUDED_FROM_BASE_POOL = new Set<number>(EXCLUDED_POOL_KEYS.map((k
 
 /** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */
 export const isBasePool = (s: SymbolDefinition) => {
-    return (s.type === SymbolType.NORMAL || s.type === SymbolType.TERRAIN || s.type === SymbolType.ANCIENT || s.type === SymbolType.UNIT) &&
+    return (s.type === SymbolType.NORMAL || s.type === SymbolType.TERRAIN || s.type === SymbolType.UNIT) &&
         !EXCLUDED_FROM_BASE_POOL.has(s.id) &&
         !RELIGION_DOCTRINE_IDS.has(s.id);
 };
@@ -321,7 +322,7 @@ const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
 export const KNOWLEDGE_PRODUCING_IDS = new Set<number>(KNOWLEDGE_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
 const GOLD_PRODUCING_KEYS: SymbolKey[] = [
-    'sea', 'stone', 'mountain', 'merchant', 'fur', 'dye',
+    'sea', 'stone', 'mountain', 'merchant', 'fur', 'dye', 'bronze_tribute_chest',
 ];
 
 /** Gold를 생산하는 심볼 ID 목록 */

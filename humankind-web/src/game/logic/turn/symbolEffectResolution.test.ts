@@ -10,10 +10,12 @@ import {
     DESERT_STORAGE_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     EXPLORATION_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     GUILD_UPGRADE_ID,
+    IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
@@ -94,6 +96,39 @@ describe('symbolEffectResolution', () => {
         expect(result.food).toBe(-3);
     });
 
+    it('lets Bronze Tribute Chest produce gold for three turns then mark itself for destruction', () => {
+        const board = createEmptyBoard();
+        const chest = createInstance(Sym.bronze_tribute_chest, 'bronze-tribute-chest');
+        board[1][1] = chest;
+
+        const first = processSingleSymbolEffects(chest, board, 1, 1, { upgrades: [] });
+        expect(first).toMatchObject({ food: 0, gold: 1, knowledge: 0 });
+        expect(chest.effect_counter).toBe(1);
+        expect(chest.is_marked_for_destruction).toBe(false);
+
+        const second = processSingleSymbolEffects(chest, board, 1, 1, { upgrades: [] });
+        expect(second).toMatchObject({ food: 0, gold: 1, knowledge: 0 });
+        expect(chest.effect_counter).toBe(2);
+        expect(chest.is_marked_for_destruction).toBe(false);
+
+        const third = processSingleSymbolEffects(chest, board, 1, 1, { upgrades: [] });
+        expect(third).toMatchObject({ food: 0, gold: 1, knowledge: 0 });
+        expect(chest.effect_counter).toBe(3);
+        expect(chest.is_marked_for_destruction).toBe(true);
+    });
+
+    it('upgrades Mountain with Medieval Age to produce food and knowledge', () => {
+        const board = createEmptyBoard();
+        const mountain = createInstance(Sym.mountain, 'mountain');
+        board[1][1] = mountain;
+
+        const baseResult = processSingleSymbolEffects(mountain, board, 1, 1, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(mountain, board, 1, 1, { upgrades: [FEUDALISM_UPGRADE_ID] });
+
+        expect(baseResult).toMatchObject({ food: 1, gold: 0, knowledge: 0 });
+        expect(upgradedResult).toMatchObject({ food: 2, gold: 0, knowledge: 4 });
+    });
+
     it('collects terrain disabled by flood and initializes flood counter', () => {
         const board = createEmptyBoard();
         const flood = createInstance(SYMBOLS[S.flood]!, 'flood');
@@ -159,6 +194,23 @@ describe('symbolEffectResolution', () => {
         );
 
         expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 0 });
+        expect(wheat.is_marked_for_destruction).toBe(true);
+        vi.mocked(Math.random).mockRestore();
+    });
+
+    it('prevents Desert from destroying Caravanserai', () => {
+        const board = createEmptyBoard();
+        const desert = createInstance(Sym.desert, 'desert');
+        const caravanserai = createInstance(Sym.caravanserai, 'caravanserai');
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        board[1][1] = desert;
+        board[0][1] = caravanserai;
+        board[2][1] = wheat;
+
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        processSingleSymbolEffects(desert, board, 1, 1, { upgrades: [] });
+
+        expect(caravanserai.is_marked_for_destruction).toBe(false);
         expect(wheat.is_marked_for_destruction).toBe(true);
         vi.mocked(Math.random).mockRestore();
     });
@@ -366,7 +418,7 @@ describe('symbolEffectResolution', () => {
         expect(christianityB.is_marked_for_destruction).toBe(true);
     });
 
-    it('builds food totals by slot and applies deferred merchant gold from a random adjacent symbol', () => {
+    it('builds food totals by slot and applies deferred merchant gold from the highest adjacent food producer', () => {
         const board = createEmptyBoard();
         const merchant = createInstance(Sym.merchant, 'merchant');
         merchant.merchant_store_pending = true;
@@ -374,14 +426,14 @@ describe('symbolEffectResolution', () => {
         board[1][1] = merchant;
         board[0][1] = createInstance(Sym.wheat, 'left');
         board[2][1] = createInstance(Sym.rice, 'right');
+        board[4][3] = createInstance(Sym.corn, 'distant');
 
         const foodBySlotKey = buildFoodBySlotKey([
             { x: 0, y: 1, food: -2, gold: 0, knowledge: 0 },
             { x: 2, y: 1, food: 4, gold: 0, knowledge: 0 },
             { x: 2, y: 1, food: 3, gold: 0, knowledge: 0 },
+            { x: 4, y: 3, food: 12, gold: 0, knowledge: 0 },
         ]);
-
-        vi.spyOn(Math, 'random').mockReturnValue(0.99);
 
         const result = computeMerchantDeferredEffects({
             board,
@@ -396,16 +448,16 @@ describe('symbolEffectResolution', () => {
         expect(result.goldDelta).toBe(7);
         expect(merchant.stored_gold).toBe(0);
         expect(merchant.merchant_store_pending).toBe(false);
-        vi.restoreAllMocks();
     });
 
-    it('upgrades merchant to use the highest adjacent food with Guild', () => {
+    it('upgrades merchant to use the highest food on the board with Guild', () => {
         const board = createEmptyBoard();
         const merchant = createInstance(Sym.merchant, 'merchant');
         merchant.merchant_store_pending = true;
         board[1][1] = merchant;
         board[0][1] = createInstance(Sym.wheat, 'left');
         board[2][1] = createInstance(Sym.rice, 'right');
+        board[4][3] = createInstance(Sym.corn, 'distant');
 
         const result = computeMerchantDeferredEffects({
             board,
@@ -414,13 +466,14 @@ describe('symbolEffectResolution', () => {
             foodBySlotKey: buildFoodBySlotKey([
                 { x: 0, y: 1, food: 3, gold: 0, knowledge: 0 },
                 { x: 2, y: 1, food: 8, gold: 0, knowledge: 0 },
+                { x: 4, y: 3, food: 11, gold: 0, knowledge: 0 },
             ]),
             getAdjacentCoords,
             unlockedKnowledgeUpgrades: [GUILD_UPGRADE_ID],
         });
 
-        expect(result.effects).toEqual([{ x: 1, y: 1, food: 0, gold: 8, knowledge: 0 }]);
-        expect(result.goldDelta).toBe(8);
+        expect(result.effects).toEqual([{ x: 1, y: 1, food: 0, gold: 11, knowledge: 0 }]);
+        expect(result.goldDelta).toBe(11);
         expect(merchant.merchant_store_pending).toBe(false);
     });
 
@@ -661,20 +714,18 @@ describe('symbolEffectResolution', () => {
         expect(wheat.effect_counter).toBe(3);
     });
 
-    it('upgrades grassland food with Three-field System', () => {
+    it('produces more grassland food with Irrigation and Three-field System', () => {
         const board = createEmptyBoard();
         const grassland = createInstance(Sym.grassland, 'grassland');
         board[0][0] = grassland;
 
-        const result = processSingleSymbolEffects(
-            grassland,
-            board,
-            0,
-            0,
-            { upgrades: [THREE_FIELD_SYSTEM_UPGRADE_ID] },
-        );
+        const baseResult = processSingleSymbolEffects(grassland, board, 0, 0, { upgrades: [] });
+        const irrigationResult = processSingleSymbolEffects(grassland, board, 0, 0, { upgrades: [IRRIGATION_UPGRADE_ID] });
+        const threeFieldResult = processSingleSymbolEffects(grassland, board, 0, 0, { upgrades: [THREE_FIELD_SYSTEM_UPGRADE_ID] });
 
-        expect(result.food).toBe(5);
+        expect(baseResult.food).toBe(2);
+        expect(irrigationResult.food).toBe(3);
+        expect(threeFieldResult.food).toBe(5);
     });
 
     it('adds plains counter to plains food production', () => {
@@ -775,11 +826,13 @@ describe('symbolEffectResolution', () => {
         const wheat = createInstance(Sym.wheat, 'wheat');
         const library = createInstance(Sym.library, 'library');
         const papyrus = createInstance(Sym.papyrus, 'papyrus');
+        const caravanserai = createInstance(Sym.caravanserai, 'caravanserai');
         const flood = createInstance(Sym.flood, 'flood');
         board[1][1] = desert;
         board[0][1] = wheat;
         board[1][0] = papyrus;
         board[2][1] = library;
+        board[0][0] = caravanserai;
         board[2][2] = flood;
 
         const result = processSingleSymbolEffects(
@@ -794,6 +847,7 @@ describe('symbolEffectResolution', () => {
         expect(wheat.is_marked_for_destruction).toBe(true);
         expect(papyrus.is_marked_for_destruction).toBe(true);
         expect(library.is_marked_for_destruction).toBe(true);
+        expect(caravanserai.is_marked_for_destruction).toBe(false);
         expect(flood.is_marked_for_destruction).toBe(false);
     });
 
@@ -803,11 +857,13 @@ describe('symbolEffectResolution', () => {
         const wheat = createInstance(Sym.wheat, 'wheat');
         const library = createInstance(Sym.library, 'library');
         const papyrus = createInstance(Sym.papyrus, 'papyrus');
+        const caravanserai = createInstance(Sym.caravanserai, 'caravanserai');
         const flood = createInstance(Sym.flood, 'flood');
         board[1][1] = desert;
         board[0][0] = wheat;
         board[4][3] = papyrus;
         board[3][1] = library;
+        board[0][1] = caravanserai;
         board[2][2] = flood;
 
         const result = processSingleSymbolEffects(
@@ -823,6 +879,7 @@ describe('symbolEffectResolution', () => {
         expect(wheat.is_marked_for_destruction).toBe(true);
         expect(papyrus.is_marked_for_destruction).toBe(true);
         expect(library.is_marked_for_destruction).toBe(true);
+        expect(caravanserai.is_marked_for_destruction).toBe(false);
         expect(flood.is_marked_for_destruction).toBe(false);
     });
 

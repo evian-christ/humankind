@@ -4,6 +4,7 @@ import {
     CARAVANSERAI_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
@@ -38,6 +39,24 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
+    });
+
+    it('opens Ancient symbols through the Ancient Age upgrade instead of the base pool', () => {
+        const lockedPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+        });
+        expect(lockedPool.some((sym) => sym.type === SymbolType.ANCIENT)).toBe(false);
+
+        const unlockedPool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+        expect(unlockedPool.some((sym) => sym.id === S.bronze_tribute_chest)).toBe(true);
     });
 
     it('includes every Medieval symbol once Medieval Age is unlocked', () => {

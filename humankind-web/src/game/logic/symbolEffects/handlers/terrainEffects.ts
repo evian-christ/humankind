@@ -1,7 +1,7 @@
 import { S, SymbolType } from '../../../data/symbolDefinitions';
 import {
     countOnBoard,
-    DESERT_DESTRUCTIBLE_TYPES,
+    isDesertDestructibleSymbol,
 } from '../core';
 import type { SymbolEffectHandler } from '../core';
 import {
@@ -15,6 +15,7 @@ import {
     OASIS_RECOVERY_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
@@ -42,7 +43,7 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
         case S.grassland:
             state.food += upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
                 ? 5
-                : upgrades.includes(IRRIGATION_UPGRADE_ID) ? 2 : 1;
+                : upgrades.includes(IRRIGATION_UPGRADE_ID) ? 3 : 2;
             return true;
 
         case S.oasis: {
@@ -84,7 +85,12 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.mountain:
-            state.food += 1;
+            if (upgrades.includes(FEUDALISM_UPGRADE_ID)) {
+                state.food += 2;
+                state.knowledge += 4;
+            } else {
+                state.food += 1;
+            }
             if (relicEffects.quarryEmptyGold) {
                 adj.forEach(pos => {
                     if (!boardGrid[pos.x][pos.y]) state.gold += 1;
@@ -100,7 +106,7 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                     if (
                         target &&
                         !target.is_marked_for_destruction &&
-                        DESERT_DESTRUCTIBLE_TYPES.has(target.definition.type)
+                        isDesertDestructibleSymbol(target)
                     ) {
                         allValidTargets.push({ x: bx, y: by });
                     }
@@ -111,7 +117,7 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 return (
                     target &&
                     !target.is_marked_for_destruction &&
-                    DESERT_DESTRUCTIBLE_TYPES.has(target.definition.type)
+                    isDesertDestructibleSymbol(target)
                 );
             });
 

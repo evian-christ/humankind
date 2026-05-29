@@ -220,7 +220,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
-    it('grants resources and summons 3 random current-level enemies when selecting Barbarian Suppression event', () => {
+    it('grants resources and summons 2 random current-level enemies when selecting Barbarian Suppression event', () => {
         vi.spyOn(Math, 'random').mockReturnValue(0);
         const harness = createHarness({
             era: 3,
@@ -234,7 +234,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().food).toBe(45);
         expect(harness.get().gold).toBe(47);
-        expect(harness.get().playerSymbols.filter((sym) => sym.definition.id === S.enemy_infantry)).toHaveLength(3);
+        expect(harness.get().playerSymbols.filter((sym) => sym.definition.id === S.enemy_infantry)).toHaveLength(2);
         expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(false);
         expect(getEnemyPoolForLevel(1)).toContain(S.enemy_warrior);
     });
@@ -371,7 +371,7 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().phase).toBe('selection');
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
-        expect(harness.get().bonusXpPerTurn).toBe(2);
+        expect(harness.get().bonusXpPerTurn).toBe(0);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 

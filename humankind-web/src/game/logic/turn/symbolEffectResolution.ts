@@ -239,7 +239,7 @@ export interface DeferredMerchantResult {
 
 /**
  * Merchant(22)의 merchant_store_pending 및 legacy stored_gold를 의도적으로 mutate한다.
- * effectPhase 전체 종료 후 실제 인접 심볼의 식량 생산량을 참조해 즉시 골드를 생산한다.
+ * effectPhase 전체 종료 후 실제 심볼의 식량 생산량을 참조해 즉시 골드를 생산한다.
  */
 export function computeMerchantDeferredEffects(args: {
     board: BoardGrid;
@@ -260,19 +260,16 @@ export function computeMerchantDeferredEffects(args: {
             if (!sym || sym.definition.id !== S.merchant) continue;
             if (!sym.merchant_store_pending) continue;
 
-            const adjacentSymbols = getAdjacentCoords(x, y).filter((pos) => board[pos.x][pos.y] != null);
+            const getPositiveFood = (pos: BoardCoord): number => Math.max(0, foodBySlotKey.get(slotKey(pos.x, pos.y)) ?? 0);
             const gold = hasGuild
-                ? adjacentSymbols.reduce(
-                      (maxFood, pos) => Math.max(maxFood, Math.max(0, foodBySlotKey.get(slotKey(pos.x, pos.y)) ?? 0)),
-                      0,
-                  )
-                : (() => {
-                      const picked =
-                          adjacentSymbols.length > 0
-                              ? adjacentSymbols[Math.floor(Math.random() * adjacentSymbols.length)]!
-                              : null;
-                      return picked ? Math.max(0, foodBySlotKey.get(slotKey(picked.x, picked.y)) ?? 0) : 0;
-                  })();
+                ? board.reduce((maxFood, column, bx) => {
+                      return column.reduce((columnMax, symbol, by) => {
+                          return symbol ? Math.max(columnMax, getPositiveFood({ x: bx, y: by })) : columnMax;
+                      }, maxFood);
+                  }, 0)
+                : getAdjacentCoords(x, y)
+                      .filter((pos) => board[pos.x][pos.y] != null)
+                      .reduce((maxFood, pos) => Math.max(maxFood, getPositiveFood(pos)), 0);
 
             sym.stored_gold = 0;
             sym.merchant_store_pending = false;

@@ -46,6 +46,7 @@ export interface PostEffectsResult {
     bonusGold: number;
     bonusKnowledge: number;
     agiVictory: boolean;
+    refreshRelicShop: boolean;
     relicOwnEffectFloats: RelicFloat[];
     knowledgeOwnEffectFloats: KnowledgeFloat[];
     /** 우르 전차 바퀴(3) 처리 계획(애니메이션은 호출자가 결정) */
@@ -103,6 +104,7 @@ export function runPostEffectsHooks(args: {
     let bonusGold = 0;
     let bonusKnowledge = 0;
     let agiVictory = false;
+    let refreshRelicShop = false;
     const addSymbolIds: number[] = [];
     const relicOwnEffectFloats: RelicFloat[] = [];
     const knowledgeOwnEffectFloats: KnowledgeFloat[] = [];
@@ -133,7 +135,11 @@ export function runPostEffectsHooks(args: {
                 (s.definition.id === S.pottery || s.definition.id === S.tax_storehouse) &&
                 s.is_marked_for_destruction
             ) {
-                bonusFood += s.effect_counter || 0;
+                const amount = s.effect_counter || 0;
+                if (amount > 0) {
+                    bonusFood += amount;
+                    effects.push({ x, y, food: amount, gold: 0, knowledge: 0 });
+                }
             }
         }
     }
@@ -143,7 +149,9 @@ export function runPostEffectsHooks(args: {
         for (let y = 0; y < boardHeight; y++) {
             const s = board[x][y];
             if (!s || s.definition.id !== S.date || !s.is_marked_for_destruction) continue;
-            bonusFood += unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10;
+            const amount = unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10;
+            bonusFood += amount;
+            effects.push({ x, y, food: amount, gold: 0, knowledge: 0 });
         }
     }
 
@@ -153,15 +161,44 @@ export function runPostEffectsHooks(args: {
             const s = board[x][y];
             if (!s || !s.is_marked_for_destruction) continue;
             if (s.definition.id === S.dye) {
-                bonusGold += unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
+                const amount = unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
+                bonusGold += amount;
+                effects.push({ x, y, food: 0, gold: amount, knowledge: 0 });
             }
             if (s.definition.id === S.papyrus) {
-                bonusKnowledge += unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
+                const amount = unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
+                bonusKnowledge += amount;
+                effects.push({ x, y, food: 0, gold: 0, knowledge: amount });
             }
         }
     }
 
     // ── 유물 ID 4: 조몬 토기 조각 — 매 턴 유물에 식량 1 저장(bonus_stacks)
+    // Oral Tradition: on destroy, gain +10 Knowledge per adjacent symbol.
+    for (let x = 0; x < boardWidth; x++) {
+        for (let y = 0; y < boardHeight; y++) {
+            const s = board[x][y];
+            if (!s || s.definition.id !== S.oral_tradition || !s.is_marked_for_destruction) continue;
+            const adjacentSymbolCount = getAdjacentCoords(x, y)
+                .filter((pos) => board[pos.x][pos.y] != null)
+                .length;
+            const amount = adjacentSymbolCount * 10;
+            if (amount > 0) {
+                bonusKnowledge += amount;
+                effects.push({ x, y, food: 0, gold: 0, knowledge: amount });
+            }
+        }
+    }
+
+    for (let x = 0; x < boardWidth; x++) {
+        for (let y = 0; y < boardHeight; y++) {
+            const s = board[x][y];
+            if (s?.definition.id === S.relic_caravan && s.is_marked_for_destruction) {
+                refreshRelicShop = true;
+            }
+        }
+    }
+
     const jomonRelicInst = getRelicInst(RELIC_ID.JOMON_POTTERY);
     if (jomonRelicInst) {
         relicStoreApi.incrementRelicBonus(jomonRelicInst.instanceId, 1);
@@ -687,7 +724,7 @@ export function runPostEffectsHooks(args: {
         // 기존 gameStore 로직과 동일하게 최소 baseFood를 찾는다.
         const urWheelGrasslandFood = upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
             ? 5
-            : upgrades.includes(IRRIGATION_UPGRADE_ID) ? 2 : 1;
+            : upgrades.includes(IRRIGATION_UPGRADE_ID) ? 3 : 2;
         let target: { x: number; y: number } | null = null;
         let minFood = Infinity;
         for (let ux = 0; ux < boardWidth; ux++) {
@@ -752,6 +789,7 @@ export function runPostEffectsHooks(args: {
         bonusGold,
         bonusKnowledge,
         agiVictory,
+        refreshRelicShop,
         relicOwnEffectFloats,
         knowledgeOwnEffectFloats,
         urWheelPlan,

@@ -389,6 +389,7 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0);
     const baseGold =
+        1 +
         (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 4 : 0) +

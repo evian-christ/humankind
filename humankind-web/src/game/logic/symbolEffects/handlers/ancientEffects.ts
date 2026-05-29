@@ -8,14 +8,6 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             symbolInstance.effect_counter++;
             if (symbolInstance.effect_counter >= 10) {
                 symbolInstance.is_marked_for_destruction = true;
-                let adjCount = 0;
-                adj.forEach(pos => {
-                    if (boardGrid[pos.x][pos.y]) {
-                        adjCount++;
-                        state.contributors.push(pos);
-                    }
-                });
-                state.knowledge += adjCount * 10;
             }
             return true;
 
@@ -41,6 +33,15 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
 
         case S.stargazer:
             state.knowledge += Math.floor(countEmptySlots(boardGrid) / 4) * 4;
+            return true;
+
+        case S.bronze_tribute_chest:
+            state.gold += 1;
+            symbolInstance.effect_counter++;
+            if (symbolInstance.effect_counter >= 3) {
+                symbolInstance.effect_counter = 3;
+                symbolInstance.is_marked_for_destruction = true;
+            }
             return true;
 
         case S.heqet: {

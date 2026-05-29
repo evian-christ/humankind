@@ -1,4 +1,4 @@
-import { isLeaderUnlockActive, type LeaderId } from './leaders';
+import type { LeaderId } from './leaders';
 import { EXCLUDED_FROM_BASE_POOL, SymbolType, SYMBOLS, SYMBOL_NUMERIC_ID, type SymbolKey } from './symbolDefinitions';
 
 /** 지식 업그레이드 설명에 나오는 심볼과, 선택 풀·효과에 미치는 관계 */
@@ -16,17 +16,13 @@ export interface KnowledgeUpgradeDescSymbol {
 /** 중세시대(15) 카드 칩 — 풀 제외/추가는 게임과 동기, 효과 변경은 산만(지형 등장 확률만 바뀌는 타일은 칩 제외) */
 /** 고대 시대(지식) — 고대 타입 심볼 풀 해금 카드 칩용 */
 export function buildAncientSymbolsUnlockDescSymbols(
-    leaderId: LeaderId | null = null,
-    leaderProgressLevel = 1,
+    _leaderId: LeaderId | null = null,
+    _leaderProgressLevel = 1,
 ): KnowledgeUpgradeDescSymbol[] {
     return Object.values(SYMBOLS)
         .filter((s) => {
             if (s.type !== SymbolType.ANCIENT) return false;
             if (!EXCLUDED_FROM_BASE_POOL.has(s.id)) return true;
-            if (s.key === 'heqet') return isLeaderUnlockActive(leaderId, leaderProgressLevel, 'heqet');
-            if (s.key === 'foxtail_millet') {
-                return isLeaderUnlockActive(leaderId, leaderProgressLevel, 'foxtail_millet');
-            }
             return false;
         })
         .sort((a, b) => a.id - b.id)
@@ -48,6 +44,7 @@ export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
     return [
         ...poolRemoveKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_remove' as const })),
         ...poolAddKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_add' as const })),
+        { symbolKey: 'mountain', relation: 'effect_modify' as const },
     ];
 }
 
@@ -631,7 +628,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: FEUDALISM_UPGRADE_ID,
         name: 'Medieval Age',
         type: SymbolType.MEDIEVAL,
-        description: 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2.',
+        description: 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2. Upgrades Mountain.',
         sprite: '026.png',
         descSymbols: buildFeudalismDescSymbols(),
     },

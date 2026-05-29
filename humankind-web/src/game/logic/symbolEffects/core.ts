@@ -185,3 +185,7 @@ export const DESERT_DESTRUCTIBLE_TYPES = new Set<SymbolType>([
     SymbolType.MEDIEVAL,
     SymbolType.MODERN,
 ]);
+
+export const isDesertDestructibleSymbol = (symbol: PlayerSymbolInstance): boolean =>
+    symbol.definition.id !== S.caravanserai &&
+    DESERT_DESTRUCTIBLE_TYPES.has(symbol.definition.type);

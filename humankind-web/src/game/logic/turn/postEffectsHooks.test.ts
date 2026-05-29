@@ -285,6 +285,110 @@ describe('postEffectsHooks', () => {
         expect(result.bonusKnowledge).toBe(30);
     });
 
+    it('adds destroy resource bonuses to effects so they can produce board floats', () => {
+        const board = createEmptyBoard();
+        const date = createInstance(SYMBOLS[S.date]!, 'date');
+        const dye = createInstance(SYMBOLS[S.dye]!, 'dye');
+        const papyrus = createInstance(SYMBOLS[S.papyrus]!, 'papyrus');
+        date.is_marked_for_destruction = true;
+        dye.is_marked_for_destruction = true;
+        papyrus.is_marked_for_destruction = true;
+        board[0][0] = date;
+        board[1][0] = dye;
+        board[2][0] = papyrus;
+        const effects: { x: number; y: number; food: number; gold: number; knowledge: number }[] = [];
+
+        const result = runPostEffectsHooks({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            effects,
+            leaderId: null,
+            bonusXpPerTurn: 0,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: () => [],
+            relics: [],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        });
+
+        expect(result.bonusFood).toBe(10);
+        expect(result.bonusGold).toBe(10);
+        expect(result.bonusKnowledge).toBe(10);
+        expect(effects).toEqual([
+            { x: 0, y: 0, food: 10, gold: 0, knowledge: 0 },
+            { x: 1, y: 0, food: 0, gold: 10, knowledge: 0 },
+            { x: 2, y: 0, food: 0, gold: 0, knowledge: 10 },
+        ]);
+    });
+
+    it('triggers Oral Tradition knowledge when it is destroyed by another symbol', () => {
+        const board = createEmptyBoard();
+        const oral = createInstance(SYMBOLS[S.oral_tradition]!, 'oral');
+        oral.is_marked_for_destruction = true;
+        board[1][1] = oral;
+        board[0][1] = createInstance(SYMBOLS[S.desert]!, 'desert');
+        board[2][2] = createInstance(SYMBOLS[S.wheat]!, 'wheat');
+        const effects: { x: number; y: number; food: number; gold: number; knowledge: number }[] = [];
+
+        const result = runPostEffectsHooks({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            effects,
+            leaderId: null,
+            bonusXpPerTurn: 0,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: (x, y) => {
+                const adj: { x: number; y: number }[] = [];
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (nx >= 0 && nx < 5 && ny >= 0 && ny < 4) adj.push({ x: nx, y: ny });
+                    }
+                }
+                return adj;
+            },
+            relics: [],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        });
+
+        expect(result.bonusKnowledge).toBe(20);
+        expect(effects).toContainEqual({ x: 1, y: 1, food: 0, gold: 0, knowledge: 20 });
+    });
+
+    it('refreshes the relic shop when Relic Caravan is destroyed by another symbol', () => {
+        const board = createEmptyBoard();
+        const relicCaravan = createInstance(SYMBOLS[S.relic_caravan]!, 'relic-caravan');
+        relicCaravan.is_marked_for_destruction = true;
+        board[1][1] = relicCaravan;
+
+        const result = runPostEffectsHooks({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            effects: [],
+            leaderId: null,
+            bonusXpPerTurn: 0,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: () => [],
+            relics: [],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        });
+
+        expect(result.refreshRelicShop).toBe(true);
+    });
+
     it('lets AGI Core absorb all board knowledge production and trigger victory at 500', () => {
         const board = createEmptyBoard();
         const agiCore = createInstance(SYMBOLS[S.agi_core]!, 'agi_core');
