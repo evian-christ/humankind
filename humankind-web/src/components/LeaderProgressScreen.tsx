@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 import { usePreGameStore } from '../game/state/preGameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
@@ -225,10 +225,14 @@ export default function LeaderProgressScreen() {
           </h1>
 
           <section className="leader-progress-grid" aria-label={t('leaderProgress.rosterLabel', language)}>
-            {LEADER_LIST.map((leader) => {
+            {LEADER_LIST.filter((leader) => leader.enabled && leaderHasPortraitSprite(leader.id)).map((leader, index, visibleLeaders) => {
               const enabled = leader.enabled;
               const label = t(leader.nameKey, language);
               const cardLabel = enabled ? label : t('leader.locked.desc', language);
+              const portraitMaskSrc = leaderPortraitSrc(leader.id);
+              const portraitStyle = portraitMaskSrc
+                ? ({ '--leader-progress-portrait-mask': `url("${portraitMaskSrc}")` } as CSSProperties)
+                : undefined;
               return (
                 <button
                   key={leader.id}
@@ -239,6 +243,7 @@ export default function LeaderProgressScreen() {
                   ]
                     .filter(Boolean)
                     .join(' ')}
+                  style={{ zIndex: visibleLeaders.length - index, ...portraitStyle }}
                   aria-label={cardLabel}
                   aria-disabled={!enabled}
                   onClick={() => {
