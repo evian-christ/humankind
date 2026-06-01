@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SYMBOLS_BY_KEY, SymbolType, type SymbolDefinition, type SymbolKey } from '../game/data/symbolDefinitions';
 import {
     getKnowledgeUpgradePrerequisiteClosure,
+    type KnowledgeUpgradeDescRelic,
     type KnowledgeUpgradeDescSymbol,
     type KnowledgeUpgradeDescSymbolKey,
     type KnowledgeUpgradeSymbolRelation,
@@ -12,6 +13,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
+import { getRelicRarityColorHex, RELICS } from '../game/data/relicDefinitions';
 
 const RELATION_BADGE: Record<KnowledgeUpgradeSymbolRelation, string> = {
     pool_add: '+',
@@ -34,6 +36,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
 
 const UPGRADE_DESC_SYMBOL_TIP_W = 280;
 const UPGRADE_DESC_SYMBOL_COMPARE_TIP_W = 300;
+const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 function normalizeDescForCompare(s: string): string {
     return s.replace(/\s+/g, ' ').trim();
@@ -88,9 +91,32 @@ export const UpgradeCardDescSymbols = ({
     const [hover, setHover] = useState<{
         symbolKey: KnowledgeUpgradeDescSymbolKey;
         relation: KnowledgeUpgradeSymbolRelation;
+        anchorLeft: number;
         anchorRight: number;
         anchorTop: number;
+        anchorBottom: number;
     } | null>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+    const [tooltipSize, setTooltipSize] = useState<{ width: number; height: number } | null>(null);
+
+    useLayoutEffect(() => {
+        if (!hover) return;
+
+        const updateTooltipSize = () => {
+            const el = tooltipRef.current;
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            setTooltipSize((prev) => {
+                const next = { width: Math.ceil(r.width), height: Math.ceil(r.height) };
+                if (prev && prev.width === next.width && prev.height === next.height) return prev;
+                return next;
+            });
+        };
+
+        updateTooltipSize();
+        window.addEventListener('resize', updateTooltipSize);
+        return () => window.removeEventListener('resize', updateTooltipSize);
+    }, [hover]);
 
     if (entries.length === 0) return null;
 
@@ -102,7 +128,15 @@ export const UpgradeCardDescSymbols = ({
 
     const showTooltip = (symbolKey: KnowledgeUpgradeDescSymbolKey, relation: KnowledgeUpgradeSymbolRelation, el: HTMLElement) => {
         const r = el.getBoundingClientRect();
-        setHover({ symbolKey, relation, anchorRight: r.right, anchorTop: r.top });
+        setTooltipSize(null);
+        setHover({
+            symbolKey,
+            relation,
+            anchorLeft: r.left,
+            anchorRight: r.right,
+            anchorTop: r.top,
+            anchorBottom: r.bottom,
+        });
     };
 
     const tooltipContent = hover && (() => {
@@ -136,13 +170,35 @@ export const UpgradeCardDescSymbols = ({
             isModify &&
             normalizeDescForCompare(beforeCanonical) !== normalizeDescForCompare(afterResolved ?? '');
         const tipW = isModify && hasCompare ? UPGRADE_DESC_SYMBOL_COMPARE_TIP_W : UPGRADE_DESC_SYMBOL_TIP_W;
-        let left = hover.anchorRight + 10;
-        const top = Math.max(8, hover.anchorTop);
-        if (typeof window !== 'undefined' && left + tipW > window.innerWidth - 8) {
-            left = Math.max(8, hover.anchorRight - tipW - 10);
+        const margin = 10;
+        const minInset = 8;
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
+        const measuredWidth = tooltipSize?.width ?? tipW;
+        const measuredHeight = tooltipSize?.height ?? 0;
+        let left = hover.anchorRight + margin;
+        if (left + measuredWidth > viewportWidth - minInset) {
+            left = hover.anchorLeft - measuredWidth - margin;
         }
+        left = Math.min(
+            Math.max(minInset, left),
+            Math.max(minInset, viewportWidth - measuredWidth - minInset),
+        );
+        const anchorCenterY = (hover.anchorTop + hover.anchorBottom) / 2;
+        const alignTopToAnchor = anchorCenterY <= viewportHeight / 2;
+        const preferredTop = alignTopToAnchor || measuredHeight <= 0
+            ? hover.anchorTop
+            : hover.anchorBottom - measuredHeight;
+        const top = measuredHeight > 0
+            ? Math.min(
+                Math.max(minInset, preferredTop),
+                Math.max(minInset, viewportHeight - measuredHeight - minInset),
+            )
+            : Math.max(minInset, preferredTop);
+        const maxHeight = Math.max(120, viewportHeight - minInset * 2);
         return (
             <div
+                ref={tooltipRef}
                 className="symbol-tooltip"
                 style={{
                     position: 'fixed',
@@ -150,6 +206,8 @@ export const UpgradeCardDescSymbols = ({
                     top,
                     zIndex: 600,
                     maxWidth: tipW,
+                    maxHeight,
+                    overflowY: 'auto',
                     pointerEvents: 'none',
                 }}
                 role="tooltip"
@@ -269,6 +327,193 @@ export const UpgradeCardDescSymbols = ({
                         </div>
                     );
                 })}
+            </div>
+            {tooltipContent && typeof document !== 'undefined'
+                ? createPortal(tooltipContent, document.body)
+                : null}
+        </>
+    );
+};
+
+export const UpgradeCardDescRelics = ({
+    entries,
+    layoutSize = 'default',
+}: {
+    entries: KnowledgeUpgradeDescRelic[];
+    layoutSize?: 'default' | 'panel';
+}) => {
+    const language = useSettingsStore((s) => s.language);
+    const [hover, setHover] = useState<{
+        relicId: number;
+        anchorLeft: number;
+        anchorRight: number;
+        anchorTop: number;
+        anchorBottom: number;
+    } | null>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+    const [tooltipSize, setTooltipSize] = useState<{ width: number; height: number } | null>(null);
+
+    useLayoutEffect(() => {
+        if (!hover) return;
+
+        const updateTooltipSize = () => {
+            const el = tooltipRef.current;
+            if (!el) return;
+            const r = el.getBoundingClientRect();
+            setTooltipSize((prev) => {
+                const next = { width: Math.ceil(r.width), height: Math.ceil(r.height) };
+                if (prev && prev.width === next.width && prev.height === next.height) return prev;
+                return next;
+            });
+        };
+
+        updateTooltipSize();
+        window.addEventListener('resize', updateTooltipSize);
+        return () => window.removeEventListener('resize', updateTooltipSize);
+    }, [hover]);
+
+    if (entries.length === 0) return null;
+
+    const isPanel = layoutSize === 'panel';
+    const symbolsColGap = isPanel ? '18px' : '16px';
+    const groupRowGap = isPanel ? '10px' : '8px';
+    const relLabelFontPx = isPanel ? '18px' : '16px';
+    const relPrefixFontPx = isPanel ? '20px' : '18px';
+
+    const showTooltip = (relicId: number, el: HTMLElement) => {
+        const r = el.getBoundingClientRect();
+        setTooltipSize(null);
+        setHover({
+            relicId,
+            anchorLeft: r.left,
+            anchorRight: r.right,
+            anchorTop: r.top,
+            anchorBottom: r.bottom,
+        });
+    };
+
+    const tooltipContent = hover && (() => {
+        const relic = RELICS[hover.relicId];
+        if (!relic) return null;
+        const relicName = t(`relic.${relic.id}.name`, language);
+        const rarityColor = getRelicRarityColorHex(relic.rarity);
+        const rarityName = t(`rarity.${relic.rarity}`, language) || relic.rarity;
+        const tipW = UPGRADE_DESC_SYMBOL_TIP_W;
+        const margin = 10;
+        const minInset = 8;
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
+        const measuredWidth = tooltipSize?.width ?? tipW;
+        const measuredHeight = tooltipSize?.height ?? 0;
+        let left = hover.anchorRight + margin;
+        if (left + measuredWidth > viewportWidth - minInset) {
+            left = hover.anchorLeft - measuredWidth - margin;
+        }
+        left = Math.min(
+            Math.max(minInset, left),
+            Math.max(minInset, viewportWidth - measuredWidth - minInset),
+        );
+        const anchorCenterY = (hover.anchorTop + hover.anchorBottom) / 2;
+        const alignTopToAnchor = anchorCenterY <= viewportHeight / 2;
+        const preferredTop = alignTopToAnchor || measuredHeight <= 0
+            ? hover.anchorTop
+            : hover.anchorBottom - measuredHeight;
+        const top = measuredHeight > 0
+            ? Math.min(
+                Math.max(minInset, preferredTop),
+                Math.max(minInset, viewportHeight - measuredHeight - minInset),
+            )
+            : Math.max(minInset, preferredTop);
+        const maxHeight = Math.max(120, viewportHeight - minInset * 2);
+
+        return (
+            <div
+                ref={tooltipRef}
+                className="symbol-tooltip"
+                style={{
+                    position: 'fixed',
+                    left,
+                    top,
+                    zIndex: 600,
+                    maxWidth: tipW,
+                    maxHeight,
+                    overflowY: 'auto',
+                    pointerEvents: 'none',
+                }}
+                role="tooltip"
+            >
+                <div className="symbol-tooltip-name">{relicName}</div>
+                <div
+                    className="symbol-tooltip-rarity"
+                    style={{
+                        color: rarityColor,
+                        fontWeight: 'bold',
+                        fontSize: '16px',
+                        letterSpacing: '2px',
+                        textShadow: `0 0 10px ${rarityColor}80`,
+                        marginTop: '4px',
+                    }}
+                >
+                    {rarityName}
+                </div>
+                <div className="symbol-tooltip-desc" style={{ marginTop: '8px' }}>
+                    {(t(`relic.${relic.id}.desc`, language) || relic.description)
+                        .split('\n')
+                        .map((line, i) => (
+                            <div key={i} className="symbol-tooltip-desc-line">
+                                <EffectText text={line} />
+                            </div>
+                        ))}
+                </div>
+            </div>
+        );
+    })();
+
+    return (
+        <>
+            <div
+                className="upgrade-card-desc-symbols"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                style={{ display: 'flex', flexDirection: 'column', gap: symbolsColGap }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: groupRowGap }}>
+                    <div style={{ fontSize: relLabelFontPx, color: '#94a3b8', fontFamily: 'var(--game-font-family), sans-serif', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: '#c084fc', fontWeight: '900', fontSize: relPrefixFontPx }}>+</span>
+                        {t('knowledgeUpgrade.relicRelation.gain', language)}
+                    </div>
+                    <div className="upgrade-card-desc-symbol-chips">
+                        {entries.map(({ relicId, count }) => {
+                            const relic = RELICS[relicId];
+                            if (!relic) return null;
+                            const relicName = t(`relic.${relic.id}.name`, language);
+                            return (
+                                <button
+                                    key={`relic-${relicId}-${count}`}
+                                    type="button"
+                                    className="upgrade-card-desc-symbol-chip upgrade-card-desc-symbol-chip--pool_add"
+                                    aria-label={relicName}
+                                    onMouseEnter={(e) => showTooltip(relicId, e.currentTarget)}
+                                    onMouseLeave={() => setHover(null)}
+                                    onFocus={(e) => showTooltip(relicId, e.currentTarget)}
+                                    onBlur={() => setHover(null)}
+                                >
+                                    <span
+                                        className="upgrade-card-desc-symbol-badge upgrade-card-desc-symbol-badge--pool_add"
+                                        aria-hidden
+                                    >
+                                        {count > 1 ? `x${count}` : '+'}
+                                    </span>
+                                    <img
+                                        src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`}
+                                        alt=""
+                                        className="upgrade-card-desc-symbol-img"
+                                    />
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
             {tooltipContent && typeof document !== 'undefined'
                 ? createPortal(tooltipContent, document.body)

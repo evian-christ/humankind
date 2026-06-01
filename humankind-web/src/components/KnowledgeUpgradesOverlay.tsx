@@ -32,7 +32,7 @@ import {
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
-import { UpgradeCardDescSymbols } from './KnowledgeUpgradeCardWidgets';
+import { UpgradeCardDescRelics, UpgradeCardDescSymbols } from './KnowledgeUpgradeCardWidgets';
 import { resolveUpgradeSprite } from './knowledgeUpgradeSprites';
 import { audioManager } from '../audio/audioManager';
 
@@ -1314,7 +1314,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                         </div>
                                     ))}
                             </div>
-                            {detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0 && (
+                            {((detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0) ||
+                                (detailUpgrade.descRelics && detailUpgrade.descRelics.length > 0)) && (
                                 <div
                                     className="knowledge-upgrade-desc-symbols-area"
                                     style={{
@@ -1323,15 +1324,25 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                         borderTop: '1px solid #444',
                                     }}
                                 >
-                                    <UpgradeCardDescSymbols
-                                        upgradeId={detailId!}
-                                        entries={
-                                            detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID
-                                                ? buildAncientSymbolsUnlockDescSymbols(leaderId, leaderProgressLevel)
-                                                : detailUpgrade.descSymbols
-                                        }
-                                        layoutSize="panel"
-                                    />
+                                    {detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0 && (
+                                        <UpgradeCardDescSymbols
+                                            upgradeId={detailId!}
+                                            entries={
+                                                detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID
+                                                    ? buildAncientSymbolsUnlockDescSymbols(leaderId, leaderProgressLevel)
+                                                    : detailUpgrade.descSymbols
+                                            }
+                                            layoutSize="panel"
+                                        />
+                                    )}
+                                    {detailUpgrade.descRelics && detailUpgrade.descRelics.length > 0 && (
+                                        <div style={{ marginTop: detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0 ? '12px' : 0 }}>
+                                            <UpgradeCardDescRelics
+                                                entries={detailUpgrade.descRelics}
+                                                layoutSize="panel"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
