@@ -2237,7 +2237,7 @@ button.spin-btn:disabled:active {
 
 .main-menu-button {
   width: 100%;
-  min-height: 64px;
+  min-height: 80px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2249,7 +2249,8 @@ button.spin-btn:disabled:active {
   letter-spacing: 0;
   color: #ffffff;
   background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.72);
+  border: 4px solid rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
@@ -2303,11 +2304,11 @@ button.spin-btn:disabled:active {
 
 .main-menu-play-row {
   position: relative;
-  width: min(100%, 360px);
+  width: min(100%, 290px);
 }
 
 .main-menu-actions > .main-menu-button {
-  width: min(100%, 360px);
+  width: min(100%, 290px);
 }
 
 .main-menu-play-button--open {
@@ -2347,7 +2348,7 @@ button.spin-btn:disabled:active {
 }
 
 .main-menu-option-button {
-  min-height: 56px;
+  min-height: 70px;
   font-size: clamp(19px, 2vw, 28px);
 }
 
@@ -2369,7 +2370,7 @@ button.spin-btn:disabled:active {
 
 @media (max-width: 760px) {
   .main-menu-play-row {
-    width: min(100%, 360px);
+    width: min(100%, 290px);
   }
 
   .main-menu-play-options {
@@ -2384,6 +2385,38 @@ button.spin-btn:disabled:active {
   }
 }
 
+.main-menu-settings-button {
+  position: absolute;
+  left: clamp(24px, 4vw, 56px);
+  bottom: clamp(24px, 4vw, 56px);
+  width: 68px;
+  height: 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  font-size: 38px;
+  font-weight: 400;
+  line-height: 1;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 4px solid rgba(255, 255, 255, 0.62);
+  border-radius: 16px;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.main-menu-settings-button::before {
+  content: "\2699";
+}
 .main-menu-exit-button {
   position: absolute;
   right: clamp(24px, 4vw, 56px);
@@ -2401,7 +2434,8 @@ button.spin-btn:disabled:active {
   line-height: 1;
   color: #ffffff;
   background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.62);
+  border: 4px solid rgba(255, 255, 255, 0.62);
+  border-radius: 16px;
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
@@ -2413,6 +2447,8 @@ button.spin-btn:disabled:active {
     box-shadow 140ms ease;
 }
 
+.main-menu-settings-button:hover,
+.main-menu-settings-button:focus-visible,
 .main-menu-exit-button:hover,
 .main-menu-exit-button:focus-visible {
   transform: translateY(-2px);
@@ -2425,6 +2461,7 @@ button.spin-btn:disabled:active {
   outline: none;
 }
 
+.main-menu-settings-button:active,
 .main-menu-exit-button:active {
   transform: translateY(0);
   background: rgba(255, 255, 255, 0.15);

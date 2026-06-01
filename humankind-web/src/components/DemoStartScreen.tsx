@@ -131,16 +131,14 @@ export default function DemoStartScreen() {
           >
             {t('mainMenu.achievements', language)}
           </button>
-          <button
-            type="button"
-            className="main-menu-button"
-            onClick={() => setSettingsOpen(true)}
-            aria-label={t('mainMenu.settings', language)}
-          >
-            {t('mainMenu.settings', language)}
-          </button>
         </nav>
       </main>
+      <button
+        type="button"
+        className="main-menu-settings-button"
+        onClick={() => setSettingsOpen(true)}
+        aria-label={t('mainMenu.settings', language)}
+      />
       <button
         type="button"
         className="main-menu-exit-button"
