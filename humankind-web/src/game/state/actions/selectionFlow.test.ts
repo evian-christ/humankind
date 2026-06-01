@@ -17,15 +17,18 @@ import {
     FEUDAL_CORN_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
+    GREAT_MIGRATION_UPGRADE_ID,
     GUNPOWDER_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
+    MECHANICS_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
+    PLANTATION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
@@ -76,7 +79,6 @@ const makeState = (): GameState => {
         knowledgeUpgradeFloats: [],
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
-        bonusXpPerTurn: 0,
         qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
         isRelicShopOpen: false,
@@ -217,6 +219,7 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().gold).toBe(7);
         expect(harness.get().freeSelectionRerolls).toBe(0);
+        expect(harness.get().rerollsThisTurn).toBe(1);
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
@@ -289,6 +292,62 @@ describe('selectionFlow actions', () => {
         expect(harness.get().knowledge).toBe(51);
     });
 
+    it('triggers Banana food, rainforest progress, and board floats for Jungle Expedition event', () => {
+        const banana = createInstance(SYMBOLS[S.banana]!, []);
+        const rainforest = createInstance(SYMBOLS[S.rainforest]!, []);
+        const board = createEmptyBoard();
+        board[1][1] = banana;
+        board[2][1] = rainforest;
+
+        const harness = createHarness({
+            food: 3,
+            board,
+            playerSymbols: [banana, rainforest],
+        });
+
+        harness.actions.selectEvent(17);
+
+        expect(harness.get().food).toBe(4);
+        expect(harness.get().board[1]?.[1]?.effect_counter).toBe(1);
+        expect(harness.get().lastEffects).toContainEqual({
+            x: 1,
+            y: 1,
+            food: 1,
+            gold: 0,
+            knowledge: 0,
+            counter: 1,
+            counterAnchor: 'bottom-right',
+        });
+    });
+
+    it('wraps Banana progress through Plantation threshold during Jungle Expedition event', () => {
+        const banana = createInstance(SYMBOLS[S.banana]!, []);
+        banana.effect_counter = 6;
+        const rainforest = createInstance(SYMBOLS[S.rainforest]!, []);
+        const board = createEmptyBoard();
+        board[1][1] = banana;
+        board[2][1] = rainforest;
+
+        const harness = createHarness({
+            food: 3,
+            board,
+            playerSymbols: [banana, rainforest],
+            unlockedKnowledgeUpgrades: [PLANTATION_UPGRADE_ID],
+        });
+
+        harness.actions.selectEvent(17);
+
+        expect(harness.get().food).toBe(4);
+        expect(harness.get().board[1]?.[1]?.effect_counter).toBe(0);
+        expect(harness.get().board[1]?.[1]?.banana_permanent_food_bonus).toBe(1);
+        expect(harness.get().lastEffects.at(-1)).toMatchObject({
+            x: 1,
+            y: 1,
+            food: 1,
+            counter: 1,
+        });
+    });
+
     it('destroys random owned symbols and grants resources for Capital Relocation event', () => {
         vi.spyOn(Math, 'random').mockReturnValue(0);
         const symbols = [
@@ -355,8 +414,23 @@ describe('selectionFlow actions', () => {
 
         harness.actions.rerollSymbols();
 
-        expect(harness.get().gold).toBe(2);
+        expect(harness.get().gold).toBe(4);
         expect(harness.get().rerollsThisTurn).toBe(1);
+        expect(harness.get().symbolChoices).toHaveLength(3);
+    });
+
+    it('increases reroll cost within the same turn', () => {
+        const harness = createHarness({
+            level: 0,
+            gold: 10,
+            symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.wheat]!, SYMBOLS[S.wheat]!],
+        });
+
+        harness.actions.rerollSymbols();
+        harness.actions.rerollSymbols();
+
+        expect(harness.get().gold).toBe(7);
+        expect(harness.get().rerollsThisTurn).toBe(2);
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
@@ -371,7 +445,6 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().phase).toBe('selection');
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
-        expect(harness.get().bonusXpPerTurn).toBe(0);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 
@@ -485,6 +558,7 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().gold).toBe(0);
         expect(harness.get().freeSelectionRerolls).toBe(0);
+        expect(harness.get().rerollsThisTurn).toBe(1);
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
@@ -518,6 +592,26 @@ describe('selectionFlow actions', () => {
         expect(
             useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
         ).toHaveLength(3);
+    });
+
+    it('grants 2 Pioneers and 1 State Reorganization when Great Migration is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 11,
+            era: 2,
+            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(GREAT_MIGRATION_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(GREAT_MIGRATION_UPGRADE_ID);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
+        ).toHaveLength(2);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
+        ).toHaveLength(1);
     });
 
     it.each([
@@ -588,7 +682,7 @@ describe('selectionFlow actions', () => {
         expect(theologyHarness.get().religionUnlocked).toBe(true);
     });
 
-    it('improves warrior combat stats when iron working is researched', () => {
+    it('does not improve already-owned warrior combat stats when Iron Working is researched', () => {
         const warrior = createInstance(SYMBOLS[S.warrior]!, []);
         const board = createEmptyBoard();
         board[0][0] = warrior;
@@ -605,11 +699,11 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(IRON_WORKING_UPGRADE_ID);
         expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().playerSymbols[0]?.definition.base_attack).toBe(5);
-        expect(harness.get().playerSymbols[0]?.definition.base_hp).toBe(12);
-        expect(harness.get().playerSymbols[0]?.enemy_hp).toBe(12);
+        expect(harness.get().playerSymbols[0]?.definition.base_attack).toBe(3);
+        expect(harness.get().playerSymbols[0]?.definition.base_hp).toBe(8);
+        expect(harness.get().playerSymbols[0]?.enemy_hp).toBe(8);
         expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().board[0]?.[0]?.definition.base_attack).toBe(5);
+        expect(harness.get().board[0]?.[0]?.definition.base_attack).toBe(3);
     });
 
     it('uses shared ranged combat stats for all ranged unit symbols', () => {
@@ -627,7 +721,7 @@ describe('selectionFlow actions', () => {
         ]);
     });
 
-    it('replaces warriors with knights and improves shared melee stats when Stirrups is researched', () => {
+    it('does not replace already-owned units when Stirrups is researched', () => {
         const warrior = createInstance(SYMBOLS[S.warrior]!, [IRON_WORKING_UPGRADE_ID]);
         const cavalry = createInstance(SYMBOLS[S.cavalry]!, [IRON_WORKING_UPGRADE_ID]);
         const board = createEmptyBoard();
@@ -644,17 +738,40 @@ describe('selectionFlow actions', () => {
 
         harness.actions.selectUpgrade(GUNPOWDER_UPGRADE_ID);
 
-        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.cavalry);
+        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
         expect(harness.get().playerSymbols[1]?.definition.id).toBe(S.cavalry);
         expect(harness.get().playerSymbols.map((symbol) => ({
             attack: symbol.definition.base_attack,
             hp: symbol.definition.base_hp,
         }))).toEqual([
-            { attack: 7, hp: 16 },
-            { attack: 7, hp: 16 },
+            { attack: 5, hp: 12 },
+            { attack: 5, hp: 12 },
         ]);
-        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.cavalry);
+        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
         expect(harness.get().board[1]?.[0]?.definition.id).toBe(S.cavalry);
+    });
+
+    it('does not replace or restat an already-owned Archer when Mechanics is researched', () => {
+        const archer = createInstance(SYMBOLS[S.archer]!, []);
+        const board = createEmptyBoard();
+        board[0][0] = archer;
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 13,
+            playerSymbols: [archer],
+            board,
+            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(MECHANICS_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MECHANICS_UPGRADE_ID);
+        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.archer);
+        expect(harness.get().playerSymbols[0]?.definition.base_attack).toBe(2);
+        expect(harness.get().playerSymbols[0]?.definition.base_hp).toBe(4);
+        expect(harness.get().playerSymbols[0]?.enemy_hp).toBe(4);
+        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.archer);
     });
 
     it('opens oblivion furnace board mode only when a relic-backed cell destroy resolves', () => {

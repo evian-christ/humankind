@@ -29,8 +29,6 @@ export interface EffectResult {
     triggerRelicRefresh?: boolean;
     /** 이 심볼의 효과에 기여한 인접 심볼 좌표 */
     contributors?: { x: number; y: number }[];
-    /** 영구 턴당 지식 보너스 증가 (gameStore bonusXpPerTurn) */
-    bonusXpPerTurnDelta?: number;
     /** 다음 심볼 선택지에 지형 1칸 이상 포함 */
     forceTerrainInNextChoices?: boolean;
     /** 다음 심볼 선택지 3칸을 모두 이벤트로 생성 */
@@ -45,7 +43,7 @@ export interface EffectResult {
 
 /** 현재 보유 유물의 활성 효과 플래그 (`relicDefinitions` 1–19 + 지식 업그레이드 일부, gameStore에서 조합) */
 export interface ActiveRelicEffects {
-    /** 유물 보유 수 (석판 효과용) */
+    /** 비소모형 유물 보유 수 (석판 효과용) */
     relicCount: number;
     /** 유물 5 이집트 구리 톱 — 산 인접 빈 슬롯마다 골드 */
     quarryEmptyGold: boolean;

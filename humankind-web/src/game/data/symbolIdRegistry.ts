@@ -35,7 +35,6 @@ export const SYMBOL_NUMERIC_ID = {
 
     // 숲축
     deer: 20,
-    mushroom: 21,
     fur: 22,
 
     // 열대우림축

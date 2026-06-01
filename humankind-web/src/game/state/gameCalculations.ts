@@ -30,7 +30,7 @@ import { SymbolType } from '../data/symbolDefinitions';
 
 const KNOWLEDGE_LEVELUP_BASE = 50;
 const KNOWLEDGE_LEVELUP_STEP = 5;
-const BASE_REROLL_GOLD_COST = 2;
+const BASE_REROLL_GOLD_COST = 1;
 const GOLD_INFLATION_LEVEL_CAP = 30;
 const GOLD_INFLATION_LINEAR_PER_LEVEL = 0.05;
 const GOLD_INFLATION_QUADRATIC_PER_LEVEL = 0.0017;
@@ -177,8 +177,14 @@ export const getTrojanGoldLootReward = (level: number): number => {
     return getInflationAdjustedGoldReward(25, level);
 };
 
-export const getRerollCost = (level: number, discountMultiplier = 1): number =>
-    getInflatedGoldCost(BASE_REROLL_GOLD_COST, level, discountMultiplier);
+export const getRerollCost = (level: number, discountMultiplier = 1, rerollsThisTurn = 0): number => {
+    const normalizedRerollsThisTurn = Math.max(0, Math.floor(rerollsThisTurn));
+    return getInflatedGoldCost(
+        BASE_REROLL_GOLD_COST * (1 + normalizedRerollsThisTurn),
+        level,
+        discountMultiplier,
+    );
+};
 
 export const getTimelineYearForTurn = (turn: number): number => {
     const first = TIMELINE_YEAR_ANCHORS[0]!;

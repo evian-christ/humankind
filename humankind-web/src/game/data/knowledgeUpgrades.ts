@@ -1,5 +1,6 @@
 import type { LeaderId } from './leaders';
 import { EXCLUDED_FROM_BASE_POOL, SymbolType, SYMBOLS, SYMBOL_NUMERIC_ID, type SymbolKey } from './symbolDefinitions';
+import { RELIC_ID } from '../logic/relics/relicIds';
 
 /** 지식 업그레이드 설명에 나오는 심볼과, 선택 풀·효과에 미치는 관계 */
 export type KnowledgeUpgradeSymbolRelation = 'pool_add' | 'pool_remove' | 'effect_modify';
@@ -11,6 +12,11 @@ export interface KnowledgeUpgradeDescSymbol {
     /** 활성 심볼 키 또는 표시 전용(제거된 심볼) 키 */
     symbolKey: KnowledgeUpgradeDescSymbolKey;
     relation: KnowledgeUpgradeSymbolRelation;
+}
+
+export interface KnowledgeUpgradeDescRelic {
+    relicId: number;
+    count: number;
 }
 
 /** 중세시대(15) 카드 칩 — 풀 제외/추가는 게임과 동기, 효과 변경은 산만(지형 등장 확률만 바뀌는 타일은 칩 제외) */
@@ -73,6 +79,8 @@ export interface KnowledgeUpgrade {
     sprite?: string;
     /** 효과 설명에 등장하는 심볼 — 카드에서 아이콘·관계(추가/제외/효과 변경)·툴팁 */
     descSymbols?: KnowledgeUpgradeDescSymbol[];
+    /** 효과 설명에 등장하는 지급 유물 — 카드에서 아이콘·수량·툴팁 */
+    descRelics?: KnowledgeUpgradeDescRelic[];
 }
 
 export type KnowledgeUpgradeType = SymbolType;
@@ -153,6 +161,9 @@ export const COLONIALISM_UPGRADE_ID = 72;
 export const TRIBAL_FEDERATION_UPGRADE_ID = 73;
 export const MERCENARIES_UPGRADE_ID = 74;
 export const TOTAL_MOBILIZATION_UPGRADE_ID = 75;
+export const TROPICAL_AGRICULTURE_UPGRADE_ID = 76;
+export const MASON_GUILD_UPGRADE_ID = 77;
+export const GREAT_MIGRATION_UPGRADE_ID = 78;
 export const TERRITORIAL_REORG_UPGRADE_ID = -1;
 
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
@@ -191,9 +202,6 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.ANCIENT,
         description: 'Melee units gain +2 Attack and +4 HP.',
         sprite: '022.png',
-        descSymbols: [
-            { symbolKey: 'warrior', relation: 'effect_modify' },
-        ],
     },
     [IRRIGATION_UPGRADE_ID]: {
         id: IRRIGATION_UPGRADE_ID,
@@ -240,38 +248,45 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'sea', relation: 'effect_modify' },
         ],
     },
+    [TROPICAL_AGRICULTURE_UPGRADE_ID]: {
+        id: TROPICAL_AGRICULTURE_UPGRADE_ID,
+        name: 'Tropical Agriculture',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Rainforest.',
+        sprite: '076.png',
+        descSymbols: [{ symbolKey: 'rainforest', relation: 'effect_modify' }],
+    },
     [MINING_UPGRADE_ID]: {
         id: MINING_UPGRADE_ID,
         name: 'Mining',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Rainforest and Stone.',
+        description: 'Upgrades Stone. Melee units gain +1 Attack and +2 HP.',
         sprite: '006.png',
-        descSymbols: [
-            { symbolKey: 'rainforest', relation: 'effect_modify' },
-            { symbolKey: 'stone', relation: 'effect_modify' },
-        ],
+        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
+    },
+    [MASON_GUILD_UPGRADE_ID]: {
+        id: MASON_GUILD_UPGRADE_ID,
+        name: 'Mason Guild',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Stone. Melee units gain +1 Attack and +2 HP.',
+        sprite: '006.png',
+        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
     },
     [HUNTING_UPGRADE_ID]: {
         id: HUNTING_UPGRADE_ID,
         name: 'Hunting',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Mushroom and Fur for the symbol selection pool.',
+        description: 'Unlocks Fur for the symbol selection pool.',
         sprite: '002.png',
-        descSymbols: [
-            { symbolKey: 'mushroom', relation: 'pool_add' },
-            { symbolKey: 'fur', relation: 'pool_add' },
-        ],
+        descSymbols: [{ symbolKey: 'fur', relation: 'pool_add' }],
     },
     [TRACKING_UPGRADE_ID]: {
         id: TRACKING_UPGRADE_ID,
         name: 'Tracking',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Forest and Mushroom.',
+        description: 'Upgrades Forest.',
         sprite: '020.png',
-        descSymbols: [
-            { symbolKey: 'forest', relation: 'effect_modify' },
-            { symbolKey: 'mushroom', relation: 'effect_modify' },
-        ],
+        descSymbols: [{ symbolKey: 'forest', relation: 'effect_modify' }],
     },
     [TANNING_UPGRADE_ID]: {
         id: TANNING_UPGRADE_ID,
@@ -298,12 +313,9 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: PRESERVATION_UPGRADE_ID,
         name: 'Preservation',
         type: SymbolType.MODERN,
-        description: 'Upgrades Deer and Mushroom.',
+        description: 'Upgrades Deer.',
         sprite: '057.png',
-        descSymbols: [
-            { symbolKey: 'deer', relation: 'effect_modify' },
-            { symbolKey: 'mushroom', relation: 'effect_modify' },
-        ],
+        descSymbols: [{ symbolKey: 'deer', relation: 'effect_modify' }],
     },
     [LAW_CODE_UPGRADE_ID]: {
         id: LAW_CODE_UPGRADE_ID,
@@ -370,9 +382,10 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: CHIEFDOM_UPGRADE_ID,
         name: 'Chiefdom',
         type: SymbolType.ANCIENT,
-        description: 'Base Food production +1. Gain 1 Furnace of Oblivion. Upgrades Wild Berries.',
+        description: 'Base Food production +1. Gain 1 State Reorganization. Upgrades Wild Berries.',
         sprite: '008.png',
         descSymbols: [{ symbolKey: 'wild_berries', relation: 'effect_modify' }],
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
     },
     [ARCHITECTURE_UPGRADE_ID]: {
         id: ARCHITECTURE_UPGRADE_ID,
@@ -386,9 +399,10 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: NATIONALISM_UPGRADE_ID,
         name: 'Nationalism',
         type: SymbolType.MEDIEVAL,
-        description: 'Base Knowledge production +2. Gain 1 Furnace of Oblivion. Upgrades Monument.',
+        description: 'Base Knowledge production +2. Gain 1 State Reorganization. Upgrades Monument.',
         sprite: '049.png',
         descSymbols: [{ symbolKey: 'monument', relation: 'effect_modify' }],
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
     },
     [EXPLORATION_UPGRADE_ID]: {
         id: EXPLORATION_UPGRADE_ID,
@@ -479,7 +493,6 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.ANCIENT,
         description: 'Ranged units gain +1 Attack and +2 HP.',
         sprite: '009.png',
-        descSymbols: [{ symbolKey: 'archer', relation: 'effect_modify' }],
     },
     [CURRENCY_UPGRADE_ID]: {
         id: CURRENCY_UPGRADE_ID,
@@ -503,28 +516,31 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: SACRIFICIAL_RITE_UPGRADE_ID,
         name: 'Sacrificial Rite',
         type: SymbolType.ANCIENT,
-        description: 'Gain 3 Furnaces of Oblivion.',
+        description: 'Gain 3 State Reorganizations.',
         sprite: '012.png',
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 }],
     },
     [INQUISITION_UPGRADE_ID]: {
         id: INQUISITION_UPGRADE_ID,
         name: 'Inquisition',
         type: SymbolType.MEDIEVAL,
-        description: 'Gain 3 Furnaces of Oblivion.',
+        description: 'Gain 3 State Reorganizations.',
         sprite: '064.png',
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 }],
     },
     [RESTRUCTURING_UPGRADE_ID]: {
         id: RESTRUCTURING_UPGRADE_ID,
         name: 'Restructuring',
         type: SymbolType.MODERN,
-        description: 'Gain 3 Furnaces of Oblivion.',
+        description: 'Gain 3 State Reorganizations.',
         sprite: '065.png',
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 }],
     },
     [PUBLIC_ADMINISTRATION_UPGRADE_ID]: {
         id: PUBLIC_ADMINISTRATION_UPGRADE_ID,
         name: 'Public Administration',
         type: SymbolType.MEDIEVAL,
-        description: 'In the selection phase, each card is 1.5x as likely to become an event.',
+        description: 'In the selection phase, each card is 2x as likely to become an event.',
         sprite: '066.png',
     },
     [MASS_MEDIA_UPGRADE_ID]: {
@@ -547,6 +563,18 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.MODERN,
         description: 'Gain 3 Ancient Tribe Joins.',
         sprite: '072.png',
+        descRelics: [{ relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 3 }],
+    },
+    [GREAT_MIGRATION_UPGRADE_ID]: {
+        id: GREAT_MIGRATION_UPGRADE_ID,
+        name: 'Great Migration',
+        type: SymbolType.MEDIEVAL,
+        description: 'Gain 2 Pioneers and 1 State Reorganization.',
+        sprite: '072.png',
+        descRelics: [
+            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 2 },
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
+        ],
     },
     [TRIBAL_FEDERATION_UPGRADE_ID]: {
         id: TRIBAL_FEDERATION_UPGRADE_ID,
@@ -554,6 +582,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.ANCIENT,
         description: 'Base Food production +1. Gain 2 Military Levies.',
         sprite: '073.png',
+        descRelics: [{ relicId: RELIC_ID.MILITARY_LEVY, count: 2 }],
     },
     [MERCENARIES_UPGRADE_ID]: {
         id: MERCENARIES_UPGRADE_ID,
@@ -561,6 +590,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.MEDIEVAL,
         description: 'Base Gold production +2. Gain 2 Military Levies.',
         sprite: '074.png',
+        descRelics: [{ relicId: RELIC_ID.MILITARY_LEVY, count: 2 }],
     },
     [TOTAL_MOBILIZATION_UPGRADE_ID]: {
         id: TOTAL_MOBILIZATION_UPGRADE_ID,
@@ -568,13 +598,15 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.MODERN,
         description: 'Gain 4 Military Levies.',
         sprite: '075.png',
+        descRelics: [{ relicId: RELIC_ID.MILITARY_LEVY, count: 4 }],
     },
     [STATE_LABOR_UPGRADE_ID]: {
         id: STATE_LABOR_UPGRADE_ID,
         name: 'State Labor',
         type: SymbolType.ANCIENT,
-        description: 'Base Food production +1. Base Gold production +1. Gain 1 Furnace of Oblivion.',
+        description: 'Base Food production +1. Base Gold production +1. Gain 1 State Reorganization.',
         sprite: '025.png',
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
     },
     [URBANIZATION_UPGRADE_ID]: {
         id: URBANIZATION_UPGRADE_ID,
@@ -601,9 +633,10 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: FEUDAL_CORN_UPGRADE_ID,
         name: 'Feudalism',
         type: SymbolType.MEDIEVAL,
-        description: 'Base Food production +1. Gain 1 Furnace of Oblivion. Upgrades Corn.',
+        description: 'Base Food production +1. Gain 1 State Reorganization. Upgrades Corn.',
         sprite: '036.png',
         descSymbols: [{ symbolKey: 'corn', relation: 'effect_modify' }],
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
     },
     [FISHERIES_UPGRADE_ID]: {
         id: FISHERIES_UPGRADE_ID,
@@ -733,12 +766,9 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: PLANTATION_UPGRADE_ID,
         name: 'Plantation',
         type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Banana and Rainforest.',
+        description: 'Upgrades Banana.',
         sprite: '029.png',
-        descSymbols: [
-            { symbolKey: 'banana', relation: 'effect_modify' },
-            { symbolKey: 'rainforest', relation: 'effect_modify' },
-        ],
+        descSymbols: [{ symbolKey: 'banana', relation: 'effect_modify' }],
     },
     [JUNGLE_EXPEDITION_UPGRADE_ID]: {
         id: JUNGLE_EXPEDITION_UPGRADE_ID,
@@ -871,7 +901,7 @@ export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> 
     [TANNING_UPGRADE_ID]: [TRACKING_UPGRADE_ID],
     [FORESTRY_UPGRADE_ID]: [TANNING_UPGRADE_ID],
     [PRESERVATION_UPGRADE_ID]: [FORESTRY_UPGRADE_ID],
-    [PLANTATION_UPGRADE_ID]: [MINING_UPGRADE_ID],
+    [PLANTATION_UPGRADE_ID]: [TROPICAL_AGRICULTURE_UPGRADE_ID],
     [JUNGLE_EXPEDITION_UPGRADE_ID]: [PLANTATION_UPGRADE_ID],
     [TROPICAL_DEVELOPMENT_UPGRADE_ID]: [JUNGLE_EXPEDITION_UPGRADE_ID],
     [THREE_FIELD_SYSTEM_UPGRADE_ID]: [IRRIGATION_UPGRADE_ID],
@@ -882,6 +912,7 @@ export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> 
     [DESERT_STORAGE_UPGRADE_ID]: [DRY_STORAGE_UPGRADE_ID],
     [CARAVANSERAI_UPGRADE_ID]: [DESERT_STORAGE_UPGRADE_ID],
     [OASIS_RECOVERY_UPGRADE_ID]: [CARAVANSERAI_UPGRADE_ID],
+    [MASON_GUILD_UPGRADE_ID]: [MINING_UPGRADE_ID],
 };
 
 const KNOWLEDGE_UPGRADE_DEPENDENTS = Object.entries(KNOWLEDGE_UPGRADE_PREREQUISITES).reduce<

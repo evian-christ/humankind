@@ -22,7 +22,6 @@ export interface EffectState {
     triggerRelicSelection: boolean;
     triggerRelicRefresh: boolean;
     contributors: { x: number; y: number }[];
-    bonusXpPerTurnDelta: number;
     forceTerrainInNextChoices: boolean;
     forceEventsInNextChoices: boolean;
     edictRemovalPendingFlag: boolean;
@@ -53,7 +52,6 @@ export const createEffectState = (): EffectState => ({
     triggerRelicSelection: false,
     triggerRelicRefresh: false,
     contributors: [],
-    bonusXpPerTurnDelta: 0,
     forceTerrainInNextChoices: false,
     forceEventsInNextChoices: false,
     edictRemovalPendingFlag: false,
@@ -72,7 +70,6 @@ export const buildEffectResult = (state: EffectState): EffectResult => {
     if (state.triggerRelicSelection) result.triggerRelicSelection = true;
     if (state.triggerRelicRefresh) result.triggerRelicRefresh = true;
     if (state.contributors.length > 0) result.contributors = state.contributors;
-    if (state.bonusXpPerTurnDelta > 0) result.bonusXpPerTurnDelta = state.bonusXpPerTurnDelta;
     if (state.forceTerrainInNextChoices) result.forceTerrainInNextChoices = true;
     if (state.forceEventsInNextChoices) result.forceEventsInNextChoices = true;
     if (state.edictRemovalPendingFlag) result.edictRemovalPending = true;

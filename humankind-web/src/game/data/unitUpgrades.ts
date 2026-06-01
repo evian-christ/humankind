@@ -8,6 +8,8 @@ import {
     MECHANICS_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
+    MINING_UPGRADE_ID,
+    MASON_GUILD_UPGRADE_ID,
 } from './knowledgeUpgrades';
 import { S } from './symbolIdRegistry';
 
@@ -27,12 +29,16 @@ const withSharedMeleeStats = (definition: SymbolDefinition, upgrades: ReadonlySe
         + (upgrades.has(IRON_WORKING_UPGRADE_ID) ? 2 : 0)
         + (upgrades.has(GUNPOWDER_UPGRADE_ID) ? 2 : 0)
         + (upgrades.has(INTERCHANGEABLE_PARTS_UPGRADE_ID) ? 2 : 0)
+        + (upgrades.has(MINING_UPGRADE_ID) ? 1 : 0)
+        + (upgrades.has(MASON_GUILD_UPGRADE_ID) ? 1 : 0)
         + (upgrades.has(HORSEMANSHIP_UPGRADE_ID) ? 1 : 0)
         + (upgrades.has(MILITARY_SCIENCE_UPGRADE_ID) ? 1 : 0),
     base_hp: (SYMBOLS[S.warrior]?.base_hp ?? 0)
         + (upgrades.has(IRON_WORKING_UPGRADE_ID) ? 4 : 0)
         + (upgrades.has(GUNPOWDER_UPGRADE_ID) ? 4 : 0)
         + (upgrades.has(INTERCHANGEABLE_PARTS_UPGRADE_ID) ? 4 : 0)
+        + (upgrades.has(MINING_UPGRADE_ID) ? 2 : 0)
+        + (upgrades.has(MASON_GUILD_UPGRADE_ID) ? 2 : 0)
         + (upgrades.has(HORSEMANSHIP_UPGRADE_ID) ? 1 : 0)
         + (upgrades.has(MILITARY_SCIENCE_UPGRADE_ID) ? 1 : 0),
 });
@@ -107,12 +113,16 @@ export function getDisplayUnitStats(
             + (have.has(IRON_WORKING_UPGRADE_ID) ? 2 : 0)
             + (have.has(GUNPOWDER_UPGRADE_ID) ? 2 : 0)
             + (have.has(INTERCHANGEABLE_PARTS_UPGRADE_ID) ? 2 : 0)
+            + (have.has(MINING_UPGRADE_ID) ? 1 : 0)
+            + (have.has(MASON_GUILD_UPGRADE_ID) ? 1 : 0)
             + (have.has(HORSEMANSHIP_UPGRADE_ID) ? 1 : 0)
             + (have.has(MILITARY_SCIENCE_UPGRADE_ID) ? 1 : 0);
         const hp = (SYMBOLS[S.warrior]?.base_hp ?? 0)
             + (have.has(IRON_WORKING_UPGRADE_ID) ? 4 : 0)
             + (have.has(GUNPOWDER_UPGRADE_ID) ? 4 : 0)
             + (have.has(INTERCHANGEABLE_PARTS_UPGRADE_ID) ? 4 : 0)
+            + (have.has(MINING_UPGRADE_ID) ? 2 : 0)
+            + (have.has(MASON_GUILD_UPGRADE_ID) ? 2 : 0)
             + (have.has(HORSEMANSHIP_UPGRADE_ID) ? 1 : 0)
             + (have.has(MILITARY_SCIENCE_UPGRADE_ID) ? 1 : 0);
         return { attack, hp };

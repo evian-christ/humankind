@@ -42,8 +42,8 @@ import {
     TRACKING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
+    TROPICAL_AGRICULTURE_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
-    WRITING_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
@@ -148,7 +148,6 @@ interface SimulationState {
     unlockedKnowledgeUpgrades: number[];
     knowledgeResearchCredits: KnowledgeResearchCredit[];
     religionUnlocked: boolean;
-    bonusXpPerTurn: number;
     qinCurrencyStandardTurnsRemaining: number;
     barbarianSymbolThreat: number;
     barbarianCampThreat: number;
@@ -229,7 +228,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     },
     forest_axis: {
         primaryTerrainIds: [S.forest],
-        coreSymbolIds: [S.deer, S.mushroom, S.fur],
+        coreSymbolIds: [S.deer, S.fur],
         bridgeSymbolIds: [S.wild_berries, S.honey, S.salt, S.spices],
         upgradeIds: [
             HUNTING_UPGRADE_ID,
@@ -244,7 +243,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
         coreSymbolIds: [S.banana, S.expedition],
         bridgeSymbolIds: [S.wild_berries, S.spices, S.salt, S.stone],
         upgradeIds: [
-            MINING_UPGRADE_ID,
+            TROPICAL_AGRICULTURE_UPGRADE_ID,
             PLANTATION_UPGRADE_ID,
             JUNGLE_EXPEDITION_UPGRADE_ID,
             TROPICAL_DEVELOPMENT_UPGRADE_ID,
@@ -360,7 +359,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             unlockedKnowledgeUpgrades: [],
             knowledgeResearchCredits: [],
             religionUnlocked: false,
-            bonusXpPerTurn: 0,
             qinCurrencyStandardTurnsRemaining: 0,
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
@@ -387,7 +385,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
         unlockedKnowledgeUpgrades: [],
         knowledgeResearchCredits: [],
         religionUnlocked: false,
-        bonusXpPerTurn: 0,
         qinCurrencyStandardTurnsRemaining: 0,
         barbarianSymbolThreat: 0,
         barbarianCampThreat: 0,
@@ -534,7 +531,6 @@ const applyUpgrade = (state: SimulationState, upgradeId: number) => {
     const nextUnlocked = [...state.unlockedKnowledgeUpgrades, upgradeId];
     state.unlockedKnowledgeUpgrades = nextUnlocked;
     if (upgradeId === THEOLOGY_UPGRADE_ID) state.religionUnlocked = true;
-    if (upgradeId === WRITING_SYSTEM_UPGRADE_ID) state.bonusXpPerTurn += 2;
     if (upgradeId === AGI_PROJECT_UPGRADE_ID && SYMBOLS[S.agi_core]) {
         state.playerSymbols.push(createSimulationInstance(SYMBOLS[S.agi_core]!, nextUnlocked));
     }
@@ -661,7 +657,6 @@ const simulateTurn = (
         });
         applySlotEffectResult(pipeline, slot, result);
         if (result.lootMerge) commitLootMerge(state.board, result.lootMerge);
-        if (result.bonusXpPerTurnDelta) state.bonusXpPerTurn += result.bonusXpPerTurnDelta;
         if (result.forceTerrainInNextChoices) state.forceTerrainInNextSymbolChoices = true;
         if (result.forceEventsInNextChoices) state.forceEventsInNextSymbolChoices = true;
         if (result.edictRemovalPending) state.edictRemovalPending = true;
@@ -685,7 +680,6 @@ const simulateTurn = (
         leaderId: null,
         currentEra: state.era,
         currentGold: state.gold + pipeline.totals.gold,
-        bonusXpPerTurn: state.bonusXpPerTurn,
         unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
         getAdjacentCoords,
         relics: [],

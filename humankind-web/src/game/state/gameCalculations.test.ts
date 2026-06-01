@@ -25,6 +25,7 @@ import {
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MASON_GUILD_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
@@ -43,6 +44,7 @@ import {
     TANNING_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
+    TROPICAL_AGRICULTURE_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
@@ -110,11 +112,20 @@ describe('gold inflation costs', () => {
     });
 
     it('replaces the old reroll step curve with the shared gold inflation curve', () => {
-        expect(getRerollCost(0)).toBe(2);
-        expect(getRerollCost(10)).toBe(3);
-        expect(getRerollCost(20)).toBe(5);
-        expect(getRerollCost(30)).toBe(8);
-        expect(getRerollCost(30, 0.5)).toBe(4);
+        expect(getRerollCost(0)).toBe(1);
+        expect(getRerollCost(10)).toBe(2);
+        expect(getRerollCost(20)).toBe(3);
+        expect(getRerollCost(30)).toBe(4);
+        expect(getRerollCost(30, 0.5)).toBe(2);
+    });
+
+    it('increases reroll cost for each reroll already used this turn', () => {
+        expect(getRerollCost(0, 1, 0)).toBe(1);
+        expect(getRerollCost(0, 1, 1)).toBe(2);
+        expect(getRerollCost(0, 1, 2)).toBe(3);
+        expect(getRerollCost(20, 1, 0)).toBe(3);
+        expect(getRerollCost(20, 1, 1)).toBe(5);
+        expect(getRerollCost(20, 1, 2)).toBe(8);
     });
 });
 
@@ -316,6 +327,19 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             MILITARY_SCIENCE_UPGRADE_ID,
             [FEUDALISM_UPGRADE_ID, HORSEMANSHIP_UPGRADE_ID],
             14,
+        )).toBe(true);
+    });
+
+    it('requires Mining before Mason Guild at level 12', () => {
+        expect(isUpgradeLegalForKnowledgePick(
+            MASON_GUILD_UPGRADE_ID,
+            [FEUDALISM_UPGRADE_ID],
+            12,
+        )).toBe(false);
+        expect(isUpgradeLegalForKnowledgePick(
+            MASON_GUILD_UPGRADE_ID,
+            [FEUDALISM_UPGRADE_ID, MINING_UPGRADE_ID],
+            12,
         )).toBe(true);
     });
 
@@ -577,7 +601,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('requires Mining for Plantation', () => {
+    it('requires Tropical Agriculture for Plantation', () => {
         expect(isUpgradeLegalForKnowledgePick(
             PLANTATION_UPGRADE_ID,
             [],
@@ -585,7 +609,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             PLANTATION_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, MINING_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID, TROPICAL_AGRICULTURE_UPGRADE_ID],
             11,
         )).toBe(true);
     });

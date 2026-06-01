@@ -62,7 +62,6 @@ interface SavedGame {
         prevBoard: SerializedBoard;
         religionUnlocked: boolean;
         unlockedKnowledgeUpgrades: number[];
-        bonusXpPerTurn: number;
         qinCurrencyStandardTurnsRemaining?: number;
         levelUpResearchPoints: number;
         knowledgeResearchCredits?: KnowledgeResearchCredit[];
@@ -240,7 +239,6 @@ export function saveGameState(state: GameState): void {
             prevBoard: serializeBoard(state.prevBoard),
             religionUnlocked: state.religionUnlocked,
             unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
-            bonusXpPerTurn: state.bonusXpPerTurn,
             qinCurrencyStandardTurnsRemaining: state.qinCurrencyStandardTurnsRemaining,
             levelUpResearchPoints: state.levelUpResearchPoints,
             knowledgeResearchCredits: state.knowledgeResearchCredits ?? [],
@@ -345,7 +343,6 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             knowledgeUpgradeFloats: [],
             religionUnlocked: save.state.religionUnlocked,
             unlockedKnowledgeUpgrades: save.state.unlockedKnowledgeUpgrades,
-            bonusXpPerTurn: save.state.bonusXpPerTurn,
             qinCurrencyStandardTurnsRemaining: save.state.qinCurrencyStandardTurnsRemaining ?? 0,
             levelUpResearchPoints: knowledgeResearchCredits.length,
             knowledgeResearchCredits,

@@ -313,7 +313,6 @@ export const createTurnFlowActions = ({
                 leaderProgressLevel: stateAtFinish.leaderProgressLevel,
                 currentEra: stateAtFinish.era,
                 currentGold: stateAtFinish.gold + tGold,
-                bonusXpPerTurn: stateAtFinish.bonusXpPerTurn ?? 0,
                 unlockedKnowledgeUpgrades: stateAtFinish.unlockedKnowledgeUpgrades || [],
                 getAdjacentCoords: getPhaseAdjacentCoords,
                 relics,
@@ -744,9 +743,6 @@ export const createTurnFlowActions = ({
                 }
                 applySlotEffectResult(slotPipeline, { x, y }, result);
 
-                if (result.bonusXpPerTurnDelta) {
-                    set((s) => ({ bonusXpPerTurn: s.bonusXpPerTurn + result.bonusXpPerTurnDelta! }));
-                }
                 if (result.forceTerrainInNextChoices) {
                     set({ forceTerrainInNextSymbolChoices: true });
                 }

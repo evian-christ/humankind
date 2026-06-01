@@ -3,6 +3,7 @@ import { runPostEffectsHooks } from './postEffectsHooks';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import { SymbolType } from '../../data/symbolTypes';
 import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { RELIC_ID } from '../relics/relicIds';
 import type { PlayerSymbolInstance } from '../../types';
 
 const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => Array(5).fill(null).map(() => Array(4).fill(null));
@@ -17,19 +18,19 @@ const createInstance = (definition: (typeof SYMBOLS)[number], id: string): Playe
 });
 
 describe('postEffectsHooks', () => {
-    it('applies Ramesses Relic Vault only from leader level 5', () => {
+    it('applies Ramesses Relic Vault only from leader level 5 and ignores consumable relics', () => {
         const baseArgs = {
             board: createEmptyBoard(),
             boardWidth: 5,
             boardHeight: 4,
             effects: [],
             leaderId: 'ramesses' as const,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [
                 { instanceId: 'relic-a', definition: { id: 9001 }, effect_counter: 0, bonus_stacks: 0 },
                 { instanceId: 'relic-b', definition: { id: 9002 }, effect_counter: 0, bonus_stacks: 0 },
+                { instanceId: 'relic-c', definition: { id: RELIC_ID.ANCIENT_RELIC_DEBRIS }, effect_counter: 0, bonus_stacks: 0 },
             ],
             relicStoreApi: {
                 incrementRelicBonus: () => undefined,
@@ -54,7 +55,6 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects: [],
             leaderId: 'shihuang' as const,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [],
@@ -86,7 +86,6 @@ describe('postEffectsHooks', () => {
             effects: [],
             leaderId: 'shihuang' as const,
             leaderProgressLevel: 1,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [],
@@ -114,7 +113,6 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects: [],
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [DESERT_STORAGE_UPGRADE_ID],
             getAdjacentCoords: () => [],
             relics: [],
@@ -146,7 +144,6 @@ describe('postEffectsHooks', () => {
                 { x: 2, y: 1, food: 4, gold: 2, knowledge: 0 },
             ],
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: (x, y) => {
                 const adj: { x: number; y: number }[] = [];
@@ -192,7 +189,6 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects: [],
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [],
@@ -221,7 +217,6 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects: [{ x: 1, y: 0, food: 5, gold: 0, knowledge: 0 }],
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: (x, y) => {
                 const adj: { x: number; y: number }[] = [];
@@ -270,7 +265,6 @@ describe('postEffectsHooks', () => {
                 { x: 2, y: 0, food: 0, gold: 0, knowledge: 1 },
             ],
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [CARAVANSERAI_UPGRADE_ID],
             getAdjacentCoords: () => [],
             relics: [],
@@ -304,7 +298,6 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects,
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [],
@@ -339,7 +332,6 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects,
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: (x, y) => {
                 const adj: { x: number; y: number }[] = [];
@@ -376,7 +368,6 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects: [],
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [],
@@ -406,7 +397,6 @@ describe('postEffectsHooks', () => {
                 { x: 2, y: 0, food: 0, gold: 0, knowledge: 5 },
             ],
             leaderId: null,
-            bonusXpPerTurn: 0,
             unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [],

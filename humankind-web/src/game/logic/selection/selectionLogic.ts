@@ -46,8 +46,8 @@ export interface SelectionContext {
 
 export type SelectionChoice = SymbolDefinition | GameEventDefinition;
 
-const EVENT_REPLACE_CHANCE_PER_CARD = 0.1;
-const PUBLIC_ADMINISTRATION_EVENT_CHANCE_MULTIPLIER = 1.5;
+const EVENT_REPLACE_CHANCE_PER_CARD = 0.05;
+const PUBLIC_ADMINISTRATION_EVENT_CHANCE_MULTIPLIER = 2;
 const MASS_MEDIA_EVENT_CHANCE_MULTIPLIER = 2;
 
 /** 지형 보유 임계값으로 활성화되는 조건부 이벤트 룩업 — 키 추가만으로 풀이 확장됨 */
@@ -185,7 +185,7 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.caravanserai && upgrades.includes(CARAVANSERAI_UPGRADE_ID)) isUnlocked = true; // Caravanserai -> Caravanserai
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
-        if ((sym.id === S.mushroom || sym.id === S.fur) && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
+        if (sym.id === S.fur && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
         if (sym.id === S.heqet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'heqet')) isUnlocked = true;
         if (sym.id === S.foxtail_millet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'foxtail_millet')) isUnlocked = true;
 

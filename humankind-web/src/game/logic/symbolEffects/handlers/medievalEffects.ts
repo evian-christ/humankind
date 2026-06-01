@@ -13,7 +13,10 @@ export const handleMedievalEffects: SymbolEffectHandler = ({ symbolInstance, boa
                     state.contributors.push(p);
                 }
             }
-            state.bonusXpPerTurnDelta += n * 5;
+            if (n > 0) {
+                symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + n * 5;
+            }
+            state.knowledge += symbolInstance.effect_counter || 0;
             return true;
         }
 

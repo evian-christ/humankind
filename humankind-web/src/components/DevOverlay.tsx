@@ -77,7 +77,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, level, turn, bonusXpPerTurn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, devTriggerNaturalDisaster, barbarianSymbolThreat, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
+    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, devTriggerNaturalDisaster, barbarianSymbolThreat, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
     const developerMode = useSettingsStore(s => s.developerMode);
@@ -239,14 +239,6 @@ const DevOverlay = () => {
                     onAdjust={d => devSetStat('level', level + d)}
                     onSet={v => devSetStat('level', v)}
                     deltas={[-5, -1, 1, 5]}
-                />
-
-                <StatRow
-                    label="Perm K"
-                    value={bonusXpPerTurn}
-                    onAdjust={d => devSetStat('bonusXpPerTurn', bonusXpPerTurn + d)}
-                    onSet={v => devSetStat('bonusXpPerTurn', v)}
-                    deltas={[-10, -1, 1, 10]}
                 />
 
                 <StatRow

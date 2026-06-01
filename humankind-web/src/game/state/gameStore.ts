@@ -4,6 +4,7 @@ import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/sy
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
 import { RELIC_ID } from '../logic/relics/relicIds';
+import { countNonConsumableRelics } from '../logic/relics/relicClassification';
 import {
     generateChoices as generateChoicesSelection,
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
@@ -190,8 +191,6 @@ export interface GameState {
     religionUnlocked: boolean;
     /** 플레이어가 획득한 지식 업그레이드 ID 목록 */
     unlockedKnowledgeUpgrades: number[];
-    /** 매 턴 영구 지식 보너스 */
-    bonusXpPerTurn: number;
     /** 진시황 전용 이벤트 화폐 통일: 남은 기본 골드 생산량 2배 턴 수 */
     qinCurrencyStandardTurnsRemaining: number;
 
@@ -264,7 +263,7 @@ export interface GameState {
     spinTutorialMonumentStep: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn' | 'bonusXpPerTurn', value: number) => void;
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
     devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => void;
     devTriggerNaturalDisaster: (symbolId: number) => void;
     confirmDestroySymbols: (instanceIds: string[]) => void;
@@ -371,7 +370,7 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
     const upgrades = (useGameStore.getState().unlockedKnowledgeUpgrades || []).map((x) => Number(x));
 
     return {
-        relicCount: relics.length,
+        relicCount: countNonConsumableRelics(relics),
         quarryEmptyGold: hasRelic(RELIC_ID.EGYPT_SAW),
         bananaFossilBonus: hasRelic(RELIC_ID.GOANNA_BANANA),
         horsemansihpPastureBonus: upgrades.includes(HORSEMANSHIP_UPGRADE_ID),
@@ -420,7 +419,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     knowledgeUpgradeFloats: [],
     religionUnlocked: false,
     unlockedKnowledgeUpgrades: [],
-    bonusXpPerTurn: 0,
     qinCurrencyStandardTurnsRemaining: 0,
 
     levelUpResearchPoints: 0,
@@ -550,7 +548,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
     },
 
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn' | 'bonusXpPerTurn', value: number) => {
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => {
         if (stat === 'level') {
             const L = Math.max(0, Math.min(30, Math.round(value)));
             set({ level: L, era: getEraFromLevel(L) });

@@ -48,7 +48,6 @@ describe('balanceSimulator', () => {
         expect(
             picked.has(S.forest) ||
             picked.has(S.deer) ||
-            picked.has(S.mushroom) ||
             picked.has(S.fur),
         ).toBe(true);
     });

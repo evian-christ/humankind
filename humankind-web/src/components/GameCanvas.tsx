@@ -74,12 +74,11 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         setHoveredHudStat(val);
     }, []);
 
-    /** HUD 기본 생산 툴팁: 보드·업그레이드·보너스XP·유물 개수 변화 시 갱신 */
+    /** HUD 기본 생산 툴팁: 보드·업그레이드·유물 개수 변화 시 갱신 */
     useGameStore(
         useShallow((s) => ({
             board: s.board,
             unlockedKnowledgeUpgrades: s.unlockedKnowledgeUpgrades,
-            bonusXpPerTurn: s.bonusXpPerTurn,
         })),
     );
     useRelicStore((s) => s.relics.length); // 유물 금고(람세스) 지식 반영
@@ -179,7 +178,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             combatShaking: initial.combatShaking,
             pendingNewThreatFloats: initial.pendingNewThreatFloats,
             unlockedKnowledgeUpgrades: initial.unlockedKnowledgeUpgrades,
-            bonusXpPerTurn: initial.bonusXpPerTurn,
             activeStatusIds: initial.activeStatusIds,
             activeStatuses: initial.activeStatuses,
         };
@@ -207,7 +205,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 state.combatShaking !== prev.combatShaking ||
                 state.pendingNewThreatFloats !== prev.pendingNewThreatFloats ||
                 state.unlockedKnowledgeUpgrades !== prev.unlockedKnowledgeUpgrades ||
-                state.bonusXpPerTurn !== prev.bonusXpPerTurn ||
                 state.activeStatusIds !== prev.activeStatusIds ||
                 state.activeStatuses !== prev.activeStatuses;
 
@@ -233,7 +230,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 combatShaking: state.combatShaking,
                 pendingNewThreatFloats: state.pendingNewThreatFloats,
                 unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
-                bonusXpPerTurn: state.bonusXpPerTurn,
                 activeStatusIds: state.activeStatusIds,
                 activeStatuses: state.activeStatuses,
             };

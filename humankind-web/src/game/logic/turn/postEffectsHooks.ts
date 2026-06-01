@@ -10,6 +10,7 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
+import { countNonConsumableRelics } from '../relics/relicClassification';
 import { randomBaseNormalSymbolId } from '../symbolEffects/core';
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];
@@ -62,7 +63,6 @@ export function runPostEffectsHooks(args: {
     leaderProgressLevel?: number;
     currentEra?: number;
     currentGold?: number;
-    bonusXpPerTurn: number;
     unlockedKnowledgeUpgrades: number[];
     getAdjacentCoords: (x: number, y: number) => { x: number; y: number }[];
     relics: RelicInstanceLike[];
@@ -78,7 +78,6 @@ export function runPostEffectsHooks(args: {
         leaderProgressLevel = 1,
         currentEra = 1,
         currentGold = 0,
-        bonusXpPerTurn,
         unlockedKnowledgeUpgrades,
         getAdjacentCoords,
         relics,
@@ -622,17 +621,12 @@ export function runPostEffectsHooks(args: {
         if (qinKnowledge > 0) bonusKnowledge += qinKnowledge;
     }
 
-    // 람세스 유물 금고: 보유 유물 1개당 지식 +1/턴
+    // 람세스 유물 금고: 보유 비소모형 유물 1개당 지식 +1/턴
     if (isLeaderUnlockActive(leaderId, leaderProgressLevel, 'relic_vault')) {
-        const relicVaultKnowledge = relics.length;
+        const relicVaultKnowledge = countNonConsumableRelics(relics);
         if (relicVaultKnowledge > 0) {
             bonusKnowledge += relicVaultKnowledge;
         }
-    }
-
-    // 영구 턴당 지식 보너스(`bonusXpPerTurn`)
-    if ((bonusXpPerTurn ?? 0) > 0) {
-        bonusKnowledge += bonusXpPerTurn ?? 0;
     }
 
     // ── 유물 ID 12: 쇠똥구리 부적 — 심볼 파괴 시 G+3/파괴 ──

@@ -163,7 +163,6 @@ export interface CollectionDestroyAgg {
     addSymbolDefIds: number[];
     openRelicShop: boolean;
     refreshRelicShop: boolean;
-    bonusXpPerTurnDelta: number;
     forceTerrainInNextChoices: boolean;
     forceEventsInNextChoices: boolean;
     freeSelectionRerolls: number;
@@ -181,7 +180,6 @@ export const aggregateCollectionDestroyEffects = (
         addSymbolDefIds: [],
         openRelicShop: false,
         refreshRelicShop: false,
-        bonusXpPerTurnDelta: 0,
         forceTerrainInNextChoices: false,
         forceEventsInNextChoices: false,
         freeSelectionRerolls: 0,

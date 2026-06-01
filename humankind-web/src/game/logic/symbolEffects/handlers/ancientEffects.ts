@@ -48,7 +48,7 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             state.food += 1;
             const adjacentGrasslands = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.grassland);
             if (adjacentGrasslands.length > 0) {
-                state.food += 1;
+                state.food += 2;
                 state.contributors.push(...adjacentGrasslands);
             }
             const adjacentWheats = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.wheat);

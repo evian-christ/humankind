@@ -8,6 +8,7 @@ import {
     FEUDALISM_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
+    MECHANICS_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
@@ -123,6 +124,20 @@ describe('selectionLogic', () => {
         expect(pool.some((sym) => sym.id === S.caravanserai)).toBe(true);
     });
 
+    it('applies unit upgrades only to the generated symbol pool', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID, MECHANICS_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.archer)).toBe(false);
+        const crossbowman = pool.find((sym) => sym.id === S.crossbowman);
+        expect(crossbowman?.base_attack).toBe(3);
+        expect(crossbowman?.base_hp).toBe(6);
+    });
+
     it('removes medieval and terrain symbols from the pool after modern age', () => {
         const pool = buildFlatPool({
             era: 3,
@@ -188,7 +203,7 @@ describe('selectionLogic', () => {
     });
 
     it('increases each card event chance with Public Administration and Mass Media', () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0.12);
+        vi.spyOn(Math, 'random').mockReturnValue(0.075);
 
         const baseResult = generateChoices({
             era: 1,
@@ -213,7 +228,7 @@ describe('selectionLogic', () => {
 
     it('offers the Kadesh leader event only after Ramesses reaches leader level 3', () => {
         const rollKadesh = () => {
-            const randomValues = [0, 0, 0, 0.05, 0.99, 0.05, 0.99, 0.05, 0.99];
+            const randomValues = [0, 0, 0, 0.04, 0.99, 0.04, 0.99, 0.04, 0.99];
             let call = 0;
             vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
         };
@@ -248,7 +263,7 @@ describe('selectionLogic', () => {
 
     it('offers the Currency Standardization leader event only after Qin Shi Huang reaches leader level 3', () => {
         const rollCurrencyStandardization = () => {
-            const randomValues = [0, 0, 0, 0.05, 0.99, 0.05, 0.99, 0.05, 0.99];
+            const randomValues = [0, 0, 0, 0.04, 0.99, 0.04, 0.99, 0.04, 0.99];
             let call = 0;
             vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
         };
@@ -346,7 +361,7 @@ describe('selectionLogic', () => {
     });
 
     it('stacks Mass Media multiplicatively with Public Administration', () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0.25);
+        vi.spyOn(Math, 'random').mockReturnValue(0.15);
 
         const massMediaOnlyResult = generateChoices({
             era: 1,
@@ -372,9 +387,9 @@ describe('selectionLogic', () => {
     it('offers Capital Relocation only after owning enough symbols', () => {
         const randomValues = [
             0, 0, 0, 0, 0, 0,
-            0.05, 0.99,
-            0.05, 0.99,
-            0.05, 0.99,
+            0.04, 0.99,
+            0.04, 0.99,
+            0.04, 0.99,
         ];
         let call = 0;
         vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);

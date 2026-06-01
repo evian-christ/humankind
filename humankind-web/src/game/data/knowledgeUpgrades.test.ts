@@ -3,8 +3,22 @@ import {
     buildAncientSymbolsUnlockDescSymbols,
     buildFeudalismDescSymbols,
     buildModernAgeDescSymbols,
+    CHIEFDOM_UPGRADE_ID,
+    COLONIALISM_UPGRADE_ID,
+    FEUDAL_CORN_UPGRADE_ID,
+    GREAT_MIGRATION_UPGRADE_ID,
+    INQUISITION_UPGRADE_ID,
+    KNOWLEDGE_UPGRADES,
+    MERCENARIES_UPGRADE_ID,
+    NATIONALISM_UPGRADE_ID,
+    RESTRUCTURING_UPGRADE_ID,
+    SACRIFICIAL_RITE_UPGRADE_ID,
+    STATE_LABOR_UPGRADE_ID,
+    TOTAL_MOBILIZATION_UPGRADE_ID,
+    TRIBAL_FEDERATION_UPGRADE_ID,
 } from './knowledgeUpgrades';
 import { isBasePool, SYMBOLS_BY_KEY, SymbolType, type SymbolKey } from './symbolDefinitions';
+import { RELIC_ID } from '../logic/relics/relicIds';
 
 describe('knowledgeUpgrades', () => {
     const ancientUnlockKeys = (leaderId: 'ramesses' | 'shihuang' | null, leaderProgressLevel: number) =>
@@ -57,5 +71,45 @@ describe('knowledgeUpgrades', () => {
             symbolKey: 'mountain',
             relation: 'effect_modify',
         });
+    });
+
+    it('shows relic grants on knowledge upgrades that grant relics', () => {
+        expect(KNOWLEDGE_UPGRADES[CHIEFDOM_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[STATE_LABOR_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[FEUDAL_CORN_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[NATIONALISM_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[SACRIFICIAL_RITE_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[INQUISITION_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[RESTRUCTURING_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[COLONIALISM_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 3 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[GREAT_MIGRATION_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 2 },
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[TRIBAL_FEDERATION_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.MILITARY_LEVY, count: 2 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[MERCENARIES_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.MILITARY_LEVY, count: 2 },
+        ]);
+        expect(KNOWLEDGE_UPGRADES[TOTAL_MOBILIZATION_UPGRADE_ID]?.descRelics).toEqual([
+            { relicId: RELIC_ID.MILITARY_LEVY, count: 4 },
+        ]);
     });
 });

@@ -72,7 +72,6 @@ const createSerializableState = (): GameState => {
         knowledgeUpgradeFloats: [],
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
-        bonusXpPerTurn: 0,
         qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
         isRelicShopOpen: false,

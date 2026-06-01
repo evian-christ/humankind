@@ -11,12 +11,11 @@ import {
     FOREIGN_TRADE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
-    MINING_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
+    TROPICAL_AGRICULTURE_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
@@ -63,11 +62,10 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 state.food += 5;
                 state.gold += 5;
                 state.knowledge += 5;
-            } else if (upgrades.includes(PLANTATION_UPGRADE_ID)) {
+            } else if (upgrades.includes(TROPICAL_AGRICULTURE_UPGRADE_ID)) {
                 state.food += 3;
-                state.gold += 3;
             } else {
-                state.food += upgrades.includes(MINING_UPGRADE_ID) ? 3 : 1;
+                state.food += 1;
             }
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
@@ -165,11 +163,9 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 const tracking = upgrades.includes(TRACKING_UPGRADE_ID);
                 let food = 0;
                 let gold = 0;
-                let knowledge = 0;
 
-                if (forestCount >= 3) food += forestry ? 5 : tracking ? 3 : 2;
-                if (forestCount >= 5) gold += forestry ? 5 : tracking ? 3 : 2;
-                if (forestry && forestCount >= 7) knowledge += 3;
+                if (forestCount >= 3) food += forestry ? 3 : 2;
+                if (forestCount >= 5) gold += forestry ? 3 : tracking ? 2 : 1;
 
                 const terrainTypes = new Set<number>();
                 for (let bx = 0; bx < boardGrid.length; bx++) {
@@ -180,18 +176,11 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 }
 
                 if (terrainTypes.size === 1 && terrainTypes.has(S.forest)) {
-                    if (forestry) {
-                        food *= 2;
-                        gold *= 2;
-                        knowledge *= 2;
-                    } else {
-                        food += tracking ? 3 : 2;
-                    }
+                    food += forestry ? 3 : tracking ? 2 : 1;
                 }
 
                 state.food += food;
                 state.gold += gold;
-                state.knowledge += knowledge;
             }
             return true;
 

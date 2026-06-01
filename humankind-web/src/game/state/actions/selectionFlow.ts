@@ -2,18 +2,15 @@ import { SYMBOLS, EDICT_SYMBOL_ID, S, SymbolType } from '../../data/symbolDefini
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    BALLISTICS_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
-    GUNPOWDER_UPGRADE_ID,
+    GREAT_MIGRATION_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
-    INTERCHANGEABLE_PARTS_UPGRADE_ID,
-    IRON_WORKING_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
-    MECHANICS_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
+    PLANTATION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -23,7 +20,6 @@ import {
     TERRITORIAL_REORG_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
-import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
 import { getEnemyPoolForEra } from '../../data/enemyPools';
 import {
@@ -66,6 +62,7 @@ import {
 import { saveGameState } from '../saveGame';
 import type { GamePhase, GameState } from '../gameStore';
 import type { PlayerSymbolInstance } from '../../types';
+import type { BoardEffectDelta } from '../../logic/turn/turnTypes';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -83,13 +80,6 @@ interface SelectionFlowDeps {
     phaseAfterTurnFlowComplete: () => GamePhase;
 }
 
-const UNIT_TRANSFORM_UPGRADE_IDS = new Set<number>([
-    IRON_WORKING_UPGRADE_ID,
-    MECHANICS_UPGRADE_ID,
-    GUNPOWDER_UPGRADE_ID,
-    BALLISTICS_UPGRADE_ID,
-    INTERCHANGEABLE_PARTS_UPGRADE_ID,
-]);
 const OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
     SACRIFICIAL_RITE_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
@@ -100,6 +90,7 @@ const SINGLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
     STATE_LABOR_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
+    GREAT_MIGRATION_UPGRADE_ID,
 ]);
 const MILITARY_LEVY_GRANT_UPGRADE_IDS = new Set<number>([
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -183,18 +174,59 @@ const countBoardEmptySlots = (board: GameState['board']): number => {
 const countOwnedSymbols = (playerSymbols: PlayerSymbolInstance[], symbolId: number): number =>
     playerSymbols.reduce((acc, s) => (s.definition.id === symbolId ? acc + 1 : acc), 0);
 
-/** 보드 위 모든 바나나의 현재 식량 생산(1 + permanent bonus)을 즉시 한 번 더 적용 */
-const triggerBananaEffectsOnce = (board: GameState['board']): number => {
+/** 보드 위 모든 바나나의 효과를 즉시 한 번 더 적용하고, 보드 플로팅용 결과를 생성 */
+const triggerBananaEffectsOnce = (
+    board: GameState['board'],
+    upgrades: readonly number[],
+): { foodGain: number; effects: BoardEffectDelta[] } => {
     let foodGain = 0;
-    for (const col of board) {
-        for (const cell of col) {
+    const effects: BoardEffectDelta[] = [];
+    const plantation = upgrades.map(Number).includes(PLANTATION_UPGRADE_ID);
+    const threshold = plantation ? 7 : 10;
+
+    for (let x = 0; x < board.length; x += 1) {
+        const col = board[x];
+        for (let y = 0; y < (col?.length ?? 0); y += 1) {
+            const cell = col?.[y];
             if (cell?.definition.id === S.banana) {
                 const perm = cell.banana_permanent_food_bonus ?? 0;
-                foodGain += 1 + perm;
+                const food = 1 + perm;
+                let counterDelta = 0;
+                const nearRainforest = [
+                    { x: x - 1, y: y - 1 },
+                    { x, y: y - 1 },
+                    { x: x + 1, y: y - 1 },
+                    { x: x - 1, y },
+                    { x: x + 1, y },
+                    { x: x - 1, y: y + 1 },
+                    { x, y: y + 1 },
+                    { x: x + 1, y: y + 1 },
+                ].some((pos) => board[pos.x]?.[pos.y]?.definition.id === S.rainforest);
+
+                if (nearRainforest) {
+                    const before = cell.effect_counter || 0;
+                    let next = before + 1;
+                    if (next >= threshold) {
+                        next = 0;
+                        cell.banana_permanent_food_bonus = perm + 1;
+                    }
+                    cell.effect_counter = next;
+                    counterDelta = next >= before ? next - before : threshold - before + next;
+                }
+
+                foodGain += food;
+                effects.push({
+                    x,
+                    y,
+                    food,
+                    gold: 0,
+                    knowledge: 0,
+                    ...(counterDelta > 0 ? { counter: counterDelta, counterAnchor: 'bottom-right' as const } : {}),
+                });
             }
         }
     }
-    return foodGain;
+    return { foodGain, effects };
 };
 
 const pickRandomSymbols = (symbols: PlayerSymbolInstance[], count: number): PlayerSymbolInstance[] => {
@@ -370,7 +402,12 @@ export const createSelectionFlowActions = ({
                 ];
             }
         } else if (event.key === 'jungle_expedition') {
-            foodDelta += triggerBananaEffectsOnce(state.board);
+            const bananaTrigger = triggerBananaEffectsOnce(state.board, state.unlockedKnowledgeUpgrades || []);
+            foodDelta += bananaTrigger.foodGain;
+            if (bananaTrigger.effects.length > 0) {
+                patch.board = state.board.map((col) => [...col]);
+                patch.lastEffects = [...(state.lastEffects ?? []), ...bananaTrigger.effects];
+            }
         } else if (event.key === 'desert_caravan') {
             foodDelta += DESERT_CARAVAN_FOOD[eraIdx];
         } else if (event.key === 'mountain_lookout') {
@@ -427,7 +464,6 @@ export const createSelectionFlowActions = ({
             foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food;
             goldDelta += symAgg.gold + shBonus.gold;
             knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge;
-            patch.bonusXpPerTurn = state.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta;
             patch.forceTerrainInNextSymbolChoices = state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices;
             patch.forceEventsInNextSymbolChoices = state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices;
             patch.freeSelectionRerolls = (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls;
@@ -512,7 +548,7 @@ export const createSelectionFlowActions = ({
         }
 
         const hasLydia = useRelicStore.getState().relics.some((r) => r.definition.id === RELIC_ID.LYDIA_COIN);
-        const rerollCost = getRerollCost(state.level, hasLydia ? 0.5 : 1);
+        const rerollCost = getRerollCost(state.level, hasLydia ? 0.5 : 1, state.rerollsThisTurn);
         const maxRerolls = hasLydia ? 3 : Infinity;
 
         if (state.rerollsThisTurn >= maxRerolls) return;
@@ -526,6 +562,7 @@ export const createSelectionFlowActions = ({
                 symbolChoices: choiceResolution.choices,
                 forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
                 forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
+                rerollsThisTurn: state.rerollsThisTurn + 1,
             });
             get().appendEventLog({
                 turn: state.turn,
@@ -638,11 +675,12 @@ export const createSelectionFlowActions = ({
             }
         }
 
-        if (uid === COLONIALISM_UPGRADE_ID) {
+        if (uid === COLONIALISM_UPGRADE_ID || uid === GREAT_MIGRATION_UPGRADE_ID) {
             const tribeJoinDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
             if (tribeJoinDef) {
                 const rs = useRelicStore.getState();
-                for (let i = 0; i < 3; i++) rs.addRelic(tribeJoinDef);
+                const count = uid === GREAT_MIGRATION_UPGRADE_ID ? 2 : 3;
+                for (let i = 0; i < count; i++) rs.addRelic(tribeJoinDef);
             }
         }
 
@@ -659,31 +697,6 @@ export const createSelectionFlowActions = ({
             }
         }
 
-        if (UNIT_TRANSFORM_UPGRADE_IDS.has(uid)) {
-            const migrateUnitDefinition = (s: PlayerSymbolInstance): PlayerSymbolInstance => {
-                if (s.definition.type !== SymbolType.UNIT) return s;
-                const nextDef = resolveUpgradedUnitDefinition(s.definition, newUnlocked);
-                if (
-                    nextDef.id === s.definition.id &&
-                    nextDef.base_attack === s.definition.base_attack &&
-                    nextDef.base_hp === s.definition.base_hp
-                ) {
-                    return s;
-                }
-                const prevMax = s.definition.base_hp ?? 0;
-                const nextMax = nextDef.base_hp ?? 0;
-                const currentHp = s.enemy_hp ?? prevMax;
-                const damageTaken = Math.max(0, prevMax - currentHp);
-                return {
-                    ...s,
-                    definition: nextDef,
-                    remaining_attacks: nextDef.base_attack ? 3 : 0,
-                    enemy_hp: Math.max(1, nextMax - damageTaken),
-                };
-            };
-            newPlayerSymbols = newPlayerSymbols.map(migrateUnitDefinition);
-        }
-
         for (let y = 0; y < state.board.length; y++) {
             for (let x = 0; x < state.board[y].length; x++) {
                 const cell = state.board[y][x];
@@ -697,7 +710,6 @@ export const createSelectionFlowActions = ({
         const edictAfterUpgrade = state.edictRemovalPending;
         const baseUnlock = {
             unlockedKnowledgeUpgrades: newUnlocked,
-            bonusXpPerTurn: state.bonusXpPerTurn,
             religionUnlocked,
             board: newBoard,
             playerSymbols: newPlayerSymbols,
@@ -773,7 +785,6 @@ export const createSelectionFlowActions = ({
             food: s.food + dFood,
             gold: s.gold + dGold,
             knowledge: s.knowledge + dKnowledge,
-            bonusXpPerTurn: s.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
@@ -935,7 +946,6 @@ export const createSelectionFlowActions = ({
             food: s.food + dFood,
             gold: s.gold + dGold,
             knowledge: s.knowledge + dKnowledge,
-            bonusXpPerTurn: s.bonusXpPerTurn + symAgg.bonusXpPerTurnDelta,
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,

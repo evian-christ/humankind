@@ -48,7 +48,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('grassland', { name: "Grassland", type: SymbolType.TERRAIN, description: "+2 Food.", sprite: "001.png" }),
     def('plains', { name: "Plains", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "002.png" }),
     def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "+1 Gold per 3 adjacent symbols.", sprite: "003.png" }),
-    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +2 Gold; if Forest is the only terrain on the board: +2 Food.", sprite: "004.png" }),
+    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +1 Gold; if Forest is the only terrain on the board: +1 Food.", sprite: "004.png" }),
     def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "005.png" }),
     def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol.", sprite: "006.png" }),
     def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+2 Food per 2 adjacent empty slots. (Post-Arid Preservation: +4, Post-Oasis Reclamation: +6)", sprite: "007.png" }),
@@ -84,12 +84,6 @@ const SYMBOL_LIST: SymbolDefinition[] = [
 
     // Normal: forest deck
     def('deer', { name: "Deer", type: SymbolType.NORMAL, description: "+1 Food per adjacent Forest.", sprite: "020.png" }),
-    def('mushroom', {
-        name: "Mushroom",
-        type: SymbolType.NORMAL,
-        description: "+2 Food, +2 Knowledge; destroyed if not adjacent to Forest.",
-        sprite: "021.png",
-    }),
     def('fur', { name: "Fur", type: SymbolType.NORMAL, description: "+2 Gold per 2 Forests placed on the board.", sprite: "022.png" }),
 
     // Normal: rainforest deck
@@ -135,7 +129,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Produces Gold equal to the highest Food produced by an adjacent symbol.", sprite: "034.png" }),
     def('monument', { name: "Monument", type: SymbolType.NORMAL, description: "+5 Knowledge.", sprite: "035.png" }),
     def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
-    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+2 Knowledge per relic owned.", sprite: "037.png" }),
+    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+2 Knowledge per non-consumable relic owned.", sprite: "037.png" }),
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
 
     // Ancient
@@ -148,7 +142,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+4 Knowledge per 4 empty slots.", sprite: "045.png" }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.ANCIENT, description: "+1 Food. Destroyed after 5 turns.", sprite: "046.png" }),
     def('bronze_tribute_chest', { name: "Bronze Tribute Chest", type: SymbolType.ANCIENT, description: "+1 Gold. Destroyed after 3 turns.", sprite: "086.png" }),
-    def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +1 additional Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
+    def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +2 additional Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
     def('foxtail_millet', { name: "Foxtail Millet", type: SymbolType.ANCIENT, description: "+5 Food per 2 adjacent Terrain symbols.", sprite: "088.png" }),
 
     // Medieval
@@ -157,7 +151,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         name: "Scholar",
         type: SymbolType.MEDIEVAL,
         description:
-            "Destroys all adjacent Ancient symbols. Permanently gain +5 Knowledge per Ancient symbol destroyed.",
+            "Destroys all adjacent Ancient symbols. This Scholar permanently produces +5 Knowledge per Ancient symbol destroyed.",
         sprite: "048.png",
     }),
     def('holy_relic', {
@@ -290,7 +284,7 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'christianity', 'islam', 'buddhism', 'hinduism',
     'cavalry', 'crossbowman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
     'flood', 'earthquake', 'drought', 'plague', 'heatwave',
-    'mushroom', 'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
+    'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
     'heqet', 'foxtail_millet',
 ];
 
@@ -307,7 +301,7 @@ export const isBasePool = (s: SymbolDefinition) => {
 const FOOD_PRODUCING_KEYS: SymbolKey[] = [
     'wheat', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
     'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey', 'corn', 'wild_berries',
-    'sheep', 'mushroom', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition', 'heqet', 'foxtail_millet',
+    'sheep', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition', 'heqet', 'foxtail_millet',
 ];
 
 /** Food를 생산하는 심볼 ID 목록 */

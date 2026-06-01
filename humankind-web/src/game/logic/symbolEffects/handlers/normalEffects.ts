@@ -13,10 +13,10 @@ import {
     IRRIGATION_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
     MINING_UPGRADE_ID,
+    MASON_GUILD_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
-    NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -25,7 +25,6 @@ import {
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
-    TRACKING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
@@ -154,12 +153,25 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
         }
 
         case S.stone:
-            state.gold += 1;
+            state.gold += upgrades.includes(MINING_UPGRADE_ID) || upgrades.includes(MASON_GUILD_UPGRADE_ID) ? 2 : 1;
             {
-                const mountainCol = findMountainSameColumn(boardGrid, x);
-                if (mountainCol) {
-                    state.gold += upgrades.includes(MINING_UPGRADE_ID) ? 5 : 2;
-                    state.contributors.push(mountainCol);
+                if (upgrades.includes(MASON_GUILD_UPGRADE_ID)) {
+                    const mountainCoords = [];
+                    for (let bx = 0; bx < BOARD_WIDTH; bx += 1) {
+                        for (let by = 0; by < BOARD_HEIGHT; by += 1) {
+                            if (boardGrid[bx][by]?.definition.id === S.mountain) mountainCoords.push({ x: bx, y: by });
+                        }
+                    }
+                    if (mountainCoords.length > 0) {
+                        state.gold += 4;
+                        state.contributors.push(...mountainCoords);
+                    }
+                } else {
+                    const mountainCol = findMountainSameColumn(boardGrid, x);
+                    if (mountainCol) {
+                        state.gold += upgrades.includes(MINING_UPGRADE_ID) ? 4 : 2;
+                        state.contributors.push(mountainCol);
+                    }
                 }
             }
             return true;
@@ -423,26 +435,6 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                 state.contributors.push({ x, y });
             }
             return true;
-
-        case S.mushroom: {
-            const forestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.forest);
-            if (upgrades.includes(PRESERVATION_UPGRADE_ID)) {
-                state.food += 9;
-                state.knowledge += 9;
-            } else if (upgrades.includes(TRACKING_UPGRADE_ID)) {
-                state.food += 4;
-                state.knowledge += 4;
-            } else {
-                state.food += 2;
-                state.knowledge += 2;
-            }
-            if (forestAdj.length === 0) {
-                symbolInstance.is_marked_for_destruction = true;
-            } else {
-                forestAdj.forEach((pos) => state.contributors.push(pos));
-            }
-            return true;
-        }
 
         case S.fur: {
             const forestCount = countOnBoard(boardGrid, S.forest);
