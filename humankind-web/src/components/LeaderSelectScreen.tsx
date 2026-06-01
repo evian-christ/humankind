@@ -22,6 +22,12 @@ const DIFFICULTY_LABEL_KEYS: Record<DifficultyOption, string> = {
   PRO: 'pregame.difficulty.pro',
 };
 
+const DIFFICULTY_COLOR_CLASSES: Record<DifficultyOption, string> = {
+  NORMAL: 'leader-difficulty-buttons--normal',
+  HARD: 'leader-difficulty-buttons--hard',
+  PRO: 'leader-difficulty-buttons--pro',
+};
+
 type LeaderPortraitVariant = 'full' | 'mini';
 const ENABLED_DIFFICULTIES: ReadonlySet<DifficultyOption> = new Set(['NORMAL']);
 
@@ -89,6 +95,7 @@ export default function LeaderSelectScreen() {
   const [chosenLeaderId, setChosenLeaderId] = useState<LeaderId | null>(defaultLeaderId);
   const [hoveredLeaderId, setHoveredLeaderId] = useState<LeaderId | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyOption>('NORMAL');
+  const selectedDifficultyIndex = DIFFICULTY_OPTIONS.indexOf(selectedDifficulty);
 
   const visibleLeaders = useMemo(
     () => LEADER_LIST.filter((leader) => leader.enabled && leaderHasPortraitSprite(leader.id)),
@@ -208,7 +215,14 @@ export default function LeaderSelectScreen() {
               </div>
 
               <section className="leader-difficulty" aria-label={t('pregame.difficultySelect', language)}>
-                <div className="leader-difficulty-buttons">
+                <div
+                  className={[
+                    'leader-difficulty-buttons',
+                    DIFFICULTY_COLOR_CLASSES[selectedDifficulty],
+                  ].join(' ')}
+                  style={{ '--leader-difficulty-index': selectedDifficultyIndex } as CSSProperties}
+                >
+                  <span className="leader-difficulty-thumb" aria-hidden="true" />
                   {DIFFICULTY_OPTIONS.map((difficulty) => {
                     const selected = selectedDifficulty === difficulty;
                     const enabled = ENABLED_DIFFICULTIES.has(difficulty);
