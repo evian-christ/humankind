@@ -1420,7 +1420,7 @@ function App() {
             aria-label="일시정지"
             style={{ position: 'relative', top: 'auto', left: 'auto', right: 'auto' }}
           >
-            ⏸
+            <span className="pause-btn-top-icon" aria-hidden="true" />
           </button>
         </div>
       </div>

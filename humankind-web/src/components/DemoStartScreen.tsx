@@ -1,8 +1,110 @@
 import { useEffect, useState } from 'react';
+import type { Language } from '../game/state/settingsStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { usePreGameStore } from '../game/state/preGameStore';
+import {
+  DEMO_ACHIEVEMENT_SECTIONS,
+  getDemoAchievementProgress,
+  type LocalizedText,
+} from '../game/data/demoAchievements';
 import { t } from '../i18n';
 import PauseMenu from './PauseMenu';
+
+const textForLanguage = (text: LocalizedText, language: Language) => (
+  text[language] ?? text.en
+);
+
+const getMainMenuTitleSpriteSrc = (language: Language) => (
+  language === 'ko'
+    ? './capsules/kor/librarylogo.png'
+    : './capsules/librarylogo.png'
+);
+
+const demoAchievementPanelTitle: LocalizedText = {
+  en: 'Challenges',
+  ko: '도전과제',
+  zh: '挑战',
+};
+
+const demoAchievementEmptyText: LocalizedText = {
+  en: 'Coming soon',
+  ko: '준비 중',
+  zh: '即将推出',
+};
+
+function DemoAchievementsPanel({ language }: { language: Language }) {
+  return (
+    <aside className="demo-achievements-panel" aria-label={textForLanguage(demoAchievementPanelTitle, language)}>
+      <h2 className="demo-achievements-title">
+        {textForLanguage(demoAchievementPanelTitle, language)}
+      </h2>
+      <div className="demo-achievements-sections">
+        {DEMO_ACHIEVEMENT_SECTIONS.map((section) => (
+          <section
+            key={section.id}
+            className={`demo-achievement-section demo-achievement-section--${section.id}`}
+            aria-label={section.label}
+          >
+            <h3 className="demo-achievement-section-title">
+              {section.label}
+            </h3>
+            {section.achievements.length > 0 ? (
+              <div className="demo-achievement-list">
+                {section.achievements.map((achievement) => {
+                  const { progress, target } = getDemoAchievementProgress(achievement);
+                  const progressRatio = target > 0
+                    ? Math.min(1, Math.max(0, progress / target))
+                    : 0;
+                  const progressText = `${progress}/${target}`;
+                  const achievementName = textForLanguage(achievement.name, language);
+                  const completed = target > 0 && progress >= target;
+
+                  return (
+                    <article key={achievement.id} className="demo-achievement-item">
+                      <div className="demo-achievement-item-header">
+                        <h4 className="demo-achievement-name">
+                          {achievementName}
+                          {completed ? (
+                            <span className="demo-achievement-complete-check" aria-label="completed">
+                              ✓
+                            </span>
+                          ) : null}
+                        </h4>
+                        <span className="demo-achievement-progress-text">
+                          {progressText}
+                        </span>
+                      </div>
+                      <p className="demo-achievement-condition">
+                        {textForLanguage(achievement.condition, language)}
+                      </p>
+                      <div
+                        className="demo-achievement-progress"
+                        role="progressbar"
+                        aria-label={`${achievementName} ${progressText}`}
+                        aria-valuemin={0}
+                        aria-valuemax={target}
+                        aria-valuenow={progress}
+                      >
+                        <span
+                          className="demo-achievement-progress-fill"
+                          style={{ width: `${progressRatio * 100}%` }}
+                        />
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="demo-achievement-empty">
+                {textForLanguage(demoAchievementEmptyText, language)}
+              </p>
+            )}
+          </section>
+        ))}
+      </div>
+    </aside>
+  );
+}
 
 export default function DemoStartScreen() {
   const language = useSettingsStore((s) => s.language);
@@ -53,11 +155,12 @@ export default function DemoStartScreen() {
 
   return (
     <div className="demo-start-root">
+      <DemoAchievementsPanel language={language} />
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
         <h1 className="main-menu-title main-menu-title--image">
           <img
             className="main-menu-title-sprite"
-            src="./capsules/librarylogo.png"
+            src={getMainMenuTitleSpriteSrc(language)}
             alt="Humankind in a nutshell"
             draggable={false}
           />

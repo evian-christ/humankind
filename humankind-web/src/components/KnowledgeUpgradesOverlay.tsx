@@ -205,47 +205,14 @@ const ARCHERY_BRONZE_LINE_WIDTH = 3;
 const KNOWLEDGE_CONNECTOR_PORT_W = 28;
 const KNOWLEDGE_CONNECTOR_PORT_H = 4;
 const KNOWLEDGE_CONNECTOR_PORT_SHADOW = '#24262b';
-/** Inset rim + bottom pillar; default #555/#444; researched = subdued green (clear hue, not neon; pillar darker). */
-const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#555';
-const KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT = '#444';
-const KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED = '#469068';
-const KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED = '#26503a';
-const KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED = '#2a2b2e';
-const KNOWLEDGE_TREE_CHIP_PILLAR_LOCKED = '#111111';
-const KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET = 8;
-const KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET = 1;
+const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#070707';
+const KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED = '#061008';
+const KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED = '#050505';
 const KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y = 5;
 const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
-const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#b91c1c';
-const KNOWLEDGE_TREE_CHIP_DENIED_PILLAR = '#7f1d1d';
+const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#120303';
 const KNOWLEDGE_TOOLTIP_PIN_DELAY_MS = 1000;
 const KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS = 180;
-
-function knowledgeTreeChipFrameShadow(
-    pressDepth: 'idle' | 'pressed',
-    researched: boolean,
-    locked: boolean,
-    denied = false,
-): string {
-    const inset = denied
-        ? KNOWLEDGE_TREE_CHIP_DENIED_FRAME
-        : researched
-            ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED
-            : locked
-                ? KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED
-                : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
-    const pillar = denied
-        ? KNOWLEDGE_TREE_CHIP_DENIED_PILLAR
-        : researched
-            ? KNOWLEDGE_TREE_CHIP_PILLAR_RESEARCHED
-            : locked
-                ? KNOWLEDGE_TREE_CHIP_PILLAR_LOCKED
-                : KNOWLEDGE_TREE_CHIP_PILLAR_DEFAULT;
-    if (pressDepth === 'pressed') {
-        return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_PRESSED_OFFSET}px 6px rgba(0,0,0,0.4)`;
-    }
-    return `inset 0 0 0 4px ${inset}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 0 0 ${pillar}, 0 ${KNOWLEDGE_TREE_CHIP_PILLAR_IDLE_OFFSET}px 12px rgba(0,0,0,0.4)`;
-}
 
 function knowledgeTreeChipFrameColor(researched: boolean, locked: boolean, denied: boolean): string {
     return denied
@@ -257,10 +224,6 @@ function knowledgeTreeChipFrameColor(researched: boolean, locked: boolean, denie
                 : KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT;
 }
 
-/** Idle chip fill — same before/after research (border differentiates researched) */
-const KNOWLEDGE_TREE_CHIP_IDLE_BG = '#1b1b1c';
-
-const KNOWLEDGE_TREE_CHIP_HOVER_BG = '#24262b';
 const KNOWLEDGE_CONNECTOR_IDLE_OPACITY = 0.16;
 const KNOWLEDGE_CONNECTOR_DIMMED_OPACITY = 0.08;
 const KNOWLEDGE_CONNECTOR_ACTIVE_OPACITY = 0.95;
@@ -1067,7 +1030,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const unlocked = unlockedUpgrades.includes(id);
                                                 const visuallyLocked = isVisuallyLocked(id);
                                                 const isDenied = deniedChipId === id;
-                                                const isHovered = hoveredId === id;
                                                 const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
                                                 const isSelectionRelated =
                                                     activeFocusId == null ||
@@ -1083,6 +1045,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                         type="button"
                                                         className={[
                                                             'knowledge-upgrade-chip',
+                                                            unlocked ? 'knowledge-upgrade-chip--unlocked' : '',
+                                                            visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
                                                             isDenied ? 'knowledge-upgrade-chip--denied' : '',
                                                             id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
                                                         ].filter(Boolean).join(' ')}
@@ -1099,26 +1063,11 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             display: 'block',
                                                             position: 'relative',
                                                             overflow: 'hidden',
-                                                            borderRadius: 0,
                                                             filter: chipFilter,
-                                                            boxShadow: knowledgeTreeChipFrameShadow(
-                                                                visuallyLocked
-                                                                    ? 'pressed'
-                                                                    : 'idle',
-                                                                unlocked,
-                                                                visuallyLocked,
-                                                                isDenied,
-                                                            ),
-                                                            background: isHovered
-                                                                    ? KNOWLEDGE_TREE_CHIP_HOVER_BG
-                                                                : visuallyLocked ? '#161616' : KNOWLEDGE_TREE_CHIP_IDLE_BG,
                                                             color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
                                                             cursor: visuallyLocked && !unlocked ? 'not-allowed' : 'pointer',
-                                                            transform: visuallyLocked
-                                                                ? `translateY(${KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y}px)`
-                                                                : 'none',
                                                             transition:
-                                                                'background 0.15s ease, filter 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease',
+                                                                'background 140ms ease, border-color 140ms ease, filter 0.15s ease, box-shadow 140ms ease, transform 140ms ease',
                                                         }}
                                                     >
                                                         {upgradeSpriteUrl && (
@@ -1141,23 +1090,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                                 }}
                                                             />
                                                         )}
-                                                        {unlocked && (
-                                                            <div
-                                                                aria-hidden
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    inset: 0,
-                                                                    background: 'rgba(70,144,104,0.18)',
-                                                                    pointerEvents: 'none',
-                                                                }}
-                                                            />
-                                                        )}
                                                         <div
                                                             aria-hidden
                                                             style={{
                                                                 position: 'absolute',
                                                                 inset: `${KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET}px`,
-                                                                border: `1px solid ${chipFrameColor}`,
+                                                                border: `2px solid ${chipFrameColor}`,
+                                                                borderRadius: 6,
                                                                 boxSizing: 'border-box',
                                                                 pointerEvents: 'none',
                                                             }}

@@ -143,6 +143,9 @@ export default function LeaderProgressScreen() {
           <section className="leader-detail-unlocks-panel" aria-label={t('leaderProgress.unlocksLabel', language)}>
             <div className="leader-detail-unlocks-scroll">
               <div className="leader-detail-unlocks">
+                <div className="leader-unlock-progress-track" aria-hidden="true">
+                  <span style={{ height: `${(currentLevel / MAX_LEADER_LEVEL) * 100}%` }} />
+                </div>
                 {Array.from({ length: MAX_LEADER_LEVEL }, (_, index) => {
                   const level = index + 1;
                   const unlock = getLeaderUnlockForLevel(selectedLeader.id, level);
@@ -172,14 +175,6 @@ export default function LeaderProgressScreen() {
                         <div className="leader-unlock-level">
                           {t('leaderProgress.levelShort', language).replace('{level}', String(level))}
                         </div>
-                        {hasUnlock ? (
-                          <span
-                            className="leader-unlock-point"
-                            aria-label={unlocked ? t('leaderProgress.unlocked', language) : undefined}
-                          >
-                            {unlocked ? '\u2713' : ''}
-                          </span>
-                        ) : null}
                       </div>
                       {hasUnlock ? (
                         <div className={[

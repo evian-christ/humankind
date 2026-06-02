@@ -113,7 +113,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             resizeObserver = new ResizeObserver((entries) => {
                 if (!destroyed && appRef.current) {
                     if (entries[0] && entries[0].contentRect) {
-                        appRef.current.resize(entries[0].contentRect.width, entries[0].contentRect.height);
+                        const { width, height } = entries[0].contentRect;
+                        appRef.current.resize(width, height);
                     }
                     appRef.current.renderBoard(useGameStore.getState(), useSettingsStore.getState());
                 }

@@ -237,7 +237,7 @@ const SymbolSelection = () => {
 
     return (
         <div
-            className={`selection-overlay${isPeeked ? ' selection-overlay--peeked' : ''}`}
+            className={`selection-overlay selection-overlay--symbol${isPeeked ? ' selection-overlay--peeked' : ''}`}
         >
             <button
                 className="selection-peek-handle"
