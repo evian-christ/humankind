@@ -1,7 +1,6 @@
 import { SYMBOLS, SymbolType, type SymbolDefinition, S } from '../data/symbolDefinitions';
 import { isGameEventDefinition } from '../data/eventDefinitions';
 import {
-    AGI_PROJECT_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     AGRICULTURE_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
@@ -531,9 +530,6 @@ const applyUpgrade = (state: SimulationState, upgradeId: number) => {
     const nextUnlocked = [...state.unlockedKnowledgeUpgrades, upgradeId];
     state.unlockedKnowledgeUpgrades = nextUnlocked;
     if (upgradeId === THEOLOGY_UPGRADE_ID) state.religionUnlocked = true;
-    if (upgradeId === AGI_PROJECT_UPGRADE_ID && SYMBOLS[S.agi_core]) {
-        state.playerSymbols.push(createSimulationInstance(SYMBOLS[S.agi_core]!, nextUnlocked));
-    }
 
     state.playerSymbols = state.playerSymbols.map((symbol) => {
         if (symbol.definition.type !== SymbolType.UNIT) return symbol;

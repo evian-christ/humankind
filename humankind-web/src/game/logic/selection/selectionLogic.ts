@@ -10,6 +10,7 @@ import {
 } from '../../data/eventDefinitions';
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import {
+    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
@@ -183,6 +184,7 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.expedition && upgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID)) isUnlocked = true; // Jungle Expedition -> Expedition
         if ((sym.id === S.dye || sym.id === S.papyrus) && upgrades.includes(DRY_STORAGE_UPGRADE_ID)) isUnlocked = true; // Dry Storage -> Dye, Papyrus
         if (sym.id === S.caravanserai && upgrades.includes(CARAVANSERAI_UPGRADE_ID)) isUnlocked = true; // Caravanserai -> Caravanserai
+        if (sym.id === S.agi_core && upgrades.includes(AGI_PROJECT_UPGRADE_ID)) isUnlocked = true; // AGI Project -> AGI Core
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
         if (sym.id === S.fur && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;

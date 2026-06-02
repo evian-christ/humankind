@@ -1,4 +1,5 @@
 import type { LeaderId } from '../../data/leaders';
+import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
 import { LEADERS, getLeaderProgressState, getLeaderStartingRelics, isLeaderPlayable } from '../../data/leaders';
 import { S, SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { GameState } from '../gameStore';
@@ -117,6 +118,7 @@ export const createGameLifecycleActions = ({
 
         const leaderRelics = getLeaderStartingRelics(leaderId);
         leaderRelics.forEach((def) => relicStore.addRelic(def));
+        recordDemoNonConsumableRelicProgress(leaderId, useRelicStore.getState().relics);
 
         const leader = LEADERS[leaderId];
         const leaderProgressLevel = getLeaderProgressState(leaderId).level;

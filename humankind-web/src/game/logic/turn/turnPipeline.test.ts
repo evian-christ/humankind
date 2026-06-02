@@ -9,6 +9,7 @@ import {
     buildSlotOrder,
     collectRemovedSymbolInstanceIds,
     commitLootMerge,
+    computeUnplacedHorseEffects,
     computeTurnStartBaseTotals,
     createSlotEffectPipeline,
     type ProcessSlotArgs,
@@ -16,6 +17,7 @@ import {
     resolveSlotEffect,
     shouldDeferReligionEffect,
 } from './turnPipeline';
+import { MILITARY_SCIENCE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import type { BoardGrid } from './turnTypes';
 
 const createEmptyBoard = (): BoardGrid => Array(5).fill(null).map(() => Array(4).fill(null));
@@ -288,6 +290,28 @@ describe('turnPipeline', () => {
 
         expect(pipeline.totals).toEqual({ food: 5, gold: 7, knowledge: 9 });
         expect(pipeline.accumulatedEffects).toEqual([{ x: 0, y: 0, food: 4, gold: 5, knowledge: 6 }]);
+    });
+
+    it('counts horse effects for owned horses that are not placed on the board', () => {
+        const board = createEmptyBoard();
+        const placedHorse = createInstance(Sym.horse, 'horse_placed');
+        const unplacedHorse = createInstance(Sym.horse, 'horse_unplaced');
+        const markedHorse = { ...createInstance(Sym.horse, 'horse_marked'), is_marked_for_destruction: true };
+        board[0][0] = placedHorse;
+
+        const result = computeUnplacedHorseEffects(board, [placedHorse, unplacedHorse, markedHorse], []);
+
+        expect(result).toEqual({ count: 1, food: 2, gold: 2, knowledge: 0 });
+    });
+
+    it('uses Military Science values for unplaced horse effects', () => {
+        const board = createEmptyBoard();
+        const horseA = createInstance(Sym.horse, 'horse_a');
+        const horseB = createInstance(Sym.horse, 'horse_b');
+
+        const result = computeUnplacedHorseEffects(board, [horseA, horseB], [MILITARY_SCIENCE_UPGRADE_ID]);
+
+        expect(result).toEqual({ count: 2, food: 6, gold: 8, knowledge: 0 });
     });
 
     it('keeps counter-only slot effects for board floats without changing resource totals', () => {

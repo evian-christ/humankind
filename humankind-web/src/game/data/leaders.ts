@@ -388,6 +388,10 @@ export function getLeaderProgressState(leaderId: LeaderId): LeaderProgressState 
   return normalizeLeaderProgress(parsed[leaderId]);
 }
 
+export function hasLeaderProgressRecord(leaderId: LeaderId): boolean {
+  return Object.prototype.hasOwnProperty.call(readLeaderProgressMap(), leaderId);
+}
+
 export function clearLeaderProgress(): void {
   storage()?.removeItem(LEADER_PROGRESS_STORAGE_KEY);
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isGameEventDefinition } from '../../data/eventDefinitions';
 import {
+    AGI_PROJECT_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
@@ -148,6 +149,24 @@ describe('selectionLogic', () => {
 
         expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
         expect(pool.some((sym) => sym.type === SymbolType.TERRAIN)).toBe(false);
+    });
+
+    it('adds AGI Core to the pool only after AGI Project is unlocked', () => {
+        const lockedPool = buildFlatPool({
+            era: 3,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+        expect(lockedPool.some((sym) => sym.id === S.agi_core)).toBe(false);
+
+        const unlockedPool = buildFlatPool({
+            era: 3,
+            religionUnlocked: false,
+            upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID, AGI_PROJECT_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+        expect(unlockedPool.some((sym) => sym.id === S.agi_core)).toBe(true);
     });
 
     it('still offers random terrain-only choices after modern age', () => {

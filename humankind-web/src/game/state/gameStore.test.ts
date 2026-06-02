@@ -137,7 +137,7 @@ describe('gameStore pasture butchering', () => {
         useGameStore.getState().butcherPastureAnimalAt(3, 1);
 
         const next = useGameStore.getState();
-        expect(next.food).toBe(20);
+        expect(next.food).toBe(30);
         expect(next.gold).toBe(10);
     });
 

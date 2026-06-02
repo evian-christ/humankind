@@ -1,4 +1,5 @@
 import { RELIC_ID } from '../../logic/relics/relicIds';
+import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
 import { useRelicStore } from '../relicStore';
 import { getInflatedGoldCost } from '../gameCalculations';
 import type { GameState } from '../gameStore';
@@ -27,6 +28,7 @@ export const createRelicShopFlowActions = ({ get, set }: RelicShopFlowDeps) => (
         if (state.gold < effectiveCost) return;
 
         useRelicStore.getState().addRelic(def);
+        recordDemoNonConsumableRelicProgress(state.leaderId, useRelicStore.getState().relics);
 
         set((s) => {
             const newChoices = [...s.relicChoices];

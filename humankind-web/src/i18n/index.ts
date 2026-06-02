@@ -640,7 +640,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.pottery.desc': '+4 Food stored per turn; on destroy: gain Food equal to stored Counter.',
         'symbol.tribal_village.desc': 'Consume to trigger symbol selection phase 2 times.',
         'symbol.merchant.desc': 'Produces Gold equal to the highest Food produced by an adjacent symbol.',
-        'symbol.horse.desc': '+2 Food, +2 Gold.',
+        'symbol.horse.desc': '+2 Food, +2 Gold. Triggers even when not placed on the board.',
         'symbol.crab.desc': 'With 1 Sea on the board: +1 Food, +1 Gold; 2 Seas: +2 Food, +2 Gold; 3+ Seas: +2 Food, +2 Gold.',
         'symbol.library.desc': '+1 Knowledge per adjacent symbol.',
         'symbol.pearl.desc': 'With 1 Sea on the board: +2 Gold; 2 Seas: +3 Gold; 3+ Seas: +5 Gold.',
@@ -866,7 +866,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.50.desc': 'Base Gold production +2. Upgrades Spices.',
         'knowledgeUpgrade.35.desc': 'Horse produces +3 Food and +4 Gold. Melee units gain +1 Attack and +1 HP.',
         'knowledgeUpgrade.symbolDescAfter.50.spices': '+3 Food per different terrain type placed.',
-        'knowledgeUpgrade.symbolDescAfter.35.horse': '+3 Food, +4 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.35.horse': '+3 Food, +4 Gold. Triggers even when not placed on the board.',
         'knowledgeUpgrade.19.name': 'Trade Goods Exchange',
         'knowledgeUpgrade.19.desc': 'Dye and Papyrus are added to the symbol selection pool.',
         'knowledgeUpgrade.32.name': 'Dry Storage',
@@ -923,7 +923,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.51.name': 'Modern Age',
         'knowledgeUpgrade.51.desc': 'Medieval symbols no longer appear. Unlocks all Modern symbols. Terrain symbols no longer appear.',
         'knowledgeUpgrade.63.name': 'AGI Project',
-        'knowledgeUpgrade.63.desc': 'Gain the AGI Core.',
+        'knowledgeUpgrade.63.desc': 'Adds AGI Core to the symbol selection pool.',
         'knowledgeUpgrade.40.name': 'Education',
         'knowledgeUpgrade.40.desc': 'Upgrades Library.',
         'knowledgeUpgrade.41.name': 'Theocracy',
@@ -1606,7 +1606,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.pottery.desc': '매 턴 저장 식량 +4; 파괴 시: 저장량만큼 식량 획득.',
         'symbol.tribal_village.desc': '소모하여 심볼 선택 페이즈 2회 발동.',
         'symbol.merchant.desc': '인접한 심볼 중, 식량을 가장 많이 생산한 심볼의 식량 생산량 만큼 골드를 생산합니다.',
-        'symbol.horse.desc': '식량 +2, 골드 +2.',
+        'symbol.horse.desc': '식량 +2, 골드 +2. 보드에 배치되지 않아도 발동합니다.',
         'symbol.crab.desc': '보드에 배치된 바다가 1개: 식량 +1, 골드 +1; 2개: 식량 +2, 골드 +2; 3개 이상: 식량 +2, 골드 +2.',
         'symbol.library.desc': '인접한 심볼 하나당 지식 +1.',
         'symbol.pearl.desc': '보드에 배치된 바다가 1개: 골드 +2; 2개: 골드 +3; 3개 이상: 골드 +5.',
@@ -1830,7 +1830,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.50.desc': '기본 골드 생산 +2. 향신료를 업그레이드합니다.',
         'knowledgeUpgrade.35.desc': '말이 식량 +3, 골드 +4를 생산합니다. 근접 유닛의 공격력 +1, 체력 +1.',
         'knowledgeUpgrade.symbolDescAfter.50.spices': '배치된 다른 지형 유형 하나당: 식량 +3.',
-        'knowledgeUpgrade.symbolDescAfter.35.horse': '식량 +3, 골드 +4.',
+        'knowledgeUpgrade.symbolDescAfter.35.horse': '식량 +3, 골드 +4. 보드에 배치되지 않아도 발동합니다.',
         'knowledgeUpgrade.19.name': '대상품 교역',
         'knowledgeUpgrade.19.desc': '염료와 파피루스를 해금합니다.',
         'knowledgeUpgrade.32.name': '건조 저장술',
@@ -1885,7 +1885,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.51.name': '현대 시대',
         'knowledgeUpgrade.51.desc': '중세 심볼이 더 이상 등장하지 않습니다. 현대 심볼을 모두 해금합니다. 지형 심볼이 더 이상 등장하지 않습니다.',
         'knowledgeUpgrade.63.name': 'AGI 프로젝트',
-        'knowledgeUpgrade.63.desc': 'AGI 코어를 획득합니다.',
+        'knowledgeUpgrade.63.desc': 'AGI 코어가 심볼 선택 풀에 등장합니다.',
         'knowledgeUpgrade.40.name': '교육',
         'knowledgeUpgrade.40.desc': '도서관을 업그레이드 합니다.',
         'knowledgeUpgrade.41.name': '신권',
@@ -2094,19 +2094,19 @@ export function getBoardSymbolTooltipDesc(
         const hasNomadicTradition = have.has(NOMADIC_TRADITION_UPGRADE_ID);
         if (hasNomadicTradition && hasPast) {
             if (lang === 'zh') {
-                return '+1 食物；10% 概率生产牛。与平原相邻时可屠宰；屠宰时：+15 食物。';
+                return '+1 食物；10% 概率生产牛。与平原相邻时可屠宰；屠宰时：+20 食物。';
             }
             return lang === 'ko'
-                ? '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +15.'
-                : '+1 Food; 10% chance to produce Cattle. When adjacent to Plains, can butcher; on butcher: +15 Food.';
+                ? '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +20.'
+                : '+1 Food; 10% chance to produce Cattle. When adjacent to Plains, can butcher; on butcher: +20 Food.';
         }
         if (hasNomadicTradition) {
             if (lang === 'zh') {
-                return '+1 食物。与平原相邻时可屠宰；屠宰时：+15 食物。';
+                return '+1 食物。与平原相邻时可屠宰；屠宰时：+20 食物。';
             }
             return lang === 'ko'
-                ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +15.'
-                : '+1 Food. When adjacent to Plains, can butcher; on butcher: +15 Food.';
+                ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +20.'
+                : '+1 Food. When adjacent to Plains, can butcher; on butcher: +20 Food.';
         }
         if (hasPast) return t('symbol.cattle.descBoard.pastoral', lang);
         return t('symbol.cattle.desc', lang);
@@ -2116,16 +2116,16 @@ export function getBoardSymbolTooltipDesc(
         if (have.has(NOMADIC_TRADITION_UPGRADE_ID)) {
             if (lang === 'zh') {
                 return have.has(PASTORALISM_UPGRADE_ID)
-                    ? '+1 食物；10% 概率生产羊。与平原相邻时可屠宰；屠宰时：+5 食物，+10 金币。'
-                    : '+1 食物。与平原相邻时可屠宰；屠宰时：+5 食物，+10 金币。';
+                    ? '+1 食物；10% 概率生产羊。与平原相邻时可屠宰；屠宰时：+10 食物，+10 金币。'
+                    : '+1 食物。与平原相邻时可屠宰；屠宰时：+10 食物，+10 金币。';
             }
             return have.has(PASTORALISM_UPGRADE_ID)
                 ? lang === 'ko'
-                    ? '식량 +1; 10% 확률로 양 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +10.'
-                    : '+1 Food; 10% chance to produce Sheep. When adjacent to Plains, can butcher; on butcher: +5 Food, +10 Gold.'
+                    ? '식량 +1; 10% 확률로 양 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +10, 골드 +10.'
+                    : '+1 Food; 10% chance to produce Sheep. When adjacent to Plains, can butcher; on butcher: +10 Food, +10 Gold.'
                 : lang === 'ko'
-                    ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +10.'
-                    : '+1 Food. When adjacent to Plains, can butcher; on butcher: +5 Food, +10 Gold.';
+                    ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +10, 골드 +10.'
+                    : '+1 Food. When adjacent to Plains, can butcher; on butcher: +10 Food, +10 Gold.';
         }
         return have.has(PASTORALISM_UPGRADE_ID)
             ? t('symbol.sheep.descBoard.pastoral', lang)

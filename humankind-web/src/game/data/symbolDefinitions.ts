@@ -74,7 +74,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
             "+1 Food; when adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold. With Pastoralism: 10% chance per turn to produce Sheep.",
         sprite: "013.png",
     }),
-    def('horse', { name: "Horse", type: SymbolType.NORMAL, description: "+2 Food, +2 Gold.", sprite: "015.png" }),
+    def('horse', { name: "Horse", type: SymbolType.NORMAL, description: "+2 Food, +2 Gold. Triggers even when not placed on the board.", sprite: "015.png" }),
 
     // Normal: sea deck
     def('fish', { name: "Fish", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +1 Food; 2+ Seas: +2 Food; 3+ Seas: +4 Food.", sprite: "016.png" }),

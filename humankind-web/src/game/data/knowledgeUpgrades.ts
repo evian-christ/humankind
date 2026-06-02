@@ -835,7 +835,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: AGI_PROJECT_UPGRADE_ID,
         name: 'AGI Project',
         type: SymbolType.MODERN,
-        description: 'Gain the AGI Core.',
+        description: 'Adds AGI Core to the symbol selection pool.',
         sprite: '063.png',
         descSymbols: [{ symbolKey: 'agi_core', relation: 'pool_add' }],
     },

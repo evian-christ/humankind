@@ -1,4 +1,4 @@
-import { PLANTATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { MILITARY_SCIENCE_UPGRADE_ID, PLANTATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import { getEffectiveAdjacentCoords } from '../symbolEffects/core';
@@ -133,6 +133,10 @@ function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolE
 
 function getCounterDisplayValue(rawValue: number): number {
     return rawValue;
+}
+
+export interface UnplacedHorseEffectResult extends ResourceTotals {
+    count: number;
 }
 
 function getCounterDisplayText(symbol: PlayerSymbolInstance, rawValue: number): string | null {
@@ -356,6 +360,46 @@ export function completeSlotEffects(args: CompleteSlotEffectsArgs): void {
 
     pipeline.accumulatedEffects.push(...merchantResult.effects);
     pipeline.totals.gold += merchantResult.goldDelta;
+}
+
+export function computeUnplacedHorseEffects(
+    board: BoardGrid,
+    playerSymbols: readonly PlayerSymbolInstance[],
+    unlockedKnowledgeUpgrades: readonly number[] = [],
+): UnplacedHorseEffectResult {
+    const boardInstanceIds = new Set<string>();
+    for (const col of board) {
+        for (const symbol of col) {
+            if (symbol && !symbol.is_marked_for_destruction) {
+                boardInstanceIds.add(symbol.instanceId);
+            }
+        }
+    }
+
+    const count = playerSymbols.filter(
+        (symbol) =>
+            symbol.definition.id === S.horse &&
+            !symbol.is_marked_for_destruction &&
+            !boardInstanceIds.has(symbol.instanceId),
+    ).length;
+    const hasMilitaryScience = unlockedKnowledgeUpgrades.map(Number).includes(MILITARY_SCIENCE_UPGRADE_ID);
+
+    return {
+        count,
+        food: count * (hasMilitaryScience ? 3 : 2),
+        gold: count * (hasMilitaryScience ? 4 : 2),
+        knowledge: 0,
+    };
+}
+
+export function applyUnplacedHorseEffects(
+    pipeline: SlotEffectPipeline,
+    result: UnplacedHorseEffectResult,
+): void {
+    if (result.count === 0) return;
+    pipeline.totals.food += result.food;
+    pipeline.totals.gold += result.gold;
+    pipeline.totals.knowledge += result.knowledge;
 }
 
 export function removeMarkedSymbolsFromBoard(board: BoardGrid): BoardGrid {

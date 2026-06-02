@@ -1,4 +1,9 @@
 import { t } from '../../../i18n';
+import {
+    recordDemoBaseGoldProductionProgress,
+    recordDemoFoodPaymentTurn,
+    recordDemoLeaderGameCompletion,
+} from '../../data/demoAchievements';
 import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
 import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
@@ -28,8 +33,10 @@ import { createMathRng } from '../../logic/turn/rng';
 import {
     applyGeneratedSymbols,
     applySlotEffectResult,
+    applyUnplacedHorseEffects,
     collectRemovedSymbolInstanceIds,
     completeSlotEffects,
+    computeUnplacedHorseEffects,
     computeTurnStartBaseTotals,
     createSlotEffectPipeline,
     removeMarkedSymbolsFromBoard,
@@ -135,6 +142,7 @@ export const createTurnFlowActions = ({
     const awardTerminalLeaderProgress = (outcome: LeaderGameOutcome) => {
         const state = get();
         if (!state.leaderId || state.isTutorialMode || state.lastLeaderProgressAward) return;
+        recordDemoLeaderGameCompletion(state.leaderId, outcome);
         const award = awardLeaderGameXp(state.leaderId, {
             survivedTurns: state.turn,
             finalLevel: state.level,
@@ -245,6 +253,7 @@ export const createTurnFlowActions = ({
         const startFood = baseTotals.food;
         const startGold = baseTotals.gold;
         const startKnowledge = baseTotals.knowledge;
+        recordDemoBaseGoldProductionProgress(state.leaderId, startGold);
 
         set({
             phase: 'processing',
@@ -587,6 +596,7 @@ export const createTurnFlowActions = ({
                         }
 
                         if (phaseResolution.isFoodPaymentTurn) {
+                            recordDemoFoodPaymentTurn(finalState.turn);
                             const venusRelics = useRelicStore
                                 .getState()
                                 .relics.filter((r) => r.definition.id === RELIC_ID.WILLENDORF_VENUS);
@@ -656,6 +666,28 @@ export const createTurnFlowActions = ({
                     unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
                     relicEffects: buildActiveRelicEffects(),
                 });
+                const unplacedHorseEffects = computeUnplacedHorseEffects(
+                    get().board,
+                    get().playerSymbols,
+                    state.unlockedKnowledgeUpgrades || [],
+                );
+                applyUnplacedHorseEffects(slotPipeline, unplacedHorseEffects);
+                if (unplacedHorseEffects.count > 0) {
+                    get().appendEventLog({
+                        turn: get().turn,
+                        kind: 'symbol_effect',
+                        symbolId: S.horse,
+                        delta: {
+                            food: unplacedHorseEffects.food,
+                            gold: unplacedHorseEffects.gold,
+                            knowledge: unplacedHorseEffects.knowledge,
+                        },
+                        meta: {
+                            action: 'unplaced_horse_effect',
+                            count: unplacedHorseEffects.count,
+                        },
+                    });
+                }
 
                 set({ activeSlot: null, activeContributors: [], pendingContributors: [], counterDisplayOverrides: [], lootMergeFx: null });
                 set({

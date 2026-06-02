@@ -1,4 +1,5 @@
 import { NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
 import { S, SymbolType } from '../../data/symbolDefinitions';
 import { generateChoices as generateChoicesSelection } from '../../logic/selection/selectionLogic';
 import type { GameState } from '../gameStore';
@@ -60,7 +61,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const symAgg = aggregateCollectionDestroyEffects(removed, false, prev.unlockedKnowledgeUpgrades || []);
         const shBonus = scarabBonusForOwnedRemoves(prev.board, removed.length);
         const hasNomadicTradition = (prev.unlockedKnowledgeUpgrades || []).includes(NOMADIC_TRADITION_UPGRADE_ID);
-        const butcherFood = sid === S.cattle ? (hasNomadicTradition ? 15 : 10) : 5;
+        const butcherFood = sid === S.cattle ? (hasNomadicTradition ? 20 : 10) : (hasNomadicTradition ? 10 : 5);
         const butcherGoldFlat = sid === S.sheep ? (hasNomadicTradition ? 10 : 5) : 0;
         const dFood = butcherFood + symAgg.food + shBonus.food;
         const dGold = butcherGoldFlat + symAgg.gold + shBonus.gold;
@@ -168,16 +169,28 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             pendingLootSlot: null,
         });
 
+        let grantedRelic = false;
+
         if (reward.grantsRelic) {
             const relicPool = Object.values(RELICS);
             const relicDef = relicPool[Math.floor(Math.random() * relicPool.length)];
-            if (relicDef) useRelicStore.getState().addRelic(relicDef);
+            if (relicDef) {
+                useRelicStore.getState().addRelic(relicDef);
+                grantedRelic = true;
+            }
         }
 
         reward.grantedRelicIds?.forEach((relicId) => {
             const relicDef = RELICS[relicId];
-            if (relicDef) useRelicStore.getState().addRelic(relicDef);
+            if (relicDef) {
+                useRelicStore.getState().addRelic(relicDef);
+                grantedRelic = true;
+            }
         });
+
+        if (grantedRelic) {
+            recordDemoNonConsumableRelicProgress(prev.leaderId, useRelicStore.getState().relics);
+        }
 
         get().appendEventLog({
             turn: prev.turn,

@@ -1,7 +1,5 @@
 import { SYMBOLS, EDICT_SYMBOL_ID, S, SymbolType } from '../../data/symbolDefinitions';
 import {
-    AGI_PROJECT_UPGRADE_ID,
-    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
@@ -21,6 +19,7 @@ import {
     THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
+import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
 import { getEnemyPoolForEra } from '../../data/enemyPools';
 import {
     CAPITAL_RELOCATION_DESTROY_COUNT,
@@ -651,11 +650,14 @@ export const createSelectionFlowActions = ({
             ? [{ relicInstanceId: mouseionRelic.instanceId, text: '+3', color: '#fbbf24' }]
             : [];
 
+        let grantedRelicForAchievement = false;
+
         if (OBLIVION_FURNACE_GRANT_UPGRADE_IDS.has(uid)) {
             const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
             if (oblDef) {
                 const rs = useRelicStore.getState();
                 for (let i = 0; i < 3; i++) rs.addRelic(oblDef);
+                grantedRelicForAchievement = true;
             }
         }
 
@@ -663,6 +665,7 @@ export const createSelectionFlowActions = ({
             const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
             if (oblDef) {
                 useRelicStore.getState().addRelic(oblDef);
+                grantedRelicForAchievement = true;
             }
         }
 
@@ -672,6 +675,7 @@ export const createSelectionFlowActions = ({
                 const rs = useRelicStore.getState();
                 const count = uid === TOTAL_MOBILIZATION_UPGRADE_ID ? 4 : 2;
                 for (let i = 0; i < count; i++) rs.addRelic(militaryLevyDef);
+                grantedRelicForAchievement = true;
             }
         }
 
@@ -681,7 +685,12 @@ export const createSelectionFlowActions = ({
                 const rs = useRelicStore.getState();
                 const count = uid === GREAT_MIGRATION_UPGRADE_ID ? 2 : 3;
                 for (let i = 0; i < count; i++) rs.addRelic(tribeJoinDef);
+                grantedRelicForAchievement = true;
             }
+        }
+
+        if (grantedRelicForAchievement) {
+            recordDemoNonConsumableRelicProgress(state.leaderId, useRelicStore.getState().relics);
         }
 
         let religionUnlocked = state.religionUnlocked;
@@ -689,13 +698,6 @@ export const createSelectionFlowActions = ({
 
         const newBoard = [...state.board.map((row) => [...row])];
         let newPlayerSymbols = [...state.playerSymbols];
-
-        if (uid === AGI_PROJECT_UPGRADE_ID) {
-            const agiCoreDef = SYMBOLS[S.agi_core];
-            if (agiCoreDef) {
-                newPlayerSymbols = [...newPlayerSymbols, createInstance(agiCoreDef, newUnlocked)];
-            }
-        }
 
         for (let y = 0; y < state.board.length; y++) {
             for (let x = 0; x < state.board[y].length; x++) {

@@ -786,7 +786,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().pendingOblivionFurnaceRelicId).toBeNull();
     });
 
-    it('grants AGI Core when AGI Project is researched', () => {
+    it('unlocks AGI Project without immediately granting AGI Core', () => {
         const harness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
@@ -798,7 +798,7 @@ describe('selectionFlow actions', () => {
         harness.actions.selectUpgrade(AGI_PROJECT_UPGRADE_ID);
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(AGI_PROJECT_UPGRADE_ID);
-        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.agi_core)).toBe(true);
+        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.agi_core)).toBe(false);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 
