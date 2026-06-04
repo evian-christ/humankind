@@ -4,6 +4,7 @@ import { audioManager } from '../../audio/audioManager';
 export type Language = 'en' | 'ko' | 'zh';
 export type EffectSpeed = '1x' | '2x' | '4x' | 'instant';
 export type SpinSpeed = '1x' | '2x' | '4x' | 'instant';
+export type ScreenMode = 'windowed' | 'fullscreen' | 'borderless';
 
 const SETTINGS_KEY = 'humankind.settings.v1';
 const SETTINGS_VERSION = 1;
@@ -72,6 +73,7 @@ export interface SettingsState {
     musicVolume: number;
     effectVolume: number;
     ambientVolume: number;
+    screenMode: ScreenMode;
     developerMode: boolean;
 
     setResolution: (width: number, height: number) => void;
@@ -82,6 +84,7 @@ export interface SettingsState {
     setMusicVolume: (volume: number) => void;
     setEffectVolume: (volume: number) => void;
     setAmbientVolume: (volume: number) => void;
+    setScreenMode: (mode: ScreenMode) => void;
     setDeveloperMode: (enabled: boolean) => void;
 }
 
@@ -96,6 +99,7 @@ type PersistedSettings = Pick<
     | 'musicVolume'
     | 'effectVolume'
     | 'ambientVolume'
+    | 'screenMode'
     | 'developerMode'
 >;
 
@@ -115,6 +119,7 @@ const defaultSettings: PersistedSettings = {
     musicVolume: 1,
     effectVolume: 1,
     ambientVolume: 1,
+    screenMode: 'windowed',
     developerMode: false,
 };
 
@@ -126,22 +131,51 @@ const storage = (): Storage | null => {
     }
 };
 
+const hasSavedSettings = () => storage()?.getItem(SETTINGS_KEY) != null;
+
 const isLanguage = (value: unknown): value is Language => value === 'en' || value === 'ko' || value === 'zh';
 const isEffectSpeed = (value: unknown): value is EffectSpeed =>
     value === '1x' || value === '2x' || value === '4x' || value === 'instant';
 const isSpinSpeed = (value: unknown): value is SpinSpeed =>
     value === '1x' || value === '2x' || value === '4x' || value === 'instant';
+const isScreenMode = (value: unknown): value is ScreenMode =>
+    value === 'windowed' || value === 'fullscreen' || value === 'borderless';
 
 const sanitizeDimension = (value: unknown, fallback: number) =>
     typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.round(value) : fallback;
 
+function mapLocaleToLanguage(locale: string | null | undefined): Language | null {
+    if (!locale) return null;
+    const normalized = locale.trim().toLowerCase().replace('_', '-');
+    if (normalized.startsWith('ko')) return 'ko';
+    if (normalized.startsWith('zh') || normalized.includes('chinese')) return 'zh';
+    if (normalized.startsWith('en') || normalized === 'english') return 'en';
+    if (normalized === 'koreana' || normalized === 'korean') return 'ko';
+    if (normalized === 'schinese' || normalized === 'tchinese') return 'zh';
+    return null;
+}
+
+function getBrowserLanguage(): Language {
+    const locales = [
+        ...(Array.isArray(globalThis.navigator?.languages) ? globalThis.navigator.languages : []),
+        globalThis.navigator?.language,
+    ];
+    for (const locale of locales) {
+        const language = mapLocaleToLanguage(locale);
+        if (language) return language;
+    }
+    return defaultSettings.language;
+}
+
 function loadSettings(): PersistedSettings {
     const raw = storage()?.getItem(SETTINGS_KEY);
-    if (!raw) return defaultSettings;
+    if (!raw) return { ...defaultSettings, language: getBrowserLanguage() };
 
     try {
         const save = JSON.parse(raw) as Partial<SavedSettings>;
         if (save.version !== SETTINGS_VERSION || save.settings == null) return defaultSettings;
+
+        const legacyFullscreen = (save.settings as { fullscreen?: unknown }).fullscreen;
 
         return {
             resolutionWidth: sanitizeDimension(save.settings.resolutionWidth, defaultSettings.resolutionWidth),
@@ -153,12 +187,17 @@ function loadSettings(): PersistedSettings {
             musicVolume: clampVolume(save.settings.musicVolume),
             effectVolume: clampVolume(save.settings.effectVolume),
             ambientVolume: clampVolume(save.settings.ambientVolume ?? defaultSettings.ambientVolume),
+            screenMode: isScreenMode(save.settings.screenMode)
+                ? save.settings.screenMode
+                : legacyFullscreen === true
+                    ? 'fullscreen'
+                    : defaultSettings.screenMode,
             developerMode: typeof save.settings.developerMode === 'boolean'
                 ? save.settings.developerMode
                 : defaultSettings.developerMode,
         };
     } catch {
-        return defaultSettings;
+        return { ...defaultSettings, language: getBrowserLanguage() };
     }
 }
 
@@ -179,6 +218,7 @@ function saveSettings(state: PersistedSettings): void {
             musicVolume: state.musicVolume,
             effectVolume: state.effectVolume,
             ambientVolume: state.ambientVolume,
+            screenMode: state.screenMode,
             developerMode: state.developerMode,
         },
     };
@@ -265,6 +305,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         audioManager.setAmbientVolume(clamped);
     },
 
+    setScreenMode: (mode) => {
+        set((state) => {
+            const next = { ...state, screenMode: mode };
+            saveSettings(next);
+            return { screenMode: mode };
+        });
+        applyScreenModeToDOM(mode);
+    },
+
     setDeveloperMode: (enabled) => {
         set((state) => {
             const next = { ...state, developerMode: enabled };
@@ -279,28 +328,36 @@ function clampVolume(value: number) {
 }
 
 // ─── 전체화면 상태 추적 ───
-let _isFullscreen = false;
+let _fillsScreen = initialSettings.screenMode !== 'windowed';
 
-function syncFullscreenState() {
+function syncScreenModeState() {
     if (document.fullscreenElement) {
-        _isFullscreen = true;
+        _fillsScreen = true;
+        persistScreenModeState('fullscreen');
         applyRootScale();
         return;
     }
     import('@tauri-apps/api/core').then(({ isTauri }) => {
         if (isTauri()) {
             import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-                getCurrentWindow().isFullscreen().then(isFull => {
-                    _isFullscreen = isFull;
+                const win = getCurrentWindow();
+                Promise.all([win.isFullscreen(), win.isDecorated()]).then(([isFull, isDecorated]) => {
+                    const mode: ScreenMode = isFull
+                        ? isDecorated ? 'fullscreen' : 'borderless'
+                        : !isDecorated ? 'borderless' : 'windowed';
+                    _fillsScreen = mode !== 'windowed';
+                    persistScreenModeState(mode);
                     applyRootScale();
                 });
             }).catch(() => { });
         } else {
-            _isFullscreen = false;
+            _fillsScreen = false;
+            persistScreenModeState('windowed');
             applyRootScale();
         }
     }).catch(() => {
-        _isFullscreen = false;
+        _fillsScreen = false;
+        persistScreenModeState('windowed');
         applyRootScale();
     });
 }
@@ -328,7 +385,7 @@ function applyRootScale() {
     root.style.width = `${virtualW}px`;
     root.style.height = `${virtualH}px`;
 
-    if (_isFullscreen) {
+    if (_fillsScreen) {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const fsScaleX = vw / virtualW;
@@ -344,9 +401,10 @@ function applyRootScale() {
 }
 
 // 리사이즈 / 전체화면 이벤트
-window.addEventListener('resize', () => syncFullscreenState());
+window.addEventListener('resize', () => syncScreenModeState());
 document.addEventListener('fullscreenchange', () => {
-    _isFullscreen = !!document.fullscreenElement;
+    _fillsScreen = !!document.fullscreenElement;
+    persistScreenModeState(_fillsScreen ? 'fullscreen' : 'windowed');
     applyRootScale();
 });
 
@@ -357,8 +415,11 @@ function applyResolutionToDOM(width: number, height: number) {
             import('@tauri-apps/api/window').then(({ getCurrentWindow, LogicalSize }) => {
                 const win = getCurrentWindow();
                 const setWinSize = async () => {
+                    if (useSettingsStore.getState().screenMode !== 'windowed') return;
                     const isFull = await win.isFullscreen();
-                    if (!isFull) {
+                    const isDecorated = await win.isDecorated();
+                    const isMaximized = await win.isMaximized();
+                    if (!isFull && (isDecorated || !isMaximized)) {
                         await win.setSize(new LogicalSize(width, height));
                     }
                 };
@@ -370,6 +431,86 @@ function applyResolutionToDOM(width: number, height: number) {
     scheduleFrame(() => applyRootScale());
 }
 
+function applyScreenModeToDOM(mode: ScreenMode) {
+    import('@tauri-apps/api/core').then(({ isTauri }) => {
+        if (isTauri()) {
+            import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+                const win = getCurrentWindow();
+                const apply = async () => {
+                    if (mode === 'fullscreen') {
+                        await win.setDecorations(true);
+                        await win.setFullscreen(true);
+                        return;
+                    }
+
+                    await win.setFullscreen(false);
+
+                    if (mode === 'borderless') {
+                        if (await win.isMaximized()) {
+                            await win.unmaximize();
+                        }
+                        await win.setDecorations(false);
+                        await win.setFullscreen(true);
+                        return;
+                    }
+
+                    await win.setDecorations(true);
+                    if (await win.isMaximized()) {
+                        await win.unmaximize();
+                    }
+                    const { resolutionWidth, resolutionHeight } = useSettingsStore.getState();
+                    const { LogicalSize } = await import('@tauri-apps/api/window');
+                    await win.setSize(new LogicalSize(resolutionWidth, resolutionHeight));
+                    await win.center();
+                };
+                apply()
+                    .then(() => {
+                        _fillsScreen = mode !== 'windowed';
+                        persistScreenModeState(mode);
+                        applyRootScale();
+                    })
+                    .catch(console.error);
+            }).catch(console.error);
+            return;
+        }
+
+        if (mode === 'fullscreen' || mode === 'borderless') {
+            document.documentElement.requestFullscreen()
+                .then(() => {
+                    _fillsScreen = true;
+                    persistScreenModeState(mode === 'borderless' ? 'fullscreen' : mode);
+                    applyRootScale();
+                })
+                .catch(console.error);
+            return;
+        }
+
+        if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen()
+                .then(() => {
+                    _fillsScreen = false;
+                    persistScreenModeState('windowed');
+                    applyRootScale();
+                })
+                .catch(console.error);
+            return;
+        }
+
+        _fillsScreen = false;
+        persistScreenModeState('windowed');
+        applyRootScale();
+    }).catch(console.error);
+}
+
+function persistScreenModeState(screenMode: ScreenMode) {
+    const state = useSettingsStore.getState();
+    if (state.screenMode === screenMode) return;
+
+    const next = { ...state, screenMode };
+    saveSettings(next);
+    useSettingsStore.setState({ screenMode });
+}
+
 /** #root에 data-lang 속성 설정 (CSS 폰트 전환용) */
 function applyLanguageToDOM(lang: Language) {
     const root = document.getElementById('root');
@@ -377,6 +518,24 @@ function applyLanguageToDOM(lang: Language) {
     root.setAttribute('data-lang', lang);
     const fontFamily = lang === 'zh' ? 'Noto Sans SC' : 'Mulmaru';
     document.fonts?.load(`16px "${fontFamily}"`).catch(() => {});
+}
+
+async function initializeLanguageFromSteam(): Promise<void> {
+    if (hasSavedSettings()) return;
+
+    try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const steamLanguage = await invoke<string | null>('get_steam_game_language');
+        const language = mapLocaleToLanguage(steamLanguage);
+        if (!language || useSettingsStore.getState().language === language || hasSavedSettings()) return;
+
+        const next = { ...useSettingsStore.getState(), language };
+        saveSettings(next);
+        useSettingsStore.setState({ language });
+        applyLanguageToDOM(language);
+    } catch (error) {
+        console.info('Steam language unavailable; using browser language.', error);
+    }
 }
 
 function scheduleFrame(callback: () => void) {
@@ -394,4 +553,10 @@ audioManager.setAmbientVolume(initialSettings.ambientVolume);
 scheduleFrame(() => {
     applyLanguageToDOM(initialSettings.language);
     applyResolutionToDOM(initialSettings.resolutionWidth, initialSettings.resolutionHeight);
+    if (initialSettings.screenMode !== 'windowed') {
+        applyScreenModeToDOM(initialSettings.screenMode);
+    } else {
+        syncScreenModeState();
+    }
 });
+initializeLanguageFromSteam();

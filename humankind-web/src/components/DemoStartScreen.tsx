@@ -20,10 +20,41 @@ const getMainMenuTitleSpriteSrc = (language: Language) => (
     : './capsules/librarylogo.png'
 );
 
+const FALLBACK_STEAM_PROOF_CODE = '0000-0000-0000';
+const STEAM_PROOF_SALT = 'humankind-demo-steam-proof-v1';
+
+async function createSteamProofCode(steamId64: string | null): Promise<string> {
+  if (!steamId64 || !/^\d+$/.test(steamId64)) return FALLBACK_STEAM_PROOF_CODE;
+  try {
+    const data = new TextEncoder().encode(`${STEAM_PROOF_SALT}:${steamId64}`);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const hex = [...new Uint8Array(hash)]
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('')
+      .slice(0, 12)
+      .toUpperCase();
+    return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}`;
+  } catch (error) {
+    console.error('Failed to create Steam proof code:', error);
+    return FALLBACK_STEAM_PROOF_CODE;
+  }
+}
+
+async function loadSteamProofCode(): Promise<string> {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const steamId64 = await invoke<string | null>('get_steam_id64');
+    return createSteamProofCode(steamId64);
+  } catch (error) {
+    console.error('Failed to load Steam ID64:', error);
+    return FALLBACK_STEAM_PROOF_CODE;
+  }
+}
+
 const demoAchievementPanelTitle: LocalizedText = {
-  en: 'Challenges',
-  ko: '도전과제',
-  zh: '挑战',
+  en: 'Demo achievements',
+  ko: '데모 도전과제',
+  zh: '演示成就',
 };
 
 const demoAchievementEmptyText: LocalizedText = {
@@ -120,6 +151,7 @@ export default function DemoStartScreen() {
   const shouldHighlightTutorial = !hasCompletedTutorial;
   const [playOptionsOpen, setPlayOptionsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [steamProofCode, setSteamProofCode] = useState(FALLBACK_STEAM_PROOF_CODE);
   const quitLabel = language === 'ko' ? '나가기' : language === 'zh' ? '退出' : 'Quit';
 
   const handleQuit = () => {
@@ -153,10 +185,26 @@ export default function DemoStartScreen() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [hasCompletedTutorial, skipIntroToDefaults]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void loadSteamProofCode().then((code) => {
+      if (!cancelled) setSteamProofCode(code);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="demo-start-root">
+      <div className="main-menu-proof-code" aria-label={`Steam proof code ${steamProofCode}`} title={steamProofCode}>
+        {steamProofCode}
+      </div>
       <DemoAchievementsPanel language={language} />
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
+        <div className="main-menu-version" aria-label="beta version">
+          b1.0.1
+        </div>
         <h1 className="main-menu-title main-menu-title--image">
           <img
             className="main-menu-title-sprite"
@@ -236,6 +284,21 @@ export default function DemoStartScreen() {
           </button>
         </nav>
       </main>
+      <a
+        className="main-menu-steam-button"
+        href="https://store.steampowered.com/app/1779280/"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Wishlist on Steam"
+      >
+        <span className="main-menu-steam-button-text">Wishlist on</span>
+        <img
+          className="main-menu-steam-button-logo"
+          src="./capsules/steam-removebg-preview.png"
+          alt="Steam"
+          draggable={false}
+        />
+      </a>
       <button
         type="button"
         className="main-menu-settings-button"
@@ -250,9 +313,6 @@ export default function DemoStartScreen() {
       >
         ×
       </button>
-      <div className="main-menu-version" aria-label="alpha version">
-        a1.4.3
-      </div>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
   );

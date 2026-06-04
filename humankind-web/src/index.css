@@ -2721,6 +2721,160 @@ button.spin-btn:disabled:active {
   }
 }
 
+.main-menu-proof-code {
+  position: absolute;
+  top: max(6px, env(safe-area-inset-top, 0px));
+  right: max(6px, env(safe-area-inset-right, 0px));
+  z-index: 150;
+  color: rgba(255, 255, 255, 0.42);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.6px;
+  text-align: right;
+  white-space: nowrap;
+  pointer-events: auto;
+  user-select: text;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.main-menu-steam-button {
+  position: absolute;
+  top: clamp(18px, 3vw, 32px);
+  right: clamp(20px, 3.6vw, 44px);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-height: 82px;
+  width: min(238px, calc(100% - 40px));
+  padding: 12px 20px 14px;
+  color: #ffffff;
+  font-family: var(--game-font-family), sans-serif;
+  text-align: center;
+  text-decoration: none;
+  background: #101010;
+  border: 7px solid #1b120c;
+  border-top-color: #4a3528;
+  border-right-color: #0b0705;
+  border-bottom-color: #070403;
+  border-left-color: #2d1f17;
+  border-radius: 14px;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.42),
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset -3px 0 0 rgba(0, 0, 0, 0.26),
+    inset 3px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.24);
+  isolation: isolate;
+  overflow: visible;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.main-menu-steam-button::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  z-index: -1;
+  border-radius: 24px;
+  background:
+    conic-gradient(from 0deg,
+      rgba(255, 255, 255, 0),
+      rgba(232, 247, 255, 0.56),
+      rgba(157, 219, 255, 0.38),
+      rgba(255, 255, 255, 0),
+      rgba(214, 241, 255, 0.48),
+      rgba(255, 255, 255, 0));
+  filter: blur(12px);
+  opacity: 0.56;
+  pointer-events: none;
+  animation: steam-button-aura-pulse 2.8s ease-in-out infinite;
+}
+
+.main-menu-steam-button::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  z-index: -1;
+  border-radius: 18px;
+  background: rgba(222, 244, 255, 0.12);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+@keyframes steam-button-aura-pulse {
+  0%,
+  100% {
+    transform: scale(0.98);
+    opacity: 0.42;
+  }
+
+  50% {
+    transform: scale(1.04);
+    opacity: 0.62;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-menu-steam-button::before {
+    animation: none;
+  }
+}
+
+.main-menu-steam-button-text {
+  display: block;
+  font-size: clamp(15px, 1.35vw, 20px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.main-menu-steam-button-logo {
+  display: block;
+  width: min(178px, 100%);
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.main-menu-steam-button:hover,
+.main-menu-steam-button:focus-visible {
+  transform: translateY(-2px);
+  background: #121212;
+  border-top-color: #5a4030;
+  border-right-color: #130c08;
+  border-bottom-color: #0a0604;
+  border-left-color: #38271d;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset -3px 0 0 rgba(0, 0, 0, 0.3),
+    inset 3px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+  outline: none;
+}
+
+.main-menu-steam-button:active {
+  transform: translateY(0);
+  background: #0d0d0d;
+  border-top-color: #080504;
+  border-right-color: #39281e;
+  border-bottom-color: #4a3528;
+  border-left-color: #0f0a07;
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.34),
+    inset 0 3px 0 rgba(0, 0, 0, 0.28),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
 .main-menu-settings-button {
   position: absolute;
   left: clamp(24px, 4vw, 56px);
@@ -2832,8 +2986,8 @@ button.spin-btn:disabled:active {
 
 .main-menu-version {
   position: absolute;
-  top: clamp(18px, 3vw, 32px);
-  right: clamp(20px, 3.6vw, 44px);
+  left: 8px;
+  bottom: 8px;
   color: rgba(255, 255, 255, 0.78);
   font-family: var(--game-font-family), sans-serif;
   font-size: clamp(16px, 1.7vw, 24px);
@@ -3057,36 +3211,87 @@ button.spin-btn:disabled:active {
 
 .tutorial-dialog-next {
   margin-top: 34px;
-  padding: 0 0 4px;
+  padding: 0 0 6px;
   align-self: flex-end;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 247, 208, 0.96);
   font-family: var(--game-font-family), sans-serif;
-  font-size: clamp(16px, 1.7vw, 22px);
-  font-weight: 700;
+  font-size: clamp(22px, 2.25vw, 32px);
+  font-weight: 800;
   letter-spacing: 0;
   text-decoration: underline;
-  text-underline-offset: 6px;
-  text-decoration-thickness: 1px;
+  text-underline-offset: 7px;
+  text-decoration-thickness: 2px;
   background: transparent;
   border: 0;
   cursor: pointer;
   pointer-events: auto;
+  text-shadow:
+    0 0 12px rgba(255, 232, 148, 0.64),
+    0 3px 14px rgba(0, 0, 0, 0.9);
   transition:
     color 140ms ease,
+    text-shadow 140ms ease,
     transform 140ms ease;
+}
+
+.tutorial-dialog-next:not(.tutorial-dialog-finish):not(:disabled) {
+  animation: tutorial-next-text-pulse 1.35s ease-in-out infinite;
 }
 
 .tutorial-dialog-next:hover,
 .tutorial-dialog-next:focus-visible {
+  animation: none;
   color: #ffffff;
-  transform: translateY(-1px);
+  text-shadow:
+    0 0 18px rgba(255, 245, 196, 0.86),
+    0 3px 16px rgba(0, 0, 0, 0.94);
+  transform: translateY(-2px) scale(1.05);
   outline: none;
 }
 
 .tutorial-dialog-next:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.99);
 }
 
+.tutorial-dialog-next:disabled,
+.tutorial-dialog-next[aria-disabled='true'] {
+  color: rgba(255, 255, 255, 0.42);
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+  cursor: default;
+}
+
+.tutorial-dialog-finish {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: clamp(18px, 1.8vw, 24px);
+  font-weight: 700;
+  text-decoration-thickness: 1px;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.9);
+}
+
+@keyframes tutorial-next-text-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    color: rgba(255, 247, 208, 0.96);
+    text-shadow:
+      0 0 12px rgba(255, 232, 148, 0.64),
+      0 3px 14px rgba(0, 0, 0, 0.9);
+  }
+  50% {
+    transform: scale(1.12);
+    color: #ffffff;
+    text-shadow:
+      0 0 24px rgba(255, 245, 196, 0.95),
+      0 0 44px rgba(255, 211, 92, 0.62),
+      0 4px 18px rgba(0, 0, 0, 0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-dialog-next {
+    animation: none !important;
+  }
+}
 .tutorial-exit-button {
   position: fixed;
   right: clamp(20px, 2vw, 36px);
@@ -4416,16 +4621,26 @@ button.spin-btn:disabled:active {
 }
 
 .leader-detail-xpbar {
+  box-sizing: border-box;
+  width: calc(100% + 10px);
   height: 14px;
   margin-top: 12px;
+  margin-left: -5px;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.54);
-  background: rgba(255, 255, 255, 0.06);
+  padding: 2px;
+  border: 2px solid #3a2111;
+  border-radius: 999px;
+  background: #130d08;
+  box-shadow:
+    inset 0 0 0 1px rgba(117, 74, 33, 0.48),
+    inset 0 2px 0 rgba(255, 222, 145, 0.08),
+    0 6px 14px rgba(0, 0, 0, 0.3);
 }
 
 .leader-detail-xpbar span {
   display: block;
   height: 100%;
+  border-radius: 999px;
   background: #fff1a8;
 }
 
@@ -4457,8 +4672,10 @@ button.spin-btn:disabled:active {
 .leader-detail-unlocks {
   --leader-unlock-rail-x: 96px;
   --leader-unlock-step-height: 96px;
-  --leader-unlock-line-offset: 64px;
-  --leader-unlock-bar-width: 14px;
+  --leader-unlock-line-offset: 58px;
+  --leader-unlock-bar-width: 18px;
+  --leader-unlock-connector-start: 58px;
+  --leader-unlock-connector-overrun: calc(var(--leader-unlock-rail-x) - var(--leader-unlock-connector-start));
   width: 100%;
   position: relative;
   display: grid;
@@ -4480,27 +4697,30 @@ button.spin-btn:disabled:active {
   z-index: 0;
   width: var(--leader-unlock-bar-width);
   overflow: hidden;
-  border: 2px solid rgba(86, 86, 86, 0.92);
+  border: 4px solid #3a2111;
   border-radius: 999px;
-  background: #151515;
+  background: #130d08;
   transform: translateX(-50%);
   pointer-events: none;
   box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.36),
-    inset 0 2px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+    0 8px 18px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 2px rgba(117, 74, 33, 0.56),
+    inset 0 3px 0 rgba(255, 222, 145, 0.08),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.38);
 }
 
 .leader-unlock-progress-track span {
+  margin-top: -2px;
   display: block;
   width: 100%;
   min-height: 0;
   border-radius: inherit;
-  background: #86efac;
+  background: linear-gradient(180deg, #3f8f43 0%, #1f6b32 45%, #124a26 100%);
   box-shadow:
-    0 0 18px rgba(134, 239, 172, 0.34),
-    inset 0 2px 0 rgba(255, 255, 255, 0.24),
-    inset 0 -2px 0 rgba(3, 19, 6, 0.2);
+    0 0 10px rgba(42, 121, 53, 0.34),
+    0 0 18px rgba(42, 121, 53, 0.18),
+    inset 0 2px 0 rgba(214, 255, 190, 0.18),
+    inset 0 -2px 0 rgba(3, 19, 6, 0.28);
 }
 .leader-unlock-step {
   position: relative;
@@ -4519,7 +4739,7 @@ button.spin-btn:disabled:active {
   content: none;
 }
 .leader-unlock-step--filled {
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.58);
 }
 
 .leader-unlock-rail {
@@ -4529,9 +4749,22 @@ button.spin-btn:disabled:active {
   align-items: center;
 }
 
+.leader-unlock-step--next .leader-unlock-rail::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: var(--leader-unlock-connector-start);
+  width: calc(var(--leader-unlock-rail-x) - var(--leader-unlock-connector-start) + var(--leader-unlock-connector-overrun));
+  height: 1px;
+  background: rgba(255, 232, 158, 0.34);
+  box-shadow: 0 0 6px rgba(255, 232, 158, 0.18);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .leader-unlock-level {
   width: 72px;
-  color: rgba(255, 241, 168, 0.72);
+  color: rgba(255, 232, 158, 0.46);
   font-size: 18px;
   font-weight: 900;
   line-height: 1;
@@ -4540,7 +4773,7 @@ button.spin-btn:disabled:active {
 }
 
 .leader-unlock-step--filled .leader-unlock-level {
-  color: #fff1a8;
+  color: rgba(255, 232, 158, 0.46);
 }
 
 .leader-unlock-point {
@@ -4549,40 +4782,150 @@ button.spin-btn:disabled:active {
 .leader-unlock-body {
   position: relative;
   z-index: 1;
+  justify-self: stretch;
+  width: 100%;
   min-width: 0;
   box-sizing: border-box;
   padding: 13px 18px 14px;
-  border: 2px solid rgba(86, 86, 86, 0.9);
+  border: 3px solid #6e4b22;
   border-radius: 6px;
-  background: transparent;
-  box-shadow: none;
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(91, 51, 18, 0.22) 0 7%, transparent 20%),
+    radial-gradient(ellipse at 84% 72%, rgba(87, 48, 16, 0.18) 0 8%, transparent 24%),
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.24) 0 1px, transparent 2px),
+    radial-gradient(circle at 46% 58%, rgba(92, 53, 18, 0.12) 0 1px, transparent 2px),
+    repeating-linear-gradient(98deg, rgba(92, 54, 20, 0.06) 0 1px, transparent 1px 9px),
+    linear-gradient(135deg, rgba(246, 224, 142, 0.94), rgba(219, 178, 88, 0.95) 48%, rgba(178, 124, 50, 0.94));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 237, 162, 0.72),
+    inset 0 0 0 5px rgba(105, 67, 26, 0.34),
+    inset 0 0 24px rgba(89, 50, 17, 0.34),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+  color: #3b2612;
+  isolation: isolate;
+  overflow: visible;
 }
 
-.leader-unlock-step--unlocked .leader-unlock-body {
-  padding-right: 58px;
-  background: rgba(134, 239, 172, 0.12);
-}
-
-.leader-unlock-step--unlocked .leader-unlock-body::after {
-  content: "\2713";
+.leader-unlock-body::before,
+.leader-unlock-body::after {
+  content: "";
   position: absolute;
   top: 50%;
-  right: 16px;
-  color: #86efac;
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 1;
-  text-shadow: 0 0 12px rgba(134, 239, 172, 0.34);
+  width: 0;
+  height: 0;
+  pointer-events: none;
   transform: translateY(-50%);
 }
 
+.leader-unlock-body::before {
+  left: -20px;
+  z-index: -2;
+  border-top: 19px solid transparent;
+  border-bottom: 19px solid transparent;
+  border-right: 20px solid #6e4b22;
+}
+
+.leader-unlock-body::after {
+  left: -15px;
+  z-index: -1;
+  border-top: 15px solid transparent;
+  border-bottom: 15px solid transparent;
+  border-right: 16px solid #dfb860;
+}
+
+.leader-unlock-step--unlocked .leader-unlock-body {
+  border-color: #5f6f2f;
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(76, 70, 25, 0.2) 0 7%, transparent 20%),
+    radial-gradient(ellipse at 84% 72%, rgba(77, 73, 28, 0.18) 0 8%, transparent 24%),
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.22) 0 1px, transparent 2px),
+    radial-gradient(circle at 46% 58%, rgba(69, 66, 25, 0.12) 0 1px, transparent 2px),
+    repeating-linear-gradient(98deg, rgba(74, 68, 27, 0.06) 0 1px, transparent 1px 9px),
+    linear-gradient(135deg, rgba(239, 226, 143, 0.94), rgba(200, 186, 82, 0.95) 48%, rgba(151, 139, 54, 0.94));
+}
+
+.leader-unlock-step--unlocked .leader-unlock-body::before {
+  border-right-color: #5f6f2f;
+}
+
+.leader-unlock-step--unlocked .leader-unlock-body::after {
+  border-right-color: #c9ba52;
+}
+
+.leader-unlock-body--locked {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-color: #4f3b26;
+  background:
+    repeating-linear-gradient(135deg, rgba(45, 32, 18, 0.18) 0 2px, transparent 2px 12px),
+    radial-gradient(ellipse at 16% 20%, rgba(63, 39, 17, 0.34) 0 8%, transparent 24%),
+    radial-gradient(ellipse at 78% 66%, rgba(50, 35, 18, 0.28) 0 10%, transparent 26%),
+    repeating-linear-gradient(98deg, rgba(61, 42, 22, 0.1) 0 1px, transparent 1px 9px),
+    linear-gradient(135deg, rgba(166, 133, 78, 0.92), rgba(127, 95, 52, 0.94) 52%, rgba(94, 66, 37, 0.94));
+  box-shadow:
+    inset 0 0 0 2px rgba(205, 173, 105, 0.46),
+    inset 0 0 0 5px rgba(55, 37, 20, 0.42),
+    inset 0 0 24px rgba(26, 18, 10, 0.46),
+    0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.leader-unlock-body--locked::before {
+  border-right-color: #4f3b26;
+}
+
+.leader-unlock-body--locked::after {
+  border-right-color: #7d5f35;
+}
+
+.leader-unlock-body--locked .leader-unlock-event-mark,
+.leader-unlock-body--locked .leader-unlock-symbol-mark,
+.leader-unlock-body--locked .leader-unlock-copy {
+  filter: saturate(0.45);
+  opacity: 0.58;
+}
+
+.leader-unlock-body--locked .leader-unlock-name {
+  color: rgba(45, 31, 17, 0.78);
+}
+
+.leader-unlock-body--locked .leader-unlock-desc {
+  color: rgba(45, 31, 17, 0.64);
+}
+
+.leader-unlock-lock-mark {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 7px 10px 6px;
+  border: 2px solid rgba(54, 34, 17, 0.78);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.16) 0 2px, transparent 2px 8px),
+    rgba(43, 29, 16, 0.26);
+  color: rgba(255, 229, 154, 0.9);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+  box-shadow:
+    inset 0 0 0 1px rgba(233, 198, 124, 0.24),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 .leader-unlock-body--empty {
+  width: auto;
   min-height: 0;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.leader-unlock-body--empty::before,
+.leader-unlock-body--empty::after {
+  content: none;
 }
 
 .leader-unlock-body--event {
@@ -4641,7 +4984,7 @@ button.spin-btn:disabled:active {
 }
 
 .leader-unlock-name {
-  color: #ffffff;
+  color: #2f1b0d;
   font-size: 22px;
   font-weight: 900;
   line-height: 1.15;
@@ -4650,7 +4993,7 @@ button.spin-btn:disabled:active {
 
 .leader-unlock-desc {
   margin-top: 6px;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(60, 38, 16, 0.78);
   font-size: 16px;
   font-weight: 500;
   line-height: 1.32;
@@ -4845,7 +5188,9 @@ button.spin-btn:disabled:active {
   .leader-detail-unlocks {
     --leader-unlock-rail-x: 74px;
     --leader-unlock-step-height: 86px;
-    --leader-unlock-line-offset: 55px;
+    --leader-unlock-line-offset: 50px;
+    --leader-unlock-connector-start: 44px;
+    --leader-unlock-connector-overrun: calc(var(--leader-unlock-rail-x) - var(--leader-unlock-connector-start));
     padding: 12px 0;
   }
 
@@ -5189,10 +5534,6 @@ button.spin-btn:disabled:active {
   margin-top: 0;
 }
 
-.endgame-progress-reveal .leader-detail-status {
-  background: #182033;
-}
-
 .endgame-progress-xp {
   padding-top: 30px;
 }
@@ -5202,6 +5543,51 @@ button.spin-btn:disabled:active {
   box-shadow:
     0 0 12px rgba(255, 241, 168, 0.72),
     0 0 26px rgba(250, 204, 21, 0.34);
+}
+.endgame-progress-xp .leader-detail-xpbar--level-up {
+  position: relative;
+  overflow: visible;
+  animation: endgame-xpbar-level-up-shell 560ms ease-out;
+}
+
+.endgame-progress-xp .leader-detail-xpbar--level-up::before {
+  content: "";
+  position: absolute;
+  inset: -18px -24px;
+  z-index: -1;
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 241, 168, 0.9) 0%, rgba(250, 204, 21, 0.46) 36%, rgba(250, 204, 21, 0) 72%);
+  filter: blur(10px);
+  pointer-events: none;
+  animation: endgame-xpbar-level-up-aura 560ms ease-out forwards;
+}
+
+.endgame-progress-xp .leader-detail-xpbar--level-up span {
+  box-shadow:
+    0 0 20px rgba(255, 248, 196, 0.96),
+    0 0 42px rgba(250, 204, 21, 0.74),
+    0 0 72px rgba(250, 204, 21, 0.38),
+    inset 0 0 10px rgba(255, 255, 255, 0.42);
+  animation: endgame-xpbar-level-up-fill 560ms ease-out;
+}
+
+@keyframes endgame-xpbar-level-up-shell {
+  0% { transform: scale(1); }
+  34% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+
+@keyframes endgame-xpbar-level-up-aura {
+  0% { opacity: 0; transform: scaleX(0.9) scaleY(0.72); }
+  24% { opacity: 1; transform: scaleX(1.05) scaleY(1); }
+  100% { opacity: 0; transform: scaleX(1.22) scaleY(1.36); }
+}
+
+@keyframes endgame-xpbar-level-up-fill {
+  0% { filter: brightness(1); }
+  22% { filter: brightness(1.75); }
+  100% { filter: brightness(1); }
 }
 
 .endgame-xp-gain {
@@ -5261,20 +5647,40 @@ button.spin-btn:disabled:active {
 }
 
 .endgame-btn {
+  width: auto;
+  min-width: 176px;
+  min-height: 88px;
+  box-sizing: border-box;
   font-family: var(--game-font-family), sans-serif;
   font-size: 32px;
-  padding: 14px 48px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid #666;
-  color: #eee;
+  font-weight: 900;
+  padding: 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
   cursor: var(--app-cursor-pointer);
-  transition: all 0.15s ease;
   letter-spacing: 2px;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.endgame-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #aaa;
+.endgame-btn:hover:not(:active) {
+  transform: translateY(-2px);
+}
+
+.endgame-btn:active {
+  transform: translateY(0);
+}
+
+.endgame-panel--defeat-intro .endgame-btn,
+.endgame-panel--victory-intro .endgame-btn {
+  margin-top: 20px;
 }
 
 /* ===== SYMBOL HOVER TOOLTIP ===== */
@@ -5640,15 +6046,6 @@ button.spin-btn:disabled:active {
   font-weight: 800;
   text-transform: uppercase;
 }
-
-.effect-log-entry-title,
-.effect-log-entry-subtitle {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .effect-log-entry-title {
   color: #f8fafc;
   font-weight: 800;
@@ -6776,7 +7173,8 @@ button.relic-shop-btn:active .relic-shop-btn-icon-layer {
 /* Bottom action buttons share the symbol-choice card bevel. */
 button.spin-btn,
 button.relic-shop-btn,
-button.pause-btn-top {
+button.pause-btn-top,
+button.endgame-btn {
   border: 7px solid #1b120c;
   border-top-color: #4a3528;
   border-right-color: #0b0705;
@@ -6795,7 +7193,8 @@ button.pause-btn-top {
 
 button.spin-btn:hover:not(:disabled):not(:active),
 button.relic-shop-btn:hover:not(:active),
-button.pause-btn-top:hover:not(:active) {
+button.pause-btn-top:hover:not(:active),
+button.endgame-btn:hover:not(:active) {
   border-top-color: #5a4030;
   border-right-color: #130c08;
   border-bottom-color: #0a0604;
@@ -6812,7 +7211,8 @@ button.pause-btn-top:hover:not(:active) {
 
 button.spin-btn:active:not(:disabled),
 button.relic-shop-btn:active,
-button.pause-btn-top:active {
+button.pause-btn-top:active,
+button.endgame-btn:active {
   border-top-color: #080504;
   border-right-color: #39281e;
   border-bottom-color: #4a3528;
@@ -6952,6 +7352,7 @@ button.bottom-right-btn:active {
 
 /* Knowledge tree chips: share the same beveled button shell as the spin button. */
 button.knowledge-upgrade-chip {
+  isolation: isolate;
   cursor: var(--app-cursor-pointer);
   border: 7px solid #1b120c;
   border-top-color: #4a3528;
@@ -6970,6 +7371,14 @@ button.knowledge-upgrade-chip {
     inset -3px 0 0 rgba(0, 0, 0, 0.26),
     inset 3px 0 0 rgba(255, 255, 255, 0.04),
     inset 0 -2px 0 rgba(0, 0, 0, 0.24);
+}
+
+button.knowledge-upgrade-chip > img {
+  z-index: 2;
+}
+
+button.knowledge-upgrade-chip > div {
+  z-index: 0;
 }
 
 button.knowledge-upgrade-chip:hover:not([aria-disabled="true"]):not(:active) {
@@ -6996,6 +7405,27 @@ button.knowledge-upgrade-chip:active:not([aria-disabled="true"]) {
   box-shadow:
     inset 0 3px 0 rgba(0, 0, 0, 0.28),
     inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+button.knowledge-upgrade-chip--available::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  z-index: 1;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(138, 106, 50, 0.34) 0%,
+      rgba(138, 106, 50, 0.25) 42%,
+      rgba(138, 106, 50, 0.14) 64%,
+      rgba(138, 106, 50, 0) 82%);
+  filter: blur(7px);
+  opacity: 0.94;
+  pointer-events: none;
+}
+
+button.knowledge-upgrade-chip--available:hover:not([aria-disabled="true"]):not(:active)::before {
+  opacity: 1;
 }
 
 button.knowledge-upgrade-chip--locked {
@@ -7026,6 +7456,23 @@ button.knowledge-upgrade-chip--unlocked {
     inset 0 -2px 0 rgba(4, 18, 9, 0.26);
 }
 
+button.knowledge-upgrade-chip--unlocked::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  z-index: 1;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 50%,
+      rgba(47, 111, 93, 0.36) 0%,
+      rgba(47, 111, 93, 0.28) 42%,
+      rgba(47, 111, 93, 0.16) 64%,
+      rgba(47, 111, 93, 0) 82%);
+  filter: blur(7px);
+  opacity: 0.96;
+  pointer-events: none;
+}
+
 button.knowledge-upgrade-chip--unlocked:hover:not([aria-disabled="true"]):not(:active) {
   border-top-color: #426646;
   border-right-color: #102415;
@@ -7037,6 +7484,10 @@ button.knowledge-upgrade-chip--unlocked:hover:not([aria-disabled="true"]):not(:a
     inset -3px 0 0 rgba(4, 18, 9, 0.34),
     inset 3px 0 0 rgba(187, 247, 208, 0.06),
     inset 0 -2px 0 rgba(4, 18, 9, 0.3);
+}
+
+button.knowledge-upgrade-chip--unlocked:hover:not([aria-disabled="true"]):not(:active)::before {
+  opacity: 1;
 }
 
 button.knowledge-upgrade-chip--unlocked:active:not([aria-disabled="true"]) {

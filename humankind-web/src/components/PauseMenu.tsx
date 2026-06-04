@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSettingsStore, getResolutionOptions, type Language, type EffectSpeed, type SpinSpeed } from '../game/state/settingsStore';
+import { useSettingsStore, getResolutionOptions, type Language, type EffectSpeed, type SpinSpeed, type ScreenMode } from '../game/state/settingsStore';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { usePreGameStore } from '../game/state/preGameStore';
@@ -28,6 +28,12 @@ const SPIN_SPEED_OPTIONS: { value: SpinSpeed; label: string }[] = [
     { value: 'instant', label: 'Instant' },
 ];
 
+const SCREEN_MODE_OPTIONS: { value: ScreenMode; labelKey: string }[] = [
+    { value: 'windowed', labelKey: 'settings.screenMode.windowed' },
+    { value: 'fullscreen', labelKey: 'settings.screenMode.fullscreen' },
+    { value: 'borderless', labelKey: 'settings.screenMode.borderless' },
+];
+
 type SettingsTab = 'general' | 'gameplay' | 'graphics' | 'audio';
 
 interface PauseMenuProps {
@@ -39,7 +45,6 @@ interface PauseMenuProps {
 const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) => {
     const [screen, setScreen] = useState<'main' | 'settings'>(initialScreen);
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-    const [isFullscreen, setIsFullscreen] = useState(false);
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     const {
         resolutionWidth,
@@ -51,6 +56,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         musicVolume,
         effectVolume,
         ambientVolume,
+        screenMode,
         developerMode,
         setResolution,
         setLanguage,
@@ -60,6 +66,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         setMusicVolume,
         setEffectVolume,
         setAmbientVolume,
+        setScreenMode,
         setDeveloperMode,
     } = useSettingsStore();
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
@@ -74,68 +81,6 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         }
     }, [initialScreen, isOpen]);
 
-    useEffect(() => {
-        import('@tauri-apps/api/core').then(({ isTauri }) => {
-            if (isTauri()) {
-                import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-                    getCurrentWindow().isFullscreen().then(setIsFullscreen);
-                }).catch(console.error);
-            } else {
-                const handleFullscreenChange = () => {
-                    setIsFullscreen(!!document.fullscreenElement);
-                };
-                document.addEventListener('fullscreenchange', handleFullscreenChange);
-                setIsFullscreen(!!document.fullscreenElement);
-                return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            }
-        }).catch(console.error);
-    }, []);
-
-    // 전체화면 전환 시 해상도 100% 강제 / 복원
-    const [preFullscreenRes, setPreFullscreenRes] = useState<{ w: number, h: number } | null>(null);
-
-    const toggleFullscreen = () => {
-        import('@tauri-apps/api/core').then(({ isTauri }) => {
-            if (isTauri()) {
-                import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-                    const win = getCurrentWindow();
-                    win.isFullscreen().then((isFull) => {
-                        if (!isFull) {
-                            // 전체화면 진입: 현재 해상도 저장, 100%로 전환
-                            setPreFullscreenRes({ w: resolutionWidth, h: resolutionHeight });
-                            const fullOpt = getResolutionOptions()[0]; // 100%
-                            if (fullOpt) setResolution(fullOpt.width, fullOpt.height);
-                        } else {
-                            // 전체화면 해제: 이전 해상도 복원
-                            if (preFullscreenRes) {
-                                setResolution(preFullscreenRes.w, preFullscreenRes.h);
-                                setPreFullscreenRes(null);
-                            }
-                        }
-                        win.setFullscreen(!isFull).then(() => setIsFullscreen(!isFull));
-                    });
-                }).catch(console.error);
-            } else {
-                if (!document.fullscreenElement) {
-                    setPreFullscreenRes({ w: resolutionWidth, h: resolutionHeight });
-                    const fullOpt = getResolutionOptions()[0];
-                    if (fullOpt) setResolution(fullOpt.width, fullOpt.height);
-                    document.documentElement.requestFullscreen().catch(err => {
-                        console.error(`Error attempting to enable fullscreen: ${err.message} (${err.name})`);
-                    });
-                } else {
-                    if (preFullscreenRes) {
-                        setResolution(preFullscreenRes.w, preFullscreenRes.h);
-                        setPreFullscreenRes(null);
-                    }
-                    if (document.exitFullscreen) {
-                        document.exitFullscreen();
-                    }
-                }
-            }
-        }).catch(console.error);
-    };
-
     useRegisterBoardTooltipBlock('pause-menu', isOpen);
 
     if (!isOpen) return null;
@@ -143,6 +88,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     const resOptions = getResolutionOptions();
     const currentResOption = resOptions.find(o => o.width === resolutionWidth && o.height === resolutionHeight);
     const currentResLabel = currentResOption ? currentResOption.label : `${resolutionWidth} x ${resolutionHeight}`;
+    const isFillScreenMode = screenMode !== 'windowed';
 
     const handleResume = () => {
         setScreen('main');
@@ -299,7 +245,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                                             <select
                                                 className="settings-dropdown"
                                                 value={currentResLabel}
-                                                disabled={isFullscreen}
+                                                disabled={isFillScreenMode}
                                                 onChange={(e) => {
                                                     const opt = resOptions.find((o) => o.label === e.target.value);
                                                     if (opt) setResolution(opt.width, opt.height);
@@ -316,20 +262,21 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                                 </div>
 
                                 <div className="settings-row">
-                                    <div className="settings-row-label">{t('settings.fullscreen', language)}</div>
+                                    <div className="settings-row-label">{t('settings.screenMode', language)}</div>
                                     <div className="settings-row-controls">
-                                        <button
-                                            className={`settings-seg-btn ${!isFullscreen ? 'active' : ''}`}
-                                            onClick={() => { if (isFullscreen) toggleFullscreen(); }}
-                                        >
-                                            {t('settings.fullscreen.off', language)}
-                                        </button>
-                                        <button
-                                            className={`settings-seg-btn ${isFullscreen ? 'active' : ''}`}
-                                            onClick={() => { if (!isFullscreen) toggleFullscreen(); }}
-                                        >
-                                            {t('settings.fullscreen.on', language)}
-                                        </button>
+                                        <div className="settings-dropdown-wrap">
+                                            <select
+                                                className="settings-dropdown"
+                                                value={screenMode}
+                                                onChange={(e) => setScreenMode(e.target.value as ScreenMode)}
+                                            >
+                                                {SCREEN_MODE_OPTIONS.map((opt) => (
+                                                    <option key={opt.value} value={opt.value}>
+                                                        {t(opt.labelKey, language)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </>

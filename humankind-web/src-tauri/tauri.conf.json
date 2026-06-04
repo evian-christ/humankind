@@ -1,6 +1,6 @@
 {
   "productName": "Humankind in a nutshell DEMO",
-  "version": "1.4.0",
+  "version": "1.0.1",
   "identifier": "com.humankind.app",
   "build": {
     "beforeDevCommand": "npm run dev",
