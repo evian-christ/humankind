@@ -55,6 +55,11 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         volume: 0.78,
         preload: true,
     },
+    cow_butcher: {
+        src: audioUrl('board_screen/cow_butcher.wav'),
+        volume: 0.72,
+        preload: true,
+    },
     symbol_interact: {
         src: audioUrl('board_screen/symbol_interact.wav'),
         volume: 0.66,
@@ -301,6 +306,11 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         id: 'open_reward',
         layer: 'ui',
         description: 'A loot reward choice overlay opens.',
+    },
+    cow_butcher: {
+        id: 'cow_butcher',
+        layer: 'gameplay',
+        description: 'A cattle symbol is butchered from the board action button.',
     },
     symbol_interact: {
         id: 'symbol_interact',

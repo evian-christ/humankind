@@ -155,10 +155,12 @@ export interface GameState {
     activeContributors: { x: number; y: number }[];
     /** phase 1 시작 시 미리 저장해두는 이번 슬롯의 예정 contributor 목록 (X 숨김용) */
     pendingContributors: { x: number; y: number }[];
-    /** 상호작용 표시 단계: 1=들어올림만, 2=contributor wobble 중, 3=wobble 끝남(파괴 X 등 표시 가능) */
+    /** 상호작용 표시 단계: 1=들어올림만, 2=contributor wobble 중, 3=wobble 끝남 */
     effectPhase: 1 | 2 | 3 | null;
-    /** 이번 processing에서 phase 3을 한 번이라도 거쳤으면 true → 파괴 X를 계속 표시 */
+    /** 이번 processing에서 phase 3을 한 번이라도 거쳤으면 true → 파괴 마킹을 계속 표시 */
     effectPhase3ReachedThisRun: boolean;
+    /** Marked symbols are blinking just before they are removed from the board. */
+    destroyRemovalBlinkStartedAtMs?: number | null;
     /** 인접 전리품 합류: 흡수 스프라이트 이동 연출 타임링 (Pixi 렌더용) */
     lootMergeFx: {
         absorbed: { x: number; y: number };
@@ -407,6 +409,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     pendingContributors: [],
     effectPhase: null,
     effectPhase3ReachedThisRun: false,
+    destroyRemovalBlinkStartedAtMs: null,
     lootMergeFx: null,
     eventLog: [],
     prevBoard: createEmptyBoard(),

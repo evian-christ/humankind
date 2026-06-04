@@ -37,9 +37,12 @@ export interface HoveredHudStat {
 }
 
 export interface FloatingEffect {
-    texts: PIXI.Text[];
+    texts: PIXI.Container[];
     startY: number;
     elapsed: number; // ms
+    persistUntilProcessingEnd?: boolean;
+    exitElapsed?: number;
+    exitStartOffsetY?: number;
 }
 
 export interface CombatBounce {

@@ -258,7 +258,7 @@ export function createSlotEffectPipeline(args: CreateSlotEffectPipelineArgs): Sl
 }
 
 export function shouldDeferReligionEffect(symbolId: number): boolean {
-    return symbolId === S.christianity || symbolId === S.islam || symbolId === S.buddhism || symbolId === S.hinduism;
+    return symbolId === S.christianity || symbolId === S.islam || symbolId === S.hinduism;
 }
 
 export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
@@ -298,6 +298,9 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
 
     if (result.addSymbolIds) pipeline.symbolsToAdd.push(...result.addSymbolIds);
     if (result.spawnOnBoard) pipeline.symbolsToSpawnOnBoard.push(...result.spawnOnBoard);
+    if (symbol.definition.id === S.buddhism) {
+        pipeline.religionSlotsToRecalculate.push({ x, y, id: symbol.definition.id });
+    }
 
     return result;
 }

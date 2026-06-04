@@ -8,7 +8,7 @@ import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
 import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { decrementActiveStatuses, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
-import { useSettingsStore } from '../settingsStore';
+import { useSettingsStore, type EffectSpeed } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
 import { getEffectiveAdjacentCoords } from '../../logic/symbolEffects/core';
@@ -68,6 +68,18 @@ export type GameStoreGet = () => GameState;
 
 const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
     upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
+
+const DESTROY_REMOVAL_BLINK_DURATION_MS: Record<EffectSpeed, number> = {
+    '1x': 520,
+    '2x': 360,
+    '4x': 240,
+    instant: 0,
+};
+
+const getNowMs = () =>
+    typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
+        ? globalThis.performance.now()
+        : Date.now();
 
 const getRelicFloatDelta = (float: { text: string; color?: string }) => {
     const numbers = [...float.text.matchAll(/[+-]?\d+/g)].map((match) => Number(match[0])).filter(Number.isFinite);
@@ -202,6 +214,7 @@ export const createTurnFlowActions = ({
             pendingContributors: [],
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
+            destroyRemovalBlinkStartedAtMs: null,
             lootMergeFx: null,
             rerollsThisTurn: 0,
         });
@@ -258,6 +271,7 @@ export const createTurnFlowActions = ({
         set({
             phase: 'processing',
             effectPhase3ReachedThisRun: false,
+            destroyRemovalBlinkStartedAtMs: null,
             lootMergeFx: null,
             runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge },
             qinCurrencyStandardTurnsRemaining: Math.max(0, (state.qinCurrencyStandardTurnsRemaining ?? 0) - 1),
@@ -365,6 +379,28 @@ export const createTurnFlowActions = ({
             };
 
             const runFinishProcessingTail = () => {
+                if (!turnRun.isActive()) return;
+
+                const destroyedBeforeFinish = collectMarkedSymbolSnapshots(get().board);
+                const blinkDurationMs = DESTROY_REMOVAL_BLINK_DURATION_MS[useSettingsStore.getState().effectSpeed];
+                if (
+                    destroyedBeforeFinish.length > 0 &&
+                    !get().destroyRemovalBlinkStartedAtMs &&
+                    blinkDurationMs > 0
+                ) {
+                    set({
+                        activeSlot: null,
+                        activeContributors: [],
+                        pendingContributors: [],
+                        effectPhase: null,
+                        counterDisplayOverrides: [],
+                        lootMergeFx: null,
+                        destroyRemovalBlinkStartedAtMs: getNowMs(),
+                    });
+                    turnRun.schedule(blinkDurationMs, runFinishProcessingTail);
+                    return;
+                }
+
                 const nileForDecrement = getRelicInst(RELIC_ID.NILE_SILT);
                 if (nileForDecrement && nileForDecrement.effect_counter > 0) {
                     useRelicStore.getState().decrementRelicCounterOrRemove(nileForDecrement.instanceId);
@@ -452,11 +488,12 @@ export const createTurnFlowActions = ({
                         pendingContributors: [],
                         effectPhase: null,
                         effectPhase3ReachedThisRun: false,
+                        destroyRemovalBlinkStartedAtMs: null,
                         lootMergeFx: null,
                         era: prog.newEra,
                         board: generated.board,
                         playerSymbols: filteredSymbols,
-                        lastEffects: [...effects],
+                        lastEffects: [],
                         phase: nextPhase,
                         symbolChoices: nextChoiceRes.choices,
                         forceTerrainInNextSymbolChoices:
@@ -931,6 +968,7 @@ export const createTurnFlowActions = ({
                     pendingContributors: [],
                     effectPhase: null,
                     effectPhase3ReachedThisRun: false,
+                    destroyRemovalBlinkStartedAtMs: null,
                     lootMergeFx: null,
                     combatAnimation: null,
                     combatShaking: false,

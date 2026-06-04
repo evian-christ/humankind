@@ -331,6 +331,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             pendingContributors: [],
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
+            destroyRemovalBlinkStartedAtMs: null,
             lootMergeFx: null,
             eventLog: save.state.eventLog ?? [],
             prevBoard: deserializeBoard(save.state.prevBoard, symbolByInstanceId),

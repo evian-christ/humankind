@@ -2,12 +2,28 @@ import * as PIXI from 'pixi.js';
 import { audioManager } from '../../../audio/audioManager';
 import { useGameStore } from '../../../game/state/gameStore';
 import type { GameState } from '../../../game/state/gameStore';
+import type { BoardEffectDelta } from '../../../game/logic/turn/turnTypes';
+import {
+    FOOD_RESOURCE_ICON_URL,
+    GOLD_RESOURCE_ICON_URL,
+    KNOWLEDGE_RESOURCE_ICON_URL,
+} from '../../../uiAssetUrls';
 import type { CellLayout, FloatingEffect } from '../types';
+import { getProductionHighlightScaleForDelta } from '../productionHighlightScale';
 import { destroyPixiChild } from './rendererShared';
 
-const FLOAT_DURATION = 800;
+const FLOAT_DURATION = 1100;
 const FLOAT_DISTANCE = 30;
+const FLOAT_FADE_START = 0.7;
+const PERSIST_EXIT_DURATION = 280;
+const PERSIST_EXIT_DISTANCE = 18;
 const COUNTER_FLOAT_COLOR = '#8b7355';
+const RESOURCE_FLOAT_GAIN_COLOR = '#4ade80';
+const RESOURCE_FLOAT_LOSS_COLOR = '#ef4444';
+const RESOURCE_FLOAT_ICON_VERTICAL_NUDGE = 0.08;
+
+type ResourceFloatKind = 'food' | 'gold' | 'knowledge';
+type FloatingItem = PIXI.Container & { _baseOffsetY?: number };
 
 const THREAT_FLOAT_DRIFT_MS = 220;
 export const THREAT_FLOAT_TOTAL_MS = 1800;
@@ -19,11 +35,55 @@ interface BoardFloatLayout extends CellLayout {
     fontFamily: string;
 }
 
+function getResourceIconUrl(kind: ResourceFloatKind): string {
+    if (kind === 'food') return FOOD_RESOURCE_ICON_URL;
+    if (kind === 'gold') return GOLD_RESOURCE_ICON_URL;
+    return KNOWLEDGE_RESOURCE_ICON_URL;
+}
+
+function createResourceFloatItem(args: {
+    kind: ResourceFloatKind;
+    value: number;
+    fontSize: number;
+    fontFamily: string;
+}): PIXI.Container {
+    const { kind, value, fontSize, fontFamily } = args;
+    const color = value > 0 ? RESOURCE_FLOAT_GAIN_COLOR : RESOURCE_FLOAT_LOSS_COLOR;
+    const iconSize = Math.max(16, Math.round(fontSize));
+    const iconGap = Math.max(3, Math.round(fontSize * 0.12));
+    const container = new PIXI.Container();
+    const texture = (PIXI.Assets.get(getResourceIconUrl(kind)) as PIXI.Texture | undefined)
+        ?? PIXI.Texture.from(getResourceIconUrl(kind));
+    const icon = new PIXI.Sprite(texture);
+    icon.width = iconSize;
+    icon.height = iconSize;
+    icon.x = 0;
+
+    const txt = new PIXI.Text({
+        text: `${value > 0 ? '+' : ''}${value}`,
+        style: new PIXI.TextStyle({
+            fill: color,
+            fontSize,
+            fontFamily,
+            stroke: { color: '#000000', width: 3 },
+        }),
+    });
+    txt.anchor.set(0, 0);
+    txt.x = iconSize + iconGap;
+    txt.y = 0;
+    icon.y = Math.max(0, (txt.height - iconSize) / 2) + Math.round(fontSize * RESOURCE_FLOAT_ICON_VERTICAL_NUDGE);
+
+    container.addChild(icon);
+    container.addChild(txt);
+    return container;
+}
+
 export class FloatingTextRenderer {
     private container: PIXI.Container;
     private floatingEffects: FloatingEffect[] = [];
-    private threatFloatingEffects: { texts: PIXI.Text[]; startX: number; startY: number; elapsed: number }[] = [];
+    private threatFloatingEffects: { texts: PIXI.Container[]; startX: number; startY: number; elapsed: number }[] = [];
     private prevEffectCount = 0;
+    private renderedBoardEffects = new WeakSet<BoardEffectDelta>();
     private prevCombatFloatCount = 0;
     private prevRelicFloatCount = 0;
     private prevKnowledgeUpgradeFloatCount = 0;
@@ -48,35 +108,43 @@ export class FloatingTextRenderer {
     }
 
     public tick(dt: number) {
-        this.tickStandardFloats(dt);
+        this.tickStandardFloats(dt, useGameStore.getState());
         this.tickThreatFloats(dt);
     }
 
-    public addText(text: PIXI.Text, startY: number) {
+    public addText(text: PIXI.Container, startY: number, persistUntilProcessingEnd = false) {
         this.container.addChild(text);
-        this.floatingEffects.push({ texts: [text], startY, elapsed: 0 });
+        this.floatingEffects.push({ texts: [text], startY, elapsed: 0, persistUntilProcessingEnd });
     }
 
-    public addTextGroup(texts: PIXI.Text[], startY: number) {
+    public addTextGroup(texts: PIXI.Container[], startY: number, persistUntilProcessingEnd = false) {
         if (texts.length === 0) return;
         for (const txt of texts) this.container.addChild(txt);
-        this.floatingEffects.push({ texts, startY, elapsed: 0 });
+        this.floatingEffects.push({ texts, startY, elapsed: 0, persistUntilProcessingEnd });
     }
 
     public renderBoardEffectFloats(state: GameState, layout: BoardFloatLayout) {
-        if (state.lastEffects.length === 0 && this.prevEffectCount > 0) {
+        if (state.lastEffects.length === 0) {
             this.prevEffectCount = 0;
+            this.renderedBoardEffects = new WeakSet<BoardEffectDelta>();
             return;
         }
+        if (state.phase === 'processing' && state.effectPhase === null) return;
         if (state.lastEffects.length <= this.prevEffectCount) return;
 
-        const newEffects = state.lastEffects.slice(this.prevEffectCount);
+        const newEffects = state.lastEffects
+            .slice(this.prevEffectCount)
+            .filter((effect) => !this.renderedBoardEffects.has(effect));
         this.prevEffectCount = state.lastEffects.length;
 
         const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, scale } = layout;
         const rowGap = 0;
+        const persistUntilProcessingEnd = state.phase === 'processing';
         for (const effect of newEffects) {
+            this.renderedBoardEffects.add(effect);
             const effectFontSize = Math.max(24, cellHeight * 0.22);
+            const resourceFloatScale = getProductionHighlightScaleForDelta(effect);
+            const resourceFontSize = effectFontSize * resourceFloatScale;
             const cellX = startX + gridOffsetX + effect.x * (cellWidth + colGap);
             const cellY = startY + gridOffsetY + effect.y * (cellHeight + rowGap);
             const baseX = cellX + cellWidth / 2;
@@ -85,31 +153,29 @@ export class FloatingTextRenderer {
             const hasPositiveGoldFloat = effect.gold > 0;
             const hasPositiveKnowledgeFloat = effect.knowledge > 0;
 
-            const lines = [];
-            if (effect.food !== 0) lines.push({ text: `${effect.food > 0 ? '+' : ''}${effect.food}`, color: effect.food > 0 ? '#4ade80' : '#ef4444' });
-            if (effect.gold !== 0) lines.push({ text: `${effect.gold > 0 ? '+' : ''}${effect.gold}`, color: effect.gold > 0 ? '#fbbf24' : '#ef4444' });
-            if (effect.knowledge !== 0) lines.push({ text: `${effect.knowledge > 0 ? '+' : ''}${effect.knowledge}`, color: effect.knowledge > 0 ? '#60a5fa' : '#ef4444' });
+            const lines: Array<{ kind: ResourceFloatKind; value: number }> = [];
+            if (effect.food !== 0) lines.push({ kind: 'food', value: effect.food });
+            if (effect.gold !== 0) lines.push({ kind: 'gold', value: effect.gold });
+            if (effect.knowledge !== 0) lines.push({ kind: 'knowledge', value: effect.knowledge });
 
             if (lines.length > 0) {
-                const gapText = 6 * scale;
-                const tempTexts = lines.map((line) => {
-                    const txt = new PIXI.Text({
-                        text: line.text,
-                        style: new PIXI.TextStyle({ fill: line.color, fontSize: effectFontSize, fontFamily: layout.fontFamily, stroke: { color: '#000000', width: 3 } }),
-                    });
-                    txt.anchor.set(0, 0);
-                    return txt;
-                });
+                const gapText = 6 * scale * resourceFloatScale;
+                const tempTexts = lines.map((line) => createResourceFloatItem({
+                    kind: line.kind,
+                    value: line.value,
+                    fontSize: resourceFontSize,
+                    fontFamily: layout.fontFamily,
+                }));
                 const totalW = tempTexts.reduce((sum, t) => sum + t.width, 0) + gapText * (tempTexts.length - 1);
                 let curX = baseX - totalW / 2;
 
                 for (const txt of tempTexts) {
                     txt.x = curX;
                     txt.y = baseY;
-                    (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+                    (txt as FloatingItem)._baseOffsetY = 0;
                     curX += txt.width + gapText;
                 }
-                this.addTextGroup(tempTexts, baseY);
+                this.addTextGroup(tempTexts, baseY, persistUntilProcessingEnd);
             }
 
             if (effect.counter) {
@@ -135,8 +201,8 @@ export class FloatingTextRenderer {
                 txt.anchor.set(0.5, 0.5);
                 txt.x = counterX;
                 txt.y = counterY;
-                (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
-                this.addText(txt, counterY);
+                (txt as unknown as FloatingItem)._baseOffsetY = 0;
+                this.addText(txt, counterY, persistUntilProcessingEnd);
             }
             if (hasPositiveFoodFloat) {
                 void audioManager.play('resource_food');
@@ -179,7 +245,7 @@ export class FloatingTextRenderer {
             txt.anchor.set(0.5, 0);
             txt.x = fx;
             txt.y = fy;
-            (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+            (txt as unknown as FloatingItem)._baseOffsetY = 0;
             this.addText(txt, fy);
         }
     }
@@ -255,7 +321,7 @@ export class FloatingTextRenderer {
             txt.anchor.set(0.5, 0.5);
             txt.x = c.x;
             txt.y = c.y - iconSize * 0.15;
-            (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY = 0;
+            (txt as unknown as FloatingItem)._baseOffsetY = 0;
             this.addText(txt, txt.y);
         }
     }
@@ -266,21 +332,40 @@ export class FloatingTextRenderer {
         }
     }
 
-    private tickStandardFloats(dt: number) {
+    private tickStandardFloats(dt: number, state: GameState) {
         for (let i = this.floatingEffects.length - 1; i >= 0; i--) {
             const f = this.floatingEffects[i];
             f.elapsed += dt;
             const progress = Math.min(f.elapsed / FLOAT_DURATION, 1);
             const ease = 1 - (1 - progress) * (1 - progress);
-            const offsetY = -FLOAT_DISTANCE * ease;
-            const alpha = progress < 0.7 ? 1 : 1 - (progress - 0.7) / 0.3;
+            const shouldHold = f.persistUntilProcessingEnd && state.phase === 'processing' && state.effectPhase !== null;
+            const baseOffsetY = -FLOAT_DISTANCE * ease;
+            let offsetY = baseOffsetY;
+            let alpha = shouldHold || progress < FLOAT_FADE_START
+                ? 1
+                : 1 - (progress - FLOAT_FADE_START) / (1 - FLOAT_FADE_START);
+
+            if (f.persistUntilProcessingEnd && !shouldHold) {
+                f.exitStartOffsetY ??= baseOffsetY;
+                f.exitElapsed = (f.exitElapsed ?? 0) + dt;
+                const exitProgress = Math.min(f.exitElapsed / PERSIST_EXIT_DURATION, 1);
+                const exitEase = 1 - (1 - exitProgress) * (1 - exitProgress);
+                offsetY = f.exitStartOffsetY - PERSIST_EXIT_DISTANCE * exitEase;
+                alpha = 1 - exitProgress;
+            } else if (shouldHold) {
+                f.exitElapsed = undefined;
+                f.exitStartOffsetY = undefined;
+            }
 
             for (const txt of f.texts) {
-                txt.y = f.startY + (txt as PIXI.Text & { _baseOffsetY: number })._baseOffsetY + offsetY;
+                txt.y = f.startY + ((txt as FloatingItem)._baseOffsetY ?? 0) + offsetY;
                 txt.alpha = alpha;
             }
 
-            if (progress >= 1) {
+            const exitComplete = f.persistUntilProcessingEnd
+                ? (f.exitElapsed ?? 0) >= PERSIST_EXIT_DURATION
+                : progress >= 1;
+            if (exitComplete && !shouldHold) {
                 for (const txt of f.texts) {
                     txt.parent?.removeChild(txt);
                     destroyPixiChild(txt);

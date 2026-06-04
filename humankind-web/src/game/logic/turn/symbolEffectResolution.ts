@@ -92,7 +92,6 @@ export function computeReligionDeferredEffects(args: {
     const doctrineFood = new Map<string, number>();
     const doctrineGold = new Map<string, number>();
     const doctrineKnowledge = new Map<string, number>();
-    const emptySlotCount = board.reduce((count, col) => count + col.filter((cell) => cell === null).length, 0);
     const symbolCounts = new Map<number, number>();
     let presentReligionCount = 0;
     let placedSymbolCount = 0;
@@ -180,8 +179,6 @@ export function computeReligionDeferredEffects(args: {
                 food = hasTheocracy ? Math.max(boardWideMaxFood, maxAdjFood) : maxAdjFood;
             } else if (sym.definition.id === S.islam) {
                 food = knowledgeProducerCount * (hasTheocracy ? 3 : 2);
-            } else if (sym.definition.id === S.buddhism) {
-                food = emptySlotCount * (hasTheocracy ? 4 : 2);
             } else if (sym.definition.id === S.hinduism && !hasDuplicateSymbols) {
                 food = hasTheocracy ? placedSymbolCount : Math.floor(placedSymbolCount / 2);
             }

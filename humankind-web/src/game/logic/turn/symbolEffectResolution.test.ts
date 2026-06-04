@@ -217,7 +217,7 @@ describe('symbolEffectResolution', () => {
         vi.mocked(Math.random).mockRestore();
     });
 
-    it('computes deferred Christianity, Islam, Buddhism, and Hinduism effects from board state', () => {
+    it('computes deferred Christianity, Islam, and Hinduism effects from board state', () => {
         const board = createEmptyBoard();
         board[1][1] = createInstance(Sym.christianity, 'christianity');
         board[2][1] = createInstance(Sym.wheat, 'wheat');
@@ -253,17 +253,6 @@ describe('symbolEffectResolution', () => {
         });
         expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 2, gold: 0, knowledge: 0 }]);
 
-        const buddhismBoard = createEmptyBoard();
-        buddhismBoard[0][1] = createInstance(Sym.buddhism, 'buddhism');
-        buddhismBoard[4][3] = createInstance(Sym.wheat, 'wheat');
-        const buddhismResult = computeReligionDeferredEffects({
-            board: buddhismBoard,
-            religionSlots: [{ x: 0, y: 1, id: S.buddhism }],
-            religionEffectCache: new Map(),
-            getAdjacentCoords,
-        });
-        expect(buddhismResult.effects).toEqual([{ x: 0, y: 1, food: 36, gold: 0, knowledge: 0 }]);
-
         const hinduismBoard = createEmptyBoard();
         hinduismBoard[0][0] = createInstance(Sym.hinduism, 'hinduism');
         hinduismBoard[1][0] = createInstance(Sym.wheat, 'wheat');
@@ -274,6 +263,42 @@ describe('symbolEffectResolution', () => {
             getAdjacentCoords,
         });
         expect(hinduismResult.effects).toEqual([{ x: 0, y: 0, food: 1, gold: 0, knowledge: 0 }]);
+    });
+
+    it('computes Buddhism food immediately from the current empty slots', () => {
+        const board = createEmptyBoard();
+        const buddhism = createInstance(Sym.buddhism, 'buddhism');
+        board[0][1] = buddhism;
+        board[4][3] = createInstance(Sym.wheat, 'wheat');
+
+        const result = processSingleSymbolEffects(buddhism, board, 0, 1, { upgrades: [] });
+
+        expect(result).toEqual({ food: 36, gold: 0, knowledge: 0 });
+    });
+
+    it('upgrades immediate Buddhism food with Theocracy', () => {
+        const board = createEmptyBoard();
+        const buddhism = createInstance(Sym.buddhism, 'buddhism');
+        board[0][1] = buddhism;
+        board[4][3] = createInstance(Sym.wheat, 'wheat');
+
+        const result = processSingleSymbolEffects(buddhism, board, 0, 1, {
+            upgrades: [THEOCRACY_UPGRADE_ID],
+        });
+
+        expect(result).toEqual({ food: 72, gold: 0, knowledge: 0 });
+    });
+
+    it('blocks immediate Buddhism food when another religion is on the board', () => {
+        const board = createEmptyBoard();
+        const buddhism = createInstance(Sym.buddhism, 'buddhism');
+        board[0][1] = buddhism;
+        board[4][3] = createInstance(Sym.christianity, 'christianity');
+
+        const result = processSingleSymbolEffects(buddhism, board, 0, 1, { upgrades: [] });
+
+        expect(result).toEqual({ food: 0, gold: 0, knowledge: 0 });
+        expect(buddhism.is_marked_for_destruction).toBe(false);
     });
 
     it('upgrades religion effects with Theocracy while preserving destroy-on-other-religion', () => {
@@ -305,18 +330,6 @@ describe('symbolEffectResolution', () => {
             unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
         });
         expect(islamResult.effects).toEqual([{ x: 2, y: 2, food: 3, gold: 0, knowledge: 0 }]);
-
-        const buddhismBoard = createEmptyBoard();
-        buddhismBoard[0][1] = createInstance(Sym.buddhism, 'buddhism');
-        buddhismBoard[4][3] = createInstance(Sym.wheat, 'wheat');
-        const buddhismResult = computeReligionDeferredEffects({
-            board: buddhismBoard,
-            religionSlots: [{ x: 0, y: 1, id: S.buddhism }],
-            religionEffectCache: new Map(),
-            getAdjacentCoords,
-            unlockedKnowledgeUpgrades: [THEOCRACY_UPGRADE_ID],
-        });
-        expect(buddhismResult.effects).toEqual([{ x: 0, y: 1, food: 72, gold: 0, knowledge: 0 }]);
 
         const hinduismBoard = createEmptyBoard();
         hinduismBoard[0][0] = createInstance(Sym.hinduism, 'hinduism');
@@ -396,6 +409,29 @@ describe('symbolEffectResolution', () => {
         expect(result.knowledgeDelta).toBe(0);
         expect(christianity.is_marked_for_destruction).toBe(true);
         expect(islam.is_marked_for_destruction).toBe(true);
+    });
+
+    it('uses deferred religion recalculation to destroy Buddhism conflicts without adding food', () => {
+        const board = createEmptyBoard();
+        const buddhism = createInstance(Sym.buddhism, 'buddhism');
+        const christianity = createInstance(Sym.christianity, 'christianity');
+        board[0][1] = buddhism;
+        board[4][3] = christianity;
+
+        const result = computeReligionDeferredEffects({
+            board,
+            religionSlots: [
+                { x: 0, y: 1, id: S.buddhism },
+                { x: 4, y: 3, id: S.christianity },
+            ],
+            religionEffectCache: new Map(),
+            getAdjacentCoords,
+        });
+
+        expect(result.effects).toEqual([]);
+        expect(result.foodDelta).toBe(0);
+        expect(buddhism.is_marked_for_destruction).toBe(true);
+        expect(christianity.is_marked_for_destruction).toBe(true);
     });
 
     it('destroys matching religion symbols when two or more religion symbols are on the board', () => {

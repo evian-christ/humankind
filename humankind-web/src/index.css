@@ -1157,7 +1157,37 @@ button.spin-btn:disabled:active {
 }
 
 .selection-event-card-mark span {
-  transform: translateY(-2px);
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 70px;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+.selection-event-card-mark span::before,
+.selection-event-card-mark span::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fde68a;
+  box-shadow:
+    0 3px 0 #000,
+    0 0 18px rgba(251, 191, 36, 0.72);
+}
+
+.selection-event-card-mark span::before {
+  top: 0;
+  width: 16px;
+  height: 46px;
+}
+
+.selection-event-card-mark span::after {
+  bottom: 0;
+  width: 16px;
+  height: 16px;
 }
 
 .selection-event-card-condition {

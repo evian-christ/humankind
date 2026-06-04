@@ -41,6 +41,7 @@ const createCommonResetPatch = () => ({
     pendingContributors: [],
     effectPhase: null,
     effectPhase3ReachedThisRun: false,
+    destroyRemovalBlinkStartedAtMs: null,
     lootMergeFx: null,
     eventLog: [],
     combatAnimation: null,

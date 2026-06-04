@@ -86,9 +86,54 @@ describe('turnPipeline', () => {
         });
 
         expect(shouldDeferReligionEffect(S.christianity)).toBe(true);
-        expect(shouldDeferReligionEffect(S.buddhism)).toBe(true);
+        expect(shouldDeferReligionEffect(S.buddhism)).toBe(false);
         expect(result).toEqual({ food: 0, knowledge: 0, gold: 0 });
         expect(pipeline.religionSlotsToRecalculate).toEqual([{ x: 1, y: 1, id: S.christianity }]);
+    });
+
+    it('resolves Buddhism immediately while keeping it in religion recalculation for destruction checks', () => {
+        const board = createEmptyBoard();
+        const buddhism = createInstance(Sym.buddhism, 'buddhism');
+        board[0][1] = buddhism;
+        board[4][3] = createInstance(Sym.wheat, 'wheat');
+        const pipeline = createSlotEffectPipeline({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            baseTotals: { food: 0, gold: 0, knowledge: 0 },
+        });
+
+        const result = resolveSlotEffect({
+            pipeline,
+            deps: {
+                processSingleSymbolEffects: (args: ProcessSlotArgs) =>
+                    processSingleSymbolEffects(
+                        args.symbol,
+                        args.board,
+                        args.x,
+                        args.y,
+                        args.effectCtx,
+                        args.relicEffects,
+                        args.disabledTerrainCoords,
+                    ),
+            },
+            symbol: buddhism,
+            board,
+            x: 0,
+            y: 1,
+            effectCtx: { upgrades: [] },
+            relicEffects: {
+                relicCount: 0,
+                quarryEmptyGold: false,
+                bananaFossilBonus: false,
+                horsemansihpPastureBonus: false,
+                terraFossilDisasterFood: false,
+                allSymbolsAreCorner: false,
+            },
+        });
+
+        expect(result).toEqual({ food: 36, knowledge: 0, gold: 0 });
+        expect(pipeline.religionSlotsToRecalculate).toEqual([{ x: 0, y: 1, id: S.buddhism }]);
     });
 
     it('captures counter display deltas while resolving slot effects', () => {

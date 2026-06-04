@@ -5,7 +5,7 @@ import {
     useGameStore,
 } from '../../game/state/gameStore';
 import type { GameState } from '../../game/state/gameStore';
-import { SPIN_SPEED_CONFIG, useSettingsStore } from '../../game/state/settingsStore';
+import { EFFECT_SPEED_DELAY, SPIN_SPEED_CONFIG, useSettingsStore } from '../../game/state/settingsStore';
 import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
 import { getSymbolColor, SymbolType, S } from '../../game/data/symbolDefinitions';
@@ -29,11 +29,69 @@ import {
     isOpenableLoot,
 } from './renderers/rendererShared';
 import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
+import {
+    getProductionHighlightScaleForDelta,
+    PRODUCTION_HIGHLIGHT_SCALE_IN_MS,
+    PRODUCTION_HIGHLIGHT_SCALE_OUT_MS,
+} from './productionHighlightScale';
 
 const SPIN_AUDIO_ESTIMATE_TICK_MS = 1000 / 60;
 const CONTRIBUTOR_WOBBLE_SECOND_SOUND_MS = 140;
+const MARKED_FOR_DESTRUCTION_ALPHA = 0.38;
+const DESTROY_REMOVAL_BLINKS = 2;
+const DESTROY_REMOVAL_BLINK_MIN_ALPHA = 0.12;
+const DESTROY_REMOVAL_BLINK_DURATION_MS: Record<SettingsState['effectSpeed'], number> = {
+    '1x': 520,
+    '2x': 360,
+    '4x': 240,
+    instant: 0,
+};
+const ACTIVE_SYMBOL_ASCENT_MS: Record<SettingsState['effectSpeed'], number> = {
+    '1x': 180,
+    '2x': 120,
+    '4x': 75,
+    instant: 0,
+};
 
 const clampPlaybackRate = (value: number) => Math.min(4, Math.max(0.25, value));
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+const easeOutBack = (t: number) => {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+};
+const easeInOutCubic = (t: number) =>
+    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+function getNowMs() {
+    return typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
+        ? globalThis.performance.now()
+        : Date.now();
+}
+
+function getDestroyMarkedAlpha(state: GameState, settings: SettingsState, fallbackAlpha: number) {
+    const blinkStartedAtMs = state.destroyRemovalBlinkStartedAtMs;
+    if (state.phase === 'processing' && blinkStartedAtMs != null) {
+        const durationMs = DESTROY_REMOVAL_BLINK_DURATION_MS[settings.effectSpeed];
+        if (durationMs > 0) {
+            const progress = clamp01((getNowMs() - blinkStartedAtMs) / durationMs);
+            const wave = 0.5 + 0.5 * Math.cos(progress * DESTROY_REMOVAL_BLINKS * Math.PI * 2);
+            return DESTROY_REMOVAL_BLINK_MIN_ALPHA + (1 - DESTROY_REMOVAL_BLINK_MIN_ALPHA) * wave;
+        }
+    }
+    if (state.phase === 'processing') return Math.min(fallbackAlpha, MARKED_FOR_DESTRUCTION_ALPHA);
+    return fallbackAlpha;
+}
+
+function getActiveSlotProductionScale(state: GameState, x: number, y: number) {
+    if (state.phase !== 'processing' || state.effectPhase !== 3) return 1;
+
+    const effect = [...state.lastEffects].reverse().find((entry) => entry.x === x && entry.y === y);
+    if (!effect) return 1;
+
+    return getProductionHighlightScaleForDelta(effect);
+}
 
 function estimateSpinDurationMs(args: {
     cellHeight: number;
@@ -136,6 +194,18 @@ export class PixiGameApp {
     private contributorWobbleTime: number = 0;
     private contributorWobbleSoundCount = 0;
     private transientRenderElapsedMs = 33;
+    private activeSlotMotion: {
+        key: string;
+        phase: GameState['effectPhase'];
+        slotStartedAtMs: number;
+        phaseStartedAtMs: number;
+    } | null = null;
+    private productionScaleMotions = new Map<string, {
+        targetScale: number;
+        growStartedAtMs: number;
+        releaseStartedAtMs?: number;
+        releaseFromScale?: number;
+    }>();
 
     /** renderBoard가 히트영역을 갈아엎어도 포인터는 그대로일 수 있어, 마지막 호버를 저장 후 재동기화 */
     private symbolHoverCell: { x: number; y: number } | null = null;
@@ -143,6 +213,131 @@ export class PixiGameApp {
     private getPulse01() {
         // 0..1 부드러운 펄스
         return 0.5 + 0.5 * Math.sin(Date.now() / 140);
+    }
+
+    private syncActiveSlotMotion(state: GameState) {
+        if (state.phase !== 'processing' || !state.activeSlot || state.effectPhase == null) {
+            this.activeSlotMotion = null;
+            return;
+        }
+
+        const key = `${state.activeSlot.x}:${state.activeSlot.y}`;
+        const now = getNowMs();
+        if (!this.activeSlotMotion || this.activeSlotMotion.key !== key) {
+            this.activeSlotMotion = {
+                key,
+                phase: state.effectPhase,
+                slotStartedAtMs: now,
+                phaseStartedAtMs: now,
+            };
+            return;
+        }
+
+        if (this.activeSlotMotion.phase !== state.effectPhase) {
+            this.activeSlotMotion.phase = state.effectPhase;
+            this.activeSlotMotion.phaseStartedAtMs = now;
+        }
+    }
+
+    private getActiveSlotMotion(cellHeight: number, effectSpeed: SettingsState['effectSpeed']) {
+        if (!this.activeSlotMotion || effectSpeed === 'instant') {
+            return { x: 0, y: 0, shadowScale: 0, shadowAlpha: 0 };
+        }
+
+        const now = getNowMs();
+        const liftY = -cellHeight * 0.18;
+        const ascentMs = Math.max(1, ACTIVE_SYMBOL_ASCENT_MS[effectSpeed]);
+        const descentMs = Math.max(70, EFFECT_SPEED_DELAY[effectSpeed]);
+        const phaseElapsed = now - this.activeSlotMotion.phaseStartedAtMs;
+        const slotElapsed = now - this.activeSlotMotion.slotStartedAtMs;
+
+        if (this.activeSlotMotion.phase === 3) {
+            const t = easeInOutCubic(clamp01(phaseElapsed / descentMs));
+            const hoverFade = 1 - t;
+            const hoverElapsed = Math.max(0, slotElapsed - ascentMs);
+            return {
+                x: Math.sin((hoverElapsed / 1300) * Math.PI * 2) * cellHeight * 0.006 * hoverFade,
+                y: liftY * hoverFade + Math.sin((hoverElapsed / 980) * Math.PI * 2) * cellHeight * 0.011 * hoverFade,
+                shadowScale: hoverFade,
+                shadowAlpha: 0.34 * hoverFade,
+            };
+        }
+
+        const ascentT = clamp01(slotElapsed / ascentMs);
+        const liftedY = liftY * easeOutBack(ascentT);
+        const hoverElapsed = Math.max(0, slotElapsed - ascentMs);
+        return {
+            x: Math.sin((hoverElapsed / 1300) * Math.PI * 2) * cellHeight * 0.006 * ascentT,
+            y: liftedY + Math.sin((hoverElapsed / 980) * Math.PI * 2) * cellHeight * 0.014 * ascentT,
+            shadowScale: ascentT,
+            shadowAlpha: 0.34 * ascentT,
+        };
+    }
+
+    private getProductionScaleMotionValue(
+        motion: {
+            targetScale: number;
+            growStartedAtMs: number;
+            releaseStartedAtMs?: number;
+            releaseFromScale?: number;
+        },
+        effectSpeed: SettingsState['effectSpeed'],
+        now: number,
+    ) {
+        if (motion.releaseStartedAtMs != null) {
+            const scaleOutMs = Math.max(1, PRODUCTION_HIGHLIGHT_SCALE_OUT_MS[effectSpeed]);
+            const t = clamp01((now - motion.releaseStartedAtMs) / scaleOutMs);
+            const fromScale = motion.releaseFromScale ?? motion.targetScale;
+            return fromScale + (1 - fromScale) * easeInOutCubic(t);
+        }
+
+        const scaleInMs = Math.max(1, PRODUCTION_HIGHLIGHT_SCALE_IN_MS[effectSpeed]);
+        const t = clamp01((now - motion.growStartedAtMs) / scaleInMs);
+        return 1 + (motion.targetScale - 1) * easeOutCubic(t);
+    }
+
+    private syncProductionScaleMotions(state: GameState, settings: SettingsState) {
+        const effectSpeed = settings.effectSpeed;
+        if (effectSpeed === 'instant') {
+            this.productionScaleMotions.clear();
+            return;
+        }
+
+        const now = getNowMs();
+        const activeSlot = state.phase === 'processing' && state.effectPhase === 3 ? state.activeSlot : null;
+        const activeKey = activeSlot ? `${activeSlot.x}:${activeSlot.y}` : null;
+        const activeTargetScale = activeSlot
+            ? getActiveSlotProductionScale(state, activeSlot.x, activeSlot.y)
+            : 1;
+
+        if (activeKey && activeTargetScale > 1) {
+            const existing = this.productionScaleMotions.get(activeKey);
+            if (!existing || existing.targetScale !== activeTargetScale || existing.releaseStartedAtMs != null) {
+                this.productionScaleMotions.set(activeKey, {
+                    targetScale: activeTargetScale,
+                    growStartedAtMs: now,
+                });
+            }
+        }
+
+        const scaleOutMs = Math.max(1, PRODUCTION_HIGHLIGHT_SCALE_OUT_MS[effectSpeed]);
+        for (const [key, motion] of this.productionScaleMotions) {
+            const isCurrentActive = key === activeKey && activeTargetScale > 1;
+            if (!isCurrentActive && motion.releaseStartedAtMs == null) {
+                motion.releaseFromScale = this.getProductionScaleMotionValue(motion, effectSpeed, now);
+                motion.releaseStartedAtMs = now;
+            }
+
+            if (motion.releaseStartedAtMs != null && now - motion.releaseStartedAtMs >= scaleOutMs) {
+                this.productionScaleMotions.delete(key);
+            }
+        }
+    }
+
+    private getProductionScaleForCell(x: number, y: number, effectSpeed: SettingsState['effectSpeed']) {
+        const motion = this.productionScaleMotions.get(`${x}:${y}`);
+        if (!motion) return 1;
+        return this.getProductionScaleMotionValue(motion, effectSpeed, getNowMs());
     }
 
     private drawBackGlow(
@@ -241,6 +436,7 @@ export class PixiGameApp {
         });
         this.upgradeRenderer = new UpgradeRenderer(onHoverUpgrade);
         audioManager.registerCue('spin_loop', DEFAULT_AUDIO_CUES.spin_loop);
+        audioManager.registerCue('cow_butcher', DEFAULT_AUDIO_CUES.cow_butcher);
     }
 
     public async init() {
@@ -329,8 +525,24 @@ export class PixiGameApp {
 
         // Contributor wobble: phase 2일 때만 타이머 증가·렌더 (phase 3 진입 시 두 번째 wobble 방지)
         const state = useGameStore.getState();
+        this.syncActiveSlotMotion(state);
+        this.syncProductionScaleMotions(state, useSettingsStore.getState());
         let needsTransientRender = false;
         let forceTransientRender = false;
+        if (
+            state.phase === 'processing' &&
+            !!state.activeSlot &&
+            state.effectPhase != null &&
+            useSettingsStore.getState().effectSpeed !== 'instant'
+        ) {
+            needsTransientRender = true;
+        }
+        if (state.phase === 'processing' && state.destroyRemovalBlinkStartedAtMs != null) {
+            needsTransientRender = true;
+        }
+        if (this.productionScaleMotions.size > 0) {
+            needsTransientRender = true;
+        }
         if (state.phase === 'processing' && state.effectPhase === 2 && state.activeContributors?.length > 0) {
             if (this.contributorWobbleSoundCount === 0) {
                 void audioManager.play('symbol_interact');
@@ -470,6 +682,8 @@ export class PixiGameApp {
     public renderBoard(state: GameState, settings: SettingsState) {
         if (!this.app || !this.app.renderer || this.destroyed || this.contextLost) return;
 
+        this.syncActiveSlotMotion(state);
+        this.syncProductionScaleMotions(state, settings);
         const w = this.app.screen?.width || 1920;
 
         this.combatRenderer.setShaking(state.combatShaking);
@@ -732,7 +946,11 @@ export class PixiGameApp {
                         const local = e.getLocalPosition(cellRoot);
                         if (local.x >= btnX1 && local.x <= btnX2 && local.y >= btnY1 && local.y <= btnY2) {
                             if (canButcherPasture) {
-                                useGameStore.getState().butcherPastureAnimalAt(x, y);
+                                const store = useGameStore.getState();
+                                if (store.board[x]?.[y]?.definition.id === S.cattle) {
+                                    void audioManager.play('cow_butcher');
+                                }
+                                store.butcherPastureAnimalAt(x, y);
                             } else if (canUseEdict) {
                                 useGameStore.getState().activateEdictAt(x, y);
                             } else if (canConsumeTribalVillage) {
@@ -772,19 +990,45 @@ export class PixiGameApp {
                 const isDestroyBlockedInBoardPick =
                     state.phase === 'oblivion_furnace_board' &&
                     (symDef.type === SymbolType.ENEMY || symDef.type === SymbolType.DISASTER);
-                const symbolAlpha = isDestroyBlockedInBoardPick ? 0.48 : 1;
+                const symbolAlpha = symbol.is_marked_for_destruction
+                    ? getDestroyMarkedAlpha(state, settings, isDestroyBlockedInBoardPick ? 0.48 : 1)
+                    : isDestroyBlockedInBoardPick ? 0.48 : 1;
                 const isContrib = isProcessing && state.activeContributors.some(c => c.x === x && c.y === y);
                 const counterOverride = state.counterDisplayOverrides.find((o) => o.x === x && o.y === y);
-                const liftY = isActive ? -cellHeight * 0.14 : 0;
+                const activeMotion = isActive
+                    ? this.getActiveSlotMotion(cellHeight, settings.effectSpeed)
+                    : { x: 0, y: 0, shadowScale: 0, shadowAlpha: 0 };
+                const activeProductionScale = this.getProductionScaleForCell(x, y, settings.effectSpeed);
+                const activeOffsetX = activeMotion.x;
+                const activeOffsetY = activeMotion.y;
                 // phase 2일 때만 contributor 위아래 2회 왔다갔다 (phase 3에서는 wobble 없음)
                 const wobbleY = isContrib && state.effectPhase === 2 ? Math.sin(this.contributorWobbleTime * (4 * Math.PI / 280)) * 10 : 0;
                 const contribGreenTint = isContrib ? 0x90ee90 : 0xffffff; // 밝은 초록
 
                 // active 심볼: 들린 것 + 바로 아랫쪽에 픽셀 느낌 화살표(머리만, ▲, 밝은 연두 + 검은 테두리)
                 if (isActive) {
+                    if (activeMotion.shadowAlpha > 0) {
+                        const shadow = new PIXI.Graphics();
+                        const shadowCx = cellX + cellWidth / 2;
+                        const shadowCy = cellY + cellHeight * 0.72;
+                        const shadowW = cellWidth * (0.35 + activeMotion.shadowScale * 0.12);
+                        const shadowH = cellHeight * (0.055 + activeMotion.shadowScale * 0.018);
+                        type BlurFilterCtor = new (strength: number) => PIXI.Filter;
+                        const BlurFilterCtor = (PIXI as unknown as { BlurFilter?: BlurFilterCtor }).BlurFilter;
+                        if (BlurFilterCtor) {
+                            shadow.filters = [new BlurFilterCtor(Math.max(5, cellHeight * 0.045))];
+                        }
+                        shadow.ellipse(shadowCx, shadowCy, shadowW * 1.22, shadowH * 1.35);
+                        shadow.fill({ color: 0x000000, alpha: activeMotion.shadowAlpha * 0.32 });
+                        shadow.ellipse(shadowCx, shadowCy, shadowW * 0.86, shadowH);
+                        shadow.fill({ color: 0x000000, alpha: activeMotion.shadowAlpha * 0.44 });
+                        shadow.ellipse(shadowCx, shadowCy, shadowW * 0.48, shadowH * 0.58);
+                        shadow.fill({ color: 0x000000, alpha: activeMotion.shadowAlpha * 0.34 });
+                        this.effectsContainer.addChild(shadow);
+                    }
                     const arrowG = new PIXI.Graphics();
-                    const cx = cellX + cellWidth / 2;
-                    const base = cellY + cellHeight * 0.92;
+                    const cx = cellX + cellWidth / 2 + activeOffsetX * 0.25;
+                    const base = cellY + cellHeight * 0.92 + activeOffsetY * 0.12;
                     const s = Math.max(5, Math.min(cellWidth, cellHeight) * 0.07);
                     arrowG.moveTo(cx, base - s);
                     arrowG.lineTo(cx - s, base + s);
@@ -801,11 +1045,11 @@ export class PixiGameApp {
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
                     const sprite = PIXI.Sprite.from(spritePath);
-                    sprite.x = cellX + cellWidth / 2 + preShakeX;
-                    sprite.y = cellY + cellHeight / 2 + liftY + wobbleY + preShakeY;
+                    sprite.x = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
+                    sprite.y = cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
                     sprite.anchor.set(0.5);
-                    sprite.width = spriteSize;
-                    sprite.height = spriteSize;
+                    sprite.width = spriteSize * activeProductionScale;
+                    sprite.height = spriteSize * activeProductionScale;
                     sprite.alpha = symbolAlpha;
                     if (isContrib) sprite.tint = contribGreenTint;
                     drawTarget.addChild(sprite);
@@ -817,8 +1061,9 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: fillColor, fontSize: 32 * fs, fontFamily, stroke: { color: '#000000', width: 2 } }),
                     });
                     nameText.anchor.set(0.5);
-                    nameText.x = cellX + cellWidth / 2 + preShakeX;
-                    nameText.y = cellY + cellHeight / 2 + liftY + wobbleY + preShakeY;
+                    nameText.x = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
+                    nameText.y = cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
+                    nameText.scale.set(activeProductionScale);
                     nameText.alpha = symbolAlpha;
                     drawTarget.addChild(nameText);
                 }
@@ -832,8 +1077,8 @@ export class PixiGameApp {
                             style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
                         });
                         permText.anchor.set(0.5, 0.5);
-                        permText.x = cellX + 25;
-                        permText.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                        permText.x = cellX + 25 + activeOffsetX;
+                        permText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
                         drawTarget.addChild(permText);
                     }
                 }
@@ -853,8 +1098,8 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
                     });
                     counterText.anchor.set(0.5, 0.5);
-                    counterText.x = cellX + cellWidth - 21;
-                    counterText.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                    counterText.x = cellX + cellWidth - 21 + activeOffsetX;
+                    counterText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
                     drawTarget.addChild(counterText);
                 }
 
@@ -864,8 +1109,8 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: '#ff8c42', fontSize: 60 * fs, fontFamily }),
                     });
                     atkBg.anchor.set(0.5, 0.5);
-                    atkBg.x = cellX + 24;
-                    atkBg.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                    atkBg.x = cellX + 24 + activeOffsetX;
+                    atkBg.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
                     atkBg.alpha = 0.4;
                     drawTarget.addChild(atkBg);
 
@@ -874,8 +1119,8 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
                     });
                     atkText.anchor.set(0.5, 0.5);
-                    atkText.x = cellX + 25;
-                    atkText.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                    atkText.x = cellX + 25 + activeOffsetX;
+                    atkText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
                     drawTarget.addChild(atkText);
                 }
 
@@ -885,8 +1130,8 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: 60 * fs, fontFamily }),
                     });
                     hpBg.anchor.set(0.5, 0.5);
-                    hpBg.x = cellX + cellWidth - 20;
-                    hpBg.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                    hpBg.x = cellX + cellWidth - 20 + activeOffsetX;
+                    hpBg.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
                     hpBg.alpha = 0.4;
                     drawTarget.addChild(hpBg);
 
@@ -895,36 +1140,11 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
                     });
                     hpText.anchor.set(0.5, 0.5);
-                    hpText.x = cellX + cellWidth - 21;
-                    hpText.y = cellY + cellHeight - 24 + liftY + wobbleY;
+                    hpText.x = cellX + cellWidth - 21 + activeOffsetX;
+                    hpText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
                     drawTarget.addChild(hpText);
                 }
 
-                // 파괴 X: phase 3 시작 시 생성. 이 셀이 지금 active/contributor/pending으로 wobble 중이면 숨김.
-                // contributor/pending만 wobble로 간주. active(자기 차례)는 lift만 하므로 X 유지
-                const isPending = isProcessing && state.pendingContributors.some(c => c.x === x && c.y === y);
-                const isWobblingThisSlot = (state.effectPhase === 1 || state.effectPhase === 2) && (isContrib || isPending);
-                const showDestroyX =
-                    state.phase === 'processing' &&
-                    symbol.is_marked_for_destruction &&
-                    !symbol.suppress_destroy_overlay &&
-                    (state.effectPhase === 3 || state.effectPhase3ReachedThisRun) &&
-                    !isWobblingThisSlot;
-                if (showDestroyX) {
-                    const destroyOverlay = new PIXI.Graphics();
-                    const m = Math.min(cellWidth, cellHeight) * 0.22;
-                    const cx = cellX + cellWidth / 2;
-                    const cy = cellY + cellHeight / 2;
-                    const strokeW = Math.max(5, Math.min(cellWidth, cellHeight) * 0.11);
-                    const strokeOpt = { color: 0xef4444, width: strokeW, alpha: 0.78 };
-                    destroyOverlay.moveTo(cx - m, cy - m);
-                    destroyOverlay.lineTo(cx + m, cy + m);
-                    destroyOverlay.stroke(strokeOpt);
-                    destroyOverlay.moveTo(cx + m, cy - m);
-                    destroyOverlay.lineTo(cx - m, cy + m);
-                    destroyOverlay.stroke(strokeOpt);
-                    drawTarget.addChild(destroyOverlay);
-                }
             }
         }
 
@@ -954,11 +1174,13 @@ export class PixiGameApp {
                         startY + gridOffsetY + ay * (cellHeight + rowGap) + cellHeight / 2;
                     const recvActive =
                         state.activeSlot?.x === rx && state.activeSlot?.y === ry;
-                    const recvLiftY = recvActive ? -cellHeight * 0.14 : 0;
+                    const recvMotion = recvActive
+                        ? this.getActiveSlotMotion(cellHeight, settings.effectSpeed)
+                        : { x: 0, y: 0 };
                     const toCX =
-                        startX + gridOffsetX + rx * (cellWidth + colGap) + cellWidth / 2;
+                        startX + gridOffsetX + rx * (cellWidth + colGap) + cellWidth / 2 + recvMotion.x;
                     const toCY =
-                        startY + gridOffsetY + ry * (cellHeight + rowGap) + cellHeight / 2 + recvLiftY;
+                        startY + gridOffsetY + ry * (cellHeight + rowGap) + cellHeight / 2 + recvMotion.y;
                     const nowPerf =
                         typeof globalThis.performance !== 'undefined'
                             ? globalThis.performance.now()
