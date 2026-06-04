@@ -134,6 +134,8 @@ const GAMEPLAY_BGM_TRANSITION_DELAY_MS = GAMEPLAY_BGM_FADE_OUT_MS + 150;
 const GAME_OVER_AUDIO_FADE_OUT_MS = 1000;
 const GAME_OVER_MUSIC_FADE_IN_MS = 4200;
 const XP_FILL_FADE_OUT_MS = 120;
+const XP_LEVEL_UP_HOLD_MS = 220;
+const XP_LEVEL_UP_RESET_MS = 90;
 
 const uiText = (language: Language, ko: string, en: string, zh: string) => (
   language === 'ko' ? ko : language === 'zh' ? zh : en
@@ -160,62 +162,50 @@ function EndgameLeaderProgressReveal({
 }) {
   const [animatedXp, setAnimatedXp] = useState(award.previous.xp);
   const [animatedLevel, setAnimatedLevel] = useState(award.previous.level);
+  const [animatedBarRatio, setAnimatedBarRatio] = useState(() => {
+    const required = getLeaderXpRequiredForLevel(award.previous.level);
+    return required > 0 ? Math.min(1, award.previous.xp / required) : 0;
+  });
+  const [isLevelUpBursting, setIsLevelUpBursting] = useState(false);
   const leader = LEADERS[award.leaderId];
   const leaderName = leader ? t(leader.nameKey, language) : '';
   const portraitSrc = endgameLeaderPortraitSrc(award.leaderId);
   const showPortrait = leaderHasPortraitSprite(award.leaderId) && portraitSrc;
   const animatedXpRequired = getLeaderXpRequiredForLevel(animatedLevel);
-  const visibleRatio = Math.min(1, animatedXp / animatedXpRequired);
 
-  const xpTimeline = useMemo(() => {
-    const cumulativeXpAt = (targetLevel: number, xp: number) => {
-      let total = 0;
-      for (let level = 1; level < targetLevel; level += 1) {
-        total += getLeaderXpRequiredForLevel(level);
-      }
-      return total + xp;
-    };
+  const xpSegments = useMemo(() => {
+    const segments: { level: number; startXp: number; endXp: number; required: number }[] = [];
+    let level = award.previous.level;
+    let startXp = award.previous.xp;
 
-    const progressAtTotal = (totalXp: number) => {
-      let level = 1;
-      let remainingXp = Math.max(0, totalXp);
-
-      while (level < MAX_LEADER_LEVEL) {
-        const required = getLeaderXpRequiredForLevel(level);
-        if (remainingXp < required) {
-          return { level, xp: Math.round(remainingXp) };
-        }
-        remainingXp -= required;
-        level += 1;
-      }
-
-      return {
-        level: MAX_LEADER_LEVEL,
-        xp: Math.min(Math.round(remainingXp), getLeaderXpRequiredForLevel(MAX_LEADER_LEVEL)),
-      };
-    };
-
-    const startTotal = cumulativeXpAt(award.previous.level, award.previous.xp);
-    const endTotal = Math.max(startTotal, cumulativeXpAt(award.next.level, award.next.xp));
-    const levelUpThresholds: number[] = [];
-
-    for (let level = award.previous.level; level < award.next.level; level += 1) {
-      levelUpThresholds.push(cumulativeXpAt(level + 1, 0));
+    while (level < award.next.level && level < MAX_LEADER_LEVEL) {
+      const required = getLeaderXpRequiredForLevel(level);
+      segments.push({
+        level,
+        startXp,
+        endXp: required,
+        required,
+      });
+      level += 1;
+      startXp = 0;
     }
 
-    return {
-      startTotal,
-      endTotal,
-      levelUpThresholds,
-      progressAtTotal,
-    };
+    const finalRequired = getLeaderXpRequiredForLevel(award.next.level);
+    segments.push({
+      level: award.next.level,
+      startXp: award.previous.level === award.next.level ? award.previous.xp : 0,
+      endXp: award.next.xp,
+      required: finalRequired,
+    });
+
+    return segments;
   }, [award.next.level, award.next.xp, award.previous.level, award.previous.xp]);
 
   useEffect(() => {
     let frame = 0;
+    let timeout = 0;
     let cancelled = false;
     let xpFillHandle: AudioPlaybackHandle | null = null;
-    let nextLevelUpIndex = 0;
 
     const stopXpFill = () => {
       xpFillHandle?.stop({ fadeOutMs: XP_FILL_FADE_OUT_MS });
@@ -238,56 +228,102 @@ function EndgameLeaderProgressReveal({
 
     setAnimatedLevel(award.previous.level);
     setAnimatedXp(award.previous.xp);
+    setAnimatedBarRatio(Math.min(1, award.previous.xp / getLeaderXpRequiredForLevel(award.previous.level)));
+    setIsLevelUpBursting(false);
 
-    const distance = xpTimeline.endTotal - xpTimeline.startTotal;
+    const distance = xpSegments.reduce((total, segment) => total + Math.max(0, segment.endXp - segment.startXp), 0);
     if (distance <= 0) {
       setAnimatedLevel(award.next.level);
       setAnimatedXp(award.next.xp);
+      setAnimatedBarRatio(Math.min(1, award.next.xp / getLeaderXpRequiredForLevel(award.next.level)));
       return () => {
         cancelled = true;
       };
     }
 
-    const durationMs = Math.max(1100, Math.min(3600, 850 + distance * 8));
-    const startMs = performance.now();
+    const wait = (ms: number) => new Promise<void>((resolve) => {
+      timeout = window.setTimeout(resolve, ms);
+    });
+
+    const animateSegment = (segment: { level: number; startXp: number; endXp: number; required: number }) => {
+      const segmentDistance = Math.max(0, segment.endXp - segment.startXp);
+      const durationMs = Math.max(520, Math.min(1800, 360 + segmentDistance * 9));
+      const startMs = performance.now();
+
+      setAnimatedLevel(segment.level);
+      setAnimatedXp(segment.startXp);
+      setAnimatedBarRatio(Math.min(1, segment.startXp / segment.required));
+
+      return new Promise<void>((resolve) => {
+        const tick = (now: number) => {
+          if (cancelled) {
+            resolve();
+            return;
+          }
+
+          const raw = Math.min(1, (now - startMs) / durationMs);
+          const currentXp = segment.startXp + segmentDistance * raw;
+
+          setAnimatedLevel(segment.level);
+          setAnimatedXp(Math.round(currentXp));
+          setAnimatedBarRatio(Math.min(1, currentXp / segment.required));
+
+          if (raw < 1) {
+            frame = requestAnimationFrame(tick);
+          } else {
+            setAnimatedXp(segment.endXp);
+            setAnimatedBarRatio(Math.min(1, segment.endXp / segment.required));
+            resolve();
+          }
+        };
+
+        frame = requestAnimationFrame(tick);
+      });
+    };
 
     void startXpFill();
 
-    const tick = (now: number) => {
-      if (cancelled) return;
+    const runAnimation = async () => {
+      for (let index = 0; index < xpSegments.length; index += 1) {
+        const segment = xpSegments[index]!;
+        await animateSegment(segment);
+        if (cancelled) return;
 
-      const raw = Math.min(1, (now - startMs) / durationMs);
-      const currentTotal = xpTimeline.startTotal + distance * raw;
-      const nextProgress = xpTimeline.progressAtTotal(currentTotal);
+        const leveledUp = segment.endXp >= segment.required && segment.level < award.next.level;
+        if (!leveledUp) continue;
 
-      setAnimatedLevel(nextProgress.level);
-      setAnimatedXp(nextProgress.xp);
-
-      while (
-        nextLevelUpIndex < xpTimeline.levelUpThresholds.length
-        && currentTotal >= xpTimeline.levelUpThresholds[nextLevelUpIndex]!
-      ) {
-        nextLevelUpIndex += 1;
         void audioManager.play('level_up', { volume: 0.25 });
+        setAnimatedXp(segment.required);
+        setAnimatedBarRatio(1);
+        setIsLevelUpBursting(true);
+        await wait(XP_LEVEL_UP_HOLD_MS);
+        if (cancelled) return;
+
+        const nextLevel = Math.min(MAX_LEADER_LEVEL, segment.level + 1);
+        setAnimatedLevel(nextLevel);
+        setAnimatedXp(0);
+        setAnimatedBarRatio(0);
+        setIsLevelUpBursting(false);
+        await wait(XP_LEVEL_UP_RESET_MS);
+        if (cancelled) return;
       }
 
-      if (raw < 1) {
-        frame = requestAnimationFrame(tick);
-      } else {
-        setAnimatedLevel(award.next.level);
-        setAnimatedXp(award.next.xp);
-        stopXpFill();
-      }
+      setAnimatedLevel(award.next.level);
+      setAnimatedXp(award.next.xp);
+      setAnimatedBarRatio(Math.min(1, award.next.xp / getLeaderXpRequiredForLevel(award.next.level)));
+      setIsLevelUpBursting(false);
+      stopXpFill();
     };
 
-    frame = requestAnimationFrame(tick);
+    void runAnimation();
 
     return () => {
       cancelled = true;
       stopXpFill();
       cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
     };
-  }, [award.next.level, award.next.xp, award.previous.level, award.previous.xp, xpTimeline]);
+  }, [award.next.level, award.next.xp, award.previous.level, award.previous.xp, xpSegments]);
 
   return (
     <section className="leader-detail-hero endgame-progress-reveal">
@@ -320,8 +356,8 @@ function EndgameLeaderProgressReveal({
             <span>{t('leaderProgress.xp', language)}</span>
             <span>{animatedXp} / {animatedXpRequired}</span>
           </div>
-          <div className="leader-detail-xpbar" aria-hidden="true">
-            <span style={{ width: `${visibleRatio * 100}%` }} />
+          <div className={`leader-detail-xpbar ${isLevelUpBursting ? 'leader-detail-xpbar--level-up' : ''}`} aria-hidden="true">
+            <span style={{ width: `${animatedBarRatio * 100}%` }} />
           </div>
         </div>
         {award.levelsGained > 0 ? (
@@ -1652,7 +1688,7 @@ function App() {
                 className="endgame-btn"
                 onClick={handleGameOverContinue}
               >
-                {uiText(language, '계속 >>', 'Continue >>', '继续 >>')}
+                {uiText(language, '계속', 'Continue', '继续')}
               </button>
               </>
             )}
@@ -1704,7 +1740,7 @@ function App() {
                   className="endgame-btn endgame-btn--victory"
                   onClick={handleVictoryContinue}
                 >
-                  {uiText(language, '계속 >>', 'Continue >>', '继续 >>')}
+                  {uiText(language, '계속', 'Continue', '继续')}
                 </button>
               </>
             )}

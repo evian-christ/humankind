@@ -73,6 +73,15 @@ export default function LeaderProgressScreen() {
   const currentXp = progress.xp;
   const xpRequired = progress.xpRequired;
   const xpRatio = Math.min(1, currentXp / xpRequired);
+  const nextUnlockLevel = selectedLeader
+    ? Array.from({ length: MAX_LEADER_LEVEL }, (_, index) => {
+        const level = index + 1;
+        const unlock = getLeaderUnlockForLevel(selectedLeader.id, level);
+        const hasUnlock = unlock?.nameKey != null && unlock?.descKey != null;
+        const unlocked = unlock?.unlockedByDefault || currentLevel >= level;
+        return hasUnlock && !unlocked ? level : null;
+      }).find((level) => level != null) ?? null
+    : null;
 
   const handleBack = () => {
     if (selectedLeaderId) {
@@ -167,6 +176,7 @@ export default function LeaderProgressScreen() {
                         'leader-unlock-step',
                         hasUnlock ? 'leader-unlock-step--filled' : '',
                         unlocked ? 'leader-unlock-step--unlocked' : '',
+                        level === nextUnlockLevel ? 'leader-unlock-step--next' : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
@@ -181,6 +191,7 @@ export default function LeaderProgressScreen() {
                           'leader-unlock-body',
                           isEventUnlock ? 'leader-unlock-body--event' : '',
                           symbolUnlockSpriteUrl ? 'leader-unlock-body--symbol' : '',
+                          !unlocked ? 'leader-unlock-body--locked' : '',
                         ].filter(Boolean).join(' ')}>
                           {isEventUnlock ? (
                             <span className="leader-unlock-event-mark" aria-hidden="true">
@@ -200,6 +211,11 @@ export default function LeaderProgressScreen() {
                               {t(unlockDescKey!, language)}
                             </div>
                           </div>
+                          {!unlocked ? (
+                            <span className="leader-unlock-lock-mark">
+                              {t('leaderProgress.lockedUntil', language).replace('{level}', String(level))}
+                            </span>
+                          ) : null}
                         </div>
                       ) : (
                         <div className="leader-unlock-body leader-unlock-body--empty" aria-hidden="true" />

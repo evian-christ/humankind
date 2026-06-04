@@ -1030,6 +1030,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                 const unlocked = unlockedUpgrades.includes(id);
                                                 const visuallyLocked = isVisuallyLocked(id);
                                                 const isDenied = deniedChipId === id;
+                                                const canResearch = canConfirmResearch(id);
                                                 const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
                                                 const isSelectionRelated =
                                                     activeFocusId == null ||
@@ -1045,6 +1046,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                         type="button"
                                                         className={[
                                                             'knowledge-upgrade-chip',
+                                                            !unlocked && canResearch ? 'knowledge-upgrade-chip--available' : '',
                                                             unlocked ? 'knowledge-upgrade-chip--unlocked' : '',
                                                             visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
                                                             isDenied ? 'knowledge-upgrade-chip--denied' : '',
@@ -1062,7 +1064,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             padding: 0,
                                                             display: 'block',
                                                             position: 'relative',
-                                                            overflow: 'hidden',
+                                                            overflow: unlocked || canResearch ? 'visible' : 'hidden',
                                                             filter: chipFilter,
                                                             color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
                                                             cursor: visuallyLocked && !unlocked ? 'not-allowed' : 'pointer',
