@@ -21,6 +21,7 @@ const COUNTER_FLOAT_COLOR = '#8b7355';
 const RESOURCE_FLOAT_GAIN_COLOR = '#4ade80';
 const RESOURCE_FLOAT_LOSS_COLOR = '#ef4444';
 const RESOURCE_FLOAT_ICON_VERTICAL_NUDGE = 0.08;
+const RESOURCE_FLOAT_FONT_SCALE = 0.8;
 
 type ResourceFloatKind = 'food' | 'gold' | 'knowledge';
 type FloatingItem = PIXI.Container & { _baseOffsetY?: number };
@@ -144,7 +145,7 @@ export class FloatingTextRenderer {
             this.renderedBoardEffects.add(effect);
             const effectFontSize = Math.max(24, cellHeight * 0.22);
             const resourceFloatScale = getProductionHighlightScaleForDelta(effect);
-            const resourceFontSize = effectFontSize * resourceFloatScale;
+            const resourceFontSize = effectFontSize * RESOURCE_FLOAT_FONT_SCALE * resourceFloatScale;
             const cellX = startX + gridOffsetX + effect.x * (cellWidth + colGap);
             const cellY = startY + gridOffsetY + effect.y * (cellHeight + rowGap);
             const baseX = cellX + cellWidth / 2;
