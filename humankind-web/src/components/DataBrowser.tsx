@@ -116,7 +116,7 @@ const DataBrowser = () => {
         return t(`status.${status.key}.desc`, language);
     }, [language]);
     const statusCategoryLabel = useCallback((category: typeof STATUSES[number]['category']) => {
-        if (category === 'threat') return language === 'ko' ? '위협' : 'Threat';
+        if (category === 'threat') return language === 'ko' ? '위협' : language === 'ru' ? 'Угроза' : 'Threat';
         return category;
     }, [language]);
 

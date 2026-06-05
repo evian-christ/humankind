@@ -68,11 +68,13 @@ export const DEMO_ACHIEVEMENT_SECTIONS: DemoAchievementSection[] = [
         id: 'river-valley-civilizations',
         name: {
           en: 'River valley civilizations',
+          ru: 'Цивилизации речных долин',
           ko: '강 유역 문명',
           zh: '河谷文明',
         },
         condition: {
           en: 'Complete a game with Ramesses II and Qin Shi Huang.',
+          ru: 'Завершите игру за Рамсеса II и Цинь Шихуана.',
           ko: '람세스 2세와 진시황으로 게임을 완료하세요',
           zh: '使用拉美西斯二世和秦始皇完成游戏。',
         },
@@ -88,11 +90,13 @@ export const DEMO_ACHIEVEMENT_SECTIONS: DemoAchievementSection[] = [
         id: 'relic-mountain',
         name: {
           en: 'Relic Mountain',
+          ru: 'Гора реликвий',
           ko: '유물 산더미',
           zh: '遗物成山',
         },
         condition: {
           en: 'Play as Ramesses II and own 5 non-consumable relics.',
+          ru: 'Играя за Рамсеса II, получите 5 несгораемых реликвий.',
           ko: '람세스 2세로 플레이하여 비소모형 유물 5개를 보유하세요',
           zh: '使用拉美西斯二世进行游戏，并拥有 5 个非消耗型遗物。',
         },
@@ -103,11 +107,13 @@ export const DEMO_ACHIEVEMENT_SECTIONS: DemoAchievementSection[] = [
         id: 'wealth-and-glory',
         name: {
           en: 'Wealth and Glory',
+          ru: 'Богатство и слава',
           ko: '부귀영화',
           zh: '富贵荣华',
         },
         condition: {
           en: 'Play as Qin Shi Huang and reach +10 base Gold production.',
+          ru: 'Играя за Цинь Шихуана, достигните +10 базового производства золота.',
           ko: '진시황으로 기본 골드 생산량 +10을 달성하세요',
           zh: '使用秦始皇达到基础金币产量 +10。',
         },
@@ -124,11 +130,13 @@ export const DEMO_ACHIEVEMENT_SECTIONS: DemoAchievementSection[] = [
         id: 'champion',
         name: {
           en: 'Champion!',
+          ru: 'Чемпион!',
           ko: '챔피언!',
           zh: '冠军！',
         },
         condition: {
           en: 'Win a game.',
+          ru: 'Победите в игре.',
           ko: '게임 승리하기',
           zh: '赢得一局游戏。',
         },
@@ -144,11 +152,13 @@ export const DEMO_ACHIEVEMENT_SECTIONS: DemoAchievementSection[] = [
         id: 'population-explosion',
         name: {
           en: 'Population Explosion',
+          ru: 'Демографический взрыв',
           ko: '인구 대폭발',
           zh: '人口大爆发',
         },
         condition: {
           en: 'Pay the required food on turn 150.',
+          ru: 'Заплатите требуемую еду на 150-м ходу.',
           ko: '150턴 요구 식량을 지불하세요',
           zh: '支付第 150 回合的所需食物。',
         },

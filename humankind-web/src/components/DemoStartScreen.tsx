@@ -55,12 +55,14 @@ const demoAchievementPanelTitle: LocalizedText = {
   en: 'Demo achievements',
   ko: '데모 도전과제',
   zh: '演示成就',
+  ru: 'Достижения демоверсии',
 };
 
 const demoAchievementEmptyText: LocalizedText = {
   en: 'Coming soon',
   ko: '준비 중',
   zh: '即将推出',
+  ru: 'Скоро',
 };
 
 function DemoAchievementsPanel({ language }: { language: Language }) {
@@ -152,7 +154,7 @@ export default function DemoStartScreen() {
   const [playOptionsOpen, setPlayOptionsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [steamProofCode, setSteamProofCode] = useState(FALLBACK_STEAM_PROOF_CODE);
-  const quitLabel = language === 'ko' ? '나가기' : language === 'zh' ? '退出' : 'Quit';
+  const quitLabel = language === 'ko' ? '나가기' : language === 'zh' ? '退出' : language === 'ru' ? 'Выйти' : 'Quit';
 
   const handleQuit = () => {
     void (async () => {

@@ -137,8 +137,8 @@ const XP_FILL_FADE_OUT_MS = 120;
 const XP_LEVEL_UP_HOLD_MS = 220;
 const XP_LEVEL_UP_RESET_MS = 90;
 
-const uiText = (language: Language, ko: string, en: string, zh: string) => (
-  language === 'ko' ? ko : language === 'zh' ? zh : en
+const uiText = (language: Language, ko: string, en: string, zh: string, ru?: string) => (
+  language === 'ko' ? ko : language === 'zh' ? zh : language === 'ru' ? (ru ?? en) : en
 );
 
 function getGameplayBgmPlaylist(level: number) {
@@ -362,7 +362,7 @@ function EndgameLeaderProgressReveal({
         </div>
         {award.levelsGained > 0 ? (
           <div className="endgame-level-gained">
-            {uiText(language, `레벨 +${award.levelsGained}`, `Level +${award.levelsGained}`, `等级 +${award.levelsGained}`)}
+            {uiText(language, `레벨 +${award.levelsGained}`, `Level +${award.levelsGained}`, `等级 +${award.levelsGained}`, `Уровень +${award.levelsGained}`)}
           </div>
         ) : null}
       </div>
@@ -528,6 +528,85 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
   ],
 ];
 
+const TUTORIAL_DIALOG_STEPS_RU: string[][] = [
+  [
+    'Добро пожаловать в обучение.',
+    'Здесь вы изучите базовые правила игры.',
+  ],
+  [
+    'Ваша цель - помочь цивилизации выжить, развиться и достичь процветания.',
+  ],
+  [
+    'Народ требует еду каждые несколько ходов.',
+  ],
+  [
+    'Сейчас у вас 0 еды, поэтому сначала нужно произвести немного еды.',
+  ],
+  [
+    'Вот два символа кукурузы.',
+  ],
+  [
+    'Каждая кукуруза дает 2 еды, когда попадает на поле.',
+    'Наведите курсор на кукурузу, чтобы посмотреть подробности.',
+  ],
+  [
+    'Нажмите кнопку SPIN, чтобы перейти к следующему ходу.',
+  ],
+  [
+    'Каждое вращение размещает ваши символы на поле и запускает их эффекты.',
+  ],
+  [
+    'Две кукурузы произвели по 2 еды, всего вы получили 4 еды.',
+    'Собирайте еду, чтобы выжить.',
+  ],
+  [
+    'После каждого вращения можно выбрать один из трех случайных символов.',
+  ],
+  [
+    'Выберите монумент.',
+  ],
+  [
+    'Проверим ваши символы.',
+  ],
+  [
+    'Монумент производит знания.',
+  ],
+  [
+    'Вернитесь на предыдущий экран.',
+  ],
+  [
+    'Нажмите кнопку SPIN, чтобы перейти к следующему ходу.',
+  ],
+  [
+    'Вы накопили достаточно знаний, чтобы достичь уровня 2.',
+  ],
+  [
+    'Откройте окно улучшений знаний.',
+  ],
+  [
+    'Каждый новый уровень позволяет изучить здесь одно улучшение знаний.',
+  ],
+  [
+    'Нажмите, чтобы изучить древнюю эпоху.',
+  ],
+  [
+    'Вернитесь на предыдущий экран.',
+  ],
+  [
+    'Откройте лавку реликвий.',
+  ],
+  [
+    'Реликвии дают мощные эффекты и помогают достичь процветания.',
+  ],
+  [
+    'Реликвии покупаются за золото, поэтому старайтесь накопить побольше золота.',
+  ],
+  [
+    'Базовое обучение завершено.',
+    'Теперь ведите свою цивилизацию к процветанию!',
+  ],
+];
+
 const TUTORIAL_DIALOG_STEPS_ZH: string[][] = [
   ['欢迎来到教程。', '这里会介绍开始游戏所需的基本规则。'],
   ['你的目标是帮助文明生存、发展，并走向繁荣。'],
@@ -556,7 +635,13 @@ const TUTORIAL_DIALOG_STEPS_ZH: string[][] = [
 ];
 
 const getTutorialDialogSteps = (language: Language) => (
-  language === 'ko' ? TUTORIAL_DIALOG_STEPS_KO : language === 'zh' ? TUTORIAL_DIALOG_STEPS_ZH : TUTORIAL_DIALOG_STEPS_EN
+  language === 'ko'
+    ? TUTORIAL_DIALOG_STEPS_KO
+    : language === 'zh'
+      ? TUTORIAL_DIALOG_STEPS_ZH
+      : language === 'ru'
+        ? TUTORIAL_DIALOG_STEPS_RU
+        : TUTORIAL_DIALOG_STEPS_EN
 );
 
 const TUTORIAL_CORN_CELLS = [
@@ -803,13 +888,13 @@ function App() {
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const tutorialDialogSteps = useMemo(() => getTutorialDialogSteps(language), [language]);
-  const tutorialDialogLabel = uiText(language, '튜토리얼 안내', 'Tutorial guide', '教程指南');
-  const tutorialMonumentGainedText = uiText(language, '기념비를 획득했습니다!', 'You gained a Monument!', '你获得了纪念碑！');
-  const tutorialMonumentProducesPrefix = uiText(language, '기념비는', 'Monument produces', '纪念碑会生产');
-  const tutorialMonumentProducesSuffix = uiText(language, '지식을 생산합니다.', 'Knowledge.', '知识。');
-  const tutorialFinishLabel = uiText(language, '종료', 'Finish', '完成');
-  const tutorialExitLabel = uiText(language, '튜토리얼 종료', 'Exit Tutorial', '退出教程');
-  const tutorialNextLabel = uiText(language, '다음 >>', 'Next >>', '下一步 >>');
+  const tutorialDialogLabel = uiText(language, '튜토리얼 안내', 'Tutorial guide', '教程指南', 'Подсказка обучения');
+  const tutorialMonumentGainedText = uiText(language, '기념비를 획득했습니다!', 'You gained a Monument!', '你获得了纪念碑！', 'Вы получили монумент!');
+  const tutorialMonumentProducesPrefix = uiText(language, '기념비는', 'Monument produces', '纪念碑会生产', 'Монумент производит');
+  const tutorialMonumentProducesSuffix = uiText(language, '지식을 생산합니다.', 'Knowledge.', '知识。', 'знания.');
+  const tutorialFinishLabel = uiText(language, '종료', 'Finish', '完成', 'Готово');
+  const tutorialExitLabel = uiText(language, '튜토리얼 종료', 'Exit Tutorial', '退出教程', 'Выйти из обучения');
+  const tutorialNextLabel = uiText(language, '다음 >>', 'Next >>', '下一步 >>', 'Далее >>');
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -1329,7 +1414,7 @@ function App() {
 
   // ===== 본게임 =====
   const eraName = t(ERA_NAME_KEYS[era] ?? 'era.ancient', language);
-  const historyLabel = uiText(language, '히스토리', 'History', '历史');
+  const historyLabel = uiText(language, '히스토리', 'History', '历史', 'История');
 
   const knowledgeRequired = getKnowledgeRequiredForLevel(Math.min(level, 29));
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
@@ -1689,7 +1774,7 @@ function App() {
                 className="endgame-btn"
                 onClick={handleGameOverContinue}
               >
-                {uiText(language, '계속', 'Continue', '继续')}
+                {uiText(language, '계속', 'Continue', '继续', 'Продолжить')}
               </button>
               </>
             )}
@@ -1705,7 +1790,7 @@ function App() {
             <div className="endgame-subtitle">{t('game.turn', language)} {turn}</div>
             {lastLeaderProgressAward ? (
               <div className="endgame-leader-xp">
-                <span>{uiText(language, '지도자 경험치', 'Leader XP', '领袖经验值')}</span>
+                <span>{uiText(language, '지도자 경험치', 'Leader XP', '领袖经验值', 'Опыт лидера')}</span>
                 <strong>+{lastLeaderProgressAward?.xpAwarded}</strong>
                 <small>
                   {t('leaderProgress.currentLevel', language).replace('{level}', String(lastLeaderProgressAward?.next.level ?? 1))}
@@ -1741,7 +1826,7 @@ function App() {
                   className="endgame-btn endgame-btn--victory"
                   onClick={handleVictoryContinue}
                 >
-                  {uiText(language, '계속', 'Continue', '继续')}
+                  {uiText(language, '계속', 'Continue', '继续', 'Продолжить')}
                 </button>
               </>
             )}

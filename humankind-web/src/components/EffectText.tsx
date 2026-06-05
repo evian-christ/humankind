@@ -8,9 +8,9 @@ interface EffectTextProps {
 type ResourceKind = 'food' | 'gold' | 'knowledge';
 
 const getResourceKind = (word: string): ResourceKind | null => {
-    if (/^(Food|식량|食物)$/iu.test(word)) return 'food';
-    if (/^(Gold|골드|金币)$/iu.test(word)) return 'gold';
-    if (/^(Knowledge|지식|知识)$/iu.test(word)) return 'knowledge';
+    if (/^(Food|식량|食物|еда|еды|еду)$/iu.test(word)) return 'food';
+    if (/^(Gold|골드|金币|золото|золота)$/iu.test(word)) return 'gold';
+    if (/^(Knowledge|지식|知识|знание|знания|знаний)$/iu.test(word)) return 'knowledge';
     return null;
 };
 
@@ -24,7 +24,7 @@ export const EffectText: React.FC<EffectTextProps> = ({ text }) => {
 
     const outline = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
 
-    const resourceWord = String.raw`Food|Gold|Knowledge|식량|골드|지식|食物|金币|知识`;
+    const resourceWord = String.raw`Food|Gold|Knowledge|식량|골드|지식|食物|金币|知识|еда|еды|еду|золото|золота|знание|знания|знаний`;
     const number = String.raw`[+-]?\d+(?:\.\d+)?`;
     const regex = new RegExp(
         [

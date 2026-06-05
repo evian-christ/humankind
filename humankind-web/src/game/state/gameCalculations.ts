@@ -212,18 +212,20 @@ export const getTimelineYearForTurn = (turn: number): number => {
     return last.year;
 };
 
-export const formatTimelineYear = (year: number, language: 'en' | 'ko' | 'zh' = 'en'): string => {
+export const formatTimelineYear = (year: number, language: 'en' | 'ko' | 'zh' | 'ru' = 'en'): string => {
     const normalizedYear = Math.trunc(year);
-    const locale = language === 'ko' ? 'ko-KR' : language === 'zh' ? 'zh-CN' : 'en-US';
+    const locale = language === 'ko' ? 'ko-KR' : language === 'zh' ? 'zh-CN' : language === 'ru' ? 'ru-RU' : 'en-US';
     const numberFormatter = new Intl.NumberFormat(locale);
     if (normalizedYear < 0) {
         const value = numberFormatter.format(Math.abs(normalizedYear));
         if (language === 'zh') return `公元前${value}年`;
+        if (language === 'ru') return `${value} до н. э.`;
         return language === 'ko' ? `BC${value}년` : `${value} BC`;
     }
 
     const value = numberFormatter.format(Math.max(1, normalizedYear));
     if (language === 'zh') return `公元${value}年`;
+    if (language === 'ru') return `${value} н. э.`;
     return language === 'ko' ? `${value}년` : `AD ${value}`;
 };
 

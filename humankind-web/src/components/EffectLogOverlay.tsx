@@ -75,7 +75,47 @@ const slotLabel = (slot?: { x: number; y: number }, language?: Language) => {
     return language === 'ko' ? `${idx}번 칸` : `S${String(idx).padStart(2, '0')}`;
 };
 
-const text = (language: Language, ko: string, en: string) => language === 'ko' ? ko : en;
+const RU_TEXT: Record<string, string> = {
+    All: 'Все',
+    Resources: 'Ресурсы',
+    Choices: 'Выбор',
+    Symbols: 'Символы',
+    Relics: 'Реликвии',
+    Combat: 'Бой',
+    Threats: 'Угрозы',
+    Research: 'Исследования',
+    Shop: 'Лавка',
+    Board: 'Поле',
+    Turn: 'Ход',
+    Start: 'Старт',
+    Symbol: 'Символ',
+    Finish: 'Финиш',
+    End: 'Конец',
+    Relic: 'Реликвия',
+    Choice: 'Выбор',
+    Threat: 'Угроза',
+    System: 'Система',
+    'Destroyed symbols': 'Уничтоженные символы',
+    'Spawned threats': 'Появившиеся угрозы',
+    'Added symbols': 'Добавленные символы',
+    'Threat appeared': 'Появилась угроза',
+    'Rerolled choices': 'Варианты переброшены',
+    'Skipped symbol choice': 'Выбор символа пропущен',
+    'Player action': 'Действие игрока',
+    'Shop action': 'Действие лавки',
+    'Relic event': 'Событие реликвии',
+    'Symbols destroyed': 'Символы уничтожены',
+    'Opened loot': 'Добыча открыта',
+    'Loot reward': 'Награда добычи',
+    'System event': 'Системное событие',
+    'No extra change': 'Нет дополнительных изменений',
+    'Turn history': 'История ходов',
+    'No history matches the current view.': 'Нет записей для текущего вида.',
+    Close: 'Закрыть',
+};
+
+const text = (language: Language, ko: string, en: string, ru?: string) =>
+    language === 'ko' ? ko : language === 'ru' ? (ru ?? RU_TEXT[en] ?? en) : en;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value != null && !Array.isArray(value);
@@ -576,7 +616,9 @@ const EffectLogOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     const eventLog = useGameStore(s => s.eventLog);
     const currentTurn = useGameStore(s => s.turn);
     const language = useSettingsStore(s => s.language);
-    const logTitle = text(language, `히스토리 - 턴 ${currentTurn}`, `History - Turn ${currentTurn}`);
+    const logTitle = language === 'ru'
+        ? `История - ход ${currentTurn}`
+        : text(language, `히스토리 - 턴 ${currentTurn}`, `History - Turn ${currentTurn}`);
     const closeLabel = text(language, '닫기', 'Close');
 
     useRegisterBoardTooltipBlock('effect-log-overlay', isOpen);
@@ -671,7 +713,12 @@ const EffectLogOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                         className="effect-history-search"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder={text(language, '심볼, 유물, 자원, 턴 번호로 찾기...', 'Search symbol, relic, resource, or turn...')}
+                        placeholder={text(
+                            language,
+                            '심볼, 유물, 자원, 턴 번호로 찾기...',
+                            'Search symbol, relic, resource, or turn...',
+                            'Поиск по символу, реликвии, ресурсу или номеру хода...',
+                        )}
                     />
                     <div className="effect-history-filter-row">
                         {FILTERS.map((item) => {
