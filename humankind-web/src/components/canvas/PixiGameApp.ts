@@ -52,6 +52,16 @@ const ACTIVE_SYMBOL_ASCENT_MS: Record<SettingsState['effectSpeed'], number> = {
     '4x': 75,
     instant: 0,
 };
+const PRODUCTION_STICKER_DEPTH = 0.11;
+const PRODUCTION_STICKER_LIFT = 0.05;
+const PRODUCTION_STICKER_DRIFT_X = 0.14;
+const PRODUCTION_STICKER_DRIFT_Y = 0.18;
+const PRODUCTION_STICKER_FLOAT_TIME_SCALE: Record<SettingsState['effectSpeed'], number> = {
+    '1x': 1,
+    '2x': 1.35,
+    '4x': 1.8,
+    instant: 1,
+};
 
 const clampPlaybackRate = (value: number) => Math.min(4, Math.max(0.25, value));
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -63,6 +73,20 @@ const easeOutBack = (t: number) => {
 const easeInOutCubic = (t: number) =>
     t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+const shortestAngleDelta = (from: number, to: number) =>
+    Math.atan2(Math.sin(to - from), Math.cos(to - from));
+const seededSignedValue = (seed: number, index: number) => {
+    const value = Math.sin(seed * 91.3458 + index * 47.853) * 43758.5453;
+    return (value - Math.floor(value)) * 2 - 1;
+};
+const getSmoothRandomShift = (seed: number, elapsedMs: number, segmentMs: number) => {
+    const segment = Math.floor(elapsedMs / segmentMs);
+    const t = smoothstep((elapsedMs % segmentMs) / segmentMs);
+    const from = seededSignedValue(seed, segment);
+    const to = seededSignedValue(seed, segment + 1);
+    return from + (to - from) * t;
+};
 
 function getNowMs() {
     return typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
@@ -203,6 +227,13 @@ export class PixiGameApp {
     private productionScaleMotions = new Map<string, {
         targetScale: number;
         growStartedAtMs: number;
+        floatSpeed: number;
+        driftStrength: number;
+        driftSeedX: number;
+        driftSeedY: number;
+        tiltStartAngle: number;
+        tiltEndAngle: number;
+        tiltDirectionProgressAtRelease?: number;
         releaseStartedAtMs?: number;
         releaseFromScale?: number;
     }>();
@@ -278,6 +309,13 @@ export class PixiGameApp {
         motion: {
             targetScale: number;
             growStartedAtMs: number;
+            floatSpeed: number;
+            driftStrength: number;
+            driftSeedX: number;
+            driftSeedY: number;
+            tiltStartAngle: number;
+            tiltEndAngle: number;
+            tiltDirectionProgressAtRelease?: number;
             releaseStartedAtMs?: number;
             releaseFromScale?: number;
         },
@@ -316,6 +354,12 @@ export class PixiGameApp {
                 this.productionScaleMotions.set(activeKey, {
                     targetScale: activeTargetScale,
                     growStartedAtMs: now,
+                    floatSpeed: 0.82 + Math.random() * 0.32,
+                    driftStrength: 0.9 + Math.random() * 0.4,
+                    driftSeedX: Math.random() * 1000,
+                    driftSeedY: Math.random() * 1000,
+                    tiltStartAngle: Math.random() * Math.PI * 2,
+                    tiltEndAngle: Math.random() * Math.PI * 2,
                 });
             }
         }
@@ -325,6 +369,12 @@ export class PixiGameApp {
             const isCurrentActive = key === activeKey && activeTargetScale > 1;
             if (!isCurrentActive && motion.releaseStartedAtMs == null) {
                 motion.releaseFromScale = this.getProductionScaleMotionValue(motion, effectSpeed, now);
+                const directionInMs = Math.max(
+                    1,
+                    PRODUCTION_HIGHLIGHT_SCALE_IN_MS[effectSpeed] + EFFECT_SPEED_DELAY[effectSpeed],
+                );
+                motion.tiltDirectionProgressAtRelease = 0.72
+                    * easeInOutCubic(clamp01((now - motion.growStartedAtMs) / directionInMs));
                 motion.releaseStartedAtMs = now;
             }
 
@@ -334,10 +384,45 @@ export class PixiGameApp {
         }
     }
 
-    private getProductionScaleForCell(x: number, y: number, effectSpeed: SettingsState['effectSpeed']) {
+    private getProductionStickerMotionForCell(x: number, y: number, effectSpeed: SettingsState['effectSpeed']) {
         const motion = this.productionScaleMotions.get(`${x}:${y}`);
-        if (!motion) return 1;
-        return this.getProductionScaleMotionValue(motion, effectSpeed, getNowMs());
+        if (!motion) return { scale: 1, tilt: 0, orbitX: 0, orbitY: 0, driftX: 0, driftY: 0 };
+
+        const now = getNowMs();
+        const scale = this.getProductionScaleMotionValue(motion, effectSpeed, now);
+        const scaleRange = Math.max(0.0001, motion.targetScale - 1);
+        const normalizedScale = clamp01((scale - 1) / scaleRange);
+        const tilt = motion.releaseStartedAtMs == null
+            ? Math.sqrt(normalizedScale)
+            : normalizedScale * normalizedScale;
+        const floatTime = (now - motion.growStartedAtMs)
+            * PRODUCTION_STICKER_FLOAT_TIME_SCALE[effectSpeed]
+            * motion.floatSpeed;
+        const directionInMs = Math.max(
+            1,
+            PRODUCTION_HIGHLIGHT_SCALE_IN_MS[effectSpeed] + EFFECT_SPEED_DELAY[effectSpeed],
+        );
+        let directionProgress = 0.72 * easeInOutCubic(clamp01((now - motion.growStartedAtMs) / directionInMs));
+        if (motion.releaseStartedAtMs != null) {
+            const releaseT = clamp01(
+                (now - motion.releaseStartedAtMs)
+                / Math.max(1, PRODUCTION_HIGHLIGHT_SCALE_OUT_MS[effectSpeed]),
+            );
+            const releaseFrom = motion.tiltDirectionProgressAtRelease ?? directionProgress;
+            directionProgress = releaseFrom + (1 - releaseFrom) * easeInOutCubic(releaseT);
+        }
+        const tiltAngle = motion.tiltStartAngle
+            + shortestAngleDelta(motion.tiltStartAngle, motion.tiltEndAngle) * directionProgress;
+        const driftX = getSmoothRandomShift(motion.driftSeedX, floatTime, 460) * motion.driftStrength * tilt;
+        const driftY = getSmoothRandomShift(motion.driftSeedY, floatTime, 540) * motion.driftStrength * tilt;
+        return {
+            scale,
+            tilt,
+            orbitX: Math.cos(tiltAngle),
+            orbitY: Math.sin(tiltAngle),
+            driftX,
+            driftY,
+        };
     }
 
     private drawBackGlow(
@@ -998,7 +1083,11 @@ export class PixiGameApp {
                 const activeMotion = isActive
                     ? this.getActiveSlotMotion(cellHeight, settings.effectSpeed)
                     : { x: 0, y: 0, shadowScale: 0, shadowAlpha: 0 };
-                const activeProductionScale = this.getProductionScaleForCell(x, y, settings.effectSpeed);
+                const productionStickerMotion = this.getProductionStickerMotionForCell(x, y, settings.effectSpeed);
+                const activeProductionScale = productionStickerMotion.scale;
+                const productionStickerTilt = productionStickerMotion.tilt;
+                const productionStickerOrbitX = productionStickerMotion.orbitX;
+                const productionStickerOrbitY = productionStickerMotion.orbitY;
                 const activeOffsetX = activeMotion.x;
                 const activeOffsetY = activeMotion.y;
                 // phase 2일 때만 contributor 위아래 2회 왔다갔다 (phase 3에서는 wobble 없음)
@@ -1044,15 +1133,56 @@ export class PixiGameApp {
                     const SPRITE_PX = 32;
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
-                    const sprite = PIXI.Sprite.from(spritePath);
-                    sprite.x = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
-                    sprite.y = cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
-                    sprite.anchor.set(0.5);
-                    sprite.width = spriteSize * activeProductionScale;
-                    sprite.height = spriteSize * activeProductionScale;
-                    sprite.alpha = symbolAlpha;
-                    if (isContrib) sprite.tint = contribGreenTint;
-                    drawTarget.addChild(sprite);
+                    const spriteCenterX = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
+                    const spriteCenterY = cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
+                    const texture = PIXI.Texture.from(spritePath);
+                    if (productionStickerTilt > 0) {
+                        const halfSize = spriteSize * activeProductionScale / 2;
+                        const projectCorner = (cornerX: number, cornerY: number) => {
+                            const depth = (
+                                productionStickerOrbitX * cornerX
+                                + productionStickerOrbitY * cornerY
+                            ) * productionStickerTilt;
+                            const perspectiveScale = 1 + depth * PRODUCTION_STICKER_DEPTH;
+                            return {
+                                x: cornerX * halfSize * perspectiveScale,
+                                y: cornerY * halfSize * perspectiveScale
+                                    - depth * spriteSize * PRODUCTION_STICKER_LIFT,
+                            };
+                        };
+                        const topLeft = projectCorner(-1, -1);
+                        const topRight = projectCorner(1, -1);
+                        const bottomRight = projectCorner(1, 1);
+                        const bottomLeft = projectCorner(-1, 1);
+                        const mesh = new PIXI.PerspectiveMesh({
+                            texture,
+                            verticesX: 6,
+                            verticesY: 6,
+                        });
+                        mesh.setCorners(
+                            topLeft.x, topLeft.y,
+                            topRight.x, topRight.y,
+                            bottomRight.x, bottomRight.y,
+                            bottomLeft.x, bottomLeft.y,
+                        );
+                        mesh.x = spriteCenterX
+                            + productionStickerMotion.driftX * spriteSize * PRODUCTION_STICKER_DRIFT_X;
+                        mesh.y = spriteCenterY
+                            + productionStickerMotion.driftY * spriteSize * PRODUCTION_STICKER_DRIFT_Y;
+                        mesh.alpha = symbolAlpha;
+                        if (isContrib) mesh.tint = contribGreenTint;
+                        drawTarget.addChild(mesh);
+                    } else {
+                        const sprite = new PIXI.Sprite(texture);
+                        sprite.anchor.set(0.5);
+                        sprite.x = spriteCenterX;
+                        sprite.y = spriteCenterY;
+                        sprite.width = spriteSize;
+                        sprite.height = spriteSize;
+                        sprite.alpha = symbolAlpha;
+                        if (isContrib) sprite.tint = contribGreenTint;
+                        drawTarget.addChild(sprite);
+                    }
                 } else {
                     const symName = t(`symbol.${symDef.key}.name`, lang);
                     const fillColor = isContrib ? '#90ee90' : rarityColor;
@@ -1064,6 +1194,7 @@ export class PixiGameApp {
                     nameText.x = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
                     nameText.y = cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
                     nameText.scale.set(activeProductionScale);
+                    nameText.skew.set(-0.16 * productionStickerTilt, 0.06 * productionStickerTilt);
                     nameText.alpha = symbolAlpha;
                     drawTarget.addChild(nameText);
                 }
