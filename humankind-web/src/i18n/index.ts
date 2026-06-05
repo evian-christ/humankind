@@ -60,6 +60,10 @@ import {
     eraScaleIndex,
 } from '../game/data/eventDefinitions';
 import { ZH_TRANSLATIONS } from './zh';
+import { RU_TRANSLATIONS } from './ru';
+import {
+    getRussianFallback,
+} from './ruFallback';
 
 const translations: Partial<Record<Language, Record<string, string>>> & Record<'en' | 'ko', Record<string, string>> = {
     en: {
@@ -79,6 +83,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'settings.lang.en': 'English',
         'settings.lang.ko': 'Korean',
         'settings.lang.zh': 'Chinese',
+        'settings.lang.ru': 'Russian',
         'settings.tab.gameplay': 'Gameplay',
         'settings.tab.graphics': 'Graphics',
         'settings.tab.general': 'General',
@@ -1058,6 +1063,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'settings.lang.en': '영어',
         'settings.lang.ko': '한국어',
         'settings.lang.zh': '중국어',
+        'settings.lang.ru': '러시아어',
         'settings.tab.gameplay': '게임플레이',
         'settings.tab.graphics': '그래픽',
         'settings.tab.general': '일반',
@@ -2008,6 +2014,10 @@ translations.zh = {
     ...ZH_TRANSLATIONS,
 };
 
+translations.ru = {
+    ...RU_TRANSLATIONS,
+};
+
 /** 지식 카드 ‘적용 전’: 해당 업그레이드 ID를 제외한 보유 연구 기준 */
 export function unlocksExcluding(unlocked: readonly number[] | undefined, omitId: number): number[] {
     return (unlocked ?? []).map(Number).filter((id) => id !== omitId);
@@ -2395,8 +2405,64 @@ export function getBoardSymbolTooltipDesc(
     return t('symbol.rice.desc', lang);
 }
 
+const RU_FALLBACK_REPLACEMENTS: Array<[RegExp, string]> = [
+    [/Food/g, 'еды'],
+    [/Gold/g, 'золота'],
+    [/Knowledge/g, 'знаний'],
+    [/Relic Shop/g, 'лавка реликвий'],
+    [/Relics/g, 'реликвии'],
+    [/Relic/g, 'реликвия'],
+    [/Knowledge Upgrades/g, 'улучшения знаний'],
+    [/Knowledge Upgrade/g, 'улучшение знаний'],
+    [/Symbols/g, 'символы'],
+    [/Symbol/g, 'символ'],
+    [/Enemies/g, 'враги'],
+    [/Enemy/g, 'враг'],
+    [/Attack/g, 'атака'],
+    [/Defense/g, 'защита'],
+    [/HP/g, 'ОЗ'],
+    [/turns/g, 'ходов'],
+    [/turn/g, 'ход'],
+    [/on the board/g, 'на поле'],
+    [/the board/g, 'поле'],
+    [/adjacent/g, 'соседний'],
+    [/per/g, 'за'],
+    [/Every/g, 'Каждые'],
+    [/every/g, 'каждые'],
+    [/When/g, 'Когда'],
+    [/when/g, 'когда'],
+    [/chance/g, 'шанс'],
+    [/produces/g, 'производит'],
+    [/gain/g, 'получают'],
+    [/gains/g, 'получает'],
+    [/Unlocks at/g, 'Открывается на'],
+    [/Needs/g, 'Требуется'],
+    [/Choose/g, 'Выберите'],
+    [/Gain/g, 'Получить'],
+    [/gain/g, 'получить'],
+    [/Destroy/g, 'Уничтожить'],
+    [/destroy/g, 'уничтожить'],
+    [/random/g, 'случайный'],
+    [/additional/g, 'дополнительно'],
+    [/base production/g, 'базовое производство'],
+    [/Base production/g, 'Базовое производство'],
+    [/Ancient Era/g, 'Древняя эпоха'],
+    [/Medieval Age/g, 'Средневековье'],
+    [/Modern Age/g, 'Современная эпоха'],
+];
+
+function russianizeFallback(value: string): string {
+    return RU_FALLBACK_REPLACEMENTS.reduce((text, [pattern, replacement]) => (
+        text.replace(pattern, replacement)
+    ), value);
+}
+
 export function t(key: string, lang: Language): string {
-    return translations[lang]?.[key] ?? translations['en'][key] ?? key;
+    const translated = translations[lang]?.[key];
+    if (translated != null) return translated;
+    const english = translations['en'][key];
+    if (lang === 'ru') return getRussianFallback(key, english) ?? (english != null ? russianizeFallback(english) : key);
+    return english ?? key;
 }
 
 const ERA_DESC_SUFFIX = ['ancient', 'medieval', 'modern'] as const;

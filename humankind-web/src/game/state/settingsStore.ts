@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { audioManager } from '../../audio/audioManager';
 
-export type Language = 'en' | 'ko' | 'zh';
+export type Language = 'en' | 'ko' | 'zh' | 'ru';
 export type EffectSpeed = '1x' | '2x' | '4x' | 'instant';
 export type SpinSpeed = '1x' | '2x' | '4x' | 'instant';
 export type ScreenMode = 'windowed' | 'fullscreen' | 'borderless';
@@ -133,7 +133,8 @@ const storage = (): Storage | null => {
 
 const hasSavedSettings = () => storage()?.getItem(SETTINGS_KEY) != null;
 
-const isLanguage = (value: unknown): value is Language => value === 'en' || value === 'ko' || value === 'zh';
+const isLanguage = (value: unknown): value is Language =>
+    value === 'en' || value === 'ko' || value === 'zh' || value === 'ru';
 const isEffectSpeed = (value: unknown): value is EffectSpeed =>
     value === '1x' || value === '2x' || value === '4x' || value === 'instant';
 const isSpinSpeed = (value: unknown): value is SpinSpeed =>
@@ -149,9 +150,11 @@ function mapLocaleToLanguage(locale: string | null | undefined): Language | null
     const normalized = locale.trim().toLowerCase().replace('_', '-');
     if (normalized.startsWith('ko')) return 'ko';
     if (normalized.startsWith('zh') || normalized.includes('chinese')) return 'zh';
+    if (normalized.startsWith('ru') || normalized === 'russian') return 'ru';
     if (normalized.startsWith('en') || normalized === 'english') return 'en';
     if (normalized === 'koreana' || normalized === 'korean') return 'ko';
     if (normalized === 'schinese' || normalized === 'tchinese') return 'zh';
+    if (normalized === 'russian') return 'ru';
     return null;
 }
 

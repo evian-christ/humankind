@@ -8,10 +8,11 @@ import { useRelicStore } from '../game/state/relicStore';
 import { clearSavedGame } from '../game/state/saveGame';
 import { clearLeaderProgress } from '../game/data/leaders';
 
-const LANGUAGE_OPTIONS: { value: Language; labelKey: string }[] = [
-    { value: 'en', labelKey: 'settings.lang.en' },
-    { value: 'ko', labelKey: 'settings.lang.ko' },
-    { value: 'zh', labelKey: 'settings.lang.zh' },
+const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+    { value: 'en', label: 'English' },
+    { value: 'ko', label: '한국어' },
+    { value: 'zh', label: '中文' },
+    { value: 'ru', label: 'Русский' },
 ];
 
 const EFFECT_SPEED_OPTIONS: { value: EffectSpeed; label: string }[] = [
@@ -296,7 +297,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                                             >
                                                 {LANGUAGE_OPTIONS.map((opt) => (
                                                     <option key={opt.value} value={opt.value}>
-                                                        {t(opt.labelKey, language)}
+                                                        {opt.label}
                                                     </option>
                                                 ))}
                                             </select>
