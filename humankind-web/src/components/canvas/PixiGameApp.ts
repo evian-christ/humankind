@@ -34,6 +34,9 @@ import {
     PRODUCTION_HIGHLIGHT_SCALE_IN_MS,
     PRODUCTION_HIGHLIGHT_SCALE_OUT_MS,
 } from './productionHighlightScale';
+import { createCrtScreenFilter } from './CrtScreenFilter';
+import { mapCrtOutputToSource, mapCrtSourceToOutput } from './crtProjection';
+import { BOARD_DISPLAY_SCALE } from '../../game/layout/boardPixelLayout';
 
 const SPIN_AUDIO_ESTIMATE_TICK_MS = 1000 / 60;
 const CONTRIBUTOR_WOBBLE_SECOND_SOUND_MS = 140;
@@ -178,6 +181,7 @@ export class PixiGameApp {
     private canvas: HTMLDivElement;
     private destroyed = false;
     private contextLost = false;
+    private crtFilter: PIXI.Filter | null = null;
     /** init() 완료 전 destroy 시 ResizePlugin 등이 미초기화라 Pixi destroy가 터질 수 있음 (React Strict Mode 등) */
     private pixiInitComplete = false;
 
@@ -498,7 +502,14 @@ export class PixiGameApp {
     ) {
         this.app = new PIXI.Application();
         this.canvas = canvas;
-        this.onHoverSymbol = onHoverSymbol;
+        this.onHoverSymbol = (symbol) => {
+            if (!symbol) {
+                onHoverSymbol(null);
+                return;
+            }
+            const projected = this.projectScreenPoint(symbol.screenX, symbol.screenY);
+            onHoverSymbol({ ...symbol, screenX: projected.x, screenY: projected.y });
+        };
         this.onHoverHudStat = onHoverHudStat;
         this.hitContainer.eventMode = 'static';
         this.boardRenderer = new BoardRenderer({
@@ -512,14 +523,35 @@ export class PixiGameApp {
             bgContainer: this.bgContainer,
             hitContainer: this.hitContainer,
             floatingTextRenderer: this.floatingTextRenderer,
-            onHoverRelic,
+            onHoverRelic: (relic) => {
+                if (!relic) {
+                    onHoverRelic(null);
+                    return;
+                }
+                const projected = this.projectScreenPoint(relic.screenX, relic.screenY);
+                onHoverRelic({ ...relic, screenX: projected.x, screenY: projected.y });
+            },
         });
         this.statusRenderer = new StatusRenderer({
             bgContainer: this.bgContainer,
             hitContainer: this.hitContainer,
-            onHoverStatus,
+            onHoverStatus: (status) => {
+                if (!status) {
+                    onHoverStatus(null);
+                    return;
+                }
+                const projected = this.projectScreenPoint(status.screenX, status.screenY);
+                onHoverStatus({ ...status, screenX: projected.x, screenY: projected.y });
+            },
         });
-        this.upgradeRenderer = new UpgradeRenderer(onHoverUpgrade);
+        this.upgradeRenderer = new UpgradeRenderer((upgrade) => {
+            if (!upgrade) {
+                onHoverUpgrade(null);
+                return;
+            }
+            const projected = this.projectScreenPoint(upgrade.screenX, upgrade.screenY);
+            onHoverUpgrade({ ...upgrade, screenX: projected.x, screenY: projected.y });
+        });
         audioManager.registerCue('spin_loop', DEFAULT_AUDIO_CUES.spin_loop);
         audioManager.registerCue('cow_butcher', DEFAULT_AUDIO_CUES.cow_butcher);
     }
@@ -533,6 +565,7 @@ export class PixiGameApp {
         await this.app.init({
             background: '#000000',
             antialias: false,
+            preference: 'webgl',
             roundPixels: true,
         });
         this.pixiInitComplete = true;
@@ -562,6 +595,10 @@ export class PixiGameApp {
         this.app.stage.addChild(this.floatContainer);
         this.app.stage.addChild(this.hitContainer);
         this.app.stage.addChild(this.hudTopContainer);
+        this.crtFilter = createCrtScreenFilter();
+        this.app.stage.filters = [this.crtFilter];
+        this.updateCrtFilterArea();
+        this.installCrtPointerMapping();
 
         this.app.ticker.add((ticker) => this.onTick(ticker));
     }
@@ -573,6 +610,8 @@ export class PixiGameApp {
             try {
                 if (this.pixiInitComplete && this.app.renderer) {
                     this.removeContextListeners();
+                    this.crtFilter?.destroy();
+                    this.crtFilter = null;
                     if (this.app.resizeTo) (this.app as unknown as { resizeTo?: unknown }).resizeTo = null;
                     this.app.destroy(true);
                 }
@@ -592,7 +631,40 @@ export class PixiGameApp {
     public resize(width: number, height: number) {
         if (!this.destroyed && !this.contextLost && this.app && this.app.renderer) {
             this.app.renderer.resize(width, height);
+            this.updateCrtFilterArea();
         }
+    }
+
+    private updateCrtFilterArea() {
+        if (!this.app?.screen) return;
+        this.app.stage.filterArea = new PIXI.Rectangle(
+            0,
+            0,
+            this.app.screen.width,
+            this.app.screen.height,
+        );
+    }
+
+    private installCrtPointerMapping() {
+        const events = this.app.renderer.events;
+        const mapPositionToPoint = events.mapPositionToPoint.bind(events);
+        events.mapPositionToPoint = (point, clientX, clientY) => {
+            mapPositionToPoint(point, clientX, clientY);
+            const mapped = mapCrtOutputToSource(
+                point.x,
+                point.y,
+                this.app.screen.width,
+                this.app.screen.height,
+            );
+            point.x = mapped.x;
+            point.y = mapped.y;
+        };
+    }
+
+    private projectScreenPoint(x: number, y: number) {
+        const width = this.app.screen?.width || this.canvas.clientWidth || 1920;
+        const height = this.app.screen?.height || this.canvas.clientHeight || 1080;
+        return mapCrtSourceToOutput(x, y, width, height);
     }
 
     /** 오버레이 열림 등으로 보드 툴팁을 끌 때 HUD 스냅샷도 초기화 */
@@ -794,10 +866,11 @@ export class PixiGameApp {
             gridOffsetY,
             colGap,
             scale,
+            viewScale,
         } = frame;
         const lang = settings.language;
         const fontFamily = frame.fontFamily;
-        const fs = 1;
+        const fs = BOARD_DISPLAY_SCALE;
         const rowGap = frame.rowGap;
 
         // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
@@ -932,8 +1005,12 @@ export class PixiGameApp {
                     !!state.preCombatShakeTarget &&
                     state.preCombatShakeTarget.x === x &&
                     state.preCombatShakeTarget.y === y;
-                const preShakeX = isPreCombatShakeTarget ? Math.sin(Date.now() / 22) * 5 : 0;
-                const preShakeY = isPreCombatShakeTarget ? Math.cos(Date.now() / 18) * 4 : 0;
+                const preShakeX = isPreCombatShakeTarget
+                    ? Math.sin(Date.now() / 22) * 5 * BOARD_DISPLAY_SCALE
+                    : 0;
+                const preShakeY = isPreCombatShakeTarget
+                    ? Math.cos(Date.now() / 18) * 4 * BOARD_DISPLAY_SCALE
+                    : 0;
 
                 const symDef = symbol.definition;
                 const canButcherPasture =
@@ -974,9 +1051,9 @@ export class PixiGameApp {
                     cellRoot.hitArea = new PIXI.Rectangle(0, 0, cellWidth, cellHeight);
 
                     // OblivionFurnaceBoardOverlay «제거» 버튼과 동일 스타일
-                    const btnFs = Math.max(15, 18 * scale);
-                    const btnPadY = Math.max(8, 10 * scale);
-                    const btnPadX = Math.max(18, 22 * scale);
+                    const btnFs = Math.max(12, 18 * scale);
+                    const btnPadY = Math.max(6.4, 10 * scale);
+                    const btnPadX = Math.max(14.4, 22 * scale);
                     const btnLabel = canButcherPasture
                         ? t('cattleButcher.button', lang)
                         : canUseEdict
@@ -1001,7 +1078,7 @@ export class PixiGameApp {
                     const btnBg = new PIXI.Graphics();
                     btnBg.rect(-bw / 2, -bh / 2, bw, bh);
                     btnBg.fill({ color: 0xb91c1c, alpha: 1 });
-                    btnBg.stroke({ width: 3, color: 0xfca5a5, alpha: 1 });
+                    btnBg.stroke({ width: 3 * BOARD_DISPLAY_SCALE, color: 0xfca5a5, alpha: 1 });
 
                     const actionBtn = new PIXI.Container();
                     actionBtn.addChild(btnBg);
@@ -1091,7 +1168,9 @@ export class PixiGameApp {
                 const activeOffsetX = activeMotion.x;
                 const activeOffsetY = activeMotion.y;
                 // phase 2일 때만 contributor 위아래 2회 왔다갔다 (phase 3에서는 wobble 없음)
-                const wobbleY = isContrib && state.effectPhase === 2 ? Math.sin(this.contributorWobbleTime * (4 * Math.PI / 280)) * 10 : 0;
+                const wobbleY = isContrib && state.effectPhase === 2
+                    ? Math.sin(this.contributorWobbleTime * (4 * Math.PI / 280)) * 10 * BOARD_DISPLAY_SCALE
+                    : 0;
                 const contribGreenTint = isContrib ? 0x90ee90 : 0xffffff; // 밝은 초록
 
                 // active 심볼: 들린 것 + 바로 아랫쪽에 픽셀 느낌 화살표(머리만, ▲, 밝은 연두 + 검은 테두리)
@@ -1124,7 +1203,7 @@ export class PixiGameApp {
                     arrowG.lineTo(cx + s, base + s);
                     arrowG.closePath();
                     arrowG.fill({ color: 0x7cff7c, alpha: 0.98 });
-                    arrowG.stroke({ color: 0x000000, width: 2, alpha: 1 });
+                    arrowG.stroke({ color: 0x000000, width: 2 * BOARD_DISPLAY_SCALE, alpha: 1 });
                     this.effectsContainer.addChild(arrowG);
                 }
 
@@ -1188,7 +1267,12 @@ export class PixiGameApp {
                     const fillColor = isContrib ? '#90ee90' : rarityColor;
                     const nameText = new PIXI.Text({
                         text: symName,
-                        style: new PIXI.TextStyle({ fill: fillColor, fontSize: 32 * fs, fontFamily, stroke: { color: '#000000', width: 2 } }),
+                        style: new PIXI.TextStyle({
+                            fill: fillColor,
+                            fontSize: 32 * fs,
+                            fontFamily,
+                            stroke: { color: '#000000', width: 2 * fs },
+                        }),
                     });
                     nameText.anchor.set(0.5);
                     nameText.x = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
@@ -1205,11 +1289,11 @@ export class PixiGameApp {
                     if (perm > 0) {
                         const permText = new PIXI.Text({
                             text: `+${perm}`,
-                            style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                            style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
                         });
                         permText.anchor.set(0.5, 0.5);
-                        permText.x = cellX + 25 + activeOffsetX;
-                        permText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
+                        permText.x = cellX + 25 * fs + activeOffsetX;
+                        permText.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
                         drawTarget.addChild(permText);
                     }
                 }
@@ -1226,11 +1310,11 @@ export class PixiGameApp {
                 if (boardCounterOverlay) {
                     const counterText = new PIXI.Text({
                         text: boardCounterOverlay,
-                        style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                        style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
                     });
                     counterText.anchor.set(0.5, 0.5);
-                    counterText.x = cellX + cellWidth - 21 + activeOffsetX;
-                    counterText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
+                    counterText.x = cellX + cellWidth - 21 * fs + activeOffsetX;
+                    counterText.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
                     drawTarget.addChild(counterText);
                 }
 
@@ -1240,18 +1324,18 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: '#ff8c42', fontSize: 60 * fs, fontFamily }),
                     });
                     atkBg.anchor.set(0.5, 0.5);
-                    atkBg.x = cellX + 24 + activeOffsetX;
-                    atkBg.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
+                    atkBg.x = cellX + 24 * fs + activeOffsetX;
+                    atkBg.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
                     atkBg.alpha = 0.4;
                     drawTarget.addChild(atkBg);
 
                     const atkText = new PIXI.Text({
                         text: String(symDef.base_attack),
-                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
                     });
                     atkText.anchor.set(0.5, 0.5);
-                    atkText.x = cellX + 25 + activeOffsetX;
-                    atkText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
+                    atkText.x = cellX + 25 * fs + activeOffsetX;
+                    atkText.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
                     drawTarget.addChild(atkText);
                 }
 
@@ -1261,18 +1345,18 @@ export class PixiGameApp {
                         style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: 60 * fs, fontFamily }),
                     });
                     hpBg.anchor.set(0.5, 0.5);
-                    hpBg.x = cellX + cellWidth - 20 + activeOffsetX;
-                    hpBg.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
+                    hpBg.x = cellX + cellWidth - 20 * fs + activeOffsetX;
+                    hpBg.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
                     hpBg.alpha = 0.4;
                     drawTarget.addChild(hpBg);
 
                     const hpText = new PIXI.Text({
                         text: String(symbol.enemy_hp ?? symDef.base_hp),
-                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 } }),
+                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
                     });
                     hpText.anchor.set(0.5, 0.5);
-                    hpText.x = cellX + cellWidth - 21 + activeOffsetX;
-                    hpText.y = cellY + cellHeight - 24 + activeOffsetY + wobbleY;
+                    hpText.x = cellX + cellWidth - 21 * fs + activeOffsetX;
+                    hpText.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
                     drawTarget.addChild(hpText);
                 }
 
@@ -1340,16 +1424,16 @@ export class PixiGameApp {
         this.floatingTextRenderer.renderThreatFloats(state, floatLayout);
         this.floatingTextRenderer.resetKnowledgeUpgradeFloatCountIfEmpty(state);
 
-        this.hudRenderer.render(scale, w);
+        this.hudRenderer.render(viewScale, w);
         this.statusRenderer.render(
             state,
-            scale,
+            viewScale,
             startX + gridOffsetX,
             startY + gridOffsetY + BOARD_HEIGHT * cellHeight + (BOARD_HEIGHT - 1) * rowGap,
             w,
             fontFamily,
         );
-        this.relicRenderer.render(state, scale, w, fontFamily);
+        this.relicRenderer.render(state, viewScale, w, fontFamily);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
 

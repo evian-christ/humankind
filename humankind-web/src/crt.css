@@ -1,0 +1,116 @@
+.crt-display {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000000;
+  box-shadow:
+    inset 0 0 24px rgba(235, 255, 242, 0.08),
+    inset 0 0 82px rgba(0, 0, 0, 0.82);
+}
+
+.crt-content {
+  position: absolute;
+  inset: 0;
+}
+
+.crt-display .hud-top {
+  transform: perspective(1400px) rotateX(-1.5deg) scaleX(0.992);
+  transform-origin: 50% 0;
+}
+
+.crt-display .bottom-action-bar {
+  transform:
+    translateX(-50%)
+    perspective(1400px)
+    rotateX(1.8deg)
+    scaleX(0.992);
+  transform-origin: 50% 100%;
+}
+
+.crt-display :is(.demo-start-root, .leader-select-root, .leader-progress-root) {
+  transform: perspective(1600px) rotateX(0.45deg) scale(0.994);
+  transform-origin: 50% 50%;
+}
+
+.crt-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 99990;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(225, 245, 230, 0.11) 0,
+      rgba(225, 245, 230, 0.11) 1px,
+      rgba(0, 0, 0, 0.16) 1px,
+      rgba(0, 0, 0, 0.16) 3px,
+      rgba(0, 0, 0, 0.035) 3px,
+      rgba(0, 0, 0, 0.035) 4px
+    ),
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 55, 55, 0.025) 0,
+      rgba(255, 55, 55, 0.025) 1px,
+      rgba(55, 255, 125, 0.018) 1px,
+      rgba(55, 255, 125, 0.018) 2px,
+      rgba(70, 110, 255, 0.025) 2px,
+      rgba(70, 110, 255, 0.025) 3px
+    );
+  box-shadow:
+    inset 0 0 34px rgba(220, 245, 226, 0.12),
+    inset 0 0 105px rgba(0, 0, 0, 0.82),
+    inset 0 0 210px rgba(0, 0, 0, 0.54);
+}
+
+.crt-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 42%,
+      rgba(0, 0, 0, 0.1) 68%,
+      rgba(0, 0, 0, 0.58) 100%
+    );
+}
+
+.crt-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.39;
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0.19) 0%,
+      rgba(235, 255, 242, 0.075) 17%,
+      rgba(255, 255, 255, 0.015) 34%,
+      transparent 46%
+    ),
+    radial-gradient(
+      ellipse at 50% -24%,
+      rgba(225, 255, 235, 0.2),
+      rgba(220, 245, 228, 0.055) 34%,
+      transparent 66%
+    ),
+    radial-gradient(
+      ellipse at 8% 52%,
+      rgba(255, 255, 255, 0.08),
+      transparent 24%
+    );
+  animation: crt-glass-flicker 7s steps(1, end) infinite;
+}
+
+@keyframes crt-glass-flicker {
+  0%, 7%, 9%, 48%, 50%, 100% { opacity: 0.39; }
+  8% { opacity: 0.34; }
+  49% { opacity: 0.42; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-overlay::after {
+    animation: none;
+  }
+}

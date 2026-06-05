@@ -3,7 +3,11 @@ import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT } from '../game/state/gameStore
 import { SymbolType } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
-import { computeBoardPixelLayout, boardCellLocalRect } from '../game/layout/boardPixelLayout';
+import {
+    BOARD_DISPLAY_SCALE,
+    computeBoardPixelLayout,
+    boardCellLocalRect,
+} from '../game/layout/boardPixelLayout';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
 type Props = { anchorRef: RefObject<HTMLElement | null> };
@@ -89,13 +93,13 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     if (phase !== 'oblivion_furnace_board' || viewSize.w <= 0 || viewSize.h <= 0) return null;
 
     const layout = computeBoardPixelLayout(viewSize.w, viewSize.h);
-    const titleH = Math.max(28, 30 * layout.scale);
+    const titleH = Math.max(28 * BOARD_DISPLAY_SCALE, 30 * layout.scale);
     /** 슬롯 그리드 안쪽(흰 칸 영역) — 바깥 보드 패널 테두리/패딩 제외 */
     const innerLeft = layout.startX + layout.gridOffsetX;
     const innerWidth =
         BOARD_WIDTH * layout.cellWidth + (BOARD_WIDTH - 1) * layout.colGap;
     /** 세로는 보드 패널 밖(상단) — 가로만 슬롯 그리드와 맞춤 */
-    const gapAboveBoard = 6;
+    const gapAboveBoard = 6 * BOARD_DISPLAY_SCALE;
     const titleTop = Math.max(4, layout.startY - titleH - gapAboveBoard);
 
     const bl = layout.startX;
@@ -159,7 +163,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
             >
                 <span
                     style={{
-                        fontSize: Math.max(18, 22 * layout.scale),
+                        fontSize: Math.max(18 * BOARD_DISPLAY_SCALE, 22 * layout.scale),
                         fontWeight: 800,
                         letterSpacing: 0.5,
                     }}
@@ -171,7 +175,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                     style={{
                         flexShrink: 0,
                         fontFamily: 'inherit',
-                        fontSize: Math.max(18, 22 * layout.scale),
+                        fontSize: Math.max(18 * BOARD_DISPLAY_SCALE, 22 * layout.scale),
                         fontWeight: 800,
                         letterSpacing: 0.5,
                         margin: 0,
@@ -198,7 +202,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                 const r = boardCellLocalRect(layout, x, y);
                 const isHover = hovered?.x === x && hovered?.y === y;
                 const isDestroyBlocked = isBoardDestroyBlockedType(cell.definition.type);
-                const btnFs = Math.max(15, 18 * layout.scale);
+                const btnFs = Math.max(15 * BOARD_DISPLAY_SCALE, 18 * layout.scale);
 
                 return (
                     <div
@@ -230,7 +234,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                                     fontFamily: 'var(--game-font-family), sans-serif',
                                     fontSize: btnFs,
                                     fontWeight: 800,
-                                    padding: `${Math.max(8, 10 * layout.scale)}px ${Math.max(18, 22 * layout.scale)}px`,
+                                    padding: `${Math.max(8 * BOARD_DISPLAY_SCALE, 10 * layout.scale)}px ${Math.max(18 * BOARD_DISPLAY_SCALE, 22 * layout.scale)}px`,
                                     background: '#b91c1c',
                                     border: '3px solid #fca5a5',
                                     color: '#fff',

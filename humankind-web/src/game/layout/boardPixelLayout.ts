@@ -12,8 +12,11 @@ const BOARD_COL_GAP_PX = 12;
 const BASE_W = 1920;
 const BASE_H = 1080;
 
+export const BOARD_DISPLAY_SCALE = 0.8;
+
 export type BoardViewLayout = CellLayout & {
     scale: number;
+    viewScale: number;
     boardH: number;
     viewW: number;
     viewH: number;
@@ -23,7 +26,8 @@ export type BoardViewLayout = CellLayout & {
 export function computeBoardPixelLayout(viewW: number, viewH: number): BoardViewLayout {
     const w = viewW;
     const h = viewH;
-    const scale = Math.min(w / BASE_W, h / BASE_H);
+    const viewScale = Math.min(w / BASE_W, h / BASE_H);
+    const scale = viewScale * BOARD_DISPLAY_SCALE;
     const boardW = BOARD_LAYOUT_WIDTH_PX * scale;
     const boardH = BOARD_LAYOUT_HEIGHT_PX * scale;
     const cellWidth = BOARD_CELL_WIDTH_PX * scale;
@@ -48,6 +52,7 @@ export function computeBoardPixelLayout(viewW: number, viewH: number): BoardView
         gridOffsetY,
         colGap,
         scale,
+        viewScale,
         boardH,
         viewW: w,
         viewH: h,

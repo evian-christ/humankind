@@ -20,6 +20,7 @@ export interface BoardRenderFrame {
     colGap: number;
     rowGap: number;
     scale: number;
+    viewScale: number;
     fontFamily: string;
 }
 
@@ -55,6 +56,7 @@ export class BoardRenderer {
             colGap: viewLayout.colGap,
             rowGap: 0,
             scale: viewLayout.scale,
+            viewScale: viewLayout.viewScale,
             fontFamily: getGameFontFamily(settings.language),
         };
 
