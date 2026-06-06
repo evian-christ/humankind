@@ -62,7 +62,7 @@ void main()
 }
 `;
 
-export function createCrtScreenFilter(): PIXI.Filter {
+export function createCrtScreenFilter(curvature = CRT_CURVATURE): PIXI.Filter {
     return PIXI.Filter.from({
         gl: {
             name: 'crt-screen-filter',
@@ -71,7 +71,7 @@ export function createCrtScreenFilter(): PIXI.Filter {
         },
         resources: {
             crtUniforms: new PIXI.UniformGroup({
-                uCurvature: { value: CRT_CURVATURE, type: 'f32' },
+                uCurvature: { value: curvature, type: 'f32' },
                 uScanlineStrength: { value: 0.16, type: 'f32' },
                 uChromaticAberration: { value: 1.35, type: 'f32' },
             }),

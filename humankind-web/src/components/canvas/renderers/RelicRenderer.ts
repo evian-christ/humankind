@@ -8,22 +8,30 @@ import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { ASSET_BASE_URL, CLICKABLE_RELIC_IDS, GAME_CURSOR_HELP, GAME_CURSOR_POINTER } from './rendererShared';
 
 export class RelicRenderer {
-    private bgContainer: PIXI.Container;
+    private displayContainer: PIXI.Container;
+    private floatContainer: PIXI.Container;
     private hitContainer: PIXI.Container;
     private floatingTextRenderer: FloatingTextRenderer;
     private onHoverRelic: (relic: HoveredRelic | null) => void;
+    private screenHitBounds: PIXI.Rectangle[] = [];
     private hoverSnapshot: { instanceId: string; screenX: number; screenY: number } | null = null;
 
     constructor(args: {
-        bgContainer: PIXI.Container;
+        displayContainer: PIXI.Container;
+        floatContainer: PIXI.Container;
         hitContainer: PIXI.Container;
         floatingTextRenderer: FloatingTextRenderer;
         onHoverRelic: (relic: HoveredRelic | null) => void;
     }) {
-        this.bgContainer = args.bgContainer;
+        this.displayContainer = args.displayContainer;
+        this.floatContainer = args.floatContainer;
         this.hitContainer = args.hitContainer;
         this.floatingTextRenderer = args.floatingTextRenderer;
         this.onHoverRelic = args.onHoverRelic;
+    }
+
+    public containsScreenPoint(x: number, y: number) {
+        return this.screenHitBounds.some((bounds) => bounds.contains(x, y));
     }
 
     public syncHoverAfterRebuild() {
@@ -43,6 +51,7 @@ export class RelicRenderer {
 
     public render(state: GameState, scale: number, screenWidth: number, fontFamily: string) {
         const relics = useRelicStore.getState().relics;
+        this.screenHitBounds = [];
         if (relics.length === 0) return;
 
         const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
@@ -56,7 +65,7 @@ export class RelicRenderer {
         const relicPanel = new PIXI.Container();
         relicPanel.x = marginLeft;
         relicPanel.y = marginTop;
-        this.bgContainer.addChildAt(relicPanel, 1);
+        this.displayContainer.addChild(relicPanel);
 
         const layout = this.buildLayout(relics, iconSize, gapX, gapY, iconsPerRow);
         const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
@@ -77,7 +86,13 @@ export class RelicRenderer {
             this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale, fontFamily);
         }
 
-        this.floatingTextRenderer.renderRelicFloats(state, relicCenterByInstanceId, iconSize, fontFamily);
+        this.floatingTextRenderer.renderRelicFloats(
+            state,
+            relicCenterByInstanceId,
+            iconSize,
+            fontFamily,
+            this.floatContainer,
+        );
     }
 
     private buildLayout(relics: RelicInstance[], iconSize: number, gapX: number, gapY: number, iconsPerRow: number) {
@@ -121,7 +136,15 @@ export class RelicRenderer {
 
     private renderHitArea(relic: RelicInstance, worldIconX: number, worldIconY: number, iconSize: number) {
         const hitArea = new PIXI.Graphics();
-        hitArea.rect(worldIconX, worldIconY, iconSize, iconSize);
+        const hitPadding = Math.max(3, iconSize * 0.05);
+        const bounds = new PIXI.Rectangle(
+            worldIconX - hitPadding,
+            worldIconY - hitPadding,
+            iconSize + hitPadding * 2,
+            iconSize + hitPadding * 2,
+        );
+        this.screenHitBounds.push(bounds);
+        hitArea.rect(bounds.x, bounds.y, bounds.width, bounds.height);
         hitArea.fill({ color: 0x000000, alpha: 0 });
         hitArea.eventMode = 'static';
         const relicClickable = CLICKABLE_RELIC_IDS.has(relic.definition.id);

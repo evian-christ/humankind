@@ -1,4 +1,4 @@
-export const CRT_CURVATURE = 0.07;
+export const CRT_CURVATURE = 0.09;
 
 type Point = {
     x: number;

@@ -113,8 +113,13 @@ export class FloatingTextRenderer {
         this.tickThreatFloats(dt);
     }
 
-    public addText(text: PIXI.Container, startY: number, persistUntilProcessingEnd = false) {
-        this.container.addChild(text);
+    public addText(
+        text: PIXI.Container,
+        startY: number,
+        persistUntilProcessingEnd = false,
+        targetContainer = this.container,
+    ) {
+        targetContainer.addChild(text);
         this.floatingEffects.push({ texts: [text], startY, elapsed: 0, persistUntilProcessingEnd });
     }
 
@@ -295,6 +300,7 @@ export class FloatingTextRenderer {
         relicCenterByInstanceId: Map<string, { x: number; y: number }>,
         iconSize: number,
         fontFamily: string,
+        targetContainer = this.container,
     ) {
         if (!state.relicFloats || state.relicFloats.length === 0) {
             this.prevRelicFloatCount = 0;
@@ -323,7 +329,7 @@ export class FloatingTextRenderer {
             txt.x = c.x;
             txt.y = c.y - iconSize * 0.15;
             (txt as unknown as FloatingItem)._baseOffsetY = 0;
-            this.addText(txt, txt.y);
+            this.addText(txt, txt.y, false, targetContainer);
         }
     }
 

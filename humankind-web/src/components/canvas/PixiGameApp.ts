@@ -182,10 +182,16 @@ export class PixiGameApp {
     private destroyed = false;
     private contextLost = false;
     private crtFilter: PIXI.Filter | null = null;
+    private flatCrtFilter: PIXI.Filter | null = null;
     /** init() 완료 전 destroy 시 ResizePlugin 등이 미초기화라 Pixi destroy가 터질 수 있음 (React Strict Mode 등) */
     private pixiInitComplete = false;
 
     // Containers
+    private crtSceneContainer = new PIXI.Container();
+    private flatRelicSceneContainer = new PIXI.Container();
+    private flatRelicContainer = new PIXI.Container();
+    private flatRelicFloatContainer = new PIXI.Container();
+    private flatRelicHitContainer = new PIXI.Container();
     private bgContainer = new PIXI.Container();
     private boardContainer = new PIXI.Container();
     private spinContainer = new PIXI.Container();
@@ -512,6 +518,7 @@ export class PixiGameApp {
         };
         this.onHoverHudStat = onHoverHudStat;
         this.hitContainer.eventMode = 'static';
+        this.flatRelicHitContainer.eventMode = 'static';
         this.boardRenderer = new BoardRenderer({
             bgContainer: this.bgContainer,
             boardContainer: this.boardContainer,
@@ -520,17 +527,11 @@ export class PixiGameApp {
         this.combatRenderer = new CombatRenderer(this.combatContainer, this.floatingTextRenderer);
         this.hudRenderer = new HudRenderer(this.hudTopContainer);
         this.relicRenderer = new RelicRenderer({
-            bgContainer: this.bgContainer,
-            hitContainer: this.hitContainer,
+            displayContainer: this.flatRelicContainer,
+            floatContainer: this.flatRelicFloatContainer,
+            hitContainer: this.flatRelicHitContainer,
             floatingTextRenderer: this.floatingTextRenderer,
-            onHoverRelic: (relic) => {
-                if (!relic) {
-                    onHoverRelic(null);
-                    return;
-                }
-                const projected = this.projectScreenPoint(relic.screenX, relic.screenY);
-                onHoverRelic({ ...relic, screenX: projected.x, screenY: projected.y });
-            },
+            onHoverRelic,
         });
         this.statusRenderer = new StatusRenderer({
             bgContainer: this.bgContainer,
@@ -587,16 +588,23 @@ export class PixiGameApp {
         if (this.destroyed) return;
 
         this.app.stage.eventMode = 'static';
-        this.app.stage.addChild(this.bgContainer);
-        this.app.stage.addChild(this.boardContainer);
-        this.app.stage.addChild(this.spinContainer);
-        this.app.stage.addChild(this.combatContainer);
-        this.app.stage.addChild(this.effectsContainer);
-        this.app.stage.addChild(this.floatContainer);
-        this.app.stage.addChild(this.hitContainer);
-        this.app.stage.addChild(this.hudTopContainer);
+        this.crtSceneContainer.addChild(this.bgContainer);
+        this.crtSceneContainer.addChild(this.boardContainer);
+        this.crtSceneContainer.addChild(this.spinContainer);
+        this.crtSceneContainer.addChild(this.combatContainer);
+        this.crtSceneContainer.addChild(this.effectsContainer);
+        this.crtSceneContainer.addChild(this.floatContainer);
+        this.crtSceneContainer.addChild(this.hitContainer);
+        this.crtSceneContainer.addChild(this.hudTopContainer);
+        this.flatRelicSceneContainer.addChild(this.flatRelicContainer);
+        this.flatRelicSceneContainer.addChild(this.flatRelicFloatContainer);
+        this.flatRelicSceneContainer.addChild(this.flatRelicHitContainer);
+        this.app.stage.addChild(this.crtSceneContainer);
+        this.app.stage.addChild(this.flatRelicSceneContainer);
         this.crtFilter = createCrtScreenFilter();
-        this.app.stage.filters = [this.crtFilter];
+        this.flatCrtFilter = createCrtScreenFilter(0);
+        this.crtSceneContainer.filters = [this.crtFilter];
+        this.flatRelicSceneContainer.filters = [this.flatCrtFilter];
         this.updateCrtFilterArea();
         this.installCrtPointerMapping();
 
@@ -612,6 +620,8 @@ export class PixiGameApp {
                     this.removeContextListeners();
                     this.crtFilter?.destroy();
                     this.crtFilter = null;
+                    this.flatCrtFilter?.destroy();
+                    this.flatCrtFilter = null;
                     if (this.app.resizeTo) (this.app as unknown as { resizeTo?: unknown }).resizeTo = null;
                     this.app.destroy(true);
                 }
@@ -637,12 +647,14 @@ export class PixiGameApp {
 
     private updateCrtFilterArea() {
         if (!this.app?.screen) return;
-        this.app.stage.filterArea = new PIXI.Rectangle(
+        const filterArea = new PIXI.Rectangle(
             0,
             0,
             this.app.screen.width,
             this.app.screen.height,
         );
+        this.crtSceneContainer.filterArea = filterArea;
+        this.flatRelicSceneContainer.filterArea = filterArea;
     }
 
     private installCrtPointerMapping() {
@@ -650,6 +662,7 @@ export class PixiGameApp {
         const mapPositionToPoint = events.mapPositionToPoint.bind(events);
         events.mapPositionToPoint = (point, clientX, clientY) => {
             mapPositionToPoint(point, clientX, clientY);
+            if (this.relicRenderer.containsScreenPoint(point.x, point.y)) return;
             const mapped = mapCrtOutputToSource(
                 point.x,
                 point.y,
@@ -851,6 +864,8 @@ export class PixiGameApp {
         clearPixiContainer(this.hitContainer);
         clearPixiContainer(this.bgContainer);
         clearPixiContainer(this.hudTopContainer);
+        clearPixiContainer(this.flatRelicContainer);
+        clearPixiContainer(this.flatRelicHitContainer);
         this.floatingTextRenderer.clearThreats();
 
         this.combatRenderer.clearIfNoAnimation(!!state.combatAnimation);
