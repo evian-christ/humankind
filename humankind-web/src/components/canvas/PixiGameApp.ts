@@ -1459,7 +1459,9 @@ export class PixiGameApp {
             w,
             fontFamily,
         );
-        this.relicRenderer.render(state, viewScale, w, fontFamily);
+        const boardLeft = startX + gridOffsetX;
+        const boardRight = boardLeft + BOARD_WIDTH * cellWidth + (BOARD_WIDTH - 1) * colGap;
+        this.relicRenderer.render(state, viewScale, w, boardLeft, boardRight, fontFamily);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
 

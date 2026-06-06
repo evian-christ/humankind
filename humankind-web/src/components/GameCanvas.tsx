@@ -284,10 +284,11 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         return { left: `${left}px`, top: `${top}px` };
     };
 
-    /** 유물 툴팁: 해당 유물 아이콘 우측에 고정 표시 */
+    /** 유물 툴팁: 기본은 아이콘 우측, 화면 경계를 넘으면 좌측에 표시 */
     const getRelicTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
         if (!hoveredItem) return { display: 'none' };
-        const left = hoveredItem.screenX + TOOLTIP_MARGIN;
+        let left = hoveredItem.screenX + TOOLTIP_MARGIN;
+        if (left + TOOLTIP_W > 1920) left = hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN;
         let top = hoveredItem.screenY;
         if (top + TOOLTIP_H > 1080) top = 1080 - TOOLTIP_H - TOOLTIP_MARGIN;
         if (top < 0) top = 0;
