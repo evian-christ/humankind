@@ -1098,7 +1098,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                                 position: 'absolute',
                                                                 inset: `${KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET}px`,
                                                                 border: `2px solid ${chipFrameColor}`,
-                                                                borderRadius: 6,
+                                                                borderRadius: 0,
                                                                 boxSizing: 'border-box',
                                                                 pointerEvents: 'none',
                                                             }}

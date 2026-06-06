@@ -7389,7 +7389,7 @@ button.knowledge-upgrade-chip {
   border-right-color: #0b0705;
   border-bottom-color: #070403;
   border-left-color: #2d1f17;
-  border-radius: 14px;
+  border-radius: 0;
   box-sizing: border-box;
   padding: 0;
   background: #101010;
@@ -7442,7 +7442,7 @@ button.knowledge-upgrade-chip--available::before {
   position: absolute;
   inset: -18px;
   z-index: 1;
-  border-radius: 22px;
+  border-radius: 0;
   background:
     radial-gradient(circle at 50% 50%,
       rgba(138, 106, 50, 0.34) 0%,
@@ -7491,7 +7491,7 @@ button.knowledge-upgrade-chip--unlocked::before {
   position: absolute;
   inset: -18px;
   z-index: 1;
-  border-radius: 22px;
+  border-radius: 0;
   background:
     radial-gradient(circle at 50% 50%,
       rgba(47, 111, 93, 0.36) 0%,
