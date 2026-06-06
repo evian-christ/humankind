@@ -397,15 +397,15 @@ body {
 /* Frame sizing: include recommended canvas ratio and 10px lower 3D pillar.
    - Relics / owned symbols: 164x110 | shop: 560x110 (@0.5 scale: 82x55 / 280x55) */
 .bottom-action-bar {
-  --bottom-action-board-width: 912px;
-  --bottom-action-button-size: 88px;
-  --bottom-action-gap: 16px;
+  --bottom-action-board-width: 1003px;
+  --bottom-action-button-size: 97px;
+  --bottom-action-gap: 18px;
   position: fixed;
   left: 50%;
   right: auto;
   bottom: 24px;
   width: var(--bottom-action-board-width);
-  height: 112px;
+  height: 123px;
   z-index: 100;
   pointer-events: none;
   display: flex;
@@ -482,7 +482,7 @@ button.spin-btn {
 button.spin-btn span {
   display: inline-block;
   transform: scaleX(1.18);
-  font-size: 64px;
+  font-size: 70px;
   font-weight: 600;
   letter-spacing: 4px;
 }
