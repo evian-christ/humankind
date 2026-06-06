@@ -75,6 +75,7 @@ export interface SettingsState {
     ambientVolume: number;
     screenMode: ScreenMode;
     developerMode: boolean;
+    crtEffect: boolean;
 
     setResolution: (width: number, height: number) => void;
     setLanguage: (lang: Language) => void;
@@ -86,6 +87,7 @@ export interface SettingsState {
     setAmbientVolume: (volume: number) => void;
     setScreenMode: (mode: ScreenMode) => void;
     setDeveloperMode: (enabled: boolean) => void;
+    setCrtEffect: (enabled: boolean) => void;
 }
 
 type PersistedSettings = Pick<
@@ -101,6 +103,7 @@ type PersistedSettings = Pick<
     | 'ambientVolume'
     | 'screenMode'
     | 'developerMode'
+    | 'crtEffect'
 >;
 
 interface SavedSettings {
@@ -121,6 +124,7 @@ const defaultSettings: PersistedSettings = {
     ambientVolume: 1,
     screenMode: 'windowed',
     developerMode: false,
+    crtEffect: true,
 };
 
 const storage = (): Storage | null => {
@@ -198,6 +202,9 @@ function loadSettings(): PersistedSettings {
             developerMode: typeof save.settings.developerMode === 'boolean'
                 ? save.settings.developerMode
                 : defaultSettings.developerMode,
+            crtEffect: typeof save.settings.crtEffect === 'boolean'
+                ? save.settings.crtEffect
+                : defaultSettings.crtEffect,
         };
     } catch {
         return { ...defaultSettings, language: getBrowserLanguage() };
@@ -223,6 +230,7 @@ function saveSettings(state: PersistedSettings): void {
             ambientVolume: state.ambientVolume,
             screenMode: state.screenMode,
             developerMode: state.developerMode,
+            crtEffect: state.crtEffect,
         },
     };
 
@@ -322,6 +330,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             const next = { ...state, developerMode: enabled };
             saveSettings(next);
             return { developerMode: enabled };
+        });
+    },
+
+    setCrtEffect: (enabled) => {
+        set((state) => {
+            const next = { ...state, crtEffect: enabled };
+            saveSettings(next);
+            return { crtEffect: enabled };
         });
     },
 }));

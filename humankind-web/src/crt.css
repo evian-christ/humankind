@@ -4,8 +4,8 @@
   overflow: hidden;
   background: #000000;
   box-shadow:
-    inset 0 0 24px rgba(235, 255, 242, 0.08),
-    inset 0 0 82px rgba(0, 0, 0, 0.82);
+    inset 0 0 24px rgba(235, 255, 242, 0.04),
+    inset 0 0 82px rgba(0, 0, 0, 0.28);
 }
 
 .crt-content {
@@ -32,6 +32,23 @@
   transform-origin: 50% 50%;
 }
 
+.crt-display.crt-disabled {
+  box-shadow: none;
+}
+
+.crt-display.crt-disabled .hud-top,
+.crt-display.crt-disabled :is(.demo-start-root, .leader-select-root, .leader-progress-root) {
+  transform: none;
+}
+
+.crt-display.crt-disabled .bottom-action-bar {
+  transform: translateX(-50%);
+}
+
+.crt-display.crt-disabled .crt-overlay {
+  display: none;
+}
+
 .crt-overlay {
   position: absolute;
   inset: 0;
@@ -41,12 +58,12 @@
   background:
     repeating-linear-gradient(
       to bottom,
-      rgba(225, 245, 230, 0.11) 0,
-      rgba(225, 245, 230, 0.11) 1px,
-      rgba(0, 0, 0, 0.16) 1px,
-      rgba(0, 0, 0, 0.16) 3px,
-      rgba(0, 0, 0, 0.035) 3px,
-      rgba(0, 0, 0, 0.035) 4px
+      rgba(225, 245, 230, 0.045) 0,
+      rgba(225, 245, 230, 0.045) 1px,
+      rgba(0, 0, 0, 0.07) 1px,
+      rgba(0, 0, 0, 0.07) 3px,
+      rgba(0, 0, 0, 0.015) 3px,
+      rgba(0, 0, 0, 0.015) 4px
     ),
     repeating-linear-gradient(
       to right,
@@ -58,9 +75,9 @@
       rgba(70, 110, 255, 0.025) 3px
     );
   box-shadow:
-    inset 0 0 34px rgba(220, 245, 226, 0.12),
-    inset 0 0 105px rgba(0, 0, 0, 0.82),
-    inset 0 0 210px rgba(0, 0, 0, 0.54);
+    inset 0 0 34px rgba(220, 245, 226, 0.035),
+    inset 0 0 105px rgba(0, 0, 0, 0.24),
+    inset 0 0 210px rgba(0, 0, 0, 0.12);
 }
 
 .crt-overlay::before {
@@ -70,9 +87,9 @@
   background:
     radial-gradient(
       ellipse at center,
-      transparent 42%,
-      rgba(0, 0, 0, 0.1) 68%,
-      rgba(0, 0, 0, 0.58) 100%
+      transparent 52%,
+      rgba(0, 0, 0, 0.025) 76%,
+      rgba(0, 0, 0, 0.16) 100%
     );
 }
 
@@ -80,7 +97,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.39;
+  opacity: 0.22;
   background:
     linear-gradient(
       118deg,
@@ -104,9 +121,9 @@
 }
 
 @keyframes crt-glass-flicker {
-  0%, 7%, 9%, 48%, 50%, 100% { opacity: 0.39; }
-  8% { opacity: 0.34; }
-  49% { opacity: 0.42; }
+  0%, 7%, 9%, 48%, 50%, 100% { opacity: 0.22; }
+  8% { opacity: 0.19; }
+  49% { opacity: 0.24; }
 }
 
 @media (prefers-reduced-motion: reduce) {

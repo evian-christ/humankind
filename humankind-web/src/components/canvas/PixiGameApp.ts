@@ -183,6 +183,7 @@ export class PixiGameApp {
     private contextLost = false;
     private crtFilter: PIXI.Filter | null = null;
     private flatCrtFilter: PIXI.Filter | null = null;
+    private crtEnabled = true;
     /** init() 완료 전 destroy 시 ResizePlugin 등이 미초기화라 Pixi destroy가 터질 수 있음 (React Strict Mode 등) */
     private pixiInitComplete = false;
 
@@ -662,6 +663,7 @@ export class PixiGameApp {
         const mapPositionToPoint = events.mapPositionToPoint.bind(events);
         events.mapPositionToPoint = (point, clientX, clientY) => {
             mapPositionToPoint(point, clientX, clientY);
+            if (!this.crtEnabled) return;
             if (this.relicRenderer.containsScreenPoint(point.x, point.y)) return;
             const mapped = mapCrtOutputToSource(
                 point.x,
@@ -675,9 +677,17 @@ export class PixiGameApp {
     }
 
     private projectScreenPoint(x: number, y: number) {
+        if (!this.crtEnabled) return { x, y };
         const width = this.app.screen?.width || this.canvas.clientWidth || 1920;
         const height = this.app.screen?.height || this.canvas.clientHeight || 1080;
         return mapCrtSourceToOutput(x, y, width, height);
+    }
+
+    private syncCrtEffect(enabled: boolean) {
+        if (this.crtEnabled === enabled) return;
+        this.crtEnabled = enabled;
+        this.crtSceneContainer.filters = enabled && this.crtFilter ? [this.crtFilter] : [];
+        this.flatRelicSceneContainer.filters = enabled && this.flatCrtFilter ? [this.flatCrtFilter] : [];
     }
 
     /** 오버레이 열림 등으로 보드 툴팁을 끌 때 HUD 스냅샷도 초기화 */
@@ -852,6 +862,7 @@ export class PixiGameApp {
     public renderBoard(state: GameState, settings: SettingsState) {
         if (!this.app || !this.app.renderer || this.destroyed || this.contextLost) return;
 
+        this.syncCrtEffect(settings.crtEffect);
         this.syncActiveSlotMotion(state);
         this.syncProductionScaleMotions(state, settings);
         const w = this.app.screen?.width || 1920;

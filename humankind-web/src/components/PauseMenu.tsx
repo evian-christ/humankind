@@ -59,6 +59,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         ambientVolume,
         screenMode,
         developerMode,
+        crtEffect,
         setResolution,
         setLanguage,
         setEffectSpeed,
@@ -69,6 +70,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         setAmbientVolume,
         setScreenMode,
         setDeveloperMode,
+        setCrtEffect,
     } = useSettingsStore();
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
     const resetPreGameProgress = usePreGameStore((s) => s.resetPreGameProgress);
@@ -278,6 +280,24 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                                                 ))}
                                             </select>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="settings-row">
+                                    <div className="settings-row-label">{t('settings.crtEffect', language)}</div>
+                                    <div className="settings-row-controls">
+                                        <button
+                                            className={`settings-seg-btn ${!crtEffect ? 'active' : ''}`}
+                                            onClick={() => setCrtEffect(false)}
+                                        >
+                                            {t('settings.crtEffect.off', language)}
+                                        </button>
+                                        <button
+                                            className={`settings-seg-btn ${crtEffect ? 'active' : ''}`}
+                                            onClick={() => setCrtEffect(true)}
+                                        >
+                                            {t('settings.crtEffect.on', language)}
+                                        </button>
                                     </div>
                                 </div>
                             </>

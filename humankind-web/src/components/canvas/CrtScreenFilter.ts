@@ -51,7 +51,7 @@ void main()
 
     float scanline = 1.0 - uScanlineStrength
         * (0.5 + 0.5 * sin(gl_FragCoord.y * 3.14159265));
-    float vignette = 1.0 - 0.22 * smoothstep(0.42, 1.75, radiusSquared);
+    float vignette = 1.0 - 0.07 * smoothstep(0.42, 1.75, radiusSquared);
     float reflection = pow(max(
         0.0,
         1.0 - distance(outputUv, vec2(0.24, -0.12)) * 0.92
@@ -72,8 +72,8 @@ export function createCrtScreenFilter(curvature = CRT_CURVATURE): PIXI.Filter {
         resources: {
             crtUniforms: new PIXI.UniformGroup({
                 uCurvature: { value: curvature, type: 'f32' },
-                uScanlineStrength: { value: 0.16, type: 'f32' },
-                uChromaticAberration: { value: 1.35, type: 'f32' },
+                uScanlineStrength: { value: 0.07, type: 'f32' },
+                uChromaticAberration: { value: 0.65, type: 'f32' },
             }),
         },
         antialias: 'off',
