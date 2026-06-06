@@ -1,0 +1,72 @@
+.oblivion-board-overlay {
+  opacity: 1;
+  transition: opacity 180ms ease-in;
+}
+
+.oblivion-board-overlay__aura {
+  opacity: 0;
+  transition: opacity 520ms ease-out;
+}
+
+.oblivion-board-overlay__header {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 280ms ease-out,
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.oblivion-board-overlay--open .oblivion-board-overlay__aura {
+  opacity: 1;
+}
+
+.oblivion-board-overlay--open .oblivion-board-overlay__header {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 140ms;
+}
+
+.oblivion-board-overlay--exiting .oblivion-board-overlay__aura {
+  opacity: 0;
+  transition-duration: 220ms;
+}
+
+.oblivion-board-overlay--exiting {
+  opacity: 0;
+}
+
+.oblivion-board-overlay--exiting .oblivion-board-overlay__header {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition-delay: 0ms;
+  transition-duration: 180ms;
+}
+
+.oblivion-board-overlay__action {
+  animation: oblivion-board-action-in 140ms ease-out both;
+}
+
+@keyframes oblivion-board-action-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oblivion-board-overlay__aura,
+  .oblivion-board-overlay__header,
+  .oblivion-board-overlay {
+    transition-duration: 1ms;
+    transition-delay: 0ms;
+  }
+
+  .oblivion-board-overlay__action {
+    animation-duration: 1ms;
+  }
+}

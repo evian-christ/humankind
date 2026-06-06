@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT } from '../game/state/gameStore';
 import { SymbolType } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
@@ -9,11 +9,68 @@ import {
     boardCellLocalRect,
 } from '../game/layout/boardPixelLayout';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
+import { mapCrtSourceToOutput } from './canvas/crtProjection';
+import './oblivionBoardOverlay.css';
 
 type Props = { anchorRef: RefObject<HTMLElement | null> };
+type Point = { x: number; y: number };
+type OverlayMotion = 'entering' | 'open' | 'exiting';
+type ProjectedRect = {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    center: Point;
+    clipPath: string;
+    polygonPoints: string;
+};
 
 const isBoardDestroyBlockedType = (type: SymbolType) =>
     type === SymbolType.ENEMY || type === SymbolType.DISASTER;
+
+const projectRect = (
+    left: number,
+    top: number,
+    width: number,
+    height: number,
+    viewWidth: number,
+    viewHeight: number,
+    crtEnabled: boolean,
+): ProjectedRect => {
+    const project = (x: number, y: number) => (
+        crtEnabled
+            ? mapCrtSourceToOutput(x, y, viewWidth, viewHeight)
+            : { x, y }
+    );
+    const corners = [
+        project(left, top),
+        project(left + width, top),
+        project(left + width, top + height),
+        project(left, top + height),
+    ];
+    const projectedLeft = Math.min(...corners.map((point) => point.x));
+    const projectedTop = Math.min(...corners.map((point) => point.y));
+    const projectedRight = Math.max(...corners.map((point) => point.x));
+    const projectedBottom = Math.max(...corners.map((point) => point.y));
+    const projectedWidth = Math.max(1, projectedRight - projectedLeft);
+    const projectedHeight = Math.max(1, projectedBottom - projectedTop);
+    const clipPath = `polygon(${corners.map((point) => (
+        `${((point.x - projectedLeft) / projectedWidth) * 100}% ${((point.y - projectedTop) / projectedHeight) * 100}%`
+    )).join(', ')})`;
+    const polygonPoints = corners.map((point) => (
+        `${point.x - projectedLeft},${point.y - projectedTop}`
+    )).join(' ');
+
+    return {
+        left: projectedLeft,
+        top: projectedTop,
+        width: projectedWidth,
+        height: projectedHeight,
+        center: project(left + width / 2, top + height / 2),
+        clipPath,
+        polygonPoints,
+    };
+};
 
 /** 망각의 화로: 보드 위 호버 시 셀 중앙 제거 버튼 */
 const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
@@ -25,11 +82,30 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     const cancelOblivionFurnacePick = useGameStore((s) => s.cancelOblivionFurnacePick);
     const cancelEdictPick = useGameStore((s) => s.cancelEdictPick);
     const language = useSettingsStore((s) => s.language);
+    const crtEffect = useSettingsStore((s) => s.crtEffect);
+    const auraMaskId = `board-aura-mask-${useId().replace(/:/g, '')}`;
 
     const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
     const [hovered, setHovered] = useState<{ x: number; y: number } | null>(null);
+    const [motion, setMotion] = useState<OverlayMotion>('entering');
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useRegisterBoardTooltipBlock('oblivion-furnace-board', phase === 'oblivion_furnace_board');
+
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => setMotion('open'));
+        return () => cancelAnimationFrame(frame);
+    }, []);
+
+    useEffect(() => () => {
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    }, []);
+
+    const beginClose = useCallback((complete: () => void) => {
+        if (motion === 'exiting') return;
+        setMotion('exiting');
+        closeTimerRef.current = setTimeout(complete, 240);
+    }, [motion]);
 
     const measure = useCallback(() => {
         const el = anchorRef.current;
@@ -61,12 +137,14 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
             const targetEl = e.target as HTMLElement;
             if (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA' || targetEl.isContentEditable) return;
             e.preventDefault();
-            if (pendingEdictSource) cancelEdictPick();
-            else cancelOblivionFurnacePick();
+            beginClose(() => {
+                if (pendingEdictSource) cancelEdictPick();
+                else cancelOblivionFurnacePick();
+            });
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [cancelEdictPick, cancelOblivionFurnacePick, pendingEdictSource]);
+    }, [beginClose, cancelEdictPick, cancelOblivionFurnacePick, pendingEdictSource]);
 
     const occupiedCells = useMemo(() => {
         const out: { x: number; y: number }[] = [];
@@ -108,12 +186,16 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     const bh = layout.boardH;
     const sc = layout.scale;
     /** 보드 뒤에서 떠 있는 느낌 — 바깥으로 강한 그림자 + 아주 약한 안쪽 깊이 */
-    const boardBackShadow = [
-        `0 ${Math.round(28 * sc)}px ${Math.round(100 * sc)}px rgba(96, 8, 12, 0.78)`,
-        `0 ${Math.round(14 * sc)}px ${Math.round(48 * sc)}px rgba(127, 18, 18, 0.64)`,
-        `0 0 ${Math.round(120 * sc)}px ${Math.round(32 * sc)}px rgba(88, 10, 14, 0.52)`,
-        `inset 0 ${Math.round(-36 * sc)}px ${Math.round(72 * sc)}px rgba(76, 5, 10, 0.3)`,
-    ].join(', ');
+    const projectedBoard = projectRect(bl, bt, bw, bh, viewSize.w, viewSize.h, crtEffect);
+    const projectedTitle = projectRect(
+        innerLeft,
+        titleTop,
+        innerWidth,
+        titleH,
+        viewSize.w,
+        viewSize.h,
+        crtEffect,
+    );
     const isEdictMode = pendingEdictSource != null;
     const titleKey = isEdictMode ? 'edictBoard.title' : 'oblivionBoard.title';
     const actionKey = isEdictMode ? 'edictBoard.remove' : 'oblivionBoard.remove';
@@ -121,6 +203,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
 
     return (
         <div
+            className={`oblivion-board-overlay oblivion-board-overlay--${motion}`}
             style={{
                 position: 'absolute',
                 inset: 0,
@@ -130,31 +213,82 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
         >
             <div
                 aria-hidden
+                className="oblivion-board-overlay__aura"
                 style={{
                     position: 'absolute',
-                    left: bl,
-                    top: bt,
-                    width: bw,
-                    height: bh,
+                    left: projectedBoard.left,
+                    top: projectedBoard.top,
+                    width: projectedBoard.width,
+                    height: projectedBoard.height,
                     zIndex: 1,
                     pointerEvents: 'none',
-                    background: 'transparent',
-                    boxShadow: boardBackShadow,
+                    overflow: 'visible',
                 }}
-            />
+            >
+                <svg
+                    width={projectedBoard.width}
+                    height={projectedBoard.height}
+                    viewBox={`0 0 ${projectedBoard.width} ${projectedBoard.height}`}
+                    style={{ display: 'block', overflow: 'visible' }}
+                >
+                    <defs>
+                        <mask
+                            id={auraMaskId}
+                            maskUnits="userSpaceOnUse"
+                            x={-projectedBoard.width}
+                            y={-projectedBoard.height}
+                            width={projectedBoard.width * 3}
+                            height={projectedBoard.height * 3}
+                        >
+                            <rect
+                                x={-projectedBoard.width}
+                                y={-projectedBoard.height}
+                                width={projectedBoard.width * 3}
+                                height={projectedBoard.height * 3}
+                                fill="#fff"
+                            />
+                            <polygon points={projectedBoard.polygonPoints} fill="#000" />
+                        </mask>
+                    </defs>
+                    <g mask={`url(#${auraMaskId})`}>
+                        <polygon
+                            points={projectedBoard.polygonPoints}
+                            fill="none"
+                            stroke="rgba(88, 10, 14, 0.48)"
+                            strokeWidth={Math.max(18, 48 * sc)}
+                            style={{ filter: `blur(${Math.max(24, 54 * sc)}px)` }}
+                        />
+                        <polygon
+                            points={projectedBoard.polygonPoints}
+                            fill="none"
+                            stroke="rgba(127, 18, 18, 0.66)"
+                            strokeWidth={Math.max(10, 24 * sc)}
+                            style={{ filter: `blur(${Math.max(12, 26 * sc)}px)` }}
+                        />
+                        <polygon
+                            points={projectedBoard.polygonPoints}
+                            fill="none"
+                            stroke="rgba(185, 28, 28, 0.78)"
+                            strokeWidth={Math.max(4, 8 * sc)}
+                            style={{ filter: `blur(${Math.max(4, 8 * sc)}px)` }}
+                        />
+                    </g>
+                </svg>
+            </div>
 
             <div
+                className="oblivion-board-overlay__header"
                 style={{
                     position: 'absolute',
-                    left: innerLeft,
-                    top: titleTop,
-                    width: innerWidth,
-                    height: titleH,
+                    left: projectedTitle.left,
+                    top: projectedTitle.top,
+                    width: projectedTitle.width,
+                    height: projectedTitle.height,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: 12,
-                    pointerEvents: 'auto',
+                    pointerEvents: motion === 'exiting' ? 'none' : 'auto',
                     zIndex: 4,
                     fontFamily: 'var(--game-font-family), sans-serif',
                     color: '#f5f5f5',
@@ -188,8 +322,10 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                     }}
                     onClick={(e) => {
                         e.stopPropagation();
-                        if (isEdictMode) cancelEdictPick();
-                        else cancelOblivionFurnacePick();
+                        beginClose(() => {
+                            if (isEdictMode) cancelEdictPick();
+                            else cancelOblivionFurnacePick();
+                        });
                     }}
                 >
                     {t(cancelKey, language)}
@@ -200,6 +336,15 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                 const cell = board[x][y];
                 if (!cell) return null;
                 const r = boardCellLocalRect(layout, x, y);
+                const projectedCell = projectRect(
+                    r.left,
+                    r.top,
+                    r.width,
+                    r.height,
+                    viewSize.w,
+                    viewSize.h,
+                    crtEffect,
+                );
                 const isHover = hovered?.x === x && hovered?.y === y;
                 const isDestroyBlocked = isBoardDestroyBlockedType(cell.definition.type);
                 const btnFs = Math.max(15 * BOARD_DISPLAY_SCALE, 18 * layout.scale);
@@ -209,12 +354,13 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                         key={`cell-${x}-${y}`}
                         style={{
                             position: 'absolute',
-                            left: r.left,
-                            top: r.top,
-                            width: r.width,
-                            height: r.height,
+                            left: projectedCell.left,
+                            top: projectedCell.top,
+                            width: projectedCell.width,
+                            height: projectedCell.height,
                             zIndex: 3,
-                            pointerEvents: 'auto',
+                            pointerEvents: motion === 'exiting' ? 'none' : 'auto',
+                            clipPath: projectedCell.clipPath,
                         }}
                         onMouseEnter={() => setHovered({ x, y })}
                         onMouseLeave={() =>
@@ -224,11 +370,12 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                         {isHover && !isDestroyBlocked && (
                             <button
                                 type="button"
+                                className="oblivion-board-overlay__action"
                                 aria-label={t(actionKey, language)}
                                 style={{
                                     position: 'absolute',
-                                    left: '50%',
-                                    top: '50%',
+                                    left: projectedCell.center.x - projectedCell.left,
+                                    top: projectedCell.center.y - projectedCell.top,
                                     transform: 'translate(-50%, -50%)',
                                     zIndex: 3,
                                     fontFamily: 'var(--game-font-family), sans-serif',
@@ -245,9 +392,10 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    if (isEdictMode) confirmEdictDestroyAt(x, y);
-                                    else confirmOblivionFurnaceDestroyAt(x, y);
-                                    setHovered(null);
+                                    beginClose(() => {
+                                        if (isEdictMode) confirmEdictDestroyAt(x, y);
+                                        else confirmOblivionFurnaceDestroyAt(x, y);
+                                    });
                                 }}
                             >
                                 {t(actionKey, language)}
