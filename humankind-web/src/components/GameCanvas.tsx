@@ -6,6 +6,7 @@ import { getHudTurnStartPassiveTotals, getTrojanGoldLootReward } from '../game/s
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
+import { isConsumableRelicId } from '../game/logic/relics/relicClassification';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat } from './canvas/types';
@@ -410,9 +411,21 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             {showBoardTooltips && hoveredRelic && (() => {
                 const info = hoveredRelic.relicInfo;
                 const counterMax = (info.definition.id === 3 || info.definition.id === 9) ? 5 : 0;
+                const isConsumable = isConsumableRelicId(info.definition.id);
                 return (
                     <div className="symbol-tooltip" style={{ ...getRelicTooltipStyle(hoveredRelic), display: 'flex', flexDirection: 'column' }}>
                         <div className="symbol-tooltip-name" style={{ color: '#dcfce7' }}>{t(`relic.${info.definition.id}.name`, language)}</div>
+                        <div style={{
+                            alignSelf: 'flex-start',
+                            padding: '2px 7px',
+                            border: `1px solid ${isConsumable ? '#f97316' : '#64748b'}`,
+                            color: isConsumable ? '#ffedd5' : '#cbd5e1',
+                            background: isConsumable ? 'rgba(194, 65, 12, 0.35)' : 'rgba(51, 65, 85, 0.4)',
+                            fontSize: '14px',
+                            letterSpacing: '1px',
+                        }}>
+                            {t(isConsumable ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable', language)}
+                        </div>
                         <div className="symbol-tooltip-desc">
                             {getDisplayedRelicDesc(
                                 info.definition.id,

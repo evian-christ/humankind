@@ -75,6 +75,7 @@ const createCommonResetPatch = () => ({
     freeSelectionRerolls: 0,
     destroySelectionMaxSymbols: 3,
     territorialAfterEdictPending: false,
+    pendingFoodPayment: false,
     lootRewardChoices: [],
     pendingLootSlot: null,
     returnPhaseAfterDevKnowledgeUpgrade: null,

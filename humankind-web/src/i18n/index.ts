@@ -112,6 +112,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
 
         // Game UI
         'game.spin': 'SPIN',
+        'game.payFood': 'PAY {amount} FOOD',
         'game.turn': 'Turn',
         'game.food': 'Food',
         'game.gold': 'Gold',
@@ -395,6 +396,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'dataBrowser.colName': 'Name',
         'dataBrowser.colEra': 'Type',
         'dataBrowser.colRarity': 'Rarity',
+        'dataBrowser.colConsumptionType': 'Consumption',
+        'dataBrowser.consumable': 'Consumable',
+        'dataBrowser.nonConsumable': 'Non-consumable',
         'dataBrowser.colBasePool': 'Base Pool',
         'dataBrowser.colType': 'Type',
         'dataBrowser.colCost': 'Cost',
@@ -1095,6 +1099,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
 
         // Game UI (스핀 = 보드 돌리기 버튼, 턴 = 게임 턴 개념)
         'game.spin': '스핀',
+        'game.payFood': '식량 {amount} 지불',
         'game.turn': '턴',
         'game.food': '식량',
         'game.gold': '골드',
@@ -1367,6 +1372,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'dataBrowser.colName': '이름',
         'dataBrowser.colEra': '타입',
         'dataBrowser.colRarity': '희귀도',
+        'dataBrowser.colConsumptionType': '소모 여부',
+        'dataBrowser.consumable': '소모형',
+        'dataBrowser.nonConsumable': '비소모형',
         'dataBrowser.colBasePool': '기본 풀',
         'dataBrowser.colType': '타입',
         'dataBrowser.colCost': '비용',

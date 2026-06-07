@@ -92,6 +92,7 @@ const createSerializableState = (): GameState => {
         freeSelectionRerolls: 0,
         destroySelectionMaxSymbols: 3,
         territorialAfterEdictPending: false,
+        pendingFoodPayment: false,
     } as unknown as GameState;
 };
 

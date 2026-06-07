@@ -84,6 +84,7 @@ interface SavedGame {
         freeSelectionRerolls: number;
         destroySelectionMaxSymbols: number;
         territorialAfterEdictPending: boolean;
+        pendingFoodPayment?: boolean;
         eventLog: GameEventLogEntry[];
     };
     relics: SerializedRelic[];
@@ -261,6 +262,7 @@ export function saveGameState(state: GameState): void {
             freeSelectionRerolls: state.freeSelectionRerolls,
             destroySelectionMaxSymbols: state.destroySelectionMaxSymbols,
             territorialAfterEdictPending: state.territorialAfterEdictPending,
+            pendingFoodPayment: state.pendingFoodPayment,
             eventLog: state.eventLog.slice(-MAX_SAVED_EVENT_LOG),
         },
         relics: useRelicStore.getState().relics.map(serializeRelic),
@@ -367,6 +369,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             freeSelectionRerolls: save.state.freeSelectionRerolls,
             destroySelectionMaxSymbols: save.state.destroySelectionMaxSymbols,
             territorialAfterEdictPending: save.state.territorialAfterEdictPending,
+            pendingFoodPayment: save.state.pendingFoodPayment ?? save.state.phase === 'food_payment',
         };
     } catch {
         return null;

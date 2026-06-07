@@ -58,6 +58,7 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
 
     // Game UI
     'game.spin': '旋转',
+    'game.payFood': '支付 {amount} 食物',
     'game.turn': '回合',
     'game.food': '食物',
     'game.gold': '金币',
@@ -195,6 +196,9 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'dataBrowser.colBasePool': '基础池',
     'dataBrowser.colSprite': '图像',
     'dataBrowser.colRarity': '稀有度',
+    'dataBrowser.colConsumptionType': '消耗类型',
+    'dataBrowser.consumable': '消耗型',
+    'dataBrowser.nonConsumable': '非消耗型',
     'dataBrowser.colCost': '费用',
     'dataBrowser.colCategory': '分类',
     'dataBrowser.colAvailability': '出现条件',

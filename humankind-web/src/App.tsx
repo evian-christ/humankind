@@ -874,6 +874,7 @@ function App() {
     setupTutorialSelectionStep,
     spinTutorialMonumentStep,
     spinBoard,
+    payFoodCost,
     toggleRelicShop,
     isRelicShopOpen,
     hasNewRelicShopStock,
@@ -882,6 +883,7 @@ function App() {
     initializeGame,
     lastLeaderProgressAward,
     level,
+    pendingFoodPayment,
   } = useGameStore();
   const resetRelics = useRelicStore((s) => s.resetRelics);
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
@@ -1211,6 +1213,13 @@ function App() {
   }, [isRelicShopOpen, hasNewRelicShopStock, clearRelicShopStockBadge]);
 
   const handleSpinBoard = useCallback(() => {
+    const st = useGameStore.getState();
+    if (st.phase === 'food_payment') {
+      void audioManager.unlock();
+      payFoodCost();
+      return;
+    }
+
     if (isTutorialMode && tutorialDialogStep === 6) {
       setTutorialDialogStep(7);
       spinTutorialCornStep();
@@ -1222,7 +1231,6 @@ function App() {
       return;
     }
 
-    const st = useGameStore.getState();
     if (st.phase !== 'idle') return;
     if ((st.levelUpResearchPoints ?? 0) > 0) {
       void audioManager.unlock().then(() => audioManager.play('denied'));
@@ -1232,7 +1240,7 @@ function App() {
 
     void audioManager.unlock();
     spinBoard();
-  }, [isTutorialMode, spinBoard, spinTutorialCornStep, spinTutorialMonumentStep, tutorialDialogStep]);
+  }, [isTutorialMode, payFoodCost, spinBoard, spinTutorialCornStep, spinTutorialMonumentStep, tutorialDialogStep]);
 
   const isTutorialInteractionAllowed = useCallback((target: EventTarget | null) => {
     if (!isTutorialMode) return true;
@@ -1355,7 +1363,7 @@ function App() {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
       if (isTutorialMode && tutorialDialogStep !== 6 && tutorialDialogStep !== 14) return;
       const st = useGameStore.getState();
-      if (st.phase !== 'idle') return;
+      if (st.phase !== 'idle' && st.phase !== 'food_payment') return;
       e.preventDefault();
       handleSpinBoard();
     };
@@ -1377,7 +1385,8 @@ function App() {
   const gold = useGameStore((s) => s.gold);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
-  const canPressSpin = phase === 'idle';
+  const isFoodPaymentPending = phase === 'food_payment';
+  const canPressSpin = phase === 'idle' || isFoodPaymentPending;
   const tutorialNextDisabled =
     isTutorialMode &&
     (((tutorialDialogStep === 7 || tutorialDialogStep === 8) && tutorialSpinStep !== 'corn_done') ||
@@ -1418,8 +1427,8 @@ function App() {
 
   const knowledgeRequired = getKnowledgeRequiredForLevel(Math.min(level, 29));
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
-  const turnsUntilPayment = turn % 10 === 0 ? 10 : 10 - (turn % 10);
-  const nextCost = calculateFoodCost(turn + turnsUntilPayment);
+  const turnsUntilPayment = pendingFoodPayment ? 0 : turn % 10 === 0 ? 10 : 10 - (turn % 10);
+  const nextCost = calculateFoodCost(pendingFoodPayment ? turn : turn + turnsUntilPayment);
   const timelineYearLabel = formatTimelineYear(getTimelineYearForTurn(turn), language);
   const turnYearLabel = `${t('game.turn', language)} ${turn}, ${timelineYearLabel}`;
 
@@ -1662,11 +1671,21 @@ function App() {
             className="spin-btn"
             onClick={handleSpinBoard}
             disabled={!canPressSpin}
-            data-audio-click={levelUpResearchPoints > 0 ? 'skip' : undefined}
-            aria-label={t('game.spin', language)}
-            title={t('game.spin', language)}
+            data-audio-click={!isFoodPaymentPending && levelUpResearchPoints > 0 ? 'skip' : undefined}
+            aria-label={isFoodPaymentPending ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString()) : t('game.spin', language)}
+            title={isFoodPaymentPending ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString()) : t('game.spin', language)}
           >
-            <span>SPIN</span>
+            <span
+              style={isFoodPaymentPending ? {
+                transform: 'none',
+                padding: '0 12px',
+                fontSize: 'clamp(28px, 2.4vw, 46px)',
+                letterSpacing: '1px',
+                whiteSpace: 'nowrap',
+              } : undefined}
+            >
+              {isFoodPaymentPending ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString()) : 'SPIN'}
+            </span>
           </button>
           {knowledgeHudAttentionKey > 0 && (
             <span key={knowledgeHudAttentionKey} className="spin-research-hint-float" aria-hidden="true">

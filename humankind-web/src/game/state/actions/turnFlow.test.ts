@@ -6,6 +6,7 @@ import { STATUS_ID } from '../../data/statusDefinitions';
 import { isGameEventDefinition } from '../../data/eventDefinitions';
 import { prepareTurn } from '../../logic/turn/turnPreparation';
 import { useRelicStore } from '../relicStore';
+import { calculateFoodCost } from '../gameCalculations';
 
 vi.mock('../settingsStore', () => ({
     useSettingsStore: {
@@ -92,7 +93,9 @@ const makeState = (): GameState => {
         freeSelectionRerolls: 0,
         destroySelectionMaxSymbols: 3,
         territorialAfterEdictPending: false,
+        pendingFoodPayment: false,
         spinBoard: () => {},
+        payFoodCost: () => {},
         startProcessing: () => {},
         continueProcessingAfterNewThreatFloats: () => {},
         selectSymbol: () => {},
@@ -224,6 +227,84 @@ describe('turnFlow actions', () => {
         expect(harness.get().board[0][0]?.instanceId).toBe(oral.instanceId);
         expect(harness.get().rerollsThisTurn).toBe(0);
         expect(harness.get().pendingNewThreatFloats).toEqual([{ x: 0, y: 0, label: 'test' }]);
+    });
+
+    it('marks food payment pending as soon as a payment-turn spin starts', () => {
+        mockedPrepareTurn.mockReturnValue({
+            board: createEmptyBoard(),
+            prevBoard: createEmptyBoard(),
+            playerSymbols: [],
+            turn: 10,
+            threatState: {
+                barbarianSymbolThreat: 0,
+                barbarianCampThreat: 0,
+                naturalDisasterThreat: 0,
+            },
+            pendingNewThreatFloats: [],
+            activeStatusIds: [],
+        });
+        const harness = createHarness({ turn: 9 });
+
+        harness.actions.spinBoard();
+
+        expect(harness.get().phase).toBe('spinning');
+        expect(harness.get().pendingFoodPayment).toBe(true);
+    });
+
+    it('payFoodCost subtracts the payment and returns to idle', () => {
+        const harness = createHarness({
+            phase: 'food_payment',
+            turn: 10,
+            food: 50,
+            pendingFoodPayment: true,
+        });
+
+        harness.actions.payFoodCost();
+
+        expect(harness.get().food).toBe(50 - calculateFoodCost(10));
+        expect(harness.get().phase).toBe('idle');
+        expect(harness.get().pendingFoodPayment).toBe(false);
+    });
+
+    it('payFoodCost moves to game_over without subtracting when food is insufficient', () => {
+        const harness = createHarness({
+            phase: 'food_payment',
+            turn: 10,
+            food: 0,
+            pendingFoodPayment: true,
+        });
+
+        harness.actions.payFoodCost();
+
+        expect(harness.get().food).toBe(0);
+        expect(harness.get().phase).toBe('game_over');
+    });
+
+    it('waits for symbol selection before requesting food payment', () => {
+        vi.useFakeTimers();
+        try {
+            const food = calculateFoodCost(10) + 3;
+            const harness = createHarness({
+                phase: 'spinning',
+                turn: 10,
+                food,
+                activeStatusIds: [STATUS_ID.CLAN_FORMATION],
+                activeStatuses: [{ id: STATUS_ID.CLAN_FORMATION, remainingTurns: 5 }],
+            });
+
+            harness.actions.startProcessing();
+            vi.runAllTimers();
+
+            expect(harness.get().phase).toBe('selection');
+            expect(harness.get().pendingFoodPayment).toBe(true);
+            expect(harness.get().food).toBe(food);
+            expect(harness.get().activeStatuses).toEqual([
+                { id: STATUS_ID.CLAN_FORMATION, remainingTurns: 4 },
+            ]);
+        } finally {
+            vi.clearAllTimers();
+            vi.useRealTimers();
+        }
     });
 
     it('startProcessing pauses at showing_new_threats when pending floats exist', () => {

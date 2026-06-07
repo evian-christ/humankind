@@ -101,9 +101,11 @@ const makeState = (): GameState => {
         freeSelectionRerolls: 0,
         destroySelectionMaxSymbols: 3,
         territorialAfterEdictPending: false,
+        pendingFoodPayment: false,
         lootRewardChoices: [],
         pendingLootSlot: null,
         spinBoard: () => {},
+        payFoodCost: () => {},
         startProcessing: () => {},
         continueProcessingAfterNewThreatFloats: () => {},
         selectSymbol: () => {},
@@ -206,6 +208,18 @@ describe('selectionFlow actions', () => {
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().bonusSelectionQueue).toEqual([]);
         expect(harness.get().symbolSelectionSymbolSourceId).toBeNull();
+    });
+
+    it('moves to food payment after the final selection on a payment turn', () => {
+        const harness = createHarness({
+            pendingFoodPayment: true,
+            symbolChoices: [SYMBOLS[S.plains]!, SYMBOLS[S.mountain]!, SYMBOLS[S.grassland]!],
+        });
+
+        harness.actions.selectSymbol(S.plains);
+
+        expect(harness.get().phase).toBe('food_payment');
+        expect(harness.get().pendingFoodPayment).toBe(true);
     });
 
     it('uses a free reroll without spending gold', () => {

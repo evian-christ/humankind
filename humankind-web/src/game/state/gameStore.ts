@@ -4,7 +4,7 @@ import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/sy
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
 import { RELIC_ID } from '../logic/relics/relicIds';
-import { countNonConsumableRelics } from '../logic/relics/relicClassification';
+import { countNonConsumableRelics, isRelicAvailableForShop } from '../logic/relics/relicClassification';
 import {
     generateChoices as generateChoicesSelection,
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
@@ -83,6 +83,7 @@ export type GamePhase =
     | 'spinning'
     | 'showing_new_threats'
     | 'processing'
+    | 'food_payment'
     | 'selection'
     | 'loot_reward_selection'
     | 'destroy_selection'
@@ -238,9 +239,11 @@ export interface GameState {
     destroySelectionMaxSymbols: number;
     /** 영토 정비(22) 직후 칙령(69)이 끼어든 경우: 칙령 처리 뒤 지형→심볼 보너스 선택 유지 */
     territorialAfterEdictPending: boolean;
+    pendingFoodPayment: boolean;
 
     // Actions
     spinBoard: () => void;
+    payFoodCost: () => void;
     /** spinning 애니메이션이 끝난 후 호출 — pendingNewThreatFloats 있으면 먼저 플로팅 표시, 없으면 processing 시작 */
     startProcessing: () => void;
     /** 플로팅 표시 후 실제 processing 시작 (뷰에서 호출) */
@@ -346,9 +349,9 @@ const generateRelicChoices = (): RelicDefinition[] => {
     // 3 unique relics
     const choices: RelicDefinition[] = [];
     const pool = [...RELIC_LIST];
-    // Filter out already owned relics
+    // Non-consumables are unique; owned consumables may return to later shop stocks.
     const ownedIds = new Set(useRelicStore.getState().relics.map(r => r.definition.id));
-    const available = shuffle(pool.filter(r => !ownedIds.has(r.id)));
+    const available = shuffle(pool.filter(r => isRelicAvailableForShop(r.id, ownedIds)));
 
     for (let i = 0; i < 3; i++) {
         if (available[i]) {
@@ -448,6 +451,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     freeSelectionRerolls: 0,
     destroySelectionMaxSymbols: 3,
     territorialAfterEdictPending: false,
+    pendingFoodPayment: false,
     lootRewardChoices: [],
     pendingLootSlot: null,
 

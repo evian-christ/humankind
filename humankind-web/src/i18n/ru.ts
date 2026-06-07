@@ -41,6 +41,7 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'settings.resetProgress.confirmButton': 'Сбросить',
 
     'game.spin': 'SPIN',
+    'game.payFood': 'ЗАПЛАТИТЬ {amount} ЕДЫ',
     'game.turn': 'Ход',
     'game.food': 'Еда',
     'game.gold': 'Золото',
@@ -224,6 +225,9 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'dataBrowser.colBasePool': 'Базовый пул',
     'dataBrowser.colSprite': 'Спрайт',
     'dataBrowser.colRarity': 'Редкость',
+    'dataBrowser.colConsumptionType': 'Расходуемость',
+    'dataBrowser.consumable': 'Расходуемый',
+    'dataBrowser.nonConsumable': 'Нерасходуемый',
     'dataBrowser.colCost': 'Цена',
     'dataBrowser.colCategory': 'Категория',
     'dataBrowser.colAvailability': 'Доступность',

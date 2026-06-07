@@ -272,6 +272,11 @@ const makeDestroyedSymbolSnapshots = (
 const isBoardDestroyBlockedType = (type: SymbolType) =>
     type === SymbolType.ENEMY || type === SymbolType.DISASTER;
 
+const resolveCompletedSelectionPhase = (
+    state: GameState,
+    phaseAfterTurnFlowComplete: () => GamePhase,
+): GamePhase => state.pendingFoodPayment ? 'food_payment' : phaseAfterTurnFlowComplete();
+
 const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () => GamePhase) => {
     const q = [...(state.bonusSelectionQueue || [])];
     if (q.length > 0) {
@@ -294,13 +299,15 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
             symbolChoices: nextChoices,
             symbolSelectionRelicSourceId: null,
             forceTerrainInNextSymbolChoices: nextForceTerrain,
-            phase: q.length > 0 ? 'selection' as GamePhase : phaseAfterTurnFlowComplete(),
+            phase: q.length > 0
+                ? 'selection' as GamePhase
+                : resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
             symbolSelectionSymbolSourceId: q.length > 0 ? state.symbolSelectionSymbolSourceId ?? null : null,
         });
     }
 
     return {
-        phase: phaseAfterTurnFlowComplete(),
+        phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
         symbolChoices: [],
         symbolSelectionRelicSourceId: null,
         symbolSelectionSymbolSourceId: null,
@@ -920,7 +927,7 @@ export const createSelectionFlowActions = ({
             return;
         }
         set({
-            phase: phaseAfterTurnFlowComplete(),
+            phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
             pendingDestroySource: null,
             destroySelectionMaxSymbols: 3,
         });

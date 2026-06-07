@@ -3,6 +3,7 @@ import { useGameStore } from '../../../game/state/gameStore';
 import type { GameState } from '../../../game/state/gameStore';
 import { useRelicStore } from '../../../game/state/relicStore';
 import type { RelicInstance } from '../../../game/state/relicStore';
+import { isConsumableRelicId } from '../../../game/logic/relics/relicClassification';
 import type { HoveredRelic } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { ASSET_BASE_URL, CLICKABLE_RELIC_IDS, GAME_CURSOR_HELP, GAME_CURSOR_POINTER } from './rendererShared';
@@ -119,6 +120,7 @@ export class RelicRenderer {
             });
 
             this.renderIcon(relicPanel, relic, iconX, iconY, iconSize, shakeX, shakeY);
+            this.renderConsumableBadge(relicPanel, relic, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
             this.renderHitArea(relic, worldIconX, worldIconY, iconSize);
             this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale, fontFamily);
         }
@@ -195,6 +197,51 @@ export class RelicRenderer {
         placeholder.x = iconX + iconSize / 2 + shakeX;
         placeholder.y = iconY + iconSize / 2 + shakeY;
         panel.addChild(placeholder);
+    }
+
+    private renderConsumableBadge(
+        panel: PIXI.Container,
+        relic: RelicInstance,
+        iconX: number,
+        iconY: number,
+        iconSize: number,
+        scale: number,
+        shakeX: number,
+        shakeY: number,
+        fontFamily: string,
+    ) {
+        if (!isConsumableRelicId(relic.definition.id)) return;
+
+        const badgeSize = 24 * scale;
+        const badgeX = iconX + iconSize + shakeX;
+        const badgeY = iconY + shakeY;
+        const badge = new PIXI.Graphics();
+        badge.poly([
+            badgeX - badgeSize,
+            badgeY,
+            badgeX,
+            badgeY,
+            badgeX,
+            badgeY + badgeSize,
+        ]);
+        badge.fill({ color: 0xf97316 });
+        badge.stroke({ color: 0xffedd5, width: Math.max(1, 1.5 * scale), alpha: 0.9 });
+        panel.addChild(badge);
+
+        const mark = new PIXI.Text({
+            text: '!',
+            style: new PIXI.TextStyle({
+                fill: '#ffffff',
+                fontSize: 14 * scale,
+                fontWeight: 'bold',
+                fontFamily,
+                stroke: { color: '#7c2d12', width: Math.max(1, 2 * scale) },
+            }),
+        });
+        mark.anchor.set(0.5);
+        mark.x = badgeX - badgeSize * 0.28;
+        mark.y = badgeY + badgeSize * 0.28;
+        panel.addChild(mark);
     }
 
     private renderHitArea(relic: RelicInstance, worldIconX: number, worldIconY: number, iconSize: number) {

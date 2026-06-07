@@ -6,7 +6,7 @@ import {
 } from '../../data/demoAchievements';
 import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
-import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { EDICT_SYMBOL_ID, SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { decrementActiveStatuses, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { useSettingsStore, type EffectSpeed } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
@@ -56,6 +56,7 @@ import { createTurnRunScheduler } from './turnRunScheduler';
 import { clearSavedGame, saveGameState } from '../saveGame';
 import {
     createKnowledgeResearchCreditsForLevelGain,
+    calculateFoodCost,
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
     getKnowledgeRequiredForLevel,
@@ -166,7 +167,117 @@ export const createTurnFlowActions = ({
         });
     };
 
+    const completeTurnEnd = () => {
+        const state = get();
+        const phaseResolution = resolveTurnEndPhase({
+            turn: state.turn,
+            food: state.food,
+            edictRemovalPending: state.edictRemovalPending,
+        });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'turn_end',
+            delta: { food: phaseResolution.foodDelta, gold: 0, knowledge: 0 },
+            meta: {
+                action: 'resolve_turn_end',
+                nextPhase: phaseResolution.nextPhase,
+                isFoodPaymentTurn: phaseResolution.isFoodPaymentTurn,
+            },
+        });
+
+        if (phaseResolution.nextPhase === 'game_over') {
+            awardTerminalLeaderProgress('game_over');
+            set({ phase: 'game_over' as GamePhase });
+            clearSavedGame();
+            return;
+        }
+
+        if (phaseResolution.foodDelta !== 0) {
+            set((current) => ({ food: current.food + phaseResolution.foodDelta }));
+        }
+
+        if (phaseResolution.isFoodPaymentTurn) {
+            recordDemoFoodPaymentTurn(state.turn);
+            const venusRelics = useRelicStore
+                .getState()
+                .relics.filter((relic) => relic.definition.id === RELIC_ID.WILLENDORF_VENUS);
+            for (const relic of venusRelics) {
+                useRelicStore.getState().incrementRelicBonus(relic.instanceId, 1);
+            }
+        }
+
+        if (phaseResolution.shouldRefreshRelicShop) {
+            get().refreshRelicShop(true);
+        }
+
+        const nextActiveStatuses = decrementActiveStatuses(state.activeStatuses ?? []);
+        const statusPatch = {
+            activeStatuses: nextActiveStatuses,
+            activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
+        };
+
+        if (phaseResolution.nextPhase === 'destroy_selection' && phaseResolution.destroySelection) {
+            set({
+                ...phaseResolution.destroySelection,
+                ...statusPatch,
+                phase: 'destroy_selection' as GamePhase,
+            });
+            saveGameState(get());
+            return;
+        }
+
+        set({
+            ...statusPatch,
+            phase: 'selection' as GamePhase,
+            symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
+            freeSelectionRerolls: Math.max(
+                state.freeSelectionRerolls ?? 0,
+                getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
+            ),
+        });
+        saveGameState(get());
+    };
+
     return {
+    payFoodCost: () => {
+        const state = get();
+        if (state.phase !== 'food_payment' || !state.pendingFoodPayment) return;
+
+        const foodCost = calculateFoodCost(state.turn);
+        if (state.food < foodCost) {
+            get().appendEventLog({
+                turn: state.turn,
+                kind: 'turn_end',
+                delta: { food: 0, gold: 0, knowledge: 0 },
+                meta: { action: 'food_payment_failed', foodCost },
+            });
+            awardTerminalLeaderProgress('game_over');
+            set({ phase: 'game_over' as GamePhase, pendingFoodPayment: false });
+            clearSavedGame();
+            return;
+        }
+
+        set({
+            food: state.food - foodCost,
+            phase: 'idle' as GamePhase,
+            pendingFoodPayment: false,
+        });
+        get().appendEventLog({
+            turn: state.turn,
+            kind: 'turn_end',
+            delta: { food: -foodCost, gold: 0, knowledge: 0 },
+            meta: { action: 'food_payment', foodCost },
+        });
+        recordDemoFoodPaymentTurn(state.turn);
+        const venusRelics = useRelicStore
+            .getState()
+            .relics.filter((relic) => relic.definition.id === RELIC_ID.WILLENDORF_VENUS);
+        for (const relic of venusRelics) {
+            useRelicStore.getState().incrementRelicBonus(relic.instanceId, 1);
+        }
+        get().refreshRelicShop(true);
+        saveGameState(get());
+    },
     spinBoard: () => {
         const state = get();
         if ((state.levelUpResearchPoints ?? 0) > 0) return;
@@ -205,6 +316,7 @@ export const createTurnFlowActions = ({
             prevBoard: prepared.prevBoard,
             board: prepared.board,
             turn: prepared.turn,
+            pendingFoodPayment: prepared.turn > 0 && prepared.turn % 10 === 0,
             phase: 'spinning',
             lastEffects: [],
             counterDisplayOverrides: [],
@@ -605,73 +717,43 @@ export const createTurnFlowActions = ({
                             return;
                         }
 
-                        const phaseResolution = resolveTurnEndPhase({
-                            turn: finalState.turn,
-                            food: finalState.food,
-                            edictRemovalPending: finalState.edictRemovalPending,
-                        });
-                        get().appendEventLog({
-                            turn: finalState.turn,
-                            kind: 'turn_end',
-                            delta: { food: phaseResolution.foodDelta, gold: 0, knowledge: 0 },
-                            meta: {
-                                action: 'resolve_turn_end',
-                                nextPhase: phaseResolution.nextPhase,
-                                isFoodPaymentTurn: phaseResolution.isFoodPaymentTurn,
-                            },
-                        });
+                        if (finalState.turn > 0 && finalState.turn % 10 === 0) {
+                            const nextActiveStatuses = decrementActiveStatuses(finalState.activeStatuses ?? []);
+                            const basePatch = {
+                                pendingFoodPayment: true,
+                                activeSlot: null,
+                                activeContributors: [],
+                                pendingContributors: [],
+                                effectPhase: null,
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                activeStatuses: nextActiveStatuses,
+                                activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
+                            };
 
-                        if (phaseResolution.nextPhase === 'game_over') {
-                            awardTerminalLeaderProgress('game_over');
-                            set({ phase: 'game_over' as GamePhase });
-                            clearSavedGame();
-                            return;
-                        }
-
-                        if (phaseResolution.foodDelta !== 0) {
-                            set((s) => ({ food: s.food + phaseResolution.foodDelta }));
-                        }
-
-                        if (phaseResolution.isFoodPaymentTurn) {
-                            recordDemoFoodPaymentTurn(finalState.turn);
-                            const venusRelics = useRelicStore
-                                .getState()
-                                .relics.filter((r) => r.definition.id === RELIC_ID.WILLENDORF_VENUS);
-                            for (const relic of venusRelics) {
-                                useRelicStore.getState().incrementRelicBonus(relic.instanceId, 1);
+                            if (finalState.edictRemovalPending) {
+                                set({
+                                    ...basePatch,
+                                    phase: 'destroy_selection' as GamePhase,
+                                    edictRemovalPending: false,
+                                    pendingDestroySource: EDICT_SYMBOL_ID,
+                                    destroySelectionMaxSymbols: 1,
+                                });
+                            } else {
+                                set({
+                                    ...basePatch,
+                                    phase: 'selection' as GamePhase,
+                                    symbolSelectionRelicSourceId: null,
+                                    freeSelectionRerolls: Math.max(
+                                        finalState.freeSelectionRerolls ?? 0,
+                                        getSelectionPhaseFreeRerollFloor(finalState.unlockedKnowledgeUpgrades ?? []),
+                                    ),
+                                });
                             }
-                        }
-
-                        if (phaseResolution.shouldRefreshRelicShop) {
-                            get().refreshRelicShop(true);
-                        }
-
-                        const nextActiveStatuses = decrementActiveStatuses(finalState.activeStatuses ?? []);
-                        const statusPatch = {
-                            activeStatuses: nextActiveStatuses,
-                            activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
-                        };
-
-                        if (phaseResolution.nextPhase === 'destroy_selection' && phaseResolution.destroySelection) {
-                            set({
-                                ...phaseResolution.destroySelection,
-                                ...statusPatch,
-                                phase: 'destroy_selection' as GamePhase,
-                            });
                             saveGameState(get());
                             return;
                         }
 
-                        set({
-                            ...statusPatch,
-                            phase: 'selection' as GamePhase,
-                            symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
-                            freeSelectionRerolls: Math.max(
-                                finalState.freeSelectionRerolls ?? 0,
-                                getSelectionPhaseFreeRerollFloor(finalState.unlockedKnowledgeUpgrades ?? []),
-                            ),
-                        });
-                        saveGameState(get());
+                        completeTurnEnd();
                     }
                 });
             };

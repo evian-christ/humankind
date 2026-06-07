@@ -18,6 +18,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
 import { getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
+import { isConsumableRelicId } from '../game/logic/relics/relicClassification';
 import { getDisplayUnitStats } from '../game/data/unitUpgrades';
 import { getEventDescription, getEventDescriptionAllEras, t } from '../i18n';
 import { EffectText } from './EffectText';
@@ -213,8 +214,16 @@ const DataBrowser = () => {
         let list = Object.values(RELICS).filter(r => {
             const name = t(`relic.${r.id}.name`, language).toLowerCase();
             const desc = getDisplayedRelicDesc(r.id).toLowerCase();
+            const consumptionType = t(
+                isConsumableRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
+                language,
+            ).toLowerCase();
             const q = search.toLowerCase();
-            return search === '' || name.includes(q) || desc.includes(q) || String(r.id).includes(q);
+            return search === '' ||
+                name.includes(q) ||
+                desc.includes(q) ||
+                consumptionType.includes(q) ||
+                String(r.id).includes(q);
         });
         if (relicSort) {
             const { column, dir } = relicSort;
@@ -224,6 +233,7 @@ const DataBrowser = () => {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = t(`relic.${a.id}.name`, language); vb = t(`relic.${b.id}.name`, language); break;
                     case 'era': va = RELIC_RARITY_ORDER.indexOf(a.rarity); vb = RELIC_RARITY_ORDER.indexOf(b.rarity); break;
+                    case 'consumptionType': va = isConsumableRelicId(a.id) ? 1 : 0; vb = isConsumableRelicId(b.id) ? 1 : 0; break;
                     case 'cost': va = a.cost; vb = b.cost; break;
                     case 'desc': va = getDisplayedRelicDesc(a.id); vb = getDisplayedRelicDesc(b.id); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
@@ -660,6 +670,7 @@ const DataBrowser = () => {
                                 <SortTh column="id" label="ID" sort={relicSort} onSort={relSortHandler} className="databrowser-th--id" />
                                 <SortTh column="name" label={t('dataBrowser.colName', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--name" />
                                 <SortTh column="era" label={t('dataBrowser.colRarity', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--era" />
+                                <SortTh column="consumptionType" label={t('dataBrowser.colConsumptionType', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--type" />
                                 <SortTh column="cost" label={t('dataBrowser.colCost', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--cost" />
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--sprite" />
@@ -680,6 +691,12 @@ const DataBrowser = () => {
                                         }}>
                                             [{t(`rarity.${RELIC_RARITY_KEYS[r.rarity]}`, language)}]
                                         </span>
+                                    </td>
+                                    <td className="databrowser-cell--type">
+                                        {t(
+                                            isConsumableRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
+                                            language,
+                                        )}
                                     </td>
                                     <td className="databrowser-cell--cost">{r.cost}g</td>
                                     <td className="databrowser-cell--desc"><EffectText text={getDisplayedRelicDesc(r.id)} /></td>
