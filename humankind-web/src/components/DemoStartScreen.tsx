@@ -204,8 +204,8 @@ export default function DemoStartScreen() {
       </div>
       <DemoAchievementsPanel language={language} />
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
-        <div className="main-menu-version" aria-label="beta version">
-          b1.1.0
+        <div className="main-menu-version" aria-label="version 1.1.1">
+          v1.1.1
         </div>
         <h1 className="main-menu-title main-menu-title--image">
           <img
