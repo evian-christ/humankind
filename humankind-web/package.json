@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "steam:macos:package": "tauri build --bundles app && node scripts/packageSteamMacos.cjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",
