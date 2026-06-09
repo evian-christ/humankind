@@ -47,10 +47,10 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     // Terrain
     def('grassland', { name: "Grassland", type: SymbolType.TERRAIN, description: "+2 Food.", sprite: "001.png" }),
     def('plains', { name: "Plains", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "002.png" }),
-    def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "+1 Gold per 3 adjacent symbols.", sprite: "003.png" }),
+    def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "+1 Gold per 4 adjacent symbols.", sprite: "003.png" }),
     def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +1 Gold; if Forest is the only terrain on the board: +1 Food.", sprite: "004.png" }),
     def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "005.png" }),
-    def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol.", sprite: "006.png" }),
+    def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol. When Desert destroys a symbol: +5 Food.", sprite: "006.png" }),
     def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+2 Food per 2 adjacent empty slots. (Post-Arid Preservation: +4, Post-Oasis Reclamation: +6)", sprite: "007.png" }),
     def('mountain', { name: "Mountain", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "008.png" }),
 

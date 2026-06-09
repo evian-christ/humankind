@@ -6,8 +6,6 @@ import {
     CARAVANSERAI_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
-    THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
 import { countNonConsumableRelics } from '../relics/relicClassification';
@@ -714,53 +712,17 @@ export function runPostEffectsHooks(args: {
     let urWheelPlan: UrWheelPlan | null = null;
     const urWheelRelicForPlan = getRelicInst(RELIC_ID.UR_WHEEL);
     if (urWheelRelicForPlan && urWheelRelicForPlan.effect_counter > 0) {
-        const upgrades = (unlockedKnowledgeUpgrades ?? []).map(Number);
-        // 기존 gameStore 로직과 동일하게 최소 baseFood를 찾는다.
-        const urWheelGrasslandFood = upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
-            ? 5
-            : upgrades.includes(IRRIGATION_UPGRADE_ID) ? 3 : 2;
+        rebuildEffectBySlot();
+        // Compare the final per-slot Food totals produced during this turn.
         let target: { x: number; y: number } | null = null;
         let minFood = Infinity;
         for (let ux = 0; ux < boardWidth; ux++) {
             for (let uy = 0; uy < boardHeight; uy++) {
                 const s = board[ux][uy];
                 if (!s || s.is_marked_for_destruction) continue;
-                const baseFood = (() => {
-                    switch (s.definition.id) {
-                        case S.wheat:
-                            return 1;
-                        case S.rice:
-                            return 1;
-                        case S.cattle:
-                            return 1;
-                        case S.banana:
-                            return 1 + (s.banana_permanent_food_bonus ?? 0);
-                        case S.fish:
-                            return 0;
-                        case S.sea:
-                            return 0;
-                        case S.stone:
-                            return 0;
-                        case S.grassland:
-                            return urWheelGrasslandFood;
-                        case S.rainforest:
-                            return 1;
-                        case S.plains:
-                            return 1 + (s.effect_counter || 0);
-                        case S.campfire:
-                            return 1;
-                        case S.merchant:
-                            return 2;
-                        case S.horse:
-                            return 1;
-                        case S.wild_seeds:
-                            return 1;
-                        default:
-                            return 0;
-                    }
-                })();
-                if (baseFood < minFood) {
-                    minFood = baseFood;
+                const producedFood = Math.max(0, effectBySlot.get(`${ux},${uy}`)?.food ?? 0);
+                if (producedFood < minFood) {
+                    minFood = producedFood;
                     target = { x: ux, y: uy };
                 }
             }

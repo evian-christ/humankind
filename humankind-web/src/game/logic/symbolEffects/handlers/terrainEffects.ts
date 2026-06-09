@@ -27,13 +27,12 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             const occupiedAdj = adj.filter(pos => boardGrid[pos.x][pos.y] != null);
             const divisor = upgrades.includes(OCEANIC_ROUTES_UPGRADE_ID)
                 ? 1
-                : upgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID) || upgrades.includes(MARITIME_TRADE_UPGRADE_ID)
+                : upgrades.includes(MARITIME_TRADE_UPGRADE_ID)
                     ? 2
-                    : 3;
-            const multiplier = upgrades.includes(OCEANIC_ROUTES_UPGRADE_ID) || upgrades.includes(MARITIME_TRADE_UPGRADE_ID)
-                ? 2
-                : 1;
-            const seaGold = Math.floor(occupiedAdj.length / divisor) * multiplier;
+                    : upgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID)
+                        ? 3
+                        : 4;
+            const seaGold = Math.floor(occupiedAdj.length / divisor);
             state.gold += seaGold;
             if (seaGold > 0) occupiedAdj.forEach(pos => state.contributors.push(pos));
             return true;
@@ -119,39 +118,35 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 );
             });
 
-            if (upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)) {
-                state.food += 10;
-                state.gold += 10;
-                allValidTargets.forEach((pos) => {
+            const destroyTargets = (targets: { x: number; y: number }[]): number => {
+                let destroyedCount = 0;
+                targets.forEach((pos) => {
                     const target = boardGrid[pos.x][pos.y];
-                    if (target) {
-                        target.is_marked_for_destruction = true;
-                        state.contributors.push(pos);
-                    }
+                    if (!target || target.is_marked_for_destruction) return;
+                    target.is_marked_for_destruction = true;
+                    state.contributors.push(pos);
+                    destroyedCount++;
                 });
+                return destroyedCount;
+            };
+
+            if (upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)) {
+                state.gold += 5;
+                state.food += destroyTargets(allValidTargets) * 30;
                 return true;
             }
 
             if (upgrades.includes(DESERT_STORAGE_UPGRADE_ID)) {
-                state.gold += 5;
-                adjacentValidTargets.forEach((pos) => {
-                    const target = boardGrid[pos.x][pos.y];
-                    if (target) {
-                        target.is_marked_for_destruction = true;
-                        state.contributors.push(pos);
-                    }
-                });
+                state.gold += 2;
+                state.food += destroyTargets(adjacentValidTargets) * 20;
                 return true;
             }
 
-            if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.gold += 2;
+            const destructionFood = upgrades.includes(FOREIGN_TRADE_UPGRADE_ID) ? 10 : 5;
+            if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.gold += 1;
             if (adjacentValidTargets.length > 0) {
                 const randomTarget = adjacentValidTargets[Math.floor(Math.random() * adjacentValidTargets.length)];
-                const targetInstance = boardGrid[randomTarget.x][randomTarget.y];
-                if (targetInstance) {
-                    targetInstance.is_marked_for_destruction = true;
-                    state.contributors.push(randomTarget);
-                }
+                state.food += destroyTargets([randomTarget]) * destructionFood;
             }
             return true;
         }

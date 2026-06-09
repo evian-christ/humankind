@@ -14,6 +14,7 @@ import {
     FEUDAL_CORN_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
     GUILD_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
@@ -74,6 +75,44 @@ const getAdjacentCoords = (x: number, y: number) => {
 };
 
 describe('symbolEffectResolution', () => {
+    it('scales sea gold by research tier without increasing gold per group', () => {
+        const board = createEmptyBoard();
+        const sea = createInstance(Sym.sea, 'sea');
+        board[2][2] = sea;
+        getAdjacentCoords(2, 2).slice(0, 6).forEach(({ x, y }, index) => {
+            board[x][y] = createInstance(Sym.wheat, `adjacent_${index}`);
+        });
+
+        expect(processSingleSymbolEffects(sea, board, 2, 2, { upgrades: [] }).gold).toBe(1);
+        expect(processSingleSymbolEffects(
+            sea,
+            board,
+            2,
+            2,
+            { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID] },
+        ).gold).toBe(2);
+        expect(processSingleSymbolEffects(
+            sea,
+            board,
+            2,
+            2,
+            { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID] },
+        ).gold).toBe(3);
+        expect(processSingleSymbolEffects(
+            sea,
+            board,
+            2,
+            2,
+            {
+                upgrades: [
+                    CELESTIAL_NAVIGATION_UPGRADE_ID,
+                    MARITIME_TRADE_UPGRADE_ID,
+                    OCEANIC_ROUTES_UPGRADE_ID,
+                ],
+            },
+        ).gold).toBe(6);
+    });
+
     it('prevents barbarian invasion enemies from plundering food with Castle', () => {
         const board = createEmptyBoard();
         const enemy = createInstance(Sym.enemy_warrior, 'enemy');
@@ -213,6 +252,42 @@ describe('symbolEffectResolution', () => {
         processSingleSymbolEffects(desert, board, 1, 1, { upgrades: [] });
 
         expect(caravanserai.is_marked_for_destruction).toBe(false);
+        expect(wheat.is_marked_for_destruction).toBe(true);
+        vi.mocked(Math.random).mockRestore();
+    });
+
+    it('grants Food when base Desert destroys a random adjacent symbol', () => {
+        const board = createEmptyBoard();
+        const desert = createInstance(Sym.desert, 'desert');
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        board[1][1] = desert;
+        board[0][1] = wheat;
+
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const result = processSingleSymbolEffects(desert, board, 1, 1, { upgrades: [] });
+
+        expect(result).toMatchObject({ food: 5, gold: 0, knowledge: 0 });
+        expect(wheat.is_marked_for_destruction).toBe(true);
+        vi.mocked(Math.random).mockRestore();
+    });
+
+    it('upgrades Desert destruction rewards with Foreign Trade', () => {
+        const board = createEmptyBoard();
+        const desert = createInstance(Sym.desert, 'desert');
+        const wheat = createInstance(Sym.wheat, 'wheat');
+        board[1][1] = desert;
+        board[0][1] = wheat;
+
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const result = processSingleSymbolEffects(
+            desert,
+            board,
+            1,
+            1,
+            { upgrades: [FOREIGN_TRADE_UPGRADE_ID] },
+        );
+
+        expect(result).toMatchObject({ food: 10, gold: 1, knowledge: 0 });
         expect(wheat.is_marked_for_destruction).toBe(true);
         vi.mocked(Math.random).mockRestore();
     });
@@ -893,7 +968,8 @@ describe('symbolEffectResolution', () => {
             { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
         );
 
-        expect(result.gold).toBe(5);
+        expect(result.food).toBe(60);
+        expect(result.gold).toBe(2);
         expect(wheat.is_marked_for_destruction).toBe(true);
         expect(papyrus.is_marked_for_destruction).toBe(true);
         expect(library.is_marked_for_destruction).toBe(true);
@@ -924,8 +1000,8 @@ describe('symbolEffectResolution', () => {
             { upgrades: [OASIS_RECOVERY_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(10);
-        expect(result.gold).toBe(10);
+        expect(result.food).toBe(90);
+        expect(result.gold).toBe(5);
         expect(wheat.is_marked_for_destruction).toBe(true);
         expect(papyrus.is_marked_for_destruction).toBe(true);
         expect(library.is_marked_for_destruction).toBe(true);
@@ -1199,7 +1275,7 @@ describe('symbolEffectResolution', () => {
         );
 
         expect(pearlResult.gold).toBe(7);
-        expect(seaResult.gold).toBe(4);
+        expect(seaResult.gold).toBe(2);
     });
 
     it('applies Oceanic Routes as the highest tier for fish crab pearl and sea', () => {
@@ -1227,7 +1303,7 @@ describe('symbolEffectResolution', () => {
         expect(crabResult.food).toBe(8);
         expect(crabResult.gold).toBe(8);
         expect(pearlResult.gold).toBe(30);
-        expect(seaResult.gold).toBe(6);
+        expect(seaResult.gold).toBe(3);
     });
 
     it('upgrades rainforest yields with Tropical Agriculture', () => {

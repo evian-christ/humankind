@@ -410,4 +410,41 @@ describe('postEffectsHooks', () => {
         expect(result.bonusKnowledge).toBe(0);
         expect(result.agiVictory).toBe(true);
     });
+
+    it('targets the lowest actual Food producer for Chariot Wheel of Ur', () => {
+        const board = createEmptyBoard();
+        board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat');
+        board[1][0] = createInstance(SYMBOLS[S.grassland]!, 'grassland');
+
+        const result = runPostEffectsHooks({
+            board,
+            boardWidth: 5,
+            boardHeight: 4,
+            effects: [
+                { x: 0, y: 0, food: 3, gold: 0, knowledge: 0 },
+                { x: 0, y: 0, food: 4, gold: 0, knowledge: 0 },
+                { x: 1, y: 0, food: 2, gold: 0, knowledge: 0 },
+            ],
+            leaderId: null,
+            unlockedKnowledgeUpgrades: [],
+            getAdjacentCoords: () => [],
+            relics: [
+                {
+                    instanceId: 'ur-wheel',
+                    definition: { id: RELIC_ID.UR_WHEEL },
+                    effect_counter: 3,
+                    bonus_stacks: 0,
+                },
+            ],
+            relicStoreApi: {
+                incrementRelicBonus: () => undefined,
+                decrementRelicCounterOrRemove: () => undefined,
+            },
+        });
+
+        expect(result.urWheelPlan).toEqual({
+            instanceId: 'ur-wheel',
+            target: { x: 1, y: 0 },
+        });
+    });
 });
