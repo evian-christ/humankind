@@ -32,6 +32,7 @@ import type { AudioPlaybackHandle } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
 import { boardCellLocalRect, computeBoardPixelLayout } from './game/layout/boardPixelLayout';
 import { S } from './game/data/symbolDefinitions';
+import { viewportPointToRootPoint } from './ui/cursorPosition';
 
 const CustomCursor = () => {
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -49,10 +50,7 @@ const CustomCursor = () => {
         if (isPointer) cursorRef.current.classList.add('is-pointer');
         else cursorRef.current.classList.remove('is-pointer');
 
-        const rect = root.getBoundingClientRect();
-        const scale = rect.width / root.clientWidth;
-        const vx = (e.clientX - rect.left) / scale;
-        const vy = (e.clientY - rect.top) / scale;
+        const { x: vx, y: vy } = viewportPointToRootPoint(root, e.clientX, e.clientY);
         cursorRef.current.style.transform = `translate(${vx}px, ${vy}px)`;
       }
     };
