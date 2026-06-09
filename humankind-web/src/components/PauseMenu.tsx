@@ -7,6 +7,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { useRelicStore } from '../game/state/relicStore';
 import { clearSavedGame } from '../game/state/saveGame';
 import { clearLeaderProgress } from '../game/data/leaders';
+import { clearDemoAchievementProgress } from '../game/data/demoAchievements';
 import {
     KEY_BINDING_ACTIONS,
     formatKeyCode,
@@ -160,6 +161,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     const handleConfirmResetGameData = () => {
         clearSavedGame();
         clearLeaderProgress();
+        clearDemoAchievementProgress();
         initializeGame();
         resetRelics();
         resetPreGameProgress();

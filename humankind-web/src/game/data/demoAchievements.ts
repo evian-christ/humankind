@@ -59,6 +59,10 @@ const writeDemoAchievementSaveData = (data: DemoAchievementSaveData): void => {
   storage()?.setItem(DEMO_ACHIEVEMENT_STORAGE_KEY, JSON.stringify(data));
 };
 
+export const clearDemoAchievementProgress = (): void => {
+  storage()?.removeItem(DEMO_ACHIEVEMENT_STORAGE_KEY);
+};
+
 export const DEMO_ACHIEVEMENT_SECTIONS: DemoAchievementSection[] = [
   {
     id: 'very-easy',

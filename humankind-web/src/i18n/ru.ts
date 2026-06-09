@@ -48,10 +48,10 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'settings.crtEffect.on': 'Вкл.',
     'settings.crtEffect.off': 'Выкл.',
     'settings.resetProgress': 'Сбросить данные игры',
-    'settings.resetProgress.hint': 'Удаляет сохраненные забеги, обучение и прогресс лидеров. Настройки сохранятся.',
+    'settings.resetProgress.hint': 'Удаляет сохраненные забеги, обучение, прогресс лидеров и достижения. Настройки сохранятся.',
     'settings.resetProgress.button': 'Сброс',
     'settings.resetProgress.confirmTitle': 'Сброс данных игры',
-    'settings.resetProgress.confirm': 'Сбросить все игровые данные? Сохраненные забеги, обучение и прогресс лидеров будут удалены. Настройки останутся.',
+    'settings.resetProgress.confirm': 'Сбросить все игровые данные? Сохраненные забеги, обучение, прогресс лидеров и достижения будут удалены. Настройки останутся.',
     'settings.resetProgress.cancel': 'Отмена',
     'settings.resetProgress.confirmButton': 'Сбросить',
 

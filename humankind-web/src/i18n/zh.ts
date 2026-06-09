@@ -64,10 +64,10 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'settings.crtEffect.on': '开',
     'settings.crtEffect.off': '关',
     'settings.resetProgress': '重置游戏数据',
-    'settings.resetProgress.hint': '清除保存的游戏、教程完成状态和领袖进度。',
+    'settings.resetProgress.hint': '清除保存的游戏、教程完成状态、领袖进度和成就。',
     'settings.resetProgress.button': '重置',
     'settings.resetProgress.confirmTitle': '重置游戏数据',
-    'settings.resetProgress.confirm': '要重置所有游戏数据吗？保存的游戏、教程完成状态和领袖进度将被删除。设置会保留。',
+    'settings.resetProgress.confirm': '要重置所有游戏数据吗？保存的游戏、教程完成状态、领袖进度和成就将被删除。设置会保留。',
     'settings.resetProgress.cancel': '取消',
     'settings.resetProgress.confirmButton': '重置',
 
