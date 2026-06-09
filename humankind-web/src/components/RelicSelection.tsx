@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { getInflatedGoldCost, getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
@@ -41,7 +42,22 @@ const RelicSelection = () => {
     const turn = useGameStore((s) => s.turn);
     const leaderId = useGameStore((s) => s.leaderId);
     const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
+    const phase = useGameStore((s) => s.phase);
     const language = useSettingsStore((s) => s.language);
+    const [purchaseDeniedHint, setPurchaseDeniedHint] = useState<{ key: number; slotIndex: number } | null>(null);
+    const purchaseInputLockedRef = useRef(true);
+
+    useEffect(() => {
+        if (isRelicShopOpen) {
+            purchaseInputLockedRef.current = true;
+            const unlockTimer = window.setTimeout(() => {
+                purchaseInputLockedRef.current = false;
+            }, 200);
+            return () => window.clearTimeout(unlockTimer);
+        }
+        purchaseInputLockedRef.current = true;
+        setPurchaseDeniedHint(null);
+    }, [isRelicShopOpen]);
 
     if (!isRelicShopOpen) return null;
 
@@ -57,7 +73,17 @@ const RelicSelection = () => {
     const isGoldenTradeDiscount = (relic: { id: number; cost: number }) =>
         hasGoldenTrade && relicHalfPriceRelicId === relic.id;
 
-    const handleBuyRelic = (relic: { id: number; cost: number }) => {
+    const handleBuyRelic = (relic: { id: number; cost: number }, slotIndex: number) => {
+        if (purchaseInputLockedRef.current) return;
+
+        if (phase === 'selection') {
+            void audioManager.play('denied');
+            setPurchaseDeniedHint((current) => ({
+                key: (current?.key ?? 0) + 1,
+                slotIndex,
+            }));
+            return;
+        }
         if (gold < getEffectiveRelicCost(relic)) {
             void audioManager.play('denied');
             return;
@@ -151,43 +177,54 @@ const RelicSelection = () => {
                     {relicChoices.map((relic, i) => (
                         <div className="relic-museum-buy-slot" key={`buy-${i}`}>
                             {relic ? (
-                                <button
-                                    type="button"
-                                    className="relic-card-buy-btn"
-                                    data-audio-click="relic_buy"
-                                    onClick={() => handleBuyRelic(relic)}
-                                    aria-label={
-                                        isGoldenTradeDiscount(relic)
-                                            ? t('game.relicShopBuyDiscountAria', language)
-                                                .replace('{sale}', String(getEffectiveRelicCost(relic)))
-                                                .replace('{original}', String(getInflatedGoldCost(relic.cost, level)))
-                                            : undefined
-                                    }
-                                >
-                                    {isGoldenTradeDiscount(relic) ? (
-                                        <span className="relic-card-buy-price relic-card-buy-price--discount">
-                                            <span className="relic-card-buy-price-was">
-                                                <span className="relic-card-buy-price-icon relic-card-buy-price-icon--was" aria-hidden>
-                                                    &#9679;
+                                <div style={{ position: 'relative', width: '100%' }}>
+                                    <button
+                                        type="button"
+                                        className="relic-card-buy-btn"
+                                        data-audio-click="relic_buy"
+                                        onClick={() => handleBuyRelic(relic, i)}
+                                        aria-label={
+                                            isGoldenTradeDiscount(relic)
+                                                ? t('game.relicShopBuyDiscountAria', language)
+                                                    .replace('{sale}', String(getEffectiveRelicCost(relic)))
+                                                    .replace('{original}', String(getInflatedGoldCost(relic.cost, level)))
+                                                : undefined
+                                        }
+                                    >
+                                        {isGoldenTradeDiscount(relic) ? (
+                                            <span className="relic-card-buy-price relic-card-buy-price--discount">
+                                                <span className="relic-card-buy-price-was">
+                                                    <span className="relic-card-buy-price-icon relic-card-buy-price-icon--was" aria-hidden>
+                                                        &#9679;
+                                                    </span>
+                                                    <span className="relic-card-buy-price-num relic-card-buy-price-num--struck">{getInflatedGoldCost(relic.cost, level)}</span>
                                                 </span>
-                                                <span className="relic-card-buy-price-num relic-card-buy-price-num--struck">{getInflatedGoldCost(relic.cost, level)}</span>
+                                                <span className="relic-card-buy-price-now">
+                                                    <span className="relic-card-buy-price-icon" aria-hidden>
+                                                        &#9679;
+                                                    </span>
+                                                    <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
+                                                </span>
                                             </span>
-                                            <span className="relic-card-buy-price-now">
+                                        ) : (
+                                            <span className="relic-card-buy-price">
                                                 <span className="relic-card-buy-price-icon" aria-hidden>
                                                     &#9679;
                                                 </span>
                                                 <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
                                             </span>
-                                        </span>
-                                    ) : (
-                                        <span className="relic-card-buy-price">
-                                            <span className="relic-card-buy-price-icon" aria-hidden>
-                                                &#9679;
-                                            </span>
-                                            <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
+                                        )}
+                                    </button>
+                                    {purchaseDeniedHint?.slotIndex === i && (
+                                        <span
+                                            key={purchaseDeniedHint.key}
+                                            className="spin-research-hint-float"
+                                            aria-hidden="true"
+                                        >
+                                            {t('game.chooseSymbolBeforeRelicPurchase', language)}
                                         </span>
                                     )}
-                                </button>
+                                </div>
                             ) : null}
                         </div>
                     ))}

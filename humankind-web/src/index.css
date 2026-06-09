@@ -91,7 +91,7 @@ body {
   left: 0;
   right: 0;
   height: 74px;
-  background: rgba(0, 0, 0, 0.96);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: space-between; /* Distribute HUD items across the row. */
@@ -184,7 +184,7 @@ body {
 
 .exp-bar-mini {
   width: 100%;
-  height: 40px;
+  height: 32px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 14px;
   overflow: hidden;
@@ -266,25 +266,93 @@ body {
 }
 
 .food-demand-mini {
+  box-sizing: border-box;
+  padding: 5px 12px;
   font-size: 24px;
   font-weight: 600;
   letter-spacing: 0.5px;
   color: #ebebeb;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 1);
-}
-
-.food-demand-mini.warning-low {
-  color: #f87171;
-  animation: pulse-red 1s infinite alternate;
+  white-space: nowrap;
+  transform-origin: center;
+  transition: color 160ms ease, font-size 160ms ease;
 }
 
 .food-demand-mini.warning-mid {
   color: #f5c842;
 }
 
-@keyframes pulse-red {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0.8; transform: scale(1.02); }
+.food-demand-mini.warning-3 {
+  color: #fde047;
+  font-size: 25px;
+  font-weight: 700;
+  text-shadow:
+    0 2px 4px #000,
+    0 0 8px rgba(250, 204, 21, 1),
+    0 0 18px rgba(250, 204, 21, 0.9),
+    0 0 34px rgba(250, 204, 21, 0.65);
+}
+
+.food-demand-mini.warning-2 {
+  color: #fdba74;
+  font-size: 27px;
+  font-weight: 800;
+  text-shadow:
+    0 2px 4px #000,
+    0 0 9px rgba(251, 146, 60, 1),
+    0 0 22px rgba(251, 146, 60, 0.95),
+    0 0 42px rgba(249, 115, 22, 0.72);
+  animation: food-demand-warning-2 0.9s ease-in-out infinite alternate;
+}
+
+.food-demand-mini.warning-1 {
+  color: #fecaca;
+  font-size: 29px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-shadow:
+    0 2px 4px #000,
+    0 0 10px rgba(248, 113, 113, 1),
+    0 0 26px rgba(239, 68, 68, 1),
+    0 0 50px rgba(220, 38, 38, 0.82);
+  animation: food-demand-warning-1 0.55s ease-in-out infinite alternate;
+}
+
+.food-demand-mini.warning-0 {
+  color: #fff;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-shadow:
+    0 2px 4px #450a0a,
+    0 0 8px rgba(255, 255, 255, 1),
+    0 0 22px rgba(248, 113, 113, 1),
+    0 0 42px rgba(239, 68, 68, 1),
+    0 0 66px rgba(185, 28, 28, 0.92);
+  animation: food-demand-warning-0 0.34s ease-in-out infinite alternate;
+}
+
+@keyframes food-demand-warning-2 {
+  from { transform: scale(1); }
+  to { transform: scale(1.035); }
+}
+
+@keyframes food-demand-warning-1 {
+  from { transform: scale(1.02); filter: brightness(1); }
+  to { transform: scale(1.075); filter: brightness(1.16); }
+}
+
+@keyframes food-demand-warning-0 {
+  from { transform: scale(1.045); filter: brightness(1); }
+  to { transform: scale(1.11); filter: brightness(1.28); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .food-demand-mini.warning-2,
+  .food-demand-mini.warning-1,
+  .food-demand-mini.warning-0 {
+    animation: none;
+  }
 }
 
 /* ===== GAME TITLE ===== */
@@ -316,7 +384,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #000000;
+  background: #242424;
 }
 
 /* ===== BOTTOM PANEL (removed) ===== */
@@ -551,10 +619,14 @@ button.spin-btn:disabled:active {
   white-space: nowrap;
   pointer-events: none;
   text-shadow:
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
+    -3px -3px 0 #000,
+    0 -3px 0 #000,
+    3px -3px 0 #000,
+    -3px 0 0 #000,
+    3px 0 0 #000,
+    -3px 3px 0 #000,
+    0 3px 0 #000,
+    3px 3px 0 #000,
     0 5px 14px rgba(0, 0, 0, 0.72);
   animation: spin-research-hint-float 920ms ease-out forwards;
 }
@@ -2311,7 +2383,7 @@ button.spin-btn:disabled:active {
   align-items: flex-start;
   justify-content: center;
   font-family: var(--game-font-family), sans-serif;
-  background: #000000;
+  background: #242424;
   padding: clamp(52px, 8vh, 96px) clamp(20px, 5vw, 72px);
   overflow-y: auto;
 }
@@ -2484,6 +2556,80 @@ button.spin-btn:disabled:active {
   letter-spacing: 0;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.72);
 }
+
+.demo-achievements-completion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  padding: 18px;
+  border: 2px solid rgba(158, 240, 141, 0.72);
+  border-radius: 12px;
+  background: rgba(18, 54, 29, 0.78);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.42),
+    0 0 24px rgba(34, 197, 94, 0.2);
+}
+
+.demo-achievements-completion-title {
+  margin: 0;
+  color: #b9f6ad;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.72);
+}
+
+.demo-achievements-completion-description {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.72);
+}
+
+.demo-achievements-giveaway-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 16px;
+  border: 2px solid #b9f6ad;
+  border-radius: 8px;
+  background: #238636;
+  color: #ffffff;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.72);
+  box-shadow: 0 3px 0 #0d421b;
+  transition: background-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.demo-achievements-giveaway-button:hover,
+.demo-achievements-giveaway-button:focus-visible {
+  background: #2ea043;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #0d421b, 0 0 18px rgba(158, 240, 141, 0.28);
+}
+
+.demo-achievements-giveaway-button:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 3px;
+}
+
+.demo-achievements-giveaway-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0d421b;
+}
+
 .main-menu-title {
   margin: 0;
   color: #ffffff;
@@ -3730,7 +3876,7 @@ button.spin-btn:disabled:active {
   overflow: hidden;
   padding: 50px 56px 48px;
   font-family: var(--game-font-family), sans-serif;
-  background: #000000;
+  background: #242424;
   color: #ffffff;
 }
 
@@ -3865,28 +4011,6 @@ button.spin-btn:disabled:active {
     brightness(0.46)
     drop-shadow(0 20px 22px rgba(0, 0, 0, 0.54));
   transition: none;
-}
-
-.leader-card-portrait::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 0) 68%,
-    rgba(0, 0, 0, 0.88) 88%,
-    #000000 100%
-  );
-  mask-image: var(--leader-portrait-mask);
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
-  -webkit-mask-image: var(--leader-portrait-mask);
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
 }
 
 .leader-card-portrait img,
@@ -5450,7 +5574,7 @@ button.spin-btn:disabled:active {
   position: relative;
   width: 100%;
   height: 100%;
-  background: #000000;
+  background: #242424;
 }
 
 .game-screen-black {
@@ -6747,7 +6871,16 @@ button.spin-btn:disabled:active {
   font-weight: bold;
   letter-spacing: 0.04em;
   color: #93c5fd;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    -2px -2px 0 #000,
+    0 -2px 0 #000,
+    2px -2px 0 #000,
+    -2px 0 0 #000,
+    2px 0 0 #000,
+    -2px 2px 0 #000,
+    0 2px 0 #000,
+    2px 2px 0 #000,
+    0 2px 5px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
   animation: knowledge-research-mouse-hint-anim 0.5s ease-out forwards;
 }
@@ -7305,7 +7438,7 @@ button.relic-shop-btn img {
   pointer-events: none;
 }
 
-/* Hover label: same panel as hud-stat-tooltip (top bar 기본 ?�산??. */
+/* Hover label: same panel as hud-stat-tooltip (top bar 기본 ??산??. */
 .bottom-action-hud-tooltip {
   position: absolute;
   left: 50%;

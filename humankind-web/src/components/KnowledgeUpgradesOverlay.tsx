@@ -45,7 +45,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.ANCIENT]: 'era.ancient',
     [SymbolType.UNIT]: 'era.normal',
     [SymbolType.ENEMY]: 'era.normal',
-    [SymbolType.DISASTER]: 'era.normal',
+    [SymbolType.DISASTER]: 'era.disaster',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 
@@ -839,7 +839,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.color = '#f8fafc'; e.currentTarget.style.transform = 'translateX(-4px)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.transform = 'translateX(0)'; }}
-                    title="돌아가기"
                     aria-label="돌아가기"
                 >
                     ←
@@ -1052,7 +1051,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             isDenied ? 'knowledge-upgrade-chip--denied' : '',
                                                             id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
                                                         ].filter(Boolean).join(' ')}
-                                                        title={name}
                                                         data-knowledge-upgrade-id={id}
                                                         aria-disabled={visuallyLocked && !unlocked}
                                                         onClick={(e) => handleChipClick(id, e)}
@@ -1076,7 +1074,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             <img
                                                                 src={upgradeSpriteUrl}
                                                                 alt={name}
-                                                                title={name}
                                                                 draggable={false}
                                                                 style={{
                                                                     position: 'absolute',

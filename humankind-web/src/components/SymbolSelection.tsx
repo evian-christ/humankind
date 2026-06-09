@@ -1,6 +1,7 @@
-import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { getRerollCost } from '../game/state/gameCalculations';
+import { isPlagueBlockingSelection } from '../game/state/actions/selectionFlow';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SYMBOLS, S, SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { isGameEventDefinition, type GameEventDefinition } from '../game/data/eventDefinitions';
@@ -10,6 +11,7 @@ import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { audioManager } from '../audio/audioManager';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
+import { getActionForKeyCode } from '../game/input/keyBindings';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -21,6 +23,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.SPECIAL]: 'era.specialSymbol',
     [SymbolType.UNIT]: 'era.unit',
     [SymbolType.ENEMY]: 'era.enemy',
+    [SymbolType.DISASTER]: 'era.disaster',
 };
 
 /** gameStore RELIC_ID: 고대 유물 잔해 / 고대 부족 합류 — 심볼 선택 UI 전용 표시·리롤 숨김 */
@@ -169,6 +172,7 @@ const SymbolSelection = () => {
         rerollSymbols,
         symbolSelectionRelicSourceId,
         symbolSelectionSymbolSourceId,
+        isTurnSymbolSelection,
         board,
     } = useGameStore();
     const language = useSettingsStore((s) => s.language);
@@ -188,8 +192,6 @@ const SymbolSelection = () => {
         prevPhaseRef.current = phase;
     }, [phase]);
 
-    if (phase !== 'selection') return null;
-
     // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
     const hasLydia = relics.some(r => r.definition.id === 2);
     const rerollCost = getRerollCost(level, hasLydia ? 0.5 : 1, rerollsThisTurn);
@@ -197,8 +199,8 @@ const SymbolSelection = () => {
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
     const hasFreeReroll = (freeSelectionRerolls ?? 0) > 0;
     const visibleRerollCost = hasFreeReroll ? 0 : rerollCost;
-    const hasPlague = board?.some((col) => col?.some((cell) => cell?.definition?.id === 78)) ?? false;
-    const canReroll = !hasPlague && (hasFreeReroll || gold >= rerollCost) && (rerollsLeft === null || rerollsLeft > 0);
+    const isSelectionBlockedByPlague = isPlagueBlockingSelection({ board, isTurnSymbolSelection });
+    const canReroll = !isSelectionBlockedByPlague && (hasFreeReroll || gold >= rerollCost) && (rerollsLeft === null || rerollsLeft > 0);
 
     const hideRerollFromRelicSource =
         symbolSelectionRelicSourceId === RELIC_ANCIENT_DEBRIS ||
@@ -206,6 +208,7 @@ const SymbolSelection = () => {
         symbolSelectionRelicSourceId === RELIC_MILITARY_LEVY ||
         symbolSelectionRelicSourceId === RELIC_PROPHECY_DIE;
     const hideRerollFromSymbolSource = symbolSelectionSymbolSourceId === S.tribal_village;
+    const canUseReroll = canReroll && !hideRerollFromRelicSource && !hideRerollFromSymbolSource;
     const symbolSource = symbolSelectionSymbolSourceId == null ? null : SYMBOLS[symbolSelectionSymbolSourceId] ?? null;
     const relicSourceLabelKey =
         hideRerollFromRelicSource && symbolSelectionRelicSourceId != null
@@ -216,24 +219,75 @@ const SymbolSelection = () => {
             ? (`symbol.${symbolSource.key}.name` as const)
             : relicSourceLabelKey;
 
-    const handleCardClick = (symbolId: number) => {
+    const handleCardClick = useCallback((symbolId: number) => {
         void audioManager.play('symbol_choice_chose');
         selectSymbol(symbolId);
-    };
+    }, [selectSymbol]);
 
-    const handleEventCardClick = (eventId: number) => {
+    const handleEventCardClick = useCallback((eventId: number) => {
         void audioManager.play('symbol_choice_chose');
         selectEvent(eventId);
-    };
+    }, [selectEvent]);
 
-    const handleRerollClick = () => {
-        if (!canReroll) {
+    const handleRerollClick = useCallback(() => {
+        if (!canUseReroll) {
             void audioManager.play('denied');
             return;
         }
         void audioManager.play('symbol_choice_reroll');
         rerollSymbols();
-    };
+    }, [canUseReroll, rerollSymbols]);
+
+    useEffect(() => {
+        if (phase !== 'selection' || isPeeked) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target as HTMLElement | null;
+            if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
+            if (event.repeat) return;
+
+            const action = getActionForKeyCode(useSettingsStore.getState().keyBindings, event.code);
+            if (action === 'reroll') {
+                event.preventDefault();
+                handleRerollClick();
+                return;
+            }
+            if (action === 'skip') {
+                event.preventDefault();
+                skipSelection();
+                return;
+            }
+
+            const choiceIndex =
+                action === 'selectFirst' ? 0
+                    : action === 'selectSecond' ? 1
+                        : action === 'selectThird' ? 2
+                            : -1;
+            if (choiceIndex < 0 || isSelectionBlockedByPlague) return;
+
+            const choice = symbolChoices[choiceIndex];
+            if (!choice) return;
+
+            event.preventDefault();
+            if (isGameEventDefinition(choice)) handleEventCardClick(choice.id);
+            else handleCardClick(choice.id);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [
+        canUseReroll,
+        handleCardClick,
+        handleEventCardClick,
+        handleRerollClick,
+        isPeeked,
+        isSelectionBlockedByPlague,
+        phase,
+        skipSelection,
+        symbolChoices,
+    ]);
+
+    if (phase !== 'selection') return null;
 
     return (
         <div
@@ -244,7 +298,6 @@ const SymbolSelection = () => {
                 type="button"
                 onClick={() => setIsPeeked((v) => !v)}
                 aria-expanded={!isPeeked}
-                title={isPeeked ? t('game.returnToSelection', language) : t('game.peekBoard', language)}
             >
                 <span className="selection-peek-handle-label">
                     {isPeeked ? t('game.returnToSelection', language) : t('game.peekBoard', language)}
@@ -261,10 +314,10 @@ const SymbolSelection = () => {
                         <div className="selection-relic-source-banner">{t(sourceLabelKey, language)}</div>
                     )}
                     <div className="selection-title selection-title--plain">
-                        {t(hasPlague ? 'game.plagueOutbreak' : 'game.chooseSymbol', language)}
+                        {t(isSelectionBlockedByPlague ? 'game.plagueOutbreak' : 'game.chooseSymbol', language)}
                     </div>
                     <div className="selection-cards">
-                        {hasPlague ? (
+                        {isSelectionBlockedByPlague ? (
                             [0, 1, 2].map((cardIndex) => (
                                 <div
                                     key={`plague-blocked-${cardIndex}`}

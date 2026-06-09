@@ -27,6 +27,8 @@ export interface BoardRenderFrame {
 export class BoardRenderer {
     private bgContainer: PIXI.Container;
     private boardContainer: PIXI.Container;
+    private slotAuraGraphics: PIXI.Graphics | null = null;
+    private slotAuraElapsedMs = 0;
 
     constructor(args: {
         bgContainer: PIXI.Container;
@@ -61,6 +63,7 @@ export class BoardRenderer {
         };
 
         this.renderBackground(frame);
+        this.renderBoardAura(frame);
         this.renderSlotCells(frame);
         this.renderSlotNumbers(frame);
         return frame;
@@ -79,11 +82,53 @@ export class BoardRenderer {
         };
     }
 
+    public tick(deltaMs: number) {
+        this.slotAuraElapsedMs = (this.slotAuraElapsedMs + deltaMs) % 4000;
+        if (!this.slotAuraGraphics) return;
+
+        const breath = (1 - Math.cos((this.slotAuraElapsedMs / 4000) * Math.PI * 2)) / 2;
+        const scale = 0.985 + breath * 0.035;
+        this.slotAuraGraphics.scale.set(scale);
+        this.slotAuraGraphics.alpha = 0.88 + breath * 0.12;
+    }
+
     private renderBackground(frame: BoardRenderFrame) {
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, frame.width, frame.height);
-        bg.fill({ color: 0x000000 });
+        bg.fill({ color: 0x242424 });
         this.bgContainer.addChild(bg);
+    }
+
+    private renderBoardAura(frame: BoardRenderFrame) {
+        const auraGraphics = new PIXI.Graphics();
+        const boardX = frame.startX + frame.gridOffsetX;
+        const boardY = frame.startY + frame.gridOffsetY;
+        const boardWidth = BOARD_WIDTH * frame.cellWidth + (BOARD_WIDTH - 1) * frame.colGap;
+        const boardHeight = BOARD_HEIGHT * frame.cellHeight + (BOARD_HEIGHT - 1) * frame.rowGap;
+        const auraBands = [
+            { spread: 36 * frame.scale, alpha: 0.18 },
+            { spread: 22 * frame.scale, alpha: 0.34 },
+            { spread: 8 * frame.scale, alpha: 0.68 },
+        ];
+
+        for (const { spread, alpha } of auraBands) {
+            auraGraphics.roundRect(
+                boardX - spread,
+                boardY - spread,
+                boardWidth + spread * 2,
+                boardHeight + spread * 2,
+                spread,
+            );
+            auraGraphics.fill({ color: 0x000000, alpha });
+        }
+
+        const auraCenterX = boardX + boardWidth / 2;
+        const auraCenterY = boardY + boardHeight / 2;
+        auraGraphics.pivot.set(auraCenterX, auraCenterY);
+        auraGraphics.position.set(auraCenterX, auraCenterY);
+        this.slotAuraGraphics = auraGraphics;
+        this.tick(0);
+        this.boardContainer.addChild(auraGraphics);
     }
 
     private renderSlotCells(frame: BoardRenderFrame) {

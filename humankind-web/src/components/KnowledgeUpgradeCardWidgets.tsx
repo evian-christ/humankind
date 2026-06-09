@@ -30,7 +30,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.ANCIENT]: 'era.ancient',
     [SymbolType.UNIT]: 'era.normal',
     [SymbolType.ENEMY]: 'era.normal',
-    [SymbolType.DISASTER]: 'era.normal',
+    [SymbolType.DISASTER]: 'era.disaster',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
 

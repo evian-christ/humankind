@@ -214,6 +214,10 @@ export class PixiGameApp {
     private onHoverSymbol: (symbol: HoveredSymbol | null) => void;
     private onHoverHudStat!: (stat: HoveredHudStat | null) => void;
     private hudHoverSnapshot: HoveredHudStat | null = null;
+    private pointerPosition: {
+        output: { x: number; y: number };
+        source: { x: number; y: number };
+    } | null = null;
 
     // Refs equivalent state
     private runningTotalTexts: { food: PIXI.Text | null; gold: PIXI.Text | null; knowledge: PIXI.Text | null } = { food: null, gold: null, knowledge: null };
@@ -248,9 +252,29 @@ export class PixiGameApp {
         releaseStartedAtMs?: number;
         releaseFromScale?: number;
     }>();
-
     /** renderBoard가 히트영역을 갈아엎어도 포인터는 그대로일 수 있어, 마지막 호버를 저장 후 재동기화 */
     private symbolHoverCell: { x: number; y: number } | null = null;
+
+    private handleCanvasPointerMove = (event: PointerEvent) => {
+        const canvas = this.app.canvas;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+
+        const output = {
+            x: (event.clientX - rect.left) * (this.app.screen.width / rect.width),
+            y: (event.clientY - rect.top) * (this.app.screen.height / rect.height),
+        };
+        const source = this.crtEnabled
+            ? mapCrtOutputToSource(output.x, output.y, this.app.screen.width, this.app.screen.height)
+            : output;
+        this.pointerPosition = { output, source };
+        this.reconcileHoverWithPointer();
+    };
+
+    private handlePointerExit = () => {
+        this.pointerPosition = null;
+        this.clearAllHover();
+    };
 
     private getPulse01() {
         // 0..1 부드러운 펄스
@@ -489,12 +513,20 @@ export class PixiGameApp {
         const canvas = this.app.canvas;
         canvas.addEventListener('webglcontextlost', this.handleWebglContextLost, false);
         canvas.addEventListener('webglcontextrestored', this.handleWebglContextRestored, false);
+        canvas.addEventListener('pointermove', this.handleCanvasPointerMove);
+        canvas.addEventListener('pointerleave', this.handlePointerExit);
+        canvas.addEventListener('pointercancel', this.handlePointerExit);
+        window.addEventListener('blur', this.handlePointerExit);
     }
 
     private removeContextListeners() {
         const canvas = this.app?.canvas;
         canvas?.removeEventListener('webglcontextlost', this.handleWebglContextLost);
         canvas?.removeEventListener('webglcontextrestored', this.handleWebglContextRestored);
+        canvas?.removeEventListener('pointermove', this.handleCanvasPointerMove);
+        canvas?.removeEventListener('pointerleave', this.handlePointerExit);
+        canvas?.removeEventListener('pointercancel', this.handlePointerExit);
+        window.removeEventListener('blur', this.handlePointerExit);
     }
 
 
@@ -565,7 +597,7 @@ export class PixiGameApp {
         // (React <img>는 표시 자체가 되지만, Pixi 로더는 실패해서 보드 스프라이트가 안 보이는 케이스가 있습니다.)
         (PIXI.TextureSource.defaultOptions as unknown as { crossOrigin?: string | null }).crossOrigin = null;
         await this.app.init({
-            background: '#000000',
+            background: '#242424',
             antialias: false,
             preference: 'webgl',
             roundPixels: true,
@@ -696,9 +728,47 @@ export class PixiGameApp {
         this.onHoverHudStat?.(null);
     }
 
+    private clearAllHover() {
+        if (this.symbolHoverCell) {
+            this.symbolHoverCell = null;
+            this.onHoverSymbol(null);
+        }
+        this.relicRenderer.clearHover();
+        this.statusRenderer.clearHover();
+        this.upgradeRenderer.clearHover();
+        this.clearHudHover();
+    }
+
+    private reconcileHoverWithPointer() {
+        const pointer = this.pointerPosition;
+        if (this.symbolHoverCell) {
+            const layout = this.cellLayout;
+            const { x, y } = this.symbolHoverCell;
+            const cellX = layout
+                ? layout.startX + layout.gridOffsetX + x * (layout.cellWidth + layout.colGap)
+                : 0;
+            const cellY = layout
+                ? layout.startY + layout.gridOffsetY + y * layout.cellHeight
+                : 0;
+            const isInside = !!layout && !!pointer
+                && pointer.source.x >= cellX
+                && pointer.source.x <= cellX + layout.cellWidth
+                && pointer.source.y >= cellY
+                && pointer.source.y <= cellY + layout.cellHeight;
+            if (!isInside) {
+                this.symbolHoverCell = null;
+                this.onHoverSymbol(null);
+            }
+        }
+
+        this.relicRenderer.validateHover(pointer?.output ?? null);
+        this.statusRenderer.validateHover(pointer?.source ?? null);
+    }
+
     private onTick(ticker: PIXI.Ticker) {
         const dt = ticker.deltaMS;
 
+        this.boardRenderer.tick(dt);
         this.floatingTextRenderer.tick(dt);
         const combatBounceFinished = this.combatRenderer.tick(dt);
         this.hudRenderer.tickFoodDemandShake();
@@ -1198,6 +1268,8 @@ export class PixiGameApp {
                     ? Math.sin(this.contributorWobbleTime * (4 * Math.PI / 280)) * 10 * BOARD_DISPLAY_SCALE
                     : 0;
                 const contribGreenTint = isContrib ? 0x90ee90 : 0xffffff; // 밝은 초록
+                const isActionable =
+                    canButcherPasture || canOpenLoot || canUseEdict || canConsumeTribalVillage;
 
                 // active 심볼: 들린 것 + 바로 아랫쪽에 픽셀 느낌 화살표(머리만, ▲, 밝은 연두 + 검은 테두리)
                 if (isActive) {
@@ -1307,6 +1379,52 @@ export class PixiGameApp {
                     nameText.skew.set(-0.16 * productionStickerTilt, 0.06 * productionStickerTilt);
                     nameText.alpha = symbolAlpha;
                     drawTarget.addChild(nameText);
+                }
+
+                // 클릭 가능한 액션 심볼: 우상단 경고 배지
+                if (isActionable) {
+                    const actionSpriteRawSize = Math.min(innerW, cellHeight) * 0.85;
+                    const actionSpriteSize = 32 * Math.max(1, Math.floor(actionSpriteRawSize / 32));
+                    const actionSpriteCenterX = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
+                    const actionSpriteCenterY =
+                        cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
+                    const badgeSize = 40 * scale;
+                    const badgeX = actionSpriteCenterX + actionSpriteSize / 2 + 6 * scale;
+                    const badgeY = actionSpriteCenterY - actionSpriteSize / 2 - 6 * scale;
+                    const badge = new PIXI.Graphics();
+                    badge.poly([
+                        badgeX - badgeSize,
+                        badgeY,
+                        badgeX,
+                        badgeY,
+                        badgeX,
+                        badgeY + badgeSize,
+                    ]);
+                    badge.fill({ color: 0xf97316 });
+                    badge.stroke({
+                        color: 0xffedd5,
+                        width: Math.max(1, 2 * scale),
+                        alpha: 0.9,
+                    });
+                    drawTarget.addChild(badge);
+
+                    const mark = new PIXI.Text({
+                        text: '!',
+                        style: new PIXI.TextStyle({
+                            fill: '#ffffff',
+                            fontSize: 23 * scale,
+                            fontWeight: 'bold',
+                            fontFamily,
+                            stroke: {
+                                color: '#7c2d12',
+                                width: Math.max(1, 2 * scale),
+                            },
+                        }),
+                    });
+                    mark.anchor.set(0.5);
+                    mark.x = badgeX - badgeSize * 0.28;
+                    mark.y = badgeY + badgeSize * 0.28;
+                    drawTarget.addChild(mark);
                 }
 
                 // 바나나 영구 식량 보너스: 좌하단 별도 표시
@@ -1498,8 +1616,8 @@ export class PixiGameApp {
             }
         }
 
-        this.relicRenderer.syncHoverAfterRebuild();
-        this.statusRenderer.syncHoverAfterRebuild();
+        this.relicRenderer.syncHoverAfterRebuild(this.pointerPosition?.output ?? null);
+        this.statusRenderer.syncHoverAfterRebuild(this.pointerPosition?.source ?? null);
         this.upgradeRenderer.syncHoverAfterRebuild();
 
         if (this.hudHoverSnapshot && this.onHoverHudStat) {

@@ -316,7 +316,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                             type="button"
                             className={sortDescending ? 'owned-symbols-sort-direction owned-symbols-sort-direction--desc' : 'owned-symbols-sort-direction'}
                             aria-label={t(sortDescending ? 'ownedSymbols.sort.desc' : 'ownedSymbols.sort.asc', language)}
-                            title={t(sortDescending ? 'ownedSymbols.sort.desc' : 'ownedSymbols.sort.asc', language)}
                             onClick={() => setSortDescending((value) => !value)}
                         >
                             <span aria-hidden="true" />

@@ -7,6 +7,12 @@ import { useGameStore } from '../game/state/gameStore';
 import { useRelicStore } from '../game/state/relicStore';
 import { clearSavedGame } from '../game/state/saveGame';
 import { clearLeaderProgress } from '../game/data/leaders';
+import {
+    KEY_BINDING_ACTIONS,
+    formatKeyCode,
+    isBindableKeyCode,
+    type KeyBindingAction,
+} from '../game/input/keyBindings';
 
 const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
     { value: 'en', label: 'English' },
@@ -35,7 +41,7 @@ const SCREEN_MODE_OPTIONS: { value: ScreenMode; labelKey: string }[] = [
     { value: 'borderless', labelKey: 'settings.screenMode.borderless' },
 ];
 
-type SettingsTab = 'general' | 'gameplay' | 'graphics' | 'audio';
+type SettingsTab = 'general' | 'gameplay' | 'keyBindings' | 'graphics' | 'audio';
 
 interface PauseMenuProps {
     isOpen: boolean;
@@ -47,6 +53,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     const [screen, setScreen] = useState<'main' | 'settings'>(initialScreen);
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+    const [capturingAction, setCapturingAction] = useState<KeyBindingAction | null>(null);
     const {
         resolutionWidth,
         resolutionHeight,
@@ -60,6 +67,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         screenMode,
         developerMode,
         crtEffect,
+        keyBindings,
         setResolution,
         setLanguage,
         setEffectSpeed,
@@ -71,6 +79,8 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         setScreenMode,
         setDeveloperMode,
         setCrtEffect,
+        setKeyBinding,
+        resetKeyBindings,
     } = useSettingsStore();
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
     const resetPreGameProgress = usePreGameStore((s) => s.resetPreGameProgress);
@@ -81,8 +91,27 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         if (isOpen) {
             setScreen(initialScreen);
             setIsResetConfirmOpen(false);
+            setCapturingAction(null);
         }
     }, [initialScreen, isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || capturingAction === null) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            if (!isBindableKeyCode(event.code)) return;
+
+            setKeyBinding(capturingAction, event.code);
+            setCapturingAction(null);
+        };
+
+        window.addEventListener('keydown', handleKeyDown, { capture: true });
+        return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    }, [capturingAction, isOpen, setKeyBinding]);
 
     useRegisterBoardTooltipBlock('pause-menu', isOpen);
 
@@ -103,6 +132,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     };
 
     const handleSettingsBack = () => {
+        setCapturingAction(null);
         if (isResetConfirmOpen) {
             setIsResetConfirmOpen(false);
             return;
@@ -141,6 +171,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     const tabs: { key: SettingsTab; labelKey: string }[] = [
         { key: 'general', labelKey: 'settings.tab.general' },
         { key: 'gameplay', labelKey: 'settings.tab.gameplay' },
+        { key: 'keyBindings', labelKey: 'settings.tab.keyBindings' },
         { key: 'graphics', labelKey: 'settings.tab.graphics' },
         { key: 'audio', labelKey: 'settings.tab.audio' },
     ];
@@ -193,7 +224,10 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                             <button
                                 key={tab.key}
                                 className={`settings-tab ${activeTab === tab.key ? 'active' : ''}`}
-                                onClick={() => setActiveTab(tab.key)}
+                                onClick={() => {
+                                    setActiveTab(tab.key);
+                                    setCapturingAction(null);
+                                }}
                             >
                                 {t(tab.labelKey, language)}
                             </button>
@@ -301,6 +335,42 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                                     </div>
                                 </div>
                             </>
+                        )}
+
+                        {activeTab === 'keyBindings' && (
+                            <div className="settings-key-bindings">
+                                <div className="settings-key-bindings-hint">
+                                    {t('settings.keyBindings.hint', language)}
+                                </div>
+                                {KEY_BINDING_ACTIONS.map((action) => (
+                                    <div className="settings-row settings-key-binding-row" key={action}>
+                                        <div className="settings-row-label">
+                                            {t(`settings.keyBindings.action.${action}`, language)}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className={`settings-key-bind-btn ${capturingAction === action ? 'is-capturing' : ''}`}
+                                            onClick={() => setCapturingAction((current) => current === action ? null : action)}
+                                        >
+                                            {capturingAction === action
+                                                ? t('settings.keyBindings.pressKey', language)
+                                                : formatKeyCode(keyBindings[action])}
+                                        </button>
+                                    </div>
+                                ))}
+                                <div className="settings-key-bindings-footer">
+                                    <button
+                                        type="button"
+                                        className="settings-key-bindings-reset"
+                                        onClick={() => {
+                                            resetKeyBindings();
+                                            setCapturingAction(null);
+                                        }}
+                                    >
+                                        {t('settings.keyBindings.reset', language)}
+                                    </button>
+                                </div>
+                            </div>
                         )}
 
                         {/* ── General Tab ── */}

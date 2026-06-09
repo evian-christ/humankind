@@ -16,6 +16,7 @@ import LeaderSelectScreen from './components/LeaderSelectScreen';
 import LeaderProgressScreen from './components/LeaderProgressScreen';
 
 import PauseMenu from './components/PauseMenu';
+import { getActionForKeyCode } from './game/input/keyBindings';
 import DevOverlay from './components/DevOverlay';
 import DataBrowser from './components/DataBrowser';
 import SymbolPoolModal from './components/SymbolPoolModal';
@@ -902,6 +903,7 @@ function App() {
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
   const [knowledgeHudAttentionKey, setKnowledgeHudAttentionKey] = useState(0);
+  const [spinBlockedHint, setSpinBlockedHint] = useState<{ key: number; text: string } | null>(null);
   const [tutorialDialogStep, setTutorialDialogStep] = useState(0);
   const [showGameOverProgress, setShowGameOverProgress] = useState(false);
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
@@ -1143,6 +1145,7 @@ function App() {
       setGameCanvasReady(false);
     } else {
       setKnowledgeHudAttentionKey(0);
+      setSpinBlockedHint(null);
     }
   }, [preGameScreen]);
 
@@ -1212,8 +1215,28 @@ function App() {
     }
   }, [isRelicShopOpen, hasNewRelicShopStock, clearRelicShopStockBadge]);
 
+  const showDeniedSpinHint = useCallback((text: string) => {
+    void audioManager.unlock().then(() => audioManager.play('denied'));
+    setSpinBlockedHint((current) => ({
+      key: (current?.key ?? 0) + 1,
+      text,
+    }));
+  }, []);
+
+  const isUserMenuOpen =
+    menuOpen ||
+    ownedSymbolsOpen ||
+    isLogOpen ||
+    isKnowledgeOpen ||
+    isRelicShopOpen;
+
   const handleSpinBoard = useCallback(() => {
     const st = useGameStore.getState();
+    if (menuOpen || ownedSymbolsOpen || isLogOpen || isKnowledgeOpen || st.isRelicShopOpen) {
+      showDeniedSpinHint(t('game.closeMenuToSpin', language));
+      return;
+    }
+
     if (st.phase === 'food_payment') {
       void audioManager.unlock();
       payFoodCost();
@@ -1233,14 +1256,44 @@ function App() {
 
     if (st.phase !== 'idle') return;
     if ((st.levelUpResearchPoints ?? 0) > 0) {
-      void audioManager.unlock().then(() => audioManager.play('denied'));
+      showDeniedSpinHint(t('game.researchToContinue', language));
       setKnowledgeHudAttentionKey((key) => key + 1);
       return;
     }
 
     void audioManager.unlock();
     spinBoard();
-  }, [isTutorialMode, payFoodCost, spinBoard, spinTutorialCornStep, spinTutorialMonumentStep, tutorialDialogStep]);
+  }, [
+    isKnowledgeOpen,
+    isLogOpen,
+    isTutorialMode,
+    language,
+    menuOpen,
+    ownedSymbolsOpen,
+    payFoodCost,
+    showDeniedSpinHint,
+    spinBoard,
+    spinTutorialCornStep,
+    spinTutorialMonumentStep,
+    tutorialDialogStep,
+  ]);
+
+  const openMenuUnlessSpinning = useCallback((openMenu: () => void) => {
+    const currentPhase = useGameStore.getState().phase;
+    if (currentPhase === 'spinning' || currentPhase === 'showing_new_threats' || currentPhase === 'processing') {
+      showDeniedSpinHint(t('game.finishSpinBeforeMenu', language));
+      return;
+    }
+    openMenu();
+  }, [language, showDeniedSpinHint]);
+
+  const handleRelicShopToggle = useCallback(() => {
+    if (useGameStore.getState().isRelicShopOpen) {
+      toggleRelicShop();
+      return;
+    }
+    openMenuUnlessSpinning(toggleRelicShop);
+  }, [openMenuUnlessSpinning, toggleRelicShop]);
 
   const isTutorialInteractionAllowed = useCallback((target: EventTarget | null) => {
     if (!isTutorialMode) return true;
@@ -1350,26 +1403,74 @@ function App() {
   // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.code === 'F12') {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-        e.preventDefault();
-        setIsLogOpen((open) => !open);
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (e.repeat) return;
+
+      const action = getActionForKeyCode(useSettingsStore.getState().keyBindings, e.code);
+      if (action === null) return;
+
+      if (isTutorialMode) {
+        const isTutorialSpin = action === 'spin' && (tutorialDialogStep === 6 || tutorialDialogStep === 14);
+        if (!isTutorialSpin && action !== 'pause') return;
+      }
+
+      e.preventDefault();
+
+      if (action === 'spin') {
+        const st = useGameStore.getState();
+        if (st.phase === 'idle' || st.phase === 'food_payment') handleSpinBoard();
         return;
       }
 
-      if (e.code !== 'Space') return;
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-      if (isTutorialMode && tutorialDialogStep !== 6 && tutorialDialogStep !== 14) return;
-      const st = useGameStore.getState();
-      if (st.phase !== 'idle' && st.phase !== 'food_payment') return;
-      e.preventDefault();
-      handleSpinBoard();
+      if (action === 'pause') {
+        if (isRelicShopOpen) {
+          handleRelicShopToggle();
+        } else if (menuOpen) {
+          setMenuOpen(false);
+        } else if (!isUserMenuOpen) {
+          openMenuUnlessSpinning(() => setMenuOpen(true));
+        }
+        return;
+      }
+
+      if (action === 'relicShop') {
+        if (!isUserMenuOpen || isRelicShopOpen) handleRelicShopToggle();
+        return;
+      }
+
+      if (action === 'knowledge') {
+        if (isKnowledgeOpen) setIsKnowledgeOpen(false);
+        else if (!isUserMenuOpen) openMenuUnlessSpinning(() => setIsKnowledgeOpen(true));
+        return;
+      }
+
+      if (action === 'history') {
+        if (isLogOpen) setIsLogOpen(false);
+        else if (!isUserMenuOpen) openMenuUnlessSpinning(() => setIsLogOpen(true));
+        return;
+      }
+
+      if (action === 'ownedSymbols') {
+        if (ownedSymbolsOpen) setOwnedSymbolsOpen(false);
+        else if (!isUserMenuOpen) openMenuUnlessSpinning(() => setOwnedSymbolsOpen(true));
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [phase, handleSpinBoard, isTutorialMode, levelUpResearchPoints, tutorialDialogStep]);
+  }, [
+    handleSpinBoard,
+    handleRelicShopToggle,
+    isKnowledgeOpen,
+    isLogOpen,
+    isRelicShopOpen,
+    isTutorialMode,
+    isUserMenuOpen,
+    menuOpen,
+    openMenuUnlessSpinning,
+    ownedSymbolsOpen,
+    tutorialDialogStep,
+  ]);
 
   const boardIsForegroundForTooltips =
     phase !== 'destroy_selection' &&
@@ -1387,6 +1488,10 @@ function App() {
   const runningTotals = useGameStore((s) => s.runningTotals);
   const isFoodPaymentPending = phase === 'food_payment';
   const canPressSpin = phase === 'idle' || isFoodPaymentPending;
+  const isTurnAnimationRunning =
+    phase === 'spinning' ||
+    phase === 'showing_new_threats' ||
+    phase === 'processing';
   const tutorialNextDisabled =
     isTutorialMode &&
     (((tutorialDialogStep === 7 || tutorialDialogStep === 8) && tutorialSpinStep !== 'corn_done') ||
@@ -1429,6 +1534,8 @@ function App() {
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
   const turnsUntilPayment = pendingFoodPayment ? 0 : turn % 10 === 0 ? 10 : 10 - (turn % 10);
   const nextCost = calculateFoodCost(pendingFoodPayment ? turn : turn + turnsUntilPayment);
+  const foodDemandWarningClass =
+    turnsUntilPayment <= 3 ? `warning-${turnsUntilPayment}` : turnsUntilPayment <= 4 ? 'warning-mid' : '';
   const timelineYearLabel = formatTimelineYear(getTimelineYearForTurn(turn), language);
   const turnYearLabel = `${t('game.turn', language)} ${turn}, ${timelineYearLabel}`;
 
@@ -1534,20 +1641,20 @@ function App() {
         </div>
 
         <div className="hud-top-center">
-          <div className={`food-demand-mini ${turnsUntilPayment <= 2 ? 'warning-low' : turnsUntilPayment <= 4 ? 'warning-mid' : ''}`}>
+          <div className={`food-demand-mini ${foodDemandWarningClass}`}>
              {t('game.foodDemandFlavor', language).replace('{turns}', String(turnsUntilPayment)).replace('{amount}', nextCost.toLocaleString())}
           </div>
         </div>
 
         <div className="hud-top-right">
-          <div className="turn-year-mini" aria-label={turnYearLabel} title={turnYearLabel}>
+          <div className="turn-year-mini" aria-label={turnYearLabel}>
             <span className="turn-year-mini-turn">{t('game.turn', language)} {turn}</span>
             <span className="turn-year-mini-year">{timelineYearLabel}</span>
           </div>
           <button
             className="pause-btn-top"
-            onClick={() => setMenuOpen(true)}
-            title="일시정지"
+            onClick={() => openMenuUnlessSpinning(() => setMenuOpen(true))}
+            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
             aria-label="일시정지"
             style={{ position: 'relative', top: 'auto', left: 'auto', right: 'auto' }}
           >
@@ -1575,12 +1682,8 @@ function App() {
           <button
             className="relic-shop-btn relic-shop-btn--relic"
             {...relicHudTooltip.bindButtonHoverHandlers}
-            onClick={toggleRelicShop}
-            title={
-              hasNewRelicShopStock
-                ? t('game.relicShopNewStockHint', language)
-                : t('game.relicShopTitleShort', language)
-            }
+            onClick={handleRelicShopToggle}
+            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
             aria-label={
               hasNewRelicShopStock
                 ? t('game.relicShopNewStockAria', language)
@@ -1628,16 +1731,9 @@ function App() {
                   )
                 : t('game.knowledgeUpgradeTreeTitle', language)
             }
-            title={
-              levelUpResearchPoints > 0
-                ? t('game.knowledgeHudButtonHintPending', language).replace(
-                    '{title}',
-                    t('game.knowledgeUpgradeTreeTitle', language),
-                  )
-                : t('game.knowledgeUpgradeTreeTitle', language)
-            }
             {...knowledgeHudTooltip.bindButtonHoverHandlers}
-            onClick={() => setIsKnowledgeOpen(true)}
+            onClick={() => openMenuUnlessSpinning(() => setIsKnowledgeOpen(true))}
+            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
           >
             {levelUpResearchPoints > 0 && (
               <span className="hud-new-stock-tab" aria-hidden="true">
@@ -1671,9 +1767,12 @@ function App() {
             className="spin-btn"
             onClick={handleSpinBoard}
             disabled={!canPressSpin}
-            data-audio-click={!isFoodPaymentPending && levelUpResearchPoints > 0 ? 'skip' : undefined}
+            data-audio-click={
+              isUserMenuOpen || (!isFoodPaymentPending && levelUpResearchPoints > 0)
+                ? 'skip'
+                : undefined
+            }
             aria-label={isFoodPaymentPending ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString()) : t('game.spin', language)}
-            title={isFoodPaymentPending ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString()) : t('game.spin', language)}
           >
             <span
               style={isFoodPaymentPending ? {
@@ -1687,9 +1786,9 @@ function App() {
               {isFoodPaymentPending ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString()) : 'SPIN'}
             </span>
           </button>
-          {knowledgeHudAttentionKey > 0 && (
-            <span key={knowledgeHudAttentionKey} className="spin-research-hint-float" aria-hidden="true">
-              {t('game.researchToContinue', language)}
+          {spinBlockedHint && (
+            <span key={spinBlockedHint.key} className="spin-research-hint-float" aria-hidden="true">
+              {spinBlockedHint.text}
             </span>
           )}
         </div>
@@ -1698,9 +1797,9 @@ function App() {
             className="relic-shop-btn relic-shop-btn--history"
             type="button"
             aria-label={historyLabel}
-            title={historyLabel}
             {...historyHudTooltip.bindButtonHoverHandlers}
-            onClick={() => setIsLogOpen(true)}
+            onClick={() => openMenuUnlessSpinning(() => setIsLogOpen(true))}
+            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
           >
             <span className="relic-shop-btn-icon-layer" aria-hidden="true">
               <img src={HISTORY_ICON_URL} alt="" draggable={false} style={{ imageRendering: 'pixelated' }} />
@@ -1726,9 +1825,9 @@ function App() {
             className="relic-shop-btn relic-shop-btn--owned-symbols"
             type="button"
             aria-label={t('ownedSymbols.title', language)}
-            title={t('ownedSymbols.title', language)}
             {...ownedSymbolsHudTooltip.bindButtonHoverHandlers}
-            onClick={() => setOwnedSymbolsOpen(true)}
+            onClick={() => openMenuUnlessSpinning(() => setOwnedSymbolsOpen(true))}
+            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
           >
             <span className="relic-shop-btn-icon-layer" aria-hidden="true">
               <img src={INVENTORY_ICON_URL} alt="" draggable={false} style={{ imageRendering: 'pixelated' }} />

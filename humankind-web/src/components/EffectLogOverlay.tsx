@@ -298,10 +298,9 @@ const DestroyedSymbolSprites = ({ entry, language }: { entry: GameEventLogEntry;
             {destroyed.map((symbol, index) => {
                 const definition = SYMBOLS[symbol.id];
                 const spriteUrl = definition ? getSymbolSpriteUrl(definition) : '';
-                const name = symbolName(symbol.id, language);
                 const key = `${symbol.id}-${symbol.x ?? 'x'}-${symbol.y ?? 'y'}-${index}`;
                 return (
-                    <span className="effect-history-destroyed-symbol" key={key} title={name}>
+                    <span className="effect-history-destroyed-symbol" key={key}>
                         {spriteUrl ? <img src={spriteUrl} alt="" draggable={false} /> : <span>{symbol.id}</span>}
                     </span>
                 );
@@ -322,10 +321,9 @@ const ThreatSymbolSprites = ({ entry, language }: { entry: GameEventLogEntry; la
             {threats.map((symbol, index) => {
                 const definition = SYMBOLS[symbol.id];
                 const spriteUrl = definition ? getSymbolSpriteUrl(definition) : '';
-                const name = symbolName(symbol.id, language);
                 const key = `${symbol.id}-${symbol.x ?? 'x'}-${symbol.y ?? 'y'}-${index}`;
                 return (
-                    <span className="effect-history-threat-symbol" key={key} title={name}>
+                    <span className="effect-history-threat-symbol" key={key}>
                         {spriteUrl ? <img src={spriteUrl} alt="" draggable={false} /> : <span>{symbol.id}</span>}
                     </span>
                 );
@@ -346,9 +344,8 @@ const AddedSymbolSprites = ({ entry, language }: { entry: GameEventLogEntry; lan
             {added.map((id, index) => {
                 const definition = SYMBOLS[id];
                 const spriteUrl = definition ? getSymbolSpriteUrl(definition) : '';
-                const name = symbolName(id, language);
                 return (
-                    <span className="effect-history-added-symbol" key={`${id}-${index}`} title={name}>
+                    <span className="effect-history-added-symbol" key={`${id}-${index}`}>
                         {spriteUrl ? <img src={spriteUrl} alt="" draggable={false} /> : <span>{id}</span>}
                     </span>
                 );

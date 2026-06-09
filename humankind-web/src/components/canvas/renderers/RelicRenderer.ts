@@ -2,8 +2,15 @@ import * as PIXI from 'pixi.js';
 import { useGameStore } from '../../../game/state/gameStore';
 import type { GameState } from '../../../game/state/gameStore';
 import { useRelicStore } from '../../../game/state/relicStore';
+import { useSettingsStore } from '../../../game/state/settingsStore';
 import type { RelicInstance } from '../../../game/state/relicStore';
-import { isConsumableRelicId } from '../../../game/logic/relics/relicClassification';
+import {
+    groupRelicsForDisplay,
+    isConsumableRelicId,
+    type RelicDisplayStack,
+} from '../../../game/logic/relics/relicClassification';
+import { audioManager } from '../../../audio/audioManager';
+import { t } from '../../../i18n';
 import type { HoveredRelic } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { ASSET_BASE_URL, CLICKABLE_RELIC_IDS, GAME_CURSOR_HELP, GAME_CURSOR_POINTER } from './rendererShared';
@@ -15,6 +22,7 @@ export class RelicRenderer {
     private floatingTextRenderer: FloatingTextRenderer;
     private onHoverRelic: (relic: HoveredRelic | null) => void;
     private screenHitBounds: PIXI.Rectangle[] = [];
+    private screenHitBoundsByInstanceId = new Map<string, PIXI.Rectangle>();
     private hoverSnapshot: { instanceId: string; screenX: number; screenY: number } | null = null;
 
     constructor(args: {
@@ -35,7 +43,22 @@ export class RelicRenderer {
         return this.screenHitBounds.some((bounds) => bounds.contains(x, y));
     }
 
-    public syncHoverAfterRebuild() {
+    public clearHover() {
+        if (!this.hoverSnapshot) return;
+        this.hoverSnapshot = null;
+        this.onHoverRelic(null);
+    }
+
+    public validateHover(pointer: { x: number; y: number } | null) {
+        if (!this.hoverSnapshot) return;
+        const bounds = this.screenHitBoundsByInstanceId.get(this.hoverSnapshot.instanceId);
+        if (!pointer || !bounds?.contains(pointer.x, pointer.y)) {
+            this.clearHover();
+        }
+    }
+
+    public syncHoverAfterRebuild(pointer: { x: number; y: number } | null) {
+        this.validateHover(pointer);
         if (!this.hoverSnapshot) return;
         const relic = useRelicStore.getState().relics.find((r) => r.instanceId === this.hoverSnapshot!.instanceId);
         if (relic) {
@@ -59,8 +82,10 @@ export class RelicRenderer {
         fontFamily: string,
     ) {
         const relics = useRelicStore.getState().relics;
+        const displayStacks = groupRelicsForDisplay(relics);
         this.screenHitBounds = [];
-        if (relics.length === 0) return;
+        this.screenHitBoundsByInstanceId.clear();
+        if (displayStacks.length === 0) return;
 
         const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
         const iconSize = 64 * scale;
@@ -96,7 +121,7 @@ export class RelicRenderer {
         this.displayContainer.addChild(relicPanel);
 
         const layout = this.buildLayout(
-            relics,
+            displayStacks,
             iconSize,
             gapX,
             gapY,
@@ -108,20 +133,24 @@ export class RelicRenderer {
         );
         const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
 
-        for (const { relic, iconX, iconY } of layout) {
+        for (const { stack, iconX, iconY } of layout) {
+            const { relic } = stack;
             const isShakingThisRelic = shakeRelicDefId === relic.definition.id;
             const shakeX = isShakingThisRelic ? Math.sin(Date.now() / 20) * (5 * scale) : 0;
             const shakeY = isShakingThisRelic ? Math.cos(Date.now() / 17) * (4 * scale) : 0;
             const worldIconX = relicPanel.x + iconX + shakeX;
             const worldIconY = relicPanel.y + iconY + shakeY;
-            relicCenterByInstanceId.set(relic.instanceId, {
-                x: worldIconX + iconSize / 2,
-                y: worldIconY + iconSize / 2,
-            });
+            for (const stackedRelic of stack.relics) {
+                relicCenterByInstanceId.set(stackedRelic.instanceId, {
+                    x: worldIconX + iconSize / 2,
+                    y: worldIconY + iconSize / 2,
+                });
+            }
 
             this.renderIcon(relicPanel, relic, iconX, iconY, iconSize, shakeX, shakeY);
             this.renderConsumableBadge(relicPanel, relic, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
-            this.renderHitArea(relic, worldIconX, worldIconY, iconSize);
+            this.renderStackCount(relicPanel, stack.count, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
+            this.renderHitArea(stack, worldIconX, worldIconY, iconSize, fontFamily);
             this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale, fontFamily);
         }
 
@@ -135,7 +164,7 @@ export class RelicRenderer {
     }
 
     private buildLayout(
-        relics: RelicInstance[],
+        stacks: RelicDisplayStack<RelicInstance>[],
         iconSize: number,
         gapX: number,
         gapY: number,
@@ -145,27 +174,27 @@ export class RelicRenderer {
         leftIconsPerSplitRow: number,
         rightIconsPerRow: number,
     ) {
-        const layout: { relic: RelicInstance; iconX: number; iconY: number }[] = [];
-        const fullRowRelicCount = Math.min(fullIconsPerRow * 2, relics.length);
+        const layout: { stack: RelicDisplayStack<RelicInstance>; iconX: number; iconY: number }[] = [];
+        const fullRowRelicCount = Math.min(fullIconsPerRow * 2, stacks.length);
         const rowStep = iconSize + gapY;
         const columnStep = iconSize + gapX;
 
         for (let index = 0; index < fullRowRelicCount; index += 1) {
             layout.push({
-                relic: relics[index],
+                stack: stacks[index],
                 iconX: leftStartX + (index % fullIconsPerRow) * columnStep,
                 iconY: Math.floor(index / fullIconsPerRow) * rowStep,
             });
         }
 
         const splitRowCapacity = leftIconsPerSplitRow + rightIconsPerRow;
-        for (let index = fullRowRelicCount; index < relics.length; index += 1) {
+        for (let index = fullRowRelicCount; index < stacks.length; index += 1) {
             const splitIndex = index - fullRowRelicCount;
             const splitRow = Math.floor(splitIndex / splitRowCapacity);
             const splitColumn = splitIndex % splitRowCapacity;
             const isLeftOfBoard = splitColumn < leftIconsPerSplitRow;
             layout.push({
-                relic: relics[index],
+                stack: stacks[index],
                 iconX: isLeftOfBoard
                     ? leftStartX + splitColumn * columnStep
                     : rightStartX + (splitColumn - leftIconsPerSplitRow) * columnStep,
@@ -173,6 +202,35 @@ export class RelicRenderer {
             });
         }
         return layout;
+    }
+
+    private renderStackCount(
+        panel: PIXI.Container,
+        count: number,
+        iconX: number,
+        iconY: number,
+        iconSize: number,
+        scale: number,
+        shakeX: number,
+        shakeY: number,
+        fontFamily: string,
+    ) {
+        if (count <= 1) return;
+
+        const label = new PIXI.Text({
+            text: `x${count}`,
+            style: new PIXI.TextStyle({
+                fill: '#ffffff',
+                fontSize: 22 * scale,
+                fontWeight: 'bold',
+                fontFamily,
+                stroke: { color: '#000000', width: Math.max(2, 4 * scale) },
+            }),
+        });
+        label.anchor.set(1, 1);
+        label.x = iconX + iconSize - 5 * scale + shakeX;
+        label.y = iconY + iconSize - 4 * scale + shakeY;
+        panel.addChild(label);
     }
 
     private renderIcon(panel: PIXI.Container, relic: RelicInstance, iconX: number, iconY: number, iconSize: number, shakeX: number, shakeY: number) {
@@ -244,7 +302,14 @@ export class RelicRenderer {
         panel.addChild(mark);
     }
 
-    private renderHitArea(relic: RelicInstance, worldIconX: number, worldIconY: number, iconSize: number) {
+    private renderHitArea(
+        stack: RelicDisplayStack<RelicInstance>,
+        worldIconX: number,
+        worldIconY: number,
+        iconSize: number,
+        fontFamily: string,
+    ) {
+        const { relic } = stack;
         const hitArea = new PIXI.Graphics();
         const hitPadding = Math.max(3, iconSize * 0.05);
         const bounds = new PIXI.Rectangle(
@@ -254,6 +319,9 @@ export class RelicRenderer {
             iconSize + hitPadding * 2,
         );
         this.screenHitBounds.push(bounds);
+        for (const stackedRelic of stack.relics) {
+            this.screenHitBoundsByInstanceId.set(stackedRelic.instanceId, bounds);
+        }
         hitArea.rect(bounds.x, bounds.y, bounds.width, bounds.height);
         hitArea.fill({ color: 0x000000, alpha: 0 });
         hitArea.eventMode = 'static';
@@ -274,6 +342,33 @@ export class RelicRenderer {
         });
         if (relicClickable) {
             hitArea.on('pointertap', () => {
+                const state = useGameStore.getState();
+                if (state.phase === 'selection' && isConsumableRelicId(relic.definition.id)) {
+                    void audioManager.play('denied');
+                    const message = new PIXI.Text({
+                        text: t(
+                            'game.chooseSymbolBeforeRelicPurchase',
+                            useSettingsStore.getState().language,
+                        ),
+                        style: new PIXI.TextStyle({
+                            fill: '#f87171',
+                            fontSize: Math.max(24, iconSize * 0.32),
+                            fontWeight: 'bold',
+                            fontFamily,
+                            stroke: { color: '#000000', width: 4 },
+                        }),
+                    });
+                    message.anchor.set(0.5, 0.5);
+                    message.x = worldIconX + iconSize / 2;
+                    message.y = worldIconY + iconSize * 0.35;
+                    this.floatingTextRenderer.addText(
+                        message,
+                        message.y,
+                        false,
+                        this.floatContainer,
+                    );
+                    return;
+                }
                 useGameStore.getState().activateClickableRelic(relic.instanceId);
             });
         }

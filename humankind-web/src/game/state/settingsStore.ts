@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import { audioManager } from '../../audio/audioManager';
+import {
+    DEFAULT_KEY_BINDINGS,
+    rebindKey,
+    sanitizeKeyBindings,
+    type KeyBindingAction,
+    type KeyBindings,
+} from '../input/keyBindings';
 
 export type Language = 'en' | 'ko' | 'zh' | 'ru';
 export type EffectSpeed = '1x' | '2x' | '4x' | 'instant';
@@ -76,6 +83,7 @@ export interface SettingsState {
     screenMode: ScreenMode;
     developerMode: boolean;
     crtEffect: boolean;
+    keyBindings: KeyBindings;
 
     setResolution: (width: number, height: number) => void;
     setLanguage: (lang: Language) => void;
@@ -88,6 +96,8 @@ export interface SettingsState {
     setScreenMode: (mode: ScreenMode) => void;
     setDeveloperMode: (enabled: boolean) => void;
     setCrtEffect: (enabled: boolean) => void;
+    setKeyBinding: (action: KeyBindingAction, code: string) => void;
+    resetKeyBindings: () => void;
 }
 
 type PersistedSettings = Pick<
@@ -104,6 +114,7 @@ type PersistedSettings = Pick<
     | 'screenMode'
     | 'developerMode'
     | 'crtEffect'
+    | 'keyBindings'
 >;
 
 interface SavedSettings {
@@ -125,6 +136,7 @@ const defaultSettings: PersistedSettings = {
     screenMode: 'windowed',
     developerMode: false,
     crtEffect: true,
+    keyBindings: { ...DEFAULT_KEY_BINDINGS },
 };
 
 const storage = (): Storage | null => {
@@ -205,6 +217,7 @@ function loadSettings(): PersistedSettings {
             crtEffect: typeof save.settings.crtEffect === 'boolean'
                 ? save.settings.crtEffect
                 : defaultSettings.crtEffect,
+            keyBindings: sanitizeKeyBindings(save.settings.keyBindings),
         };
     } catch {
         return { ...defaultSettings, language: getBrowserLanguage() };
@@ -231,6 +244,7 @@ function saveSettings(state: PersistedSettings): void {
             screenMode: state.screenMode,
             developerMode: state.developerMode,
             crtEffect: state.crtEffect,
+            keyBindings: state.keyBindings,
         },
     };
 
@@ -338,6 +352,25 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             const next = { ...state, crtEffect: enabled };
             saveSettings(next);
             return { crtEffect: enabled };
+        });
+    },
+
+    setKeyBinding: (action, code) => {
+        set((state) => {
+            const keyBindings = rebindKey(state.keyBindings, action, code);
+            if (keyBindings === state.keyBindings) return {};
+            const next = { ...state, keyBindings };
+            saveSettings(next);
+            return { keyBindings };
+        });
+    },
+
+    resetKeyBindings: () => {
+        set((state) => {
+            const keyBindings = { ...DEFAULT_KEY_BINDINGS };
+            const next = { ...state, keyBindings };
+            saveSettings(next);
+            return { keyBindings };
         });
     },
 }));

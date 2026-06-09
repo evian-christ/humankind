@@ -65,7 +65,35 @@ const demoAchievementEmptyText: LocalizedText = {
   ru: 'Скоро',
 };
 
+const demoAchievementCompletionTitle: LocalizedText = {
+  en: 'All achievements cleared! Claim your reward',
+  ko: '도전과제 올 클리어! 특별 보상을 확인하세요',
+  zh: '全成就达成！领取你的特别奖励',
+  ru: 'Все достижения открыты! Заберите особую награду',
+};
+
+const demoAchievementCompletionDescription: LocalizedText = {
+  en: 'You have unlocked entry to our launch giveaway. Enter now for a chance to win a FREE Steam key for Humankind in a nutshell!',
+  ko: '출시 기념 이벤트 참여 자격을 획득했습니다. 지금 응모하고 Humankind in a nutshell 무료 Steam 키에 도전하세요!',
+  zh: '你已获得首发抽奖资格。立即参加，就有机会免费获得 Humankind in a nutshell Steam 密钥！',
+  ru: 'Вы получили доступ к розыгрышу в честь релиза. Участвуйте сейчас, чтобы выиграть БЕСПЛАТНЫЙ Steam-ключ Humankind in a nutshell!',
+};
+
+const demoAchievementGiveawayButtonText: LocalizedText = {
+  en: 'Enter to win a FREE Steam key',
+  ko: '무료 Steam 키 응모하기',
+  zh: '参加抽奖，赢取免费 Steam 密钥',
+  ru: 'Выиграть БЕСПЛАТНЫЙ Steam-ключ',
+};
+
 function DemoAchievementsPanel({ language }: { language: Language }) {
+  const allAchievementsCompleted = DEMO_ACHIEVEMENT_SECTIONS
+    .flatMap((section) => section.achievements)
+    .every((achievement) => {
+      const { progress, target } = getDemoAchievementProgress(achievement);
+      return target > 0 && progress >= target;
+    });
+
   return (
     <aside className="demo-achievements-panel" aria-label={textForLanguage(demoAchievementPanelTitle, language)}>
       <h2 className="demo-achievements-title">
@@ -135,6 +163,24 @@ function DemoAchievementsPanel({ language }: { language: Language }) {
           </section>
         ))}
       </div>
+      {allAchievementsCompleted ? (
+        <section className="demo-achievements-completion">
+          <h3 className="demo-achievements-completion-title">
+            {textForLanguage(demoAchievementCompletionTitle, language)}
+          </h3>
+          <p className="demo-achievements-completion-description">
+            {textForLanguage(demoAchievementCompletionDescription, language)}
+          </p>
+          <a
+            className="demo-achievements-giveaway-button"
+            href="https://forms.gle/TDSwgfuqhikkmEg98"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {textForLanguage(demoAchievementGiveawayButtonText, language)}
+          </a>
+        </section>
+      ) : null}
     </aside>
   );
 }
@@ -199,13 +245,13 @@ export default function DemoStartScreen() {
 
   return (
     <div className="demo-start-root">
-      <div className="main-menu-proof-code" aria-label={`Steam proof code ${steamProofCode}`} title={steamProofCode}>
+      <div className="main-menu-proof-code" aria-label={`Steam proof code ${steamProofCode}`}>
         {steamProofCode}
       </div>
       <DemoAchievementsPanel language={language} />
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
-        <div className="main-menu-version" aria-label="version 1.1.1">
-          v1.1.1
+        <div className="main-menu-version" aria-label="version b1.2.0">
+          b1.2.0
         </div>
         <h1 className="main-menu-title main-menu-title--image">
           <img

@@ -9,6 +9,7 @@ export class StatusRenderer {
     private bgContainer: PIXI.Container;
     private hitContainer: PIXI.Container;
     private onHoverStatus: (status: HoveredStatus | null) => void;
+    private hitBoundsByStatusId = new Map<number, PIXI.Rectangle>();
     private hoverSnapshot: { statusId: number; screenX: number; screenY: number } | null = null;
 
     constructor(args: {
@@ -21,7 +22,22 @@ export class StatusRenderer {
         this.onHoverStatus = args.onHoverStatus;
     }
 
-    public syncHoverAfterRebuild() {
+    public clearHover() {
+        if (!this.hoverSnapshot) return;
+        this.hoverSnapshot = null;
+        this.onHoverStatus(null);
+    }
+
+    public validateHover(pointer: { x: number; y: number } | null) {
+        if (!this.hoverSnapshot) return;
+        const bounds = this.hitBoundsByStatusId.get(this.hoverSnapshot.statusId);
+        if (!pointer || !bounds?.contains(pointer.x, pointer.y)) {
+            this.clearHover();
+        }
+    }
+
+    public syncHoverAfterRebuild(pointer: { x: number; y: number } | null) {
+        this.validateHover(pointer);
         if (!this.hoverSnapshot) return;
         const status = STATUSES[this.hoverSnapshot.statusId];
         if (status) {
@@ -37,6 +53,7 @@ export class StatusRenderer {
     }
 
     public render(state: GameState, scale: number, boardLeft: number, boardBottom: number, screenWidth: number, fontFamily: string) {
+        this.hitBoundsByStatusId.clear();
         const activeStatuses = state.activeStatuses ?? (
             state.activeStatusIds.length > 0
                 ? state.activeStatusIds.map((id) => ({
@@ -118,7 +135,9 @@ export class StatusRenderer {
 
     private renderHitArea(status: StatusDefinition, worldIconX: number, worldIconY: number, iconSize: number) {
         const hitArea = new PIXI.Graphics();
-        hitArea.rect(worldIconX, worldIconY, iconSize, iconSize);
+        const bounds = new PIXI.Rectangle(worldIconX, worldIconY, iconSize, iconSize);
+        this.hitBoundsByStatusId.set(status.id, bounds);
+        hitArea.rect(bounds.x, bounds.y, bounds.width, bounds.height);
         hitArea.fill({ color: 0x000000, alpha: 0 });
         hitArea.eventMode = 'static';
         hitArea.cursor = GAME_CURSOR_HELP;

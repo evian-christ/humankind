@@ -1,0 +1,80 @@
+.settings-key-bindings {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.settings-key-bindings-hint {
+  margin-bottom: 4px;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 18px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.58);
+  text-align: center;
+}
+
+.settings-key-binding-row {
+  min-height: 52px;
+}
+
+.settings-key-bind-btn,
+.settings-key-bindings-reset {
+  font-family: var(--game-font-family), sans-serif;
+  letter-spacing: 1px;
+  border-radius: 6px;
+  cursor: var(--app-cursor-pointer);
+  transition: all 0.15s ease;
+}
+
+.settings-key-bind-btn {
+  min-width: 190px;
+  padding: 9px 20px;
+  font-size: 23px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid #666;
+}
+
+.settings-key-bind-btn:hover,
+.settings-key-bind-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #aaa;
+  outline: none;
+}
+
+.settings-key-bind-btn.is-capturing {
+  color: #fde68a;
+  background: rgba(161, 98, 7, 0.22);
+  border-color: #fbbf24;
+  animation: settings-key-capture-pulse 0.8s steps(2, end) infinite;
+}
+
+.settings-key-bindings-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-key-bindings-reset {
+  padding: 9px 18px;
+  font-size: 20px;
+  color: #bbb;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid #555;
+}
+
+.settings-key-bindings-reset:hover,
+.settings-key-bindings-reset:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #999;
+  outline: none;
+}
+
+@keyframes settings-key-capture-pulse {
+  50% {
+    border-color: #fff3b0;
+  }
+}
