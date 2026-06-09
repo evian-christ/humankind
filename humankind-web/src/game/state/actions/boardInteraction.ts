@@ -380,6 +380,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             bonusSelectionQueue: ['any', 'any'], // 첫 번째는 지금 띄우고, 두 번째가 큐에 대기하여 총 2회 발동
             symbolSelectionRelicSourceId: null,
             symbolSelectionSymbolSourceId: S.tribal_village,
+            isTurnSymbolSelection: false,
         });
 
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));

@@ -277,6 +277,10 @@ const resolveCompletedSelectionPhase = (
     phaseAfterTurnFlowComplete: () => GamePhase,
 ): GamePhase => state.pendingFoodPayment ? 'food_payment' : phaseAfterTurnFlowComplete();
 
+export const isPlagueBlockingSelection = (state: Pick<GameState, 'board' | 'isTurnSymbolSelection'>): boolean =>
+    state.isTurnSymbolSelection === true &&
+    state.board.some((col) => col.some((cell) => cell?.definition.id === S.plague));
+
 const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () => GamePhase) => {
     const q = [...(state.bonusSelectionQueue || [])];
     if (q.length > 0) {
@@ -298,6 +302,7 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
             bonusSelectionQueue: q,
             symbolChoices: nextChoices,
             symbolSelectionRelicSourceId: null,
+            isTurnSymbolSelection: false,
             forceTerrainInNextSymbolChoices: nextForceTerrain,
             phase: q.length > 0
                 ? 'selection' as GamePhase
@@ -311,6 +316,7 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
         symbolChoices: [],
         symbolSelectionRelicSourceId: null,
         symbolSelectionSymbolSourceId: null,
+        isTurnSymbolSelection: false,
     };
 };
 
@@ -324,8 +330,7 @@ export const createSelectionFlowActions = ({
         const state = get();
         if (state.phase !== 'selection') return;
 
-        const hasPlague = state.board.some((col) => col.some((cell) => cell?.definition.id === 78));
-        if (hasPlague) return;
+        if (isPlagueBlockingSelection(state)) return;
 
         const def = SYMBOLS[symbolId];
         if (!def) return;
@@ -353,6 +358,7 @@ export const createSelectionFlowActions = ({
     selectEvent: (eventId: number) => {
         const state = get();
         if (state.phase !== 'selection') return;
+        if (isPlagueBlockingSelection(state)) return;
 
         const event = GAME_EVENTS[eventId];
         if (!event) return;
@@ -541,8 +547,7 @@ export const createSelectionFlowActions = ({
         const state = get();
         if (state.phase !== 'selection') return;
 
-        const hasPlague = state.board.some((col) => col.some((cell) => cell?.definition.id === 78));
-        if (hasPlague) return;
+        if (isPlagueBlockingSelection(state)) return;
         if (
             state.symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_RELIC_DEBRIS ||
             state.symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_TRIBE_JOIN ||
@@ -769,6 +774,8 @@ export const createSelectionFlowActions = ({
             phase: 'selection' as GamePhase,
             returnPhaseAfterDevKnowledgeUpgrade: null,
             symbolSelectionRelicSourceId: null,
+            symbolSelectionSymbolSourceId: null,
+            isTurnSymbolSelection: true,
             symbolChoices: choiceResolution.choices,
             forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
             forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
@@ -845,6 +852,8 @@ export const createSelectionFlowActions = ({
                 destroySelectionMaxSymbols: 3,
                 territorialAfterEdictPending: false,
                 symbolSelectionRelicSourceId: null,
+                symbolSelectionSymbolSourceId: null,
+                isTurnSymbolSelection: !terr,
                 symbolChoices: terr ? resolveTerrainChoices(state) : choiceResolution!.choices,
                 forceTerrainInNextSymbolChoices: terr
                     ? state.forceTerrainInNextSymbolChoices
@@ -885,6 +894,8 @@ export const createSelectionFlowActions = ({
                 pendingDestroySource: null,
                 destroySelectionMaxSymbols: 3,
                 symbolSelectionRelicSourceId: null,
+                symbolSelectionSymbolSourceId: null,
+                isTurnSymbolSelection: false,
                 symbolChoices: resolveTerrainChoices(state),
                 bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
             }));
@@ -906,6 +917,8 @@ export const createSelectionFlowActions = ({
                 destroySelectionMaxSymbols: 3,
                 territorialAfterEdictPending: false,
                 symbolSelectionRelicSourceId: null,
+                symbolSelectionSymbolSourceId: null,
+                isTurnSymbolSelection: !terr,
                 symbolChoices: terr ? resolveTerrainChoices(state) : choiceResolution!.choices,
                 forceTerrainInNextSymbolChoices: terr
                     ? state.forceTerrainInNextSymbolChoices

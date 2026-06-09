@@ -126,6 +126,8 @@ export const createRelicActivationActions = ({
                 phase: 'selection',
                 symbolChoices: res.choices,
                 symbolSelectionRelicSourceId: RELIC_ID.ANCIENT_RELIC_DEBRIS,
+                symbolSelectionSymbolSourceId: null,
+                isTurnSymbolSelection: false,
                 freeSelectionRerolls: Math.max(
                     state.freeSelectionRerolls ?? 0,
                     getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
@@ -159,6 +161,8 @@ export const createRelicActivationActions = ({
                 phase: 'selection',
                 symbolChoices: choices,
                 symbolSelectionRelicSourceId: RELIC_ID.ANCIENT_TRIBE_JOIN,
+                symbolSelectionSymbolSourceId: null,
+                isTurnSymbolSelection: false,
                 freeSelectionRerolls: Math.max(
                     state.freeSelectionRerolls ?? 0,
                     getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
@@ -186,6 +190,8 @@ export const createRelicActivationActions = ({
                 phase: 'selection',
                 symbolChoices: choices,
                 symbolSelectionRelicSourceId: RELIC_ID.MILITARY_LEVY,
+                symbolSelectionSymbolSourceId: null,
+                isTurnSymbolSelection: false,
                 freeSelectionRerolls: Math.max(
                     state.freeSelectionRerolls ?? 0,
                     getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
@@ -211,6 +217,8 @@ export const createRelicActivationActions = ({
                 phase: 'selection',
                 symbolChoices: choices,
                 symbolSelectionRelicSourceId: RELIC_ID.PROPHECY_DIE,
+                symbolSelectionSymbolSourceId: null,
+                isTurnSymbolSelection: false,
                 freeSelectionRerolls: Math.max(
                     state.freeSelectionRerolls ?? 0,
                     getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),

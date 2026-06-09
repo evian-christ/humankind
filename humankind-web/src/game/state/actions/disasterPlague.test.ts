@@ -241,6 +241,7 @@ describe('Disaster Plague (ID 78) Tests', () => {
             const harness = createHarness({
                 board,
                 phase: 'selection',
+                isTurnSymbolSelection: true,
                 symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!],
                 playerSymbols: [],
             });
@@ -257,6 +258,7 @@ describe('Disaster Plague (ID 78) Tests', () => {
                 board,
                 gold: 10,
                 phase: 'selection',
+                isTurnSymbolSelection: true,
                 symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!],
                 rerollsThisTurn: 0,
             });
@@ -264,6 +266,42 @@ describe('Disaster Plague (ID 78) Tests', () => {
             harness.actions.rerollSymbols();
             expect(harness.get().rerollsThisTurn).toBe(0);
             expect(harness.get().gold).toBe(10);
+        });
+
+        it('should allow a relic selection when plague IS on the board', () => {
+            const board = createEmptyBoard();
+            board[0][0] = createInstance(SYMBOLS[S.plague]!, []);
+
+            const harness = createHarness({
+                board,
+                phase: 'selection',
+                isTurnSymbolSelection: false,
+                symbolSelectionRelicSourceId: 19,
+                symbolChoices: [SYMBOLS[S.plains]!, SYMBOLS[S.mountain]!],
+            });
+
+            harness.actions.selectSymbol(S.plains);
+
+            expect(harness.get().playerSymbols.some((s) => s.definition.id === S.plains)).toBe(true);
+        });
+
+        it('should allow a tribal village selection when plague IS on the board', () => {
+            const board = createEmptyBoard();
+            board[0][0] = createInstance(SYMBOLS[S.plague]!, []);
+
+            const harness = createHarness({
+                board,
+                phase: 'selection',
+                isTurnSymbolSelection: false,
+                symbolSelectionSymbolSourceId: S.tribal_village,
+                bonusSelectionQueue: ['any', 'any'],
+                symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!],
+            });
+
+            harness.actions.selectSymbol(S.wheat);
+
+            expect(harness.get().playerSymbols.some((s) => s.definition.id === S.wheat)).toBe(true);
+            expect(harness.get().phase).toBe('selection');
         });
 
         it('should reduce rerolled symbol choices to two when heatwave is on the board', () => {

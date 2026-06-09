@@ -142,6 +142,8 @@ export interface GameState {
     symbolSelectionRelicSourceId: number | null;
     /** Symbol that opened the current symbol selection when its name should be shown in the UI. */
     symbolSelectionSymbolSourceId?: number | null;
+    /** Whether the current selection is the standard selection granted at the end of each turn. */
+    isTurnSymbolSelection?: boolean;
     /** 유물 상점에 표시되는 유물 목록 (3개) */
     relicChoices: (RelicDefinition | null)[];
     /** 람세스 황금의 거래: 이번 입고(상점 갱신)에서 50% 할인된 유물 ID */
@@ -402,6 +404,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     symbolChoices: [],
     symbolSelectionRelicSourceId: null,
     symbolSelectionSymbolSourceId: null,
+    isTurnSymbolSelection: false,
     relicChoices: generateRelicChoices(),
     relicHalfPriceRelicId: null,
     lastEffects: [],

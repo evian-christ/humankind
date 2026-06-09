@@ -56,6 +56,7 @@ interface SavedGame {
         symbolChoices: number[];
         symbolSelectionRelicSourceId: number | null;
         symbolSelectionSymbolSourceId?: number | null;
+        isTurnSymbolSelection?: boolean;
         relicChoices: Array<number | null>;
         relicHalfPriceRelicId: number | null;
         lastEffects?: GameState['lastEffects'];
@@ -234,6 +235,7 @@ export function saveGameState(state: GameState): void {
             symbolChoices: state.symbolChoices.map(serializeSelectionChoiceId),
             symbolSelectionRelicSourceId: state.symbolSelectionRelicSourceId,
             symbolSelectionSymbolSourceId: state.symbolSelectionSymbolSourceId ?? null,
+            isTurnSymbolSelection: state.isTurnSymbolSelection ?? false,
             relicChoices: state.relicChoices.map((relic) => relic?.id ?? null),
             relicHalfPriceRelicId: state.relicHalfPriceRelicId,
             lastEffects: [],
@@ -323,6 +325,14 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             symbolChoices: mapSelectionChoices(save.state.symbolChoices, save.state.unlockedKnowledgeUpgrades),
             symbolSelectionRelicSourceId: save.state.symbolSelectionRelicSourceId,
             symbolSelectionSymbolSourceId: save.state.symbolSelectionSymbolSourceId ?? null,
+            isTurnSymbolSelection:
+                save.state.isTurnSymbolSelection ??
+                (
+                    save.state.phase === 'selection' &&
+                    save.state.symbolSelectionRelicSourceId == null &&
+                    save.state.symbolSelectionSymbolSourceId == null &&
+                    save.state.bonusSelectionQueue.length === 0
+                ),
             relicChoices: save.state.relicChoices.map((id) => (id == null ? null : RELICS[id] ?? null)),
             relicHalfPriceRelicId: save.state.relicHalfPriceRelicId,
             lastEffects: [],

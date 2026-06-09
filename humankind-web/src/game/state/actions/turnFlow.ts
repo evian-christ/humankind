@@ -230,6 +230,8 @@ export const createTurnFlowActions = ({
             ...statusPatch,
             phase: 'selection' as GamePhase,
             symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
+            symbolSelectionSymbolSourceId: null,
+            isTurnSymbolSelection: true,
             freeSelectionRerolls: Math.max(
                 state.freeSelectionRerolls ?? 0,
                 getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
@@ -743,6 +745,8 @@ export const createTurnFlowActions = ({
                                     ...basePatch,
                                     phase: 'selection' as GamePhase,
                                     symbolSelectionRelicSourceId: null,
+                                    symbolSelectionSymbolSourceId: null,
+                                    isTurnSymbolSelection: true,
                                     freeSelectionRerolls: Math.max(
                                         finalState.freeSelectionRerolls ?? 0,
                                         getSelectionPhaseFreeRerollFloor(finalState.unlockedKnowledgeUpgrades ?? []),

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     countNonConsumableRelics,
+    groupRelicsForDisplay,
     isConsumableRelicId,
     isRelicAvailableForShop,
 } from './relicClassification';
@@ -31,5 +32,28 @@ describe('relicClassification', () => {
         expect(isRelicAvailableForShop(RELIC_ID.ANCIENT_RELIC_DEBRIS, ownedRelicIds)).toBe(true);
         expect(isRelicAvailableForShop(RELIC_ID.CLOVIS_SPEAR, ownedRelicIds)).toBe(false);
         expect(isRelicAvailableForShop(RELIC_ID.TEN_COMMANDMENTS, ownedRelicIds)).toBe(true);
+    });
+
+    it('groups matching consumables for display without grouping non-consumables', () => {
+        const relics = [
+            { instanceId: 'permanent-a', definition: { id: RELIC_ID.CLOVIS_SPEAR } },
+            { instanceId: 'consumable-a', definition: { id: RELIC_ID.ANCIENT_RELIC_DEBRIS } },
+            { instanceId: 'permanent-b', definition: { id: RELIC_ID.CLOVIS_SPEAR } },
+            { instanceId: 'consumable-b', definition: { id: RELIC_ID.ANCIENT_RELIC_DEBRIS } },
+            { instanceId: 'consumable-c', definition: { id: RELIC_ID.PROPHECY_DIE } },
+        ];
+
+        const stacks = groupRelicsForDisplay(relics);
+
+        expect(stacks.map(({ relic, count }) => [relic.instanceId, count])).toEqual([
+            ['permanent-a', 1],
+            ['consumable-a', 2],
+            ['permanent-b', 1],
+            ['consumable-c', 1],
+        ]);
+        expect(stacks[1].relics.map((relic) => relic.instanceId)).toEqual([
+            'consumable-a',
+            'consumable-b',
+        ]);
     });
 });

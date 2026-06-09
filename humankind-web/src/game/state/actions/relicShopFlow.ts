@@ -15,6 +15,8 @@ interface RelicShopFlowDeps {
 export const createRelicShopFlowActions = ({ get, set }: RelicShopFlowDeps) => ({
     buyRelic: (relicId: number) => {
         const state = get();
+        if (state.phase === 'selection') return;
+
         const relicIndex = state.relicChoices.findIndex((r) => r && r.id === relicId);
         if (relicIndex === -1) return;
 

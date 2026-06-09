@@ -449,6 +449,7 @@ describe('turnFlow actions', () => {
             vi.runAllTimers();
 
             expect(harness.get().phase).toBe('selection');
+            expect(harness.get().isTurnSymbolSelection).toBe(true);
             expect(harness.get().playerSymbols.some((s) => s.instanceId === colony.instanceId)).toBe(false);
             expect(harness.get().symbolChoices.some(isGameEventDefinition)).toBe(true);
         } finally {

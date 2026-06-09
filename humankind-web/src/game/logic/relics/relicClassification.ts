@@ -19,3 +19,37 @@ export const isRelicAvailableForShop = (
 
 export const countNonConsumableRelics = <T extends { definition: { id: number } }>(relics: readonly T[]): number =>
     relics.filter((relic) => !isConsumableRelicId(relic.definition.id)).length;
+
+export interface RelicDisplayStack<T> {
+    relic: T;
+    relics: T[];
+    count: number;
+}
+
+export const groupRelicsForDisplay = <T extends { definition: { id: number } }>(
+    relics: readonly T[],
+): RelicDisplayStack<T>[] => {
+    const stacks: RelicDisplayStack<T>[] = [];
+    const consumableStackIndexById = new Map<number, number>();
+
+    for (const relic of relics) {
+        const relicId = relic.definition.id;
+        const existingIndex = isConsumableRelicId(relicId)
+            ? consumableStackIndexById.get(relicId)
+            : undefined;
+
+        if (existingIndex !== undefined) {
+            const stack = stacks[existingIndex];
+            stack.relics.push(relic);
+            stack.count += 1;
+            continue;
+        }
+
+        if (isConsumableRelicId(relicId)) {
+            consumableStackIndexById.set(relicId, stacks.length);
+        }
+        stacks.push({ relic, relics: [relic], count: 1 });
+    }
+
+    return stacks;
+};
