@@ -28,6 +28,9 @@ export class BoardRenderer {
     private bgContainer: PIXI.Container;
     private boardContainer: PIXI.Container;
     private slotAuraGraphics: PIXI.Graphics | null = null;
+    private destroyAuraGraphics: Array<{ graphics: PIXI.Graphics; targetAlpha: number; delayMs: number }> = [];
+    private destroyAuraElapsedMs = 0;
+    private isDestroyAuraActive = false;
     private slotAuraElapsedMs = 0;
 
     constructor(args: {
@@ -38,7 +41,7 @@ export class BoardRenderer {
         this.boardContainer = args.boardContainer;
     }
 
-    public beginFrame(app: PIXI.Application, _state: GameState, settings: SettingsState): BoardRenderFrame | null {
+    public beginFrame(app: PIXI.Application, state: GameState, settings: SettingsState): BoardRenderFrame | null {
         if (!app.renderer) return null;
 
         const width = app.screen?.width || 1920;
@@ -63,7 +66,7 @@ export class BoardRenderer {
         };
 
         this.renderBackground(frame);
-        this.renderBoardAura(frame);
+        this.renderBoardAura(frame, state);
         this.renderSlotCells(frame);
         this.renderSlotNumbers(frame);
         return frame;
@@ -90,6 +93,16 @@ export class BoardRenderer {
         const scale = 0.985 + breath * 0.035;
         this.slotAuraGraphics.scale.set(scale);
         this.slotAuraGraphics.alpha = 0.88 + breath * 0.12;
+
+        this.destroyAuraElapsedMs = this.isDestroyAuraActive
+            ? Math.min(this.destroyAuraElapsedMs + deltaMs, 1400)
+            : Math.max(this.destroyAuraElapsedMs - deltaMs * 2.6, 0);
+        const easeOut = (t: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, t)), 3);
+        for (const band of this.destroyAuraGraphics) {
+            const progress = easeOut((this.destroyAuraElapsedMs - band.delayMs) / 620);
+            band.graphics.alpha = progress * band.targetAlpha;
+            band.graphics.scale.set(scale);
+        }
     }
 
     private renderBackground(frame: BoardRenderFrame) {
@@ -99,27 +112,58 @@ export class BoardRenderer {
         this.bgContainer.addChild(bg);
     }
 
-    private renderBoardAura(frame: BoardRenderFrame) {
+    private renderBoardAura(frame: BoardRenderFrame, state: GameState) {
         const auraGraphics = new PIXI.Graphics();
         const boardX = frame.startX + frame.gridOffsetX;
         const boardY = frame.startY + frame.gridOffsetY;
         const boardWidth = BOARD_WIDTH * frame.cellWidth + (BOARD_WIDTH - 1) * frame.colGap;
         const boardHeight = BOARD_HEIGHT * frame.cellHeight + (BOARD_HEIGHT - 1) * frame.rowGap;
+        const isDestroyPick = state.phase === 'oblivion_furnace_board';
+        const wasDestroyAuraActive = this.isDestroyAuraActive;
+        if (isDestroyPick && !wasDestroyAuraActive && this.destroyAuraElapsedMs <= 0) {
+            this.destroyAuraElapsedMs = 0;
+        }
+        this.isDestroyAuraActive = isDestroyPick;
+        this.destroyAuraGraphics = [];
         const auraBands = [
-            { spread: 36 * frame.scale, alpha: 0.18 },
-            { spread: 22 * frame.scale, alpha: 0.34 },
-            { spread: 8 * frame.scale, alpha: 0.68 },
+            { spread: 104 * frame.scale, alpha: 0.035, color: 0x000000 },
+            { spread: 84 * frame.scale, alpha: 0.055, color: 0x000000 },
+            { spread: 66 * frame.scale, alpha: 0.085, color: 0x000000 },
+            { spread: 50 * frame.scale, alpha: 0.13, color: 0x000000 },
+            { spread: 36 * frame.scale, alpha: 0.2, color: 0x000000 },
+            { spread: 24 * frame.scale, alpha: 0.3, color: 0x000000 },
+            { spread: 14 * frame.scale, alpha: 0.46, color: 0x000000 },
+            { spread: 7 * frame.scale, alpha: 0.58, color: 0x000000 },
         ];
+        const destroyAuraBands = auraBands.map((band, index) => ({
+            ...band,
+            color: index >= auraBands.length - 2 ? 0x220404 : index >= auraBands.length - 5 ? 0x7f1d1d : 0xb91c1c,
+            delayMs: (auraBands.length - 1 - index) * 70,
+        }));
 
-        for (const { spread, alpha } of auraBands) {
-            auraGraphics.roundRect(
-                boardX - spread,
-                boardY - spread,
-                boardWidth + spread * 2,
-                boardHeight + spread * 2,
-                spread,
-            );
-            auraGraphics.fill({ color: 0x000000, alpha });
+        const drawAuraBand = (graphics: PIXI.Graphics, spread: number, color: number, alpha: number) => {
+            graphics
+                .roundRect(
+                    boardX - spread,
+                    boardY - spread,
+                    boardWidth + spread * 2,
+                    boardHeight + spread * 2,
+                    spread,
+                )
+                .fill({ color, alpha })
+                .rect(boardX, boardY, boardWidth, boardHeight)
+                .cut()
+                .beginPath();
+        };
+
+        for (const { spread, alpha, color } of auraBands) {
+            drawAuraBand(auraGraphics, spread, color, alpha);
+        }
+        type BlurFilterCtor = new (strength: number) => PIXI.Filter;
+        const BlurFilterCtor = (PIXI as unknown as { BlurFilter?: BlurFilterCtor }).BlurFilter;
+        const auraBlur = Math.max(10, 18 * frame.scale);
+        if (BlurFilterCtor) {
+            auraGraphics.filters = [new BlurFilterCtor(auraBlur)];
         }
 
         const auraCenterX = boardX + boardWidth / 2;
@@ -127,8 +171,23 @@ export class BoardRenderer {
         auraGraphics.pivot.set(auraCenterX, auraCenterY);
         auraGraphics.position.set(auraCenterX, auraCenterY);
         this.slotAuraGraphics = auraGraphics;
-        this.tick(0);
         this.boardContainer.addChild(auraGraphics);
+
+        if (isDestroyPick || this.destroyAuraElapsedMs > 0) {
+            for (const { spread, alpha, color, delayMs } of destroyAuraBands) {
+                const redBand = new PIXI.Graphics();
+                drawAuraBand(redBand, spread, color, 1);
+                redBand.pivot.set(auraCenterX, auraCenterY);
+                redBand.position.set(auraCenterX, auraCenterY);
+                redBand.alpha = 0;
+                if (BlurFilterCtor) {
+                    redBand.filters = [new BlurFilterCtor(auraBlur)];
+                }
+                this.destroyAuraGraphics.push({ graphics: redBand, targetAlpha: alpha, delayMs });
+                this.boardContainer.addChild(redBand);
+            }
+        }
+        this.tick(0);
     }
 
     private renderSlotCells(frame: BoardRenderFrame) {

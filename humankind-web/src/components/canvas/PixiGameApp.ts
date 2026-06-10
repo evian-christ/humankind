@@ -99,7 +99,7 @@ function getNowMs() {
 
 function getDestroyMarkedAlpha(state: GameState, settings: SettingsState, fallbackAlpha: number) {
     const blinkStartedAtMs = state.destroyRemovalBlinkStartedAtMs;
-    if (state.phase === 'processing' && blinkStartedAtMs != null) {
+    if (blinkStartedAtMs != null) {
         const durationMs = DESTROY_REMOVAL_BLINK_DURATION_MS[settings.effectSpeed];
         if (durationMs > 0) {
             const progress = clamp01((getNowMs() - blinkStartedAtMs) / durationMs);
@@ -787,7 +787,10 @@ export class PixiGameApp {
         ) {
             needsTransientRender = true;
         }
-        if (state.phase === 'processing' && state.destroyRemovalBlinkStartedAtMs != null) {
+        if (state.destroyRemovalBlinkStartedAtMs != null) {
+            needsTransientRender = true;
+        }
+        if (state.earthquakeFx != null) {
             needsTransientRender = true;
         }
         if (this.productionScaleMotions.size > 0) {
@@ -1248,7 +1251,23 @@ export class PixiGameApp {
                 const isDestroyBlockedInBoardPick =
                     state.phase === 'oblivion_furnace_board' &&
                     (symDef.type === SymbolType.ENEMY || symDef.type === SymbolType.DISASTER);
-                const symbolAlpha = symbol.is_marked_for_destruction
+                const earthquakeFx = state.earthquakeFx;
+                const isEarthquakeShaking =
+                    state.phase === 'processing' &&
+                    !!earthquakeFx &&
+                    earthquakeFx.affected.some((pos) => pos.x === x && pos.y === y);
+                const earthquakeElapsedMs = isEarthquakeShaking
+                    ? Math.max(0, getNowMs() - earthquakeFx!.startedAtMs)
+                    : 0;
+                const earthquakeProgress = isEarthquakeShaking && earthquakeFx!.durationMs > 0
+                    ? clamp01(earthquakeElapsedMs / earthquakeFx!.durationMs)
+                    : 1;
+                const earthquakeShakeX = isEarthquakeShaking
+                    ? Math.sin(earthquakeElapsedMs / 18) * (1 - earthquakeProgress * 0.25) * 9 * BOARD_DISPLAY_SCALE
+                    : 0;
+                const symbolAlpha = isEarthquakeShaking
+                    ? 1
+                    : symbol.is_marked_for_destruction
                     ? getDestroyMarkedAlpha(state, settings, isDestroyBlockedInBoardPick ? 0.48 : 1)
                     : isDestroyBlockedInBoardPick ? 0.48 : 1;
                 const isContrib = isProcessing && state.activeContributors.some(c => c.x === x && c.y === y);
@@ -1310,7 +1329,7 @@ export class PixiGameApp {
                     const SPRITE_PX = 32;
                     const rawSize = Math.min(innerW, cellHeight) * 0.85;
                     const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
-                    const spriteCenterX = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
+                    const spriteCenterX = cellX + cellWidth / 2 + activeOffsetX + preShakeX + earthquakeShakeX;
                     const spriteCenterY = cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
                     const texture = PIXI.Texture.from(spritePath);
                     if (productionStickerTilt > 0) {

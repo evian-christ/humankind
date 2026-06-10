@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT } from '../game/state/gameStore';
 import { SymbolType } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
@@ -22,7 +22,6 @@ type ProjectedRect = {
     height: number;
     center: Point;
     clipPath: string;
-    polygonPoints: string;
 };
 
 const isBoardDestroyBlockedType = (type: SymbolType) =>
@@ -57,10 +56,6 @@ const projectRect = (
     const clipPath = `polygon(${corners.map((point) => (
         `${((point.x - projectedLeft) / projectedWidth) * 100}% ${((point.y - projectedTop) / projectedHeight) * 100}%`
     )).join(', ')})`;
-    const polygonPoints = corners.map((point) => (
-        `${point.x - projectedLeft},${point.y - projectedTop}`
-    )).join(' ');
-
     return {
         left: projectedLeft,
         top: projectedTop,
@@ -68,7 +63,6 @@ const projectRect = (
         height: projectedHeight,
         center: project(left + width / 2, top + height / 2),
         clipPath,
-        polygonPoints,
     };
 };
 
@@ -83,8 +77,6 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     const cancelEdictPick = useGameStore((s) => s.cancelEdictPick);
     const language = useSettingsStore((s) => s.language);
     const crtEffect = useSettingsStore((s) => s.crtEffect);
-    const auraMaskId = `board-aura-mask-${useId().replace(/:/g, '')}`;
-
     const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
     const [hovered, setHovered] = useState<{ x: number; y: number } | null>(null);
     const [motion, setMotion] = useState<OverlayMotion>('entering');
@@ -180,13 +172,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     const gapAboveBoard = 6 * BOARD_DISPLAY_SCALE;
     const titleTop = Math.max(4, layout.startY - titleH - gapAboveBoard);
 
-    const bl = layout.startX;
-    const bt = layout.startY;
-    const bw = layout.boardW;
-    const bh = layout.boardH;
-    const sc = layout.scale;
     /** 보드 뒤에서 떠 있는 느낌 — 바깥으로 강한 그림자 + 아주 약한 안쪽 깊이 */
-    const projectedBoard = projectRect(bl, bt, bw, bh, viewSize.w, viewSize.h, crtEffect);
     const projectedTitle = projectRect(
         innerLeft,
         titleTop,
@@ -212,71 +198,6 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
             }}
         >
             <div
-                aria-hidden
-                className="oblivion-board-overlay__aura"
-                style={{
-                    position: 'absolute',
-                    left: projectedBoard.left,
-                    top: projectedBoard.top,
-                    width: projectedBoard.width,
-                    height: projectedBoard.height,
-                    zIndex: 1,
-                    pointerEvents: 'none',
-                    overflow: 'visible',
-                }}
-            >
-                <svg
-                    width={projectedBoard.width}
-                    height={projectedBoard.height}
-                    viewBox={`0 0 ${projectedBoard.width} ${projectedBoard.height}`}
-                    style={{ display: 'block', overflow: 'visible' }}
-                >
-                    <defs>
-                        <mask
-                            id={auraMaskId}
-                            maskUnits="userSpaceOnUse"
-                            x={-projectedBoard.width}
-                            y={-projectedBoard.height}
-                            width={projectedBoard.width * 3}
-                            height={projectedBoard.height * 3}
-                        >
-                            <rect
-                                x={-projectedBoard.width}
-                                y={-projectedBoard.height}
-                                width={projectedBoard.width * 3}
-                                height={projectedBoard.height * 3}
-                                fill="#fff"
-                            />
-                            <polygon points={projectedBoard.polygonPoints} fill="#000" />
-                        </mask>
-                    </defs>
-                    <g mask={`url(#${auraMaskId})`}>
-                        <polygon
-                            points={projectedBoard.polygonPoints}
-                            fill="none"
-                            stroke="rgba(88, 10, 14, 0.48)"
-                            strokeWidth={Math.max(18, 48 * sc)}
-                            style={{ filter: `blur(${Math.max(24, 54 * sc)}px)` }}
-                        />
-                        <polygon
-                            points={projectedBoard.polygonPoints}
-                            fill="none"
-                            stroke="rgba(127, 18, 18, 0.66)"
-                            strokeWidth={Math.max(10, 24 * sc)}
-                            style={{ filter: `blur(${Math.max(12, 26 * sc)}px)` }}
-                        />
-                        <polygon
-                            points={projectedBoard.polygonPoints}
-                            fill="none"
-                            stroke="rgba(185, 28, 28, 0.78)"
-                            strokeWidth={Math.max(4, 8 * sc)}
-                            style={{ filter: `blur(${Math.max(4, 8 * sc)}px)` }}
-                        />
-                    </g>
-                </svg>
-            </div>
-
-            <div
                 className="oblivion-board-overlay__header"
                 style={{
                     position: 'absolute',
@@ -297,7 +218,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
             >
                 <span
                     style={{
-                        fontSize: Math.max(18 * BOARD_DISPLAY_SCALE, 22 * layout.scale),
+                        fontSize: Math.max(26 * BOARD_DISPLAY_SCALE, 32 * layout.scale),
                         fontWeight: 800,
                         letterSpacing: 0.5,
                     }}
@@ -309,7 +230,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
                     style={{
                         flexShrink: 0,
                         fontFamily: 'inherit',
-                        fontSize: Math.max(18 * BOARD_DISPLAY_SCALE, 22 * layout.scale),
+                        fontSize: Math.max(26 * BOARD_DISPLAY_SCALE, 32 * layout.scale),
                         fontWeight: 800,
                         letterSpacing: 0.5,
                         margin: 0,
