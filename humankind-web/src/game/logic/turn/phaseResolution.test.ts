@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { EDICT_SYMBOL_ID } from '../../data/symbolDefinitions';
 import { calculateFoodCost } from '../../state/gameCalculations';
 import { resolveTurnEndPhase } from './phaseResolution';
 
@@ -10,7 +9,6 @@ describe('resolveTurnEndPhase', () => {
         const result = resolveTurnEndPhase({
             turn: 10,
             food: foodCost - 1,
-            edictRemovalPending: false,
         });
 
         expect(result.nextPhase).toBe('game_over');
@@ -26,7 +24,6 @@ describe('resolveTurnEndPhase', () => {
         const result = resolveTurnEndPhase({
             turn: 10,
             food: foodCost + 7,
-            edictRemovalPending: false,
         });
 
         expect(result.nextPhase).toBe('selection');
@@ -35,22 +32,5 @@ describe('resolveTurnEndPhase', () => {
         expect(result.foodAfterPayment).toBe(7);
         expect(result.shouldRefreshRelicShop).toBe(true);
         expect(result.symbolSelectionRelicSourceId).toBeNull();
-    });
-
-    it('moves to destroy_selection when edict removal is pending', () => {
-        const result = resolveTurnEndPhase({
-            turn: 3,
-            food: 20,
-            edictRemovalPending: true,
-        });
-
-        expect(result.nextPhase).toBe('destroy_selection');
-        expect(result.foodDelta).toBe(0);
-        expect(result.foodAfterPayment).toBe(20);
-        expect(result.destroySelection).toEqual({
-            edictRemovalPending: false,
-            pendingDestroySource: EDICT_SYMBOL_ID,
-            destroySelectionMaxSymbols: 1,
-        });
     });
 });

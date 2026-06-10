@@ -1,13 +1,10 @@
-import { MILITARY_SCIENCE_UPGRADE_ID, PLANTATION_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID, GUILD_UPGRADE_ID, MILITARY_SCIENCE_UPGRADE_ID, PLANTATION_UPGRADE_ID, THEOCRACY_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import { getEffectiveAdjacentCoords } from '../symbolEffects/core';
 import type { ActiveRelicEffects, EffectResult, LootMergeResolution, SymbolEffectContext } from '../symbolEffects/types';
 import {
-    buildFoodBySlotKey,
     collectDisabledTerrainCoords,
-    computeMerchantDeferredEffects,
-    computeReligionDeferredEffects,
     slotKey,
     type DeferredReligionSlot,
     type SlotEffect,
@@ -258,7 +255,205 @@ export function createSlotEffectPipeline(args: CreateSlotEffectPipelineArgs): Sl
 }
 
 export function shouldDeferReligionEffect(symbolId: number): boolean {
-    return symbolId === S.christianity || symbolId === S.islam || symbolId === S.hinduism;
+    void symbolId;
+    return false;
+}
+
+const isBeforeSlot = (candidate: { x: number; y: number }, active: { x: number; y: number }): boolean =>
+    candidate.y < active.y || (candidate.y === active.y && candidate.x < active.x);
+
+function cloneBoardForPreview(board: BoardGrid): BoardGrid {
+    return board.map((col) => col.map((symbol) => (symbol ? { ...symbol } : null)));
+}
+
+function previewSlotDeltaWithoutSideEffects(args: ResolveSlotEffectArgs, slot: { x: number; y: number }): ResourceTotals {
+    const { deps, board, effectCtx, relicEffects, pipeline } = args;
+    const previewBoard = cloneBoardForPreview(board);
+    const previewSymbol = previewBoard[slot.x]?.[slot.y];
+    if (!previewSymbol || previewSymbol.is_marked_for_destruction) return { food: 0, gold: 0, knowledge: 0 };
+
+    const originalRandom = Math.random;
+    try {
+        Math.random = () => 0;
+        const result = deps.processSingleSymbolEffects({
+            symbol: previewSymbol,
+            board: previewBoard,
+            x: slot.x,
+            y: slot.y,
+            effectCtx,
+            relicEffects,
+            disabledTerrainCoords: pipeline.disabledTerrainCoords,
+        });
+        return {
+            food: result.food ?? 0,
+            gold: result.gold ?? 0,
+            knowledge: result.knowledge ?? 0,
+        };
+    } finally {
+        Math.random = originalRandom;
+    }
+}
+
+function getAccumulatedSlotDelta(pipeline: SlotEffectPipeline, slot: { x: number; y: number }): ResourceTotals {
+    let food = 0;
+    let gold = 0;
+    let knowledge = 0;
+    for (const effect of pipeline.accumulatedEffects) {
+        if (effect.x !== slot.x || effect.y !== slot.y) continue;
+        food += effect.food ?? 0;
+        gold += effect.gold ?? 0;
+        knowledge += effect.knowledge ?? 0;
+    }
+    return { food, gold, knowledge };
+}
+
+function getSlotDeltaForThisTurn(args: ResolveSlotEffectArgs, slot: { x: number; y: number }): ResourceTotals {
+    const { x, y } = args;
+    return isBeforeSlot(slot, { x, y })
+        ? getAccumulatedSlotDelta(args.pipeline, slot)
+        : previewSlotDeltaWithoutSideEffects(args, slot);
+}
+
+function getPositiveSlotFoodForThisTurn(args: ResolveSlotEffectArgs, slot: { x: number; y: number }): number {
+    return Math.max(0, getSlotDeltaForThisTurn(args, slot).food);
+}
+
+function collectMarkedInstanceIds(board: BoardGrid): Set<string> {
+    const marked = new Set<string>();
+    for (const col of board) {
+        for (const symbol of col) {
+            if (symbol?.is_marked_for_destruction) marked.add(symbol.instanceId);
+        }
+    }
+    return marked;
+}
+
+function collectNewDestroyEffects(
+    board: BoardGrid,
+    markedBefore: ReadonlySet<string>,
+    getAdjacentCoords: (x: number, y: number) => Array<{ x: number; y: number }>,
+    unlockedKnowledgeUpgrades: readonly number[],
+): SlotEffect[] {
+    const effects: SlotEffect[] = [];
+    for (let bx = 0; bx < board.length; bx++) {
+        for (let by = 0; by < (board[bx]?.length ?? 0); by++) {
+            const symbol = board[bx][by];
+            if (!symbol?.is_marked_for_destruction) continue;
+            if (markedBefore.has(symbol.instanceId)) continue;
+
+            if (symbol.definition.id === S.pottery || symbol.definition.id === S.tax_storehouse) {
+                const food = symbol.effect_counter || 0;
+                if (food > 0) effects.push({ x: bx, y: by, food, gold: 0, knowledge: 0 });
+            } else if (symbol.definition.id === S.date) {
+                effects.push({
+                    x: bx,
+                    y: by,
+                    food: unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10,
+                    gold: 0,
+                    knowledge: 0,
+                });
+            } else if (symbol.definition.id === S.dye) {
+                effects.push({
+                    x: bx,
+                    y: by,
+                    food: 0,
+                    gold: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
+                    knowledge: 0,
+                });
+            } else if (symbol.definition.id === S.papyrus) {
+                effects.push({
+                    x: bx,
+                    y: by,
+                    food: 0,
+                    gold: 0,
+                    knowledge: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
+                });
+            } else if (symbol.definition.id === S.oral_tradition) {
+                const knowledge = getAdjacentCoords(bx, by).filter((pos) => board[pos.x]?.[pos.y] != null).length * 10;
+                if (knowledge > 0) effects.push({ x: bx, y: by, food: 0, gold: 0, knowledge });
+            }
+        }
+    }
+    return effects;
+}
+
+function hasMultipleReligionSymbols(board: BoardGrid): boolean {
+    let count = 0;
+    for (const col of board) {
+        for (const symbol of col) {
+            if (!symbol || symbol.is_marked_for_destruction) continue;
+            if (symbol.definition.type === SymbolType.RELIGION) count++;
+        }
+    }
+    return count >= 2;
+}
+
+function hasDuplicateSymbolsOnBoard(board: BoardGrid): boolean {
+    const seen = new Set<number>();
+    for (const col of board) {
+        for (const symbol of col) {
+            if (!symbol || symbol.is_marked_for_destruction) continue;
+            if (seen.has(symbol.definition.id)) return true;
+            seen.add(symbol.definition.id);
+        }
+    }
+    return false;
+}
+
+function countPlacedSymbolsOnBoard(board: BoardGrid): number {
+    return board.reduce(
+        (sum, col) => sum + col.filter((symbol) => symbol && !symbol.is_marked_for_destruction).length,
+        0,
+    );
+}
+
+function applyImmediateEarthquakeEffect(board: BoardGrid, x: number, result: EffectResult) {
+    const affected: { x: number; y: number }[] = [];
+    for (let y = 0; y < (board[x]?.length ?? 0); y++) {
+        const target = board[x]?.[y];
+        if (!target) continue;
+        target.is_marked_for_destruction = true;
+        affected.push({ x, y });
+    }
+    result.earthquakeFx = { column: x, affected };
+}
+
+function applyImmediateFoodMirrorEffect(args: ResolveSlotEffectArgs, result: EffectResult) {
+    const { board, x, y, effectCtx } = args;
+    const adjacentCoords = getEffectiveAdjacentCoords(board, x, y, effectCtx.allSymbolsAdjacent);
+    let bestPos: { x: number; y: number } | null = null;
+    let bestFood = 0;
+
+    for (const pos of adjacentCoords) {
+        if (!board[pos.x]?.[pos.y]) continue;
+        const producedFood = getPositiveSlotFoodForThisTurn(args, pos);
+        if (producedFood > bestFood) {
+            bestFood = producedFood;
+            bestPos = pos;
+        }
+    }
+
+    if (bestPos && bestFood > 0) {
+        result.food += bestFood;
+        result.contributors = [...(result.contributors ?? []), bestPos];
+    }
+}
+
+function applyImmediateTaxEffect(args: ResolveSlotEffectArgs, result: EffectResult) {
+    const { board, x, y, effectCtx } = args;
+    const adjacentOccupied = getEffectiveAdjacentCoords(board, x, y, effectCtx.allSymbolsAdjacent)
+        .filter((pos) => {
+            const cell = board[pos.x]?.[pos.y];
+            return cell && !cell.is_marked_for_destruction;
+        });
+    if (adjacentOccupied.length === 0) return;
+
+    const pick = adjacentOccupied[Math.floor(Math.random() * adjacentOccupied.length)];
+    const food = getPositiveSlotFoodForThisTurn(args, pick);
+    if (food <= 0) return;
+
+    result.gold += food;
+    result.contributors = [...(result.contributors ?? []), pick];
 }
 
 export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
@@ -268,12 +463,8 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         return { food: 0, knowledge: 0, gold: 0 };
     }
 
-    if (shouldDeferReligionEffect(symbol.definition.id)) {
-        pipeline.religionSlotsToRecalculate.push({ x, y, id: symbol.definition.id });
-        return { food: 0, knowledge: 0, gold: 0 };
-    }
-
     const counterTracker = createCounterMutationTracker(symbol, effectCtx);
+    const markedBefore = collectMarkedInstanceIds(board);
     const result = computeSingleSlotEffect(deps, {
         symbol,
         board,
@@ -283,6 +474,89 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         relicEffects,
         disabledTerrainCoords: pipeline.disabledTerrainCoords,
     });
+    const getPhaseAdjacentCoords = (ax: number, ay: number) =>
+        getEffectiveAdjacentCoords(board, ax, ay, effectCtx.allSymbolsAdjacent);
+    const destroyEffects = collectNewDestroyEffects(
+        board,
+        markedBefore,
+        getPhaseAdjacentCoords,
+        effectCtx.upgrades,
+    );
+    if (destroyEffects.length > 0) {
+        result.extraEffects = [...(result.extraEffects ?? []), ...destroyEffects];
+    }
+    if (
+        board.some((col) =>
+            col.some((cell) => cell?.is_marked_for_destruction && !markedBefore.has(cell.instanceId) && cell.definition.id === S.relic_caravan),
+        )
+    ) {
+        result.triggerRelicRefresh = true;
+    }
+    if (symbol.definition.id === S.campfire || symbol.definition.id === S.christianity) {
+        if (symbol.definition.id === S.christianity && hasMultipleReligionSymbols(board)) {
+            symbol.is_marked_for_destruction = true;
+        } else {
+            applyImmediateFoodMirrorEffect(args, result);
+        }
+    } else if (symbol.definition.id === S.earthquake) {
+        applyImmediateEarthquakeEffect(board, x, result);
+        const earthquakeDestroyEffects = collectNewDestroyEffects(
+            board,
+            markedBefore,
+            getPhaseAdjacentCoords,
+            effectCtx.upgrades,
+        );
+        if (earthquakeDestroyEffects.length > 0) {
+            result.extraEffects = [...(result.extraEffects ?? []), ...earthquakeDestroyEffects];
+        }
+    } else if (symbol.definition.id === S.tax) {
+        applyImmediateTaxEffect(args, result);
+    } else if (symbol.definition.id === S.merchant) {
+        const hasGuild = effectCtx.upgrades.includes(GUILD_UPGRADE_ID);
+        const candidates = hasGuild
+            ? board.flatMap((col, bx) => col.flatMap((cell, by) => (cell ? [{ x: bx, y: by }] : [])))
+            : getEffectiveAdjacentCoords(board, x, y, effectCtx.allSymbolsAdjacent).filter((pos) => board[pos.x]?.[pos.y] != null);
+        let bestPos: { x: number; y: number } | null = null;
+        let gold = 0;
+        for (const pos of candidates) {
+            const producedFood = getPositiveSlotFoodForThisTurn(args, pos);
+            if (producedFood > gold) {
+                gold = producedFood;
+                bestPos = pos;
+            }
+        }
+        symbol.merchant_store_pending = false;
+        symbol.stored_gold = 0;
+        if (bestPos && gold > 0) {
+            result.gold += gold;
+            result.contributors = [...(result.contributors ?? []), bestPos];
+        }
+    } else if (symbol.definition.id === S.islam) {
+        if (hasMultipleReligionSymbols(board)) {
+            symbol.is_marked_for_destruction = true;
+        } else {
+            const hasTheocracy = effectCtx.upgrades.includes(THEOCRACY_UPGRADE_ID);
+            let knowledgeProducerCount = 0;
+            for (let bx = 0; bx < board.length; bx++) {
+                for (let by = 0; by < (board[bx]?.length ?? 0); by++) {
+                    const cell = board[bx][by];
+                    if (!cell || cell.is_marked_for_destruction) continue;
+                    if (getSlotDeltaForThisTurn(args, { x: bx, y: by }).knowledge > 0) knowledgeProducerCount++;
+                }
+            }
+            result.food += knowledgeProducerCount * (hasTheocracy ? 3 : 2);
+        }
+    } else if (symbol.definition.id === S.hinduism) {
+        if (hasMultipleReligionSymbols(board)) {
+            symbol.is_marked_for_destruction = true;
+        } else if (!hasDuplicateSymbolsOnBoard(board)) {
+            result.food += effectCtx.upgrades.includes(THEOCRACY_UPGRADE_ID)
+                ? countPlacedSymbolsOnBoard(board)
+                : Math.floor(countPlacedSymbolsOnBoard(board) / 2);
+        }
+    } else if (symbol.definition.id === S.buddhism && hasMultipleReligionSymbols(board)) {
+        symbol.is_marked_for_destruction = true;
+    }
     const counterResult = counterTracker?.finish();
     if (counterResult) {
         result.counterDelta = counterResult.counterDelta;
@@ -325,44 +599,25 @@ export function applySlotEffectResult(
         }
         pipeline.accumulatedEffects.push(effect);
     }
+    if (result.extraEffects?.length) {
+        pipeline.accumulatedEffects.push(...result.extraEffects);
+    }
     if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
         pipeline.totals.food += result.food;
         pipeline.totals.knowledge += result.knowledge;
         pipeline.totals.gold += result.gold;
     }
+    if (result.extraEffects?.length) {
+        for (const effect of result.extraEffects) {
+            pipeline.totals.food += effect.food;
+            pipeline.totals.gold += effect.gold;
+            pipeline.totals.knowledge += effect.knowledge;
+        }
+    }
 }
 
 export function completeSlotEffects(args: CompleteSlotEffectsArgs): void {
-    const { pipeline, board, boardWidth, boardHeight, getAdjacentCoords, unlockedKnowledgeUpgrades = [], relicEffects } = args;
-    const getPhaseAdjacentCoords = (x: number, y: number) =>
-        pipeline.allSymbolsAdjacent
-            ? getEffectiveAdjacentCoords(board, x, y, true)
-            : getAdjacentCoords(x, y);
-    const religionResult = computeReligionDeferredEffects({
-        board,
-        religionSlots: pipeline.religionSlotsToRecalculate,
-        religionEffectCache: pipeline.religionEffectCache,
-        getAdjacentCoords: getPhaseAdjacentCoords,
-        unlockedKnowledgeUpgrades,
-        allSymbolsAreCorner: relicEffects?.allSymbolsAreCorner ?? false,
-    });
-
-    pipeline.accumulatedEffects.push(...religionResult.effects);
-    pipeline.totals.food += religionResult.foodDelta;
-    pipeline.totals.gold += religionResult.goldDelta;
-    pipeline.totals.knowledge += religionResult.knowledgeDelta;
-
-    const merchantResult = computeMerchantDeferredEffects({
-        board,
-        width: boardWidth,
-        height: boardHeight,
-        foodBySlotKey: buildFoodBySlotKey(pipeline.accumulatedEffects),
-        getAdjacentCoords: getPhaseAdjacentCoords,
-        unlockedKnowledgeUpgrades,
-    });
-
-    pipeline.accumulatedEffects.push(...merchantResult.effects);
-    pipeline.totals.gold += merchantResult.goldDelta;
+    void args;
 }
 
 export function computeUnplacedHorseEffects(

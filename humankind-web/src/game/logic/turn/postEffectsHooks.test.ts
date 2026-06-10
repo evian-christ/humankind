@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { runPostEffectsHooks } from './postEffectsHooks';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import { SymbolType } from '../../data/symbolTypes';
-import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { CARAVANSERAI_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
 import type { PlayerSymbolInstance } from '../../types';
 
@@ -101,7 +101,7 @@ describe('postEffectsHooks', () => {
         expect(runPostEffectsHooks({ ...baseArgs, currentEra: 3 }).bonusKnowledge).toBe(7);
     });
 
-    it('upgrades Date destroy food to 20 with Dry Storage', () => {
+    it('does not defer Date destroy food to post effects', () => {
         const board = createEmptyBoard();
         const date = createInstance(SYMBOLS[S.date]!, 'date');
         date.is_marked_for_destruction = true;
@@ -113,7 +113,7 @@ describe('postEffectsHooks', () => {
             boardHeight: 4,
             effects: [],
             leaderId: null,
-            unlockedKnowledgeUpgrades: [DESERT_STORAGE_UPGRADE_ID],
+            unlockedKnowledgeUpgrades: [],
             getAdjacentCoords: () => [],
             relics: [],
             relicStoreApi: {
@@ -122,10 +122,10 @@ describe('postEffectsHooks', () => {
             },
         });
 
-        expect(result.bonusFood).toBe(20);
+        expect(result.bonusFood).toBe(0);
     });
 
-    it('grants campfire food equal to the highest adjacent food production', () => {
+    it('does not defer campfire food to post effects', () => {
         const board = createEmptyBoard();
         const campfire = createInstance(SYMBOLS[S.campfire]!, 'campfire');
         const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
@@ -164,14 +164,15 @@ describe('postEffectsHooks', () => {
             },
         });
 
-        expect(result.bonusFood).toBe(6);
+        expect(result.bonusFood).toBe(0);
         expect(result.bonusGold).toBe(0);
         expect(result.bonusKnowledge).toBe(0);
+        expect(result.destroyedSymbols).toContainEqual({ id: S.campfire, x: 1, y: 1 });
     });
 
 
 
-    it('makes earthquake destroy every symbol in the same column', () => {
+    it('does not defer earthquake column destruction to post effects', () => {
         const board = createEmptyBoard();
         const earthquake = createInstance(SYMBOLS[S.earthquake]!, 'earthquake');
         const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
@@ -198,13 +199,13 @@ describe('postEffectsHooks', () => {
             },
         });
 
-        expect(wheat.is_marked_for_destruction).toBe(true);
+        expect(wheat.is_marked_for_destruction).toBe(false);
         expect(earthquake.is_marked_for_destruction).toBe(true);
-        expect(fish.is_marked_for_destruction).toBe(true);
+        expect(fish.is_marked_for_destruction).toBe(false);
         expect(rice.is_marked_for_destruction).toBe(false);
     });
 
-    it('lets tax produce gold without reducing food', () => {
+    it('does not defer tax gold to post effects', () => {
         const board = createEmptyBoard();
         const tax = createInstance(SYMBOLS[S.tax]!, 'tax');
         const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
@@ -238,7 +239,7 @@ describe('postEffectsHooks', () => {
         });
 
         expect(result.bonusFood).toBe(0);
-        expect(result.bonusGold).toBe(5);
+        expect(result.bonusGold).toBe(0);
     });
 
     it('lets Caravanserai mirror destroyed symbols production types', () => {
@@ -255,15 +256,17 @@ describe('postEffectsHooks', () => {
         board[2][0] = papyrus;
         board[3][0] = caravanserai;
 
+        const effects = [
+            { x: 0, y: 0, food: 5, gold: 0, knowledge: 0 },
+            { x: 1, y: 0, food: 0, gold: 1, knowledge: 0 },
+            { x: 2, y: 0, food: 0, gold: 0, knowledge: 1 },
+        ];
+
         const result = runPostEffectsHooks({
             board,
             boardWidth: 5,
             boardHeight: 4,
-            effects: [
-                { x: 0, y: 0, food: 5, gold: 0, knowledge: 0 },
-                { x: 1, y: 0, food: 0, gold: 1, knowledge: 0 },
-                { x: 2, y: 0, food: 0, gold: 0, knowledge: 1 },
-            ],
+            effects,
             leaderId: null,
             unlockedKnowledgeUpgrades: [CARAVANSERAI_UPGRADE_ID],
             getAdjacentCoords: () => [],
@@ -275,11 +278,12 @@ describe('postEffectsHooks', () => {
         });
 
         expect(result.bonusFood).toBe(10);
-        expect(result.bonusGold).toBe(30);
-        expect(result.bonusKnowledge).toBe(30);
+        expect(result.bonusGold).toBe(10);
+        expect(result.bonusKnowledge).toBe(10);
+        expect(effects).toContainEqual({ x: 3, y: 0, food: 10, gold: 10, knowledge: 10 });
     });
 
-    it('adds destroy resource bonuses to effects so they can produce board floats', () => {
+    it('does not defer Date, Dye, or Papyrus destroy resource bonuses to post effects', () => {
         const board = createEmptyBoard();
         const date = createInstance(SYMBOLS[S.date]!, 'date');
         const dye = createInstance(SYMBOLS[S.dye]!, 'dye');
@@ -307,17 +311,13 @@ describe('postEffectsHooks', () => {
             },
         });
 
-        expect(result.bonusFood).toBe(10);
-        expect(result.bonusGold).toBe(10);
-        expect(result.bonusKnowledge).toBe(10);
-        expect(effects).toEqual([
-            { x: 0, y: 0, food: 10, gold: 0, knowledge: 0 },
-            { x: 1, y: 0, food: 0, gold: 10, knowledge: 0 },
-            { x: 2, y: 0, food: 0, gold: 0, knowledge: 10 },
-        ]);
+        expect(result.bonusFood).toBe(0);
+        expect(result.bonusGold).toBe(0);
+        expect(result.bonusKnowledge).toBe(0);
+        expect(effects).toEqual([]);
     });
 
-    it('triggers Oral Tradition knowledge when it is destroyed by another symbol', () => {
+    it('does not defer Oral Tradition destroy knowledge to post effects', () => {
         const board = createEmptyBoard();
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, 'oral');
         oral.is_marked_for_destruction = true;
@@ -352,11 +352,11 @@ describe('postEffectsHooks', () => {
             },
         });
 
-        expect(result.bonusKnowledge).toBe(20);
-        expect(effects).toContainEqual({ x: 1, y: 1, food: 0, gold: 0, knowledge: 20 });
+        expect(result.bonusKnowledge).toBe(0);
+        expect(effects).toEqual([]);
     });
 
-    it('refreshes the relic shop when Relic Caravan is destroyed by another symbol', () => {
+    it('does not defer Relic Caravan shop refresh to post effects', () => {
         const board = createEmptyBoard();
         const relicCaravan = createInstance(SYMBOLS[S.relic_caravan]!, 'relic-caravan');
         relicCaravan.is_marked_for_destruction = true;
@@ -377,7 +377,7 @@ describe('postEffectsHooks', () => {
             },
         });
 
-        expect(result.refreshRelicShop).toBe(true);
+        expect(result.refreshRelicShop).toBe(false);
     });
 
     it('lets AGI Core absorb all board knowledge production and trigger victory at 500', () => {

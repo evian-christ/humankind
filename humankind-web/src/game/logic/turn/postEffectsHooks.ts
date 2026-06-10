@@ -1,10 +1,9 @@
 import type { LeaderId } from '../../data/leaders';
 import { isLeaderUnlockActive } from '../../data/leaders';
 import type { PlayerSymbolInstance } from '../../types';
-import { FOOD_PRODUCING_IDS, GOLD_PRODUCING_IDS, KNOWLEDGE_PRODUCING_IDS, SymbolType, S, TAX_SYMBOL_ID } from '../../data/symbolDefinitions';
+import { FOOD_PRODUCING_IDS, GOLD_PRODUCING_IDS, KNOWLEDGE_PRODUCING_IDS, SymbolType, S } from '../../data/symbolDefinitions';
 import {
     CARAVANSERAI_UPGRADE_ID,
-    DESERT_STORAGE_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
@@ -123,79 +122,9 @@ export function runPostEffectsHooks(args: {
         }
     }
 
-    // ── Stored Food symbols: 파괴 시 저장 식량 방출
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (
-                s &&
-                (s.definition.id === S.pottery || s.definition.id === S.tax_storehouse) &&
-                s.is_marked_for_destruction
-            ) {
-                const amount = s.effect_counter || 0;
-                if (amount > 0) {
-                    bonusFood += amount;
-                    effects.push({ x, y, food: amount, gold: 0, knowledge: 0 });
-                }
-            }
-        }
-    }
-
     // ── Date (30): 파괴 시 +10 Food / 건조 저장술 후 +20 Food ──
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (!s || s.definition.id !== S.date || !s.is_marked_for_destruction) continue;
-            const amount = unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10;
-            bonusFood += amount;
-            effects.push({ x, y, food: amount, gold: 0, knowledge: 0 });
-        }
-    }
-
     // ── Dye / Papyrus: 파괴 시 자원 보너스 ──
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (!s || !s.is_marked_for_destruction) continue;
-            if (s.definition.id === S.dye) {
-                const amount = unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
-                bonusGold += amount;
-                effects.push({ x, y, food: 0, gold: amount, knowledge: 0 });
-            }
-            if (s.definition.id === S.papyrus) {
-                const amount = unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10;
-                bonusKnowledge += amount;
-                effects.push({ x, y, food: 0, gold: 0, knowledge: amount });
-            }
-        }
-    }
-
     // ── 유물 ID 4: 조몬 토기 조각 — 매 턴 유물에 식량 1 저장(bonus_stacks)
-    // Oral Tradition: on destroy, gain +10 Knowledge per adjacent symbol.
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (!s || s.definition.id !== S.oral_tradition || !s.is_marked_for_destruction) continue;
-            const adjacentSymbolCount = getAdjacentCoords(x, y)
-                .filter((pos) => board[pos.x][pos.y] != null)
-                .length;
-            const amount = adjacentSymbolCount * 10;
-            if (amount > 0) {
-                bonusKnowledge += amount;
-                effects.push({ x, y, food: 0, gold: 0, knowledge: amount });
-            }
-        }
-    }
-
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (s?.definition.id === S.relic_caravan && s.is_marked_for_destruction) {
-                refreshRelicShop = true;
-            }
-        }
-    }
-
     const jomonRelicInst = getRelicInst(RELIC_ID.JOMON_POTTERY);
     if (jomonRelicInst) {
         relicStoreApi.incrementRelicBonus(jomonRelicInst.instanceId, 1);
@@ -215,52 +144,7 @@ export function runPostEffectsHooks(args: {
         }
     };
 
-    // ── Campfire (19): 파괴 시 인접 심볼 중 "이번 턴 식량 생산"이 가장 높은 심볼의 식량만큼 획득 ──
-    {
-        rebuildEffectBySlot();
-
-        for (let cx = 0; cx < boardWidth; cx++) {
-            for (let cy = 0; cy < boardHeight; cy++) {
-                const camp = board[cx][cy];
-                if (!camp || camp.definition.id !== S.campfire || !camp.is_marked_for_destruction) continue;
-
-                let bestPos: { x: number; y: number } | null = null;
-                let bestFood = -Infinity;
-                for (const pos of getAdjacentCoords(cx, cy)) {
-                    const adj = board[pos.x][pos.y];
-                    if (!adj) continue;
-                    const adjFood = effectBySlot.get(`${pos.x},${pos.y}`)?.food ?? 0;
-                    if (adjFood > bestFood) {
-                        bestFood = adjFood;
-                        bestPos = pos;
-                    }
-                }
-
-                if (!bestPos || bestFood <= 0) continue;
-
-                const src = effectBySlot.get(`${bestPos.x},${bestPos.y}`);
-                if (!src) continue;
-                if (src.food <= 0) continue;
-
-                bonusFood += src.food;
-                effects.push({ x: cx, y: cy, food: src.food, gold: 0, knowledge: 0 });
-            }
-        }
-    }
-
     // ── Earthquake (45): 파괴 시 무작위 인접 심볼 1개 파괴 ──
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            const s = board[x][y];
-            if (!s || s.definition.id !== S.earthquake || !s.is_marked_for_destruction) continue;
-
-            for (let cy = 0; cy < boardHeight; cy++) {
-                const target = board[x][cy];
-                if (target) target.is_marked_for_destruction = true;
-            }
-        }
-    }
-
     let finalDestroyedCount = 0;
     for (let hx = 0; hx < boardWidth; hx++) {
         for (let hy = 0; hy < boardHeight; hy++) {
@@ -640,29 +524,6 @@ export function runPostEffectsHooks(args: {
     }
 
     // ── Tax (53): 무작위 인접 심볼 슬롯의 이번 턴 식량 합계만큼 G+ (effects 집계 후 정산)
-    const foodBySlotKey = new Map<string, number>();
-    for (const e of effects) {
-        const k = `${e.x},${e.y}`;
-        foodBySlotKey.set(k, (foodBySlotKey.get(k) ?? 0) + e.food);
-    }
-    for (let tx = 0; tx < boardWidth; tx++) {
-        for (let ty = 0; ty < boardHeight; ty++) {
-            const cell = board[tx][ty];
-            if (!cell || cell.definition.id !== TAX_SYMBOL_ID || cell.is_marked_for_destruction) continue;
-            const adjOccupied: { x: number; y: number }[] = [];
-            for (const pos of getAdjacentCoords(tx, ty)) {
-                const n = board[pos.x][pos.y];
-                if (n && !n.is_marked_for_destruction) adjOccupied.push(pos);
-            }
-            if (adjOccupied.length === 0) continue;
-            const pick = adjOccupied[Math.floor(Math.random() * adjOccupied.length)];
-            const F = Math.max(0, foodBySlotKey.get(`${pick.x},${pick.y}`) ?? 0);
-            if (F <= 0) continue;
-            bonusGold += F;
-            effects.push({ x: tx, y: ty, food: 0, gold: F, knowledge: 0 });
-        }
-    }
-
     // ── 유물 ID 32: 솔로몬의 인장 반지 — 1번 슬롯(0,0) 자원 효과 한 번 더 적용 ──
     const solomonRelic = getRelicInst(RELIC_ID.SOLOMON_SEAL_RING);
     const slotOne = board[0]?.[0];

@@ -1,18 +1,10 @@
-import { EDICT_SYMBOL_ID } from '../../data/symbolDefinitions';
 import { calculateFoodCost } from '../../state/gameCalculations';
 
-export type TurnEndPhase = 'selection' | 'destroy_selection' | 'game_over';
+export type TurnEndPhase = 'selection' | 'game_over';
 
 export interface TurnEndPhaseInput {
     turn: number;
     food: number;
-    edictRemovalPending: boolean;
-}
-
-export interface DestroySelectionResolution {
-    edictRemovalPending: false;
-    pendingDestroySource: typeof EDICT_SYMBOL_ID;
-    destroySelectionMaxSymbols: 1;
 }
 
 export interface TurnEndPhaseResolution {
@@ -23,7 +15,6 @@ export interface TurnEndPhaseResolution {
     foodAfterPayment: number;
     shouldRefreshRelicShop: boolean;
     symbolSelectionRelicSourceId?: null;
-    destroySelection?: DestroySelectionResolution;
 }
 
 export function resolveTurnEndPhase(input: TurnEndPhaseInput): TurnEndPhaseResolution {
@@ -43,22 +34,6 @@ export function resolveTurnEndPhase(input: TurnEndPhaseInput): TurnEndPhaseResol
 
     const foodDelta = isFoodPaymentTurn ? -foodCost : 0;
     const foodAfterPayment = input.food + foodDelta;
-
-    if (input.edictRemovalPending) {
-        return {
-            nextPhase: 'destroy_selection',
-            isFoodPaymentTurn,
-            foodCost,
-            foodDelta,
-            foodAfterPayment,
-            shouldRefreshRelicShop: isFoodPaymentTurn,
-            destroySelection: {
-                edictRemovalPending: false,
-                pendingDestroySource: EDICT_SYMBOL_ID,
-                destroySelectionMaxSymbols: 1,
-            },
-        };
-    }
 
     return {
         nextPhase: 'selection',

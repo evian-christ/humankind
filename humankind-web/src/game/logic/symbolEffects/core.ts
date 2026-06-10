@@ -24,7 +24,6 @@ export interface EffectState {
     contributors: { x: number; y: number }[];
     forceTerrainInNextChoices: boolean;
     forceEventsInNextChoices: boolean;
-    edictRemovalPendingFlag: boolean;
     freeSelectionRerollsAcc: number;
     lootMerge: LootMergeResolution | null;
 }
@@ -54,7 +53,6 @@ export const createEffectState = (): EffectState => ({
     contributors: [],
     forceTerrainInNextChoices: false,
     forceEventsInNextChoices: false,
-    edictRemovalPendingFlag: false,
     freeSelectionRerollsAcc: 0,
     lootMerge: null,
 });
@@ -72,7 +70,6 @@ export const buildEffectResult = (state: EffectState): EffectResult => {
     if (state.contributors.length > 0) result.contributors = state.contributors;
     if (state.forceTerrainInNextChoices) result.forceTerrainInNextChoices = true;
     if (state.forceEventsInNextChoices) result.forceEventsInNextChoices = true;
-    if (state.edictRemovalPendingFlag) result.edictRemovalPending = true;
     if (state.freeSelectionRerollsAcc > 0) result.freeSelectionRerolls = state.freeSelectionRerollsAcc;
     if (state.lootMerge) result.lootMerge = state.lootMerge;
     return result;
