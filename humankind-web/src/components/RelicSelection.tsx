@@ -37,6 +37,7 @@ const RelicSelection = () => {
     const toggleRelicShop = useGameStore((s) => s.toggleRelicShop);
     const relicChoices = useGameStore((s) => s.relicChoices);
     const buyRelic = useGameStore((s) => s.buyRelic);
+    const refreshRelicShop = useGameStore((s) => s.refreshRelicShop);
     const gold = useGameStore((s) => s.gold);
     const level = useGameStore((s) => s.level);
     const turn = useGameStore((s) => s.turn);
@@ -44,6 +45,7 @@ const RelicSelection = () => {
     const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
     const phase = useGameStore((s) => s.phase);
     const language = useSettingsStore((s) => s.language);
+    const developerMode = useSettingsStore((s) => s.developerMode);
     const [purchaseDeniedHint, setPurchaseDeniedHint] = useState<{ key: number; slotIndex: number } | null>(null);
     const purchaseInputLockedRef = useRef(true);
 
@@ -58,6 +60,22 @@ const RelicSelection = () => {
         purchaseInputLockedRef.current = true;
         setPurchaseDeniedHint(null);
     }, [isRelicShopOpen]);
+
+    useEffect(() => {
+        if (!isRelicShopOpen || !developerMode) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target as HTMLElement | null;
+            if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
+            if (event.key !== '+' && event.code !== 'NumpadAdd') return;
+
+            event.preventDefault();
+            refreshRelicShop(true);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [developerMode, isRelicShopOpen, refreshRelicShop]);
 
     if (!isRelicShopOpen) return null;
 
