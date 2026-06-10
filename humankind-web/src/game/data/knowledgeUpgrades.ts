@@ -164,8 +164,6 @@ export const TOTAL_MOBILIZATION_UPGRADE_ID = 75;
 export const TROPICAL_AGRICULTURE_UPGRADE_ID = 76;
 export const MASON_GUILD_UPGRADE_ID = 77;
 export const GREAT_MIGRATION_UPGRADE_ID = 78;
-export const TERRITORIAL_REORG_UPGRADE_ID = -1;
-
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
     [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID]: {

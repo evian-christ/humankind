@@ -7,7 +7,12 @@ import { RELICS } from '../../data/relicDefinitions';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
+    createBoardDestroyResourceEffects,
+    createStoredFoodDestroyEffects,
+    getBoardOnlyDestroyEffectTotals,
     getStandardSymbolChoiceCount,
+    markBoardSymbolsForRemoval,
+    removeBoardSymbolsByInstanceIds,
     scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import { useRelicStore } from '../relicStore';
@@ -37,6 +42,13 @@ const LOOT_TIER_MAP: Record<number, LootTier> = {
 
 const isBoardDestroyBlockedType = (type: SymbolType) =>
     type === SymbolType.ENEMY || type === SymbolType.DISASTER;
+
+const BOARD_DESTROY_BLINK_DURATION_MS = 360;
+
+const getNowMs = () =>
+    typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
+        ? globalThis.performance.now()
+        : Date.now();
 
 const destroyedSymbol = (symbol: { definition: { id: number }; instanceId: string }, x: number, y: number) => ({
     id: symbol.definition.id,
@@ -254,15 +266,20 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         const removed = [edict, target];
         const symAgg = aggregateCollectionDestroyEffects(removed, true, state.unlockedKnowledgeUpgrades || []);
+        const storedFoodEffects = createStoredFoodDestroyEffects(removed, state.board, state.unlockedKnowledgeUpgrades || []);
+        const boardOnlyDestroyDelta = getBoardOnlyDestroyEffectTotals(storedFoodEffects, state.board);
         const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
-        const dFood = symAgg.food + shBonus.food;
-        const dGold = symAgg.gold + shBonus.gold;
-        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
+        const dFood = symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
+        const dGold = symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
+        const dKnowledge = symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
+        const boardEffects = createBoardDestroyResourceEffects(
+            { x, y },
+            { food: dFood, gold: dGold, knowledge: dKnowledge },
+            storedFoodEffects,
+        );
 
         const instanceIds = new Set([edict.instanceId, target.instanceId]);
-        const newBoard = state.board.map((col) => [...col]);
-        newBoard[pending.x][pending.y] = null;
-        newBoard[x][y] = null;
+        const markedBoard = markBoardSymbolsForRemoval(state.board, instanceIds);
 
         const baseFiltered = state.playerSymbols.filter((s) => !instanceIds.has(s.instanceId));
         const newSymbols = appendSymbolDefIdsToPlayer(
@@ -272,7 +289,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         );
 
         set({
-            board: newBoard,
+            board: markedBoard,
             playerSymbols: newSymbols,
             food: state.food + dFood,
             gold: state.gold + dGold,
@@ -281,11 +298,19 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: state.isRelicShopOpen || symAgg.openRelicShop,
-            lastEffects: [...state.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
+            lastEffects: [...state.lastEffects, ...boardEffects],
             phase: 'idle',
             pendingEdictSource: null,
             pendingOblivionFurnaceRelicId: null,
+            destroyRemovalBlinkStartedAtMs: getNowMs(),
         });
+        const removeMarked = () => {
+            set((current) => ({
+                board: removeBoardSymbolsByInstanceIds(current.board, instanceIds),
+                destroyRemovalBlinkStartedAtMs: null,
+            }));
+        };
+        setTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: state.turn,

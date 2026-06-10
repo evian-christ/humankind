@@ -6,7 +6,7 @@ import {
 } from '../../data/demoAchievements';
 import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
-import { EDICT_SYMBOL_ID, SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { decrementActiveStatuses, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { useSettingsStore, type EffectSpeed } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
@@ -71,6 +71,13 @@ const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =
     upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
 
 const DESTROY_REMOVAL_BLINK_DURATION_MS: Record<EffectSpeed, number> = {
+    '1x': 520,
+    '2x': 360,
+    '4x': 240,
+    instant: 0,
+};
+
+const EARTHQUAKE_SHAKE_DURATION_MS: Record<EffectSpeed, number> = {
     '1x': 520,
     '2x': 360,
     '4x': 240,
@@ -172,7 +179,6 @@ export const createTurnFlowActions = ({
         const phaseResolution = resolveTurnEndPhase({
             turn: state.turn,
             food: state.food,
-            edictRemovalPending: state.edictRemovalPending,
         });
         get().appendEventLog({
             turn: state.turn,
@@ -215,16 +221,6 @@ export const createTurnFlowActions = ({
             activeStatuses: nextActiveStatuses,
             activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
         };
-
-        if (phaseResolution.nextPhase === 'destroy_selection' && phaseResolution.destroySelection) {
-            set({
-                ...phaseResolution.destroySelection,
-                ...statusPatch,
-                phase: 'destroy_selection' as GamePhase,
-            });
-            saveGameState(get());
-            return;
-        }
 
         set({
             ...statusPatch,
@@ -329,6 +325,7 @@ export const createTurnFlowActions = ({
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
             destroyRemovalBlinkStartedAtMs: null,
+            earthquakeFx: null,
             lootMergeFx: null,
             rerollsThisTurn: 0,
         });
@@ -386,6 +383,7 @@ export const createTurnFlowActions = ({
             phase: 'processing',
             effectPhase3ReachedThisRun: false,
             destroyRemovalBlinkStartedAtMs: null,
+            earthquakeFx: null,
             lootMergeFx: null,
             runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge },
             qinCurrencyStandardTurnsRemaining: Math.max(0, (state.qinCurrencyStandardTurnsRemaining ?? 0) - 1),
@@ -472,6 +470,15 @@ export const createTurnFlowActions = ({
             const urWheelShakeMs = 360;
             const urWheelBounceDur = buildCombatPresentationPlan(useSettingsStore.getState().effectSpeed).bounceDurationMs;
 
+            set({
+                lastEffects: [...effects],
+                runningTotals: {
+                    food: tFood + bonusFood,
+                    gold: tGold + bonusGold,
+                    knowledge: tKnowledge + bonusKnowledge,
+                },
+            });
+
             const applyUrWheelDestroyAndDecrement = () => {
                 if (!urWheelInstanceId) return;
                 const r = useRelicStore.getState().relics.find((x) => x.instanceId === urWheelInstanceId);
@@ -508,6 +515,7 @@ export const createTurnFlowActions = ({
                         pendingContributors: [],
                         effectPhase: null,
                         counterDisplayOverrides: [],
+                        earthquakeFx: null,
                         lootMergeFx: null,
                         destroyRemovalBlinkStartedAtMs: getNowMs(),
                     });
@@ -576,9 +584,7 @@ export const createTurnFlowActions = ({
                         forceTerrainInNextSymbolChoices: forceTerrainForNextChoices,
                         forceEventsInNextSymbolChoices: forceEventsForNextChoices,
                     };
-                    const nextChoiceRes = prev.edictRemovalPending
-                        ? { choices: [] as SymbolDefinition[], consumedForceTerrain: false, consumedForceEvents: false }
-                        : generateChoicesSelection(selCtx);
+                    const nextChoiceRes = generateChoicesSelection(selCtx);
                     const nextPhase: GamePhase = agiVictory ? 'victory' : 'processing';
 
                     const nextResearchCredits = [
@@ -603,6 +609,7 @@ export const createTurnFlowActions = ({
                         effectPhase: null,
                         effectPhase3ReachedThisRun: false,
                         destroyRemovalBlinkStartedAtMs: null,
+                        earthquakeFx: null,
                         lootMergeFx: null,
                         era: prog.newEra,
                         board: generated.board,
@@ -732,27 +739,17 @@ export const createTurnFlowActions = ({
                                 activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
                             };
 
-                            if (finalState.edictRemovalPending) {
-                                set({
-                                    ...basePatch,
-                                    phase: 'destroy_selection' as GamePhase,
-                                    edictRemovalPending: false,
-                                    pendingDestroySource: EDICT_SYMBOL_ID,
-                                    destroySelectionMaxSymbols: 1,
-                                });
-                            } else {
-                                set({
-                                    ...basePatch,
-                                    phase: 'selection' as GamePhase,
-                                    symbolSelectionRelicSourceId: null,
-                                    symbolSelectionSymbolSourceId: null,
-                                    isTurnSymbolSelection: true,
-                                    freeSelectionRerolls: Math.max(
-                                        finalState.freeSelectionRerolls ?? 0,
-                                        getSelectionPhaseFreeRerollFloor(finalState.unlockedKnowledgeUpgrades ?? []),
-                                    ),
-                                });
-                            }
+                            set({
+                                ...basePatch,
+                                phase: 'selection' as GamePhase,
+                                symbolSelectionRelicSourceId: null,
+                                symbolSelectionSymbolSourceId: null,
+                                isTurnSymbolSelection: true,
+                                freeSelectionRerolls: Math.max(
+                                    finalState.freeSelectionRerolls ?? 0,
+                                    getSelectionPhaseFreeRerollFloor(finalState.unlockedKnowledgeUpgrades ?? []),
+                                ),
+                            });
                             saveGameState(get());
                             return;
                         }
@@ -812,7 +809,7 @@ export const createTurnFlowActions = ({
                     });
                 }
 
-                set({ activeSlot: null, activeContributors: [], pendingContributors: [], counterDisplayOverrides: [], lootMergeFx: null });
+                set({ activeSlot: null, activeContributors: [], pendingContributors: [], counterDisplayOverrides: [], earthquakeFx: null, lootMergeFx: null });
                 set({
                     lastEffects: [...slotPipeline.accumulatedEffects],
                     runningTotals: { ...slotPipeline.totals },
@@ -867,6 +864,9 @@ export const createTurnFlowActions = ({
                 typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
                     ? globalThis.performance.now()
                     : Date.now();
+            const earthquakeShakeDurationMs = result.earthquakeFx
+                ? EARTHQUAKE_SHAKE_DURATION_MS[effectSpeed]
+                : 0;
             const lootMergeFx = result.lootMerge
                 ? {
                       absorbed: result.lootMerge.absorbed,
@@ -881,6 +881,13 @@ export const createTurnFlowActions = ({
                 activeContributors: [],
                 pendingContributors: result.contributors ?? [],
                 effectPhase: 1,
+                earthquakeFx: result.earthquakeFx && earthquakeShakeDurationMs > 0
+                    ? {
+                          ...result.earthquakeFx,
+                          startedAtMs: perfNow,
+                          durationMs: earthquakeShakeDurationMs,
+                      }
+                    : null,
                 lootMergeFx,
                 counterDisplayOverrides: result.counterDelta
                     ? [{ x, y, text: result.counterDisplayTextBefore ?? null }]
@@ -904,9 +911,6 @@ export const createTurnFlowActions = ({
                 if (result.forceEventsInNextChoices) {
                     set({ forceEventsInNextSymbolChoices: true });
                 }
-                if (result.edictRemovalPending) {
-                    set({ edictRemovalPending: true });
-                }
                 if (result.freeSelectionRerolls) {
                     set((s) => ({
                         freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + result.freeSelectionRerolls!,
@@ -916,6 +920,7 @@ export const createTurnFlowActions = ({
                 set({
                     effectPhase: 3,
                     effectPhase3ReachedThisRun: true,
+                    earthquakeFx: null,
                     lootMergeFx: null,
                     counterDisplayOverrides: [],
                     lastEffects: [...slotPipeline.accumulatedEffects],
@@ -960,10 +965,11 @@ export const createTurnFlowActions = ({
             };
 
             if (!timelinePlan.hasContributors) {
-                if (timelinePlan.phase1DelayMs === 0) {
+                const phase1DelayMs = Math.max(timelinePlan.phase1DelayMs, earthquakeShakeDurationMs);
+                if (phase1DelayMs === 0) {
                     applyEffectsAndContinue();
                 } else {
-                    turnRun.schedule(timelinePlan.phase1DelayMs, applyEffectsAndContinue);
+                    turnRun.schedule(phase1DelayMs, applyEffectsAndContinue);
                 }
             } else if (timelinePlan.phase1DelayMs === 0 && timelinePlan.phase2DelayMs === 0) {
                 showPhase2();
@@ -1055,6 +1061,7 @@ export const createTurnFlowActions = ({
                     effectPhase: null,
                     effectPhase3ReachedThisRun: false,
                     destroyRemovalBlinkStartedAtMs: null,
+                    earthquakeFx: null,
                     lootMergeFx: null,
                     combatAnimation: null,
                     combatShaking: false,

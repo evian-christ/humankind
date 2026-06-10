@@ -91,16 +91,12 @@ const makeState = (): GameState => {
         pendingDevNaturalDisasterId: null,
         activeStatusIds: [],
         pendingNewThreatFloats: [],
-        pendingDestroySource: null,
         pendingOblivionFurnaceRelicId: null,
         pendingEdictSource: null,
         bonusSelectionQueue: [],
-        edictRemovalPending: false,
         forceTerrainInNextSymbolChoices: false,
         forceEventsInNextSymbolChoices: false,
         freeSelectionRerolls: 0,
-        destroySelectionMaxSymbols: 3,
-        territorialAfterEdictPending: false,
         pendingFoodPayment: false,
         lootRewardChoices: [],
         pendingLootSlot: null,
@@ -129,8 +125,6 @@ const makeState = (): GameState => {
         devSetStat: () => {},
         devForceScreen: () => {},
         devTriggerNaturalDisaster: () => {},
-        confirmDestroySymbols: () => {},
-        finishDestroySelection: () => {},
         confirmOblivionFurnaceDestroyAt: () => {},
         cancelOblivionFurnacePick: () => {},
         activateEdictAt: () => {},
@@ -173,6 +167,7 @@ describe('selectionFlow actions', () => {
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         vi.restoreAllMocks();
     });
 
@@ -387,7 +382,7 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().food).toBe(28);
-        expect(harness.get().knowledge).toBe(19);
+        expect(harness.get().knowledge).toBe(29);
         expect(harness.get().playerSymbols).toHaveLength(3);
         expect(harness.get().playerSymbols.map((symbol) => symbol.instanceId)).toEqual([
             symbols[2]!.instanceId,

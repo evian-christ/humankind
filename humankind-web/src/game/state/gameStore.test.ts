@@ -234,14 +234,24 @@ describe('gameStore pasture butchering', () => {
         expect(useGameStore.getState().pendingEdictSource?.instanceId).toBe('edict');
         expect(useGameStore.getState().phase).toBe('oblivion_furnace_board');
 
-        useGameStore.getState().confirmEdictDestroyAt(2, 1);
+        vi.useFakeTimers();
+        try {
+            useGameStore.getState().confirmEdictDestroyAt(2, 1);
 
-        const next = useGameStore.getState();
-        expect(next.board[1][1]).toBeNull();
-        expect(next.board[2][1]).toBeNull();
-        expect(next.playerSymbols).toHaveLength(0);
-        expect(next.phase).toBe('idle');
-        expect(next.pendingEdictSource).toBeNull();
+            const next = useGameStore.getState();
+            expect(next.board[1][1]?.is_marked_for_destruction).toBe(true);
+            expect(next.board[2][1]?.is_marked_for_destruction).toBe(true);
+            expect(next.playerSymbols).toHaveLength(0);
+            expect(next.phase).toBe('idle');
+            expect(next.pendingEdictSource).toBeNull();
+
+            await vi.advanceTimersByTimeAsync(360);
+            const afterBlink = useGameStore.getState();
+            expect(afterBlink.board[1][1]).toBeNull();
+            expect(afterBlink.board[2][1]).toBeNull();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('activates Military Levy into a unit-only symbol selection', async () => {

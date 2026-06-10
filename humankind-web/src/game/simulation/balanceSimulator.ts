@@ -36,7 +36,6 @@ import {
     PRESERVATION_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
-    TERRITORIAL_REORG_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
@@ -154,7 +153,6 @@ interface SimulationState {
     forceTerrainInNextSymbolChoices: boolean;
     forceEventsInNextSymbolChoices: boolean;
     freeSelectionRerolls: number;
-    edictRemovalPending: boolean;
 }
 
 interface AxisProfile {
@@ -365,7 +363,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             forceTerrainInNextSymbolChoices: false,
             forceEventsInNextSymbolChoices: false,
             freeSelectionRerolls: 0,
-            edictRemovalPending: false,
         };
     }
 
@@ -391,7 +388,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
         forceTerrainInNextSymbolChoices: false,
         forceEventsInNextSymbolChoices: false,
         freeSelectionRerolls: 0,
-        edictRemovalPending: false,
     };
 };
 
@@ -509,7 +505,6 @@ const chooseUpgrade = (
     if (strategy === 'none') return null;
     const legal = Object.keys(KNOWLEDGE_UPGRADES)
         .map(Number)
-        .filter((id) => id !== TERRITORIAL_REORG_UPGRADE_ID)
         .filter((id) => isUpgradeLegalForKnowledgePick(
             id,
             state.unlockedKnowledgeUpgrades,
@@ -655,7 +650,6 @@ const simulateTurn = (
         if (result.lootMerge) commitLootMerge(state.board, result.lootMerge);
         if (result.forceTerrainInNextChoices) state.forceTerrainInNextSymbolChoices = true;
         if (result.forceEventsInNextChoices) state.forceEventsInNextSymbolChoices = true;
-        if (result.edictRemovalPending) state.edictRemovalPending = true;
         if (result.freeSelectionRerolls) state.freeSelectionRerolls += result.freeSelectionRerolls;
     }
 
@@ -739,11 +733,9 @@ const simulateTurn = (
     const phase = resolveTurnEndPhase({
         turn: state.turn,
         food: state.food,
-        edictRemovalPending: state.edictRemovalPending,
     });
     if (phase.nextPhase === 'game_over') return 'game_over';
     state.food += phase.foodDelta;
-    state.edictRemovalPending = false;
 
     const choiceResult = withSeededMathRandom(rng, () =>
         state.forceEventsInNextSymbolChoices

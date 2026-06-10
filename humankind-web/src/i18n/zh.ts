@@ -305,9 +305,6 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'ownedSymbols.sort.asc': '升序',
     'ownedSymbols.sort.desc': '降序',
     'ownedSymbols.empty': '还没有符号。',
-    'destroySelection.title': '选择要摧毁的符号',
-    'destroySelection.confirm': '确认',
-    'destroySelection.cancel': '取消',
     'lootOpen.title': '战利品',
     'lootOpen.open': '打开',
     'lootReward.title.small': '选择战利品',
@@ -852,18 +849,6 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'knowledgeUpgrade.obsolete.14.desc': '每次进入新时代时，获得 1 个古代遗物残骸和 1 个开拓者。',
 
     // Destroy Selection
-    'destroySelection.riteTitle': '祭祀仪式（选择要摧毁的符号）',
-    'destroySelection.riteDesc': '最多可以摧毁 3 个拥有的符号。确认后，每摧毁 1 个符号获得 10 金币。',
-    'destroySelection.territoryTitle': '领土重组（选择要移除的符号）',
-    'destroySelection.territoryDesc': '最多移除 3 个拥有的符号（不触发摧毁效果）。每移除一个符号获得 10 金币。之后将进行 1 次地形选择和 3 次符号选择。',
-    'destroySelection.edictTitle': '法令 — 移除 1 个拥有的符号',
-    'destroySelection.edictDesc': '从你的收藏中选择 1 个符号进行移除（不触发摧毁效果）。之后继续进行符号选择。',
-    'destroySelection.edictConfirm': '移除 1 个并继续选择',
-    'destroySelection.oblivionTitle': '国家重组',
-    'destroySelection.oblivionDesc': '消耗此遗物以摧毁棋盘上的 1 个符号。',
-    'destroySelection.oblivionConfirm': '摧毁',
-    'destroySelection.shortDesc': '选择要摧毁的符号。',
-    'destroySelection.confirmSacrifice': '{n} 个符号 — +{gold} 金币',
 
     // Events
     'event.ancient_food_cache.name': '粮仓储存',

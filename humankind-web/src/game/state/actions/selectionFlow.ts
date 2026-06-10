@@ -1,4 +1,4 @@
-import { SYMBOLS, EDICT_SYMBOL_ID, S, SymbolType } from '../../data/symbolDefinitions';
+import { SYMBOLS, S, SymbolType } from '../../data/symbolDefinitions';
 import {
     CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
@@ -15,7 +15,6 @@ import {
     MERCENARIES_UPGRADE_ID,
     TOTAL_MOBILIZATION_UPGRADE_ID,
     SACRIFICIAL_RITE_UPGRADE_ID,
-    TERRITORIAL_REORG_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
@@ -49,7 +48,12 @@ import { useRelicStore } from '../relicStore';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
+    createBoardDestroyResourceEffects,
+    createStoredFoodDestroyEffects,
+    getBoardOnlyDestroyEffectTotals,
     getStandardSymbolChoiceCount,
+    markBoardSymbolsForRemoval,
+    removeBoardSymbolsByInstanceIds,
     scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
 import {
@@ -99,6 +103,13 @@ const MILITARY_LEVY_GRANT_UPGRADE_IDS = new Set<number>([
 
 const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
     upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
+
+const BOARD_DESTROY_BLINK_DURATION_MS = 360;
+
+const getNowMs = () =>
+    typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
+        ? globalThis.performance.now()
+        : Date.now();
 
 const withSelectionPhaseFreeReroll = (
     state: GameState,
@@ -465,6 +476,8 @@ export const createSelectionFlowActions = ({
             destroyedSymbols = makeDestroyedSymbolSnapshots(removed, state.board);
             const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
             addedSymbolIds = symAgg.addSymbolDefIds;
+            const symbolDestroyEffects = createStoredFoodDestroyEffects(removed, state.board, state.unlockedKnowledgeUpgrades || []);
+            const boardOnlyDestroyDelta = getBoardOnlyDestroyEffectTotals(symbolDestroyEffects, state.board);
             const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
             const baseFiltered = state.playerSymbols.filter((symbol) => !removedIds.has(symbol.instanceId));
             patch.playerSymbols = appendSymbolDefIdsToPlayer(
@@ -473,9 +486,12 @@ export const createSelectionFlowActions = ({
                 state.unlockedKnowledgeUpgrades || [],
             );
             patch.board = removeSymbolsFromBoard(state.board, removedIds);
-            foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food;
-            goldDelta += symAgg.gold + shBonus.gold;
-            knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge;
+            foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
+            goldDelta += symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
+            knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
+            if (symbolDestroyEffects.length > 0) {
+                patch.lastEffects = [...(state.lastEffects ?? []), ...symbolDestroyEffects];
+            }
             patch.forceTerrainInNextSymbolChoices = state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices;
             patch.forceEventsInNextSymbolChoices = state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices;
             patch.freeSelectionRerolls = (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls;
@@ -639,20 +655,6 @@ export const createSelectionFlowActions = ({
             });
         };
 
-        if (uid === TERRITORIAL_REORG_UPGRADE_ID) {
-            set({
-                unlockedKnowledgeUpgrades: [...unlockedNorm, uid],
-                phase: 'destroy_selection',
-                pendingDestroySource: TERRITORIAL_REORG_UPGRADE_ID,
-                destroySelectionMaxSymbols: 3,
-                levelUpResearchPoints: nextResearchPts,
-                knowledgeResearchCredits: nextResearchCredits,
-                returnPhaseAfterDevKnowledgeUpgrade: null,
-            });
-            appendResearchLog({ opensDestroySelection: true });
-            return;
-        }
-
         const newUnlocked = [...unlockedNorm, uid];
         const mouseionRelic = useRelicStore
             .getState()
@@ -721,7 +723,6 @@ export const createSelectionFlowActions = ({
             }
         }
 
-        const edictAfterUpgrade = state.edictRemovalPending;
         const baseUnlock = {
             unlockedKnowledgeUpgrades: newUnlocked,
             religionUnlocked,
@@ -735,19 +736,6 @@ export const createSelectionFlowActions = ({
             levelUpResearchPoints: nextResearchPts,
             knowledgeResearchCredits: nextResearchCredits,
         };
-
-        if (edictAfterUpgrade) {
-            set({
-                ...baseUnlock,
-                edictRemovalPending: false,
-                phase: 'destroy_selection' as GamePhase,
-                pendingDestroySource: EDICT_SYMBOL_ID,
-                destroySelectionMaxSymbols: 1,
-                returnPhaseAfterDevKnowledgeUpgrade: null,
-            });
-            appendResearchLog({ opensDestroySelection: true, source: 'edict' });
-            return;
-        }
 
         if (state.returnPhaseAfterDevKnowledgeUpgrade != null) {
             set(withSelectionPhaseFreeReroll(state, {
@@ -783,169 +771,6 @@ export const createSelectionFlowActions = ({
         appendResearchLog();
     },
 
-    confirmDestroySymbols: (instanceIds: string[]) => {
-        const state = get();
-        if (state.phase !== 'destroy_selection') return;
-        const src = state.pendingDestroySource;
-
-        const removed = state.playerSymbols.filter((s) => instanceIds.includes(s.instanceId));
-        const destroyedSymbols = makeDestroyedSymbolSnapshots(removed, state.board);
-        const skipEd69 = src === EDICT_SYMBOL_ID;
-        const symAgg = aggregateCollectionDestroyEffects(removed, skipEd69, state.unlockedKnowledgeUpgrades || []);
-        const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
-        const dFood = symAgg.food + shBonus.food;
-        const dGold = symAgg.gold + shBonus.gold;
-        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
-
-        const rewardPatch = (s: GameState) => ({
-            food: s.food + dFood,
-            gold: s.gold + dGold,
-            knowledge: s.knowledge + dKnowledge,
-            forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
-            forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
-            freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
-            isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
-        });
-
-        const baseFiltered = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
-        const newSymbols = appendSymbolDefIdsToPlayer(
-            baseFiltered,
-            symAgg.addSymbolDefIds,
-            state.unlockedKnowledgeUpgrades || [],
-        );
-        const goldAdd = instanceIds.length * 10;
-        const appendDestroyLog = (extra: Record<string, unknown> = {}) => {
-            get().appendEventLog({
-                turn: state.turn,
-                kind: 'board_action',
-                delta: { food: dFood, gold: dGold + (extra.goldAdd === true ? goldAdd : 0), knowledge: dKnowledge },
-                meta: {
-                    action: 'destroy_symbols',
-                    source: src,
-                    selectedInstanceIds: instanceIds,
-                    selectedSymbolIds: removed.map((symbol) => symbol.definition.id),
-                    destroyedSymbols,
-                    addSymbolIds: symAgg.addSymbolDefIds,
-                    ...extra,
-                },
-            });
-        };
-
-        const afterSetRelicRefresh = () => {
-            if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
-        };
-
-        if (src === EDICT_SYMBOL_ID) {
-            const terr = state.territorialAfterEdictPending;
-            const choiceResolution = terr ? null : resolveStandardChoices({
-                ...state,
-                forceTerrainInNextSymbolChoices:
-                    state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
-                forceEventsInNextSymbolChoices:
-                    state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
-            });
-            set(withSelectionPhaseFreeReroll(state, {
-                ...rewardPatch(state),
-                playerSymbols: newSymbols,
-                phase: 'selection',
-                pendingDestroySource: null,
-                destroySelectionMaxSymbols: 3,
-                territorialAfterEdictPending: false,
-                symbolSelectionRelicSourceId: null,
-                symbolSelectionSymbolSourceId: null,
-                isTurnSymbolSelection: !terr,
-                symbolChoices: terr ? resolveTerrainChoices(state) : choiceResolution!.choices,
-                forceTerrainInNextSymbolChoices: terr
-                    ? state.forceTerrainInNextSymbolChoices
-                    : choiceResolution!.forceTerrainInNextSymbolChoices,
-                forceEventsInNextSymbolChoices: terr
-                    ? state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices
-                    : choiceResolution!.forceEventsInNextSymbolChoices,
-                ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
-            }));
-            afterSetRelicRefresh();
-            appendDestroyLog({ territorialAfterEdictPending: terr });
-            return;
-        }
-
-        if (src === TERRITORIAL_REORG_UPGRADE_ID) {
-            const edictChain = get().edictRemovalPending;
-            if (edictChain) {
-                set({
-                    ...rewardPatch(state),
-                    playerSymbols: newSymbols,
-                    gold: state.gold + dGold + goldAdd,
-                    edictRemovalPending: false,
-                    phase: 'destroy_selection',
-                    pendingDestroySource: EDICT_SYMBOL_ID,
-                    destroySelectionMaxSymbols: 1,
-                    territorialAfterEdictPending: true,
-                    bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
-                });
-                afterSetRelicRefresh();
-                appendDestroyLog({ goldAdd: true, chainedToEdict: true });
-                return;
-            }
-            set(withSelectionPhaseFreeReroll(state, {
-                ...rewardPatch(state),
-                playerSymbols: newSymbols,
-                gold: state.gold + dGold + goldAdd,
-                phase: 'selection',
-                pendingDestroySource: null,
-                destroySelectionMaxSymbols: 3,
-                symbolSelectionRelicSourceId: null,
-                symbolSelectionSymbolSourceId: null,
-                isTurnSymbolSelection: false,
-                symbolChoices: resolveTerrainChoices(state),
-                bonusSelectionQueue: ['terrain', 'any', 'any', 'any'],
-            }));
-            afterSetRelicRefresh();
-            appendDestroyLog({ goldAdd: true });
-        }
-    },
-
-    finishDestroySelection: () => {
-        const state = get();
-        if (state.phase !== 'destroy_selection') return;
-        const src = state.pendingDestroySource;
-        if (src === EDICT_SYMBOL_ID) {
-            const terr = state.territorialAfterEdictPending;
-            const choiceResolution = terr ? null : resolveStandardChoices(state);
-            set(withSelectionPhaseFreeReroll(state, {
-                phase: 'selection',
-                pendingDestroySource: null,
-                destroySelectionMaxSymbols: 3,
-                territorialAfterEdictPending: false,
-                symbolSelectionRelicSourceId: null,
-                symbolSelectionSymbolSourceId: null,
-                isTurnSymbolSelection: !terr,
-                symbolChoices: terr ? resolveTerrainChoices(state) : choiceResolution!.choices,
-                forceTerrainInNextSymbolChoices: terr
-                    ? state.forceTerrainInNextSymbolChoices
-                    : choiceResolution!.forceTerrainInNextSymbolChoices,
-                forceEventsInNextSymbolChoices: terr
-                    ? state.forceEventsInNextSymbolChoices
-                    : choiceResolution!.forceEventsInNextSymbolChoices,
-                ...(terr ? { bonusSelectionQueue: ['terrain', 'any', 'any', 'any'] } : {}),
-            }));
-            return;
-        }
-        if (state.edictRemovalPending) {
-            set({
-                phase: 'destroy_selection',
-                pendingDestroySource: EDICT_SYMBOL_ID,
-                destroySelectionMaxSymbols: 1,
-                edictRemovalPending: false,
-            });
-            return;
-        }
-        set({
-            phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
-            pendingDestroySource: null,
-            destroySelectionMaxSymbols: 3,
-        });
-    },
-
     confirmOblivionFurnaceDestroyAt: (x: number, y: number) => {
         const state = get();
         if (state.phase !== 'oblivion_furnace_board') return;
@@ -959,10 +784,20 @@ export const createSelectionFlowActions = ({
         const instanceIds = [sym.instanceId];
         const removed = [sym];
         const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
+        const storedFoodEffects = createStoredFoodDestroyEffects(removed, state.board, state.unlockedKnowledgeUpgrades || []);
+        const boardOnlyDestroyDelta = getBoardOnlyDestroyEffectTotals(storedFoodEffects, state.board);
         const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
-        const dFood = symAgg.food + shBonus.food;
-        const dGold = symAgg.gold + shBonus.gold;
-        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
+        const dFood = symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
+        const dGold = symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
+        const dKnowledge = symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
+        const removedIdSet = new Set(instanceIds);
+        const markedBoard = markBoardSymbolsForRemoval(state.board, removedIdSet);
+        const blinkStartedAtMs = getNowMs();
+        const boardEffects = createBoardDestroyResourceEffects(
+            { x, y },
+            { food: dFood, gold: dGold, knowledge: dKnowledge },
+            storedFoodEffects,
+        );
 
         const rewardPatch = (s: GameState) => ({
             food: s.food + dFood,
@@ -974,9 +809,6 @@ export const createSelectionFlowActions = ({
             isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
         });
 
-        const newBoard = state.board.map((col) => [...col]);
-        newBoard[x][y] = null;
-
         const baseFiltered = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
         const newSymbols = appendSymbolDefIdsToPlayer(
             baseFiltered,
@@ -987,12 +819,20 @@ export const createSelectionFlowActions = ({
         useRelicStore.getState().removeRelic(relicInstId);
         set({
             ...rewardPatch(state),
-            board: newBoard,
+            board: markedBoard,
             playerSymbols: newSymbols,
+            lastEffects: [...(state.lastEffects ?? []), ...boardEffects],
             phase: phaseAfterTurnFlowComplete(),
             pendingOblivionFurnaceRelicId: null,
-            destroySelectionMaxSymbols: 3,
+            destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
         });
+        const removeMarked = () => {
+            set((current) => ({
+                board: removeBoardSymbolsByInstanceIds(current.board, removedIdSet),
+                destroyRemovalBlinkStartedAtMs: null,
+            }));
+        };
+        setTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: state.turn,
@@ -1016,7 +856,6 @@ export const createSelectionFlowActions = ({
         set({
             phase: phaseAfterTurnFlowComplete(),
             pendingOblivionFurnaceRelicId: null,
-            destroySelectionMaxSymbols: 3,
         });
     },
 });

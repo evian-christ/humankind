@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     aggregateCollectionDestroyEffects,
+    createStoredFoodDestroyEffects,
     createStartingBoard,
     ensureStartingWildSeedsOwned,
     createInstance,
@@ -70,6 +71,20 @@ describe('gameStoreHelpers starting layout', () => {
         const result = aggregateCollectionDestroyEffects([storehouse], false, []);
 
         expect(result.food).toBe(24);
+    });
+
+    it('creates Oral Tradition board destroy knowledge from adjacent symbols', () => {
+        const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
+        const wheat = createInstance(SYMBOLS[S.wheat]!, []);
+        const rice = createInstance(SYMBOLS[S.rice]!, []);
+        const board = Array(5).fill(null).map(() => Array(4).fill(null));
+        board[2][1] = oral;
+        board[1][1] = wheat;
+        board[3][2] = rice;
+
+        const effects = createStoredFoodDestroyEffects([oral], board);
+
+        expect(effects).toEqual([{ x: 2, y: 1, food: 0, gold: 0, knowledge: 20 }]);
     });
 
     it('forces event choices when royal colony is destroyed from collection', () => {

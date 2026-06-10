@@ -75,16 +75,12 @@ interface SavedGame {
         naturalDisasterThreat: number;
         activeStatusIds?: number[];
         activeStatuses?: ActiveStatusState[];
-        pendingDestroySource: GameState['pendingDestroySource'];
         pendingOblivionFurnaceRelicId: string | null;
         pendingEdictSource: GameState['pendingEdictSource'];
         bonusSelectionQueue: GameState['bonusSelectionQueue'];
-        edictRemovalPending: boolean;
         forceTerrainInNextSymbolChoices: boolean;
         forceEventsInNextSymbolChoices?: boolean;
         freeSelectionRerolls: number;
-        destroySelectionMaxSymbols: number;
-        territorialAfterEdictPending: boolean;
         pendingFoodPayment?: boolean;
         eventLog: GameEventLogEntry[];
     };
@@ -254,16 +250,12 @@ export function saveGameState(state: GameState): void {
             naturalDisasterThreat: state.naturalDisasterThreat,
             activeStatusIds: state.activeStatusIds,
             activeStatuses: state.activeStatuses,
-            pendingDestroySource: state.pendingDestroySource,
             pendingOblivionFurnaceRelicId: state.pendingOblivionFurnaceRelicId,
             pendingEdictSource: state.pendingEdictSource,
             bonusSelectionQueue: state.bonusSelectionQueue,
-            edictRemovalPending: state.edictRemovalPending,
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
             forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
             freeSelectionRerolls: state.freeSelectionRerolls,
-            destroySelectionMaxSymbols: state.destroySelectionMaxSymbols,
-            territorialAfterEdictPending: state.territorialAfterEdictPending,
             pendingFoodPayment: state.pendingFoodPayment,
             eventLog: state.eventLog.slice(-MAX_SAVED_EVENT_LOG),
         },
@@ -344,6 +336,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             effectPhase: null,
             effectPhase3ReachedThisRun: false,
             destroyRemovalBlinkStartedAtMs: null,
+            earthquakeFx: null,
             lootMergeFx: null,
             eventLog: save.state.eventLog ?? [],
             prevBoard: deserializeBoard(save.state.prevBoard, symbolByInstanceId),
@@ -369,16 +362,12 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             activeStatusIds: getActiveStatusIdsFromStates(activeStatuses),
             activeStatuses,
             pendingNewThreatFloats: [],
-            pendingDestroySource: save.state.pendingDestroySource,
             pendingOblivionFurnaceRelicId: save.state.pendingOblivionFurnaceRelicId,
             pendingEdictSource: save.state.pendingEdictSource,
             bonusSelectionQueue: save.state.bonusSelectionQueue,
-            edictRemovalPending: save.state.edictRemovalPending,
             forceTerrainInNextSymbolChoices: save.state.forceTerrainInNextSymbolChoices,
             forceEventsInNextSymbolChoices: save.state.forceEventsInNextSymbolChoices ?? false,
             freeSelectionRerolls: save.state.freeSelectionRerolls,
-            destroySelectionMaxSymbols: save.state.destroySelectionMaxSymbols,
-            territorialAfterEdictPending: save.state.territorialAfterEdictPending,
             pendingFoodPayment: save.state.pendingFoodPayment ?? save.state.phase === 'food_payment',
         };
     } catch {

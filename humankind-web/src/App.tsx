@@ -8,7 +8,6 @@ import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
-import DestroySelection from './components/DestroySelection';
 import LootRewardSelection from './components/LootRewardSelection';
 import OblivionFurnaceBoardOverlay from './components/OblivionFurnaceBoardOverlay';
 import DemoStartScreen from './components/DemoStartScreen';
@@ -1471,7 +1470,6 @@ function App() {
   ]);
 
   const boardIsForegroundForTooltips =
-    phase !== 'destroy_selection' &&
     phase !== 'oblivion_furnace_board' &&
     phase !== 'game_over' &&
     phase !== 'victory' &&
@@ -1861,9 +1859,6 @@ function App() {
 
       {/* ===== RELIC SELECTION OVERLAY ===== */}
       <RelicSelection />
-
-      {/* ===== DESTROY SYMBOLS OVERLAY ===== */}
-      <DestroySelection />
 
       {/* ===== GAME OVER OVERLAY ===== */}
       {isInGame && phase === 'game_over' && (

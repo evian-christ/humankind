@@ -82,16 +82,12 @@ const createSerializableState = (): GameState => {
         barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
         pendingNewThreatFloats: [],
-        pendingDestroySource: null,
         pendingOblivionFurnaceRelicId: null,
         pendingEdictSource: null,
         bonusSelectionQueue: [],
-        edictRemovalPending: false,
         forceTerrainInNextSymbolChoices: false,
         forceEventsInNextSymbolChoices: false,
         freeSelectionRerolls: 0,
-        destroySelectionMaxSymbols: 3,
-        territorialAfterEdictPending: false,
         pendingFoodPayment: false,
     } as unknown as GameState;
 };

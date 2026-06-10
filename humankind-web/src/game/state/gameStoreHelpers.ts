@@ -1,10 +1,11 @@
 import { SYMBOLS, S, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
-import { CARAVANSERAI_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID } from '../data/knowledgeUpgrades';
+import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID } from '../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import { RELIC_ID } from '../logic/relics/relicIds';
 import { useRelicStore } from './relicStore';
 import type { GamePhase } from './gameStore';
+import type { BoardEffectDelta } from '../logic/turn/turnTypes';
 
 export const BOARD_WIDTH = 5;
 export const BOARD_HEIGHT = 4;
@@ -191,6 +192,9 @@ export const aggregateCollectionDestroyEffects = (
             case S.tax_storehouse:
                 out.food += sym.effect_counter || 0;
                 break;
+            case S.date:
+                out.food += unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10;
+                break;
             case S.relic_caravan:
                 out.refreshRelicShop = true;
                 break;
@@ -243,6 +247,142 @@ export const appendSymbolDefIdsToPlayer = (
     }
     return next;
 };
+
+const findBoardSlotByInstanceId = (
+    board: (PlayerSymbolInstance | null)[][],
+    instanceId: string,
+): { x: number; y: number } | null => {
+    for (let x = 0; x < board.length; x++) {
+        const col = board[x];
+        for (let y = 0; y < (col?.length ?? 0); y++) {
+            if (col[y]?.instanceId === instanceId) return { x, y };
+        }
+    }
+    return null;
+};
+
+export const createStoredFoodDestroyEffects = (
+    removed: readonly PlayerSymbolInstance[],
+    board: (PlayerSymbolInstance | null)[][],
+    unlockedKnowledgeUpgrades: readonly number[] = [],
+): BoardEffectDelta[] => {
+    const effects: BoardEffectDelta[] = [];
+    for (const symbol of removed) {
+        const slot = findBoardSlotByInstanceId(board, symbol.instanceId);
+        if (!slot) continue;
+
+        if (symbol.definition.id === S.pottery || symbol.definition.id === S.tax_storehouse) {
+            const food = symbol.effect_counter || 0;
+            if (food > 0) effects.push({ ...slot, food, gold: 0, knowledge: 0 });
+        } else if (symbol.definition.id === S.date) {
+            effects.push({
+                ...slot,
+                food: unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10,
+                gold: 0,
+                knowledge: 0,
+            });
+        } else if (symbol.definition.id === S.dye) {
+            effects.push({
+                ...slot,
+                food: 0,
+                gold: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
+                knowledge: 0,
+            });
+        } else if (symbol.definition.id === S.papyrus) {
+            effects.push({
+                ...slot,
+                food: 0,
+                gold: 0,
+                knowledge: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
+            });
+        } else if (symbol.definition.id === S.oral_tradition) {
+            const knowledge = countAdjacentBoardSymbols(board, slot.x, slot.y) * 10;
+            if (knowledge > 0) effects.push({ ...slot, food: 0, gold: 0, knowledge });
+        }
+    }
+    return effects;
+};
+
+const countAdjacentBoardSymbols = (
+    board: (PlayerSymbolInstance | null)[][],
+    x: number,
+    y: number,
+): number => {
+    let count = 0;
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= board.length || ny >= (board[nx]?.length ?? 0)) continue;
+            if (board[nx]?.[ny]) count++;
+        }
+    }
+    return count;
+};
+
+export const createBoardDestroyResourceEffects = (
+    primarySlot: { x: number; y: number },
+    delta: { food: number; gold: number; knowledge: number },
+    symbolDestroyEffects: readonly BoardEffectDelta[],
+): BoardEffectDelta[] => {
+    const symbolDestroyTotals = symbolDestroyEffects.reduce(
+        (totals, effect) => ({
+            food: totals.food + effect.food,
+            gold: totals.gold + effect.gold,
+            knowledge: totals.knowledge + effect.knowledge,
+        }),
+        { food: 0, gold: 0, knowledge: 0 },
+    );
+    const primaryEffect = {
+        x: primarySlot.x,
+        y: primarySlot.y,
+        food: delta.food - symbolDestroyTotals.food,
+        gold: delta.gold - symbolDestroyTotals.gold,
+        knowledge: delta.knowledge - symbolDestroyTotals.knowledge,
+    };
+    const effects: BoardEffectDelta[] = [];
+    if (primaryEffect.food !== 0 || primaryEffect.gold !== 0 || primaryEffect.knowledge !== 0) {
+        effects.push(primaryEffect);
+    }
+    effects.push(...symbolDestroyEffects);
+    return effects;
+};
+
+export const getBoardOnlyDestroyEffectTotals = (
+    effects: readonly BoardEffectDelta[],
+    board: (PlayerSymbolInstance | null)[][],
+): { food: number; gold: number; knowledge: number } =>
+    effects.reduce(
+        (totals, effect) => {
+            const symbol = board[effect.x]?.[effect.y];
+            if (symbol?.definition.id !== S.oral_tradition) return totals;
+            return {
+                food: totals.food + effect.food,
+                gold: totals.gold + effect.gold,
+                knowledge: totals.knowledge + effect.knowledge,
+            };
+        },
+        { food: 0, gold: 0, knowledge: 0 },
+    );
+
+export const markBoardSymbolsForRemoval = (
+    board: (PlayerSymbolInstance | null)[][],
+    removedIds: ReadonlySet<string>,
+): (PlayerSymbolInstance | null)[][] =>
+    board.map((col) =>
+        col.map((cell) =>
+            cell && removedIds.has(cell.instanceId)
+                ? { ...cell, is_marked_for_destruction: true }
+                : cell,
+        ),
+    );
+
+export const removeBoardSymbolsByInstanceIds = (
+    board: (PlayerSymbolInstance | null)[][],
+    removedIds: ReadonlySet<string>,
+): (PlayerSymbolInstance | null)[][] =>
+    board.map((col) => col.map((cell) => (cell && removedIds.has(cell.instanceId) ? null : cell)));
 
 export const getStartingSymbols = (): PlayerSymbolInstance[] => {
     const oralTradition = SYMBOLS[S.oral_tradition];

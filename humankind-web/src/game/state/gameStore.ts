@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SYMBOLS, EDICT_SYMBOL_ID, S } from '../data/symbolDefinitions';
+import { SYMBOLS, S } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { useRelicStore } from './relicStore';
@@ -22,7 +22,6 @@ import {
 } from './gameCalculations';
 import {
     ELECTION_SYSTEM_UPGRADE_ID,
-    TERRITORIAL_REORG_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { createActiveStatusesForTurn, getActiveStatusIdsFromStates, getActiveStatusIdsForTurn } from '../data/statusDefinitions';
@@ -86,7 +85,6 @@ export type GamePhase =
     | 'food_payment'
     | 'selection'
     | 'loot_reward_selection'
-    | 'destroy_selection'
     | 'oblivion_furnace_board'
     | 'game_over'
     | 'victory';
@@ -164,6 +162,13 @@ export interface GameState {
     effectPhase3ReachedThisRun: boolean;
     /** Marked symbols are blinking just before they are removed from the board. */
     destroyRemovalBlinkStartedAtMs?: number | null;
+    /** Earthquake column shake before marked symbols fade. */
+    earthquakeFx?: {
+        column: number;
+        affected: { x: number; y: number }[];
+        startedAtMs: number;
+        durationMs: number;
+    } | null;
     /** 인접 전리품 합류: 흡수 스프라이트 이동 연출 타임링 (Pixi 렌더용) */
     lootMergeFx: {
         absorbed: { x: number; y: number };
@@ -221,26 +226,18 @@ export interface GameState {
     activeStatuses?: ActiveStatusState[];
     /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
     pendingNewThreatFloats: PendingThreatFloat[];
-    /** destroy_selection 진입 시 출처 (22 영토 정비 / 69 칙령) */
-    pendingDestroySource: typeof TERRITORIAL_REORG_UPGRADE_ID | typeof EDICT_SYMBOL_ID | null;
     /** 망각의 화로 발동 시 제거할 유물 instanceId */
     pendingOblivionFurnaceRelicId: string | null;
     /** 칙령 발동 시 소비할 심볼 위치/인스턴스 */
     pendingEdictSource: { x: number; y: number; instanceId: string } | null;
     /** 영토 정비(22): 남은 보너스 선택 (첫 턴은 symbolChoices로 이미 지형 3개가 열림) */
     bonusSelectionQueue: Array<'terrain' | 'any'>;
-    /** 칙령(69) 등: 턴 처리 끝난 뒤 보유 심볼 제거 단계 필요 */
-    edictRemovalPending: boolean;
     /** 개척자(68): 다음 generateChoices에서 지형 1칸 이상 강제 */
     forceTerrainInNextSymbolChoices: boolean;
     /** 왕도 개척(54): 다음 일반 심볼 선택은 이벤트만 표시 */
     forceEventsInNextSymbolChoices: boolean;
     /** 사절단(70): 심볼 선택 단계 첫 리롤(들) 무료 */
     freeSelectionRerolls: number;
-    /** 파괴/제거 선택 시 최대 개수 (희생·영토 3, 칙령 1) */
-    destroySelectionMaxSymbols: number;
-    /** 영토 정비(22) 직후 칙령(69)이 끼어든 경우: 칙령 처리 뒤 지형→심볼 보너스 선택 유지 */
-    territorialAfterEdictPending: boolean;
     pendingFoodPayment: boolean;
 
     // Actions
@@ -273,8 +270,6 @@ export interface GameState {
     devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
     devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => void;
     devTriggerNaturalDisaster: (symbolId: number) => void;
-    confirmDestroySymbols: (instanceIds: string[]) => void;
-    finishDestroySelection: () => void;
     /** 망각의 화로: 보드 (x,y) 심볼 파괴 확정 */
     confirmOblivionFurnaceDestroyAt: (x: number, y: number) => void;
     /** 망각의 화로 보드 선택 모드 취소 (유물 유지) */
@@ -416,6 +411,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     effectPhase: null,
     effectPhase3ReachedThisRun: false,
     destroyRemovalBlinkStartedAtMs: null,
+    earthquakeFx: null,
     lootMergeFx: null,
     eventLog: [],
     prevBoard: createEmptyBoard(),
@@ -444,16 +440,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     activeStatusIds: getActiveStatusIdsForTurn(0),
     activeStatuses: createActiveStatusesForTurn(0),
     pendingNewThreatFloats: [],
-    pendingDestroySource: null,
     pendingOblivionFurnaceRelicId: null,
     pendingEdictSource: null,
     bonusSelectionQueue: [],
-    edictRemovalPending: false,
     forceTerrainInNextSymbolChoices: false,
     forceEventsInNextSymbolChoices: false,
     freeSelectionRerolls: 0,
-    destroySelectionMaxSymbols: 3,
-    territorialAfterEdictPending: false,
     pendingFoodPayment: false,
     lootRewardChoices: [],
     pendingLootSlot: null,
