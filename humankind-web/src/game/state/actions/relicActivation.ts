@@ -10,6 +10,7 @@ import type { GameState } from '../gameStore';
 import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { getTrojanGoldLootReward } from '../gameCalculations';
 import { getStandardSymbolChoiceCount } from '../gameStoreHelpers';
+import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -62,7 +63,7 @@ export const createRelicActivationActions = ({
                 ],
             }));
             useRelicStore.getState().incrementRelicBonus(instanceId, -stored);
-            setTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
+            scheduleGameLifecycleTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
             get().appendEventLog({
                 turn: state.turn,
                 kind: 'relic',
@@ -81,7 +82,7 @@ export const createRelicActivationActions = ({
                     { relicInstanceId: instanceId, text: `+${goldGain}`, color: '#fbbf24' },
                 ],
             }));
-            setTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
+            scheduleGameLifecycleTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
             get().appendEventLog({
                 turn: state.turn,
                 kind: 'relic',
@@ -100,7 +101,7 @@ export const createRelicActivationActions = ({
                     { relicInstanceId: instanceId, text: `+${foodGain}`, color: '#4ade80' },
                 ],
             }));
-            setTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
+            scheduleGameLifecycleTimeout(() => useRelicStore.getState().removeRelic(instanceId), 260);
             get().appendEventLog({
                 turn: state.turn,
                 kind: 'relic',

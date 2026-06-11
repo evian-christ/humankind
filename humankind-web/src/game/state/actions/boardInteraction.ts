@@ -23,6 +23,7 @@ import {
     type LootTier,
 } from '../../data/rewardDefinitions';
 import { resolveKnowledgeProgression } from '../gameCalculations';
+import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -316,7 +317,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
                 destroyRemovalBlinkStartedAtMs: null,
             }));
         };
-        setTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
+        scheduleGameLifecycleTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: state.turn,

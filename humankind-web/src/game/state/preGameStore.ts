@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { LeaderId } from '../data/leaders';
 import { useGameStore } from './gameStore';
 import { hasSavedGame as hasSavedGameInStorage, loadSavedGamePatch } from './saveGame';
+import { beginGameLifecycle } from './gameLifecycleRun';
 
 export type PreGameScreen = 'intro' | 'leader' | 'leaderProgress' | null;
 export type LeaderProgressBackTarget = 'intro' | 'leader';
@@ -128,6 +129,7 @@ export const usePreGameStore = create<PreGameState>((set, get) => ({
     if (!get().hasCompletedTutorial) return false;
     const savedGamePatch = loadSavedGamePatch();
     if (!savedGamePatch) return false;
+    beginGameLifecycle();
     useGameStore.setState(savedGamePatch);
     set({
       screen: null,

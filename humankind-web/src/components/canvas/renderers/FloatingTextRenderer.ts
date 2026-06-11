@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { audioManager } from '../../../audio/audioManager';
 import { useGameStore } from '../../../game/state/gameStore';
+import { scheduleGameLifecycleTimeout } from '../../../game/state/gameLifecycleRun';
 import type { GameState } from '../../../game/state/gameStore';
 import type { BoardEffectDelta } from '../../../game/logic/turn/turnTypes';
 import {
@@ -292,7 +293,10 @@ export class FloatingTextRenderer {
             this.threatFloatingEffects.push({ texts: [txt], startX: cx, startY: baseY, elapsed: 0 });
         }
 
-        setTimeout(() => useGameStore.getState().continueProcessingAfterNewThreatFloats(), THREAT_FLOAT_TOTAL_MS + 200);
+        scheduleGameLifecycleTimeout(
+            () => useGameStore.getState().continueProcessingAfterNewThreatFloats(),
+            THREAT_FLOAT_TOTAL_MS + 200,
+        );
     }
 
     public renderRelicFloats(

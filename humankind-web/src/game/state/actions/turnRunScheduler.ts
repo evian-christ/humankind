@@ -1,3 +1,5 @@
+import { captureGameLifecycle, isGameLifecycleCurrent } from '../gameLifecycleRun';
+
 export interface TurnRunCancelToken {
     readonly runId: number;
     cancelled: boolean;
@@ -33,6 +35,7 @@ export function createTurnRunScheduler() {
         cancelCurrent();
 
         const runId = ++nextRunId;
+        const gameGeneration = captureGameLifecycle();
         const token: TurnRunCancelToken = { runId, cancelled: false };
         const timers = new Set<TimerHandle>();
 
@@ -42,7 +45,7 @@ export function createTurnRunScheduler() {
             schedule: (delayMs, callback) => {
                 const timer = setTimeout(() => {
                     timers.delete(timer);
-                    if (!isCurrent(runId, token)) return;
+                    if (!isCurrent(runId, token) || !isGameLifecycleCurrent(gameGeneration)) return;
                     callback({ runId, token });
                 }, delayMs);
                 timers.add(timer);
@@ -52,7 +55,7 @@ export function createTurnRunScheduler() {
                 for (const timer of timers) clearTimeout(timer);
                 timers.clear();
             },
-            isActive: () => isCurrent(runId, token),
+            isActive: () => isCurrent(runId, token) && isGameLifecycleCurrent(gameGeneration),
         };
 
         current = handle;

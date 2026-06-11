@@ -14,6 +14,7 @@ import {
 import { useRelicStore } from '../relicStore';
 import { clearSavedGame } from '../saveGame';
 import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
+import { beginGameLifecycle } from '../gameLifecycleRun';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 
@@ -89,6 +90,7 @@ export const createGameLifecycleActions = ({
     pickRelicHalfPriceIdForGoldenTrade,
 }: GameLifecycleDeps) => ({
     initializeGame: () => {
+        beginGameLifecycle();
         const { board, playerSymbols: symbols } = createStartingBoard();
         set({
             leaderId: null,
@@ -111,6 +113,7 @@ export const createGameLifecycleActions = ({
 
     startGameWithDraft: (symbolIds: number[], leaderId: LeaderId) => {
         if (!isLeaderPlayable(leaderId)) return;
+        beginGameLifecycle();
         clearSavedGame();
         const relicStore = useRelicStore.getState();
         const toRemove = relicStore.relics.map((r) => r.instanceId);
@@ -161,6 +164,7 @@ export const createGameLifecycleActions = ({
     },
 
     startTutorialGame: () => {
+        beginGameLifecycle();
         const relicStore = useRelicStore.getState();
         relicStore.resetRelics();
         set({

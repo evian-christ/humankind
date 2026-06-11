@@ -67,6 +67,7 @@ import { saveGameState } from '../saveGame';
 import type { GamePhase, GameState } from '../gameStore';
 import type { PlayerSymbolInstance } from '../../types';
 import type { BoardEffectDelta } from '../../logic/turn/turnTypes';
+import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -712,7 +713,7 @@ export const createSelectionFlowActions = ({
         if (uid === THEOLOGY_UPGRADE_ID) religionUnlocked = true;
 
         const newBoard = [...state.board.map((row) => [...row])];
-        let newPlayerSymbols = [...state.playerSymbols];
+        const newPlayerSymbols = [...state.playerSymbols];
 
         for (let y = 0; y < state.board.length; y++) {
             for (let x = 0; x < state.board[y].length; x++) {
@@ -833,7 +834,7 @@ export const createSelectionFlowActions = ({
                 destroyRemovalBlinkStartedAtMs: null,
             }));
         };
-        setTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
+        scheduleGameLifecycleTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: state.turn,
