@@ -71,17 +71,17 @@ const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =
     upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
 
 const DESTROY_REMOVAL_BLINK_DURATION_MS: Record<EffectSpeed, number> = {
-    '1x': 520,
-    '2x': 360,
-    '4x': 240,
-    instant: 0,
+    '1x': 360,
+    '2x': 240,
+    '4x': 120,
+    '8x': 60,
 };
 
 const EARTHQUAKE_SHAKE_DURATION_MS: Record<EffectSpeed, number> = {
-    '1x': 520,
-    '2x': 360,
-    '4x': 240,
-    instant: 0,
+    '1x': 360,
+    '2x': 240,
+    '4x': 120,
+    '8x': 60,
 };
 
 const getNowMs = () =>

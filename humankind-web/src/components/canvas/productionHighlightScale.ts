@@ -2,17 +2,17 @@ import type { ResourceDelta } from '../../game/logic/turn/turnTypes';
 import type { SettingsState } from '../../game/state/settingsStore';
 
 export const PRODUCTION_HIGHLIGHT_SCALE_IN_MS: Record<SettingsState['effectSpeed'], number> = {
-    '1x': 210,
-    '2x': 150,
-    '4x': 95,
-    instant: 0,
+    '1x': 150,
+    '2x': 95,
+    '4x': 48,
+    '8x': 24,
 };
 
 export const PRODUCTION_HIGHLIGHT_SCALE_OUT_MS: Record<SettingsState['effectSpeed'], number> = {
-    '1x': 300,
-    '2x': 210,
-    '4x': 140,
-    instant: 0,
+    '1x': 210,
+    '2x': 140,
+    '4x': 70,
+    '8x': 35,
 };
 
 const PRODUCTION_HIGHLIGHT_SCALE_STEPS = [

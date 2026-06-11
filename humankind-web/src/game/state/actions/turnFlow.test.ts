@@ -12,11 +12,11 @@ vi.mock('../settingsStore', () => ({
     useSettingsStore: {
         getState: () => ({
             language: 'en',
-            effectSpeed: 'instant',
+            effectSpeed: '8x',
         }),
     },
-    EFFECT_SPEED_DELAY: { '1x': 1, '2x': 1, '4x': 1, instant: 0 },
-    COMBAT_BOUNCE_DURATION: { '1x': 1, '2x': 1, '4x': 1, instant: 0 },
+    EFFECT_SPEED_DELAY: { '1x': 1, '2x': 1, '4x': 1, '8x': 0 },
+    COMBAT_BOUNCE_DURATION: { '1x': 1, '2x': 1, '4x': 1, '8x': 0 },
 }));
 
 vi.mock('../../logic/turn/turnPreparation', () => ({

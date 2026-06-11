@@ -40,6 +40,8 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'settings.resolution': '分辨率',
     'settings.language': '语言',
     'settings.back': '返回',
+    'settings.gameSpeed': '游戏速度',
+    'settings.gameSpeed.custom': '自定义',
     'settings.effectSpeed': '效果速度',
     'settings.spinSpeed': '旋转速度',
     'settings.lang.en': '英语',
@@ -70,6 +72,10 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'settings.resetProgress.confirm': '要重置所有游戏数据吗？保存的游戏、教程完成状态、领袖进度和成就将被删除。设置会保留。',
     'settings.resetProgress.cancel': '取消',
     'settings.resetProgress.confirmButton': '重置',
+    'initialSetup.language.title': '请选择语言',
+    'initialSetup.next': '下一步',
+    'initialSetup.gameSpeed.title': '选择游戏速度',
+    'initialSetup.gameSpeed.description': '稍后可在游戏设置中更改。',
 
     // Game UI
     'game.spin': '旋转',

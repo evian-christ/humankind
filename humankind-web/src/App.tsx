@@ -526,6 +526,8 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
   ],
 ];
 
+const TUTORIAL_REQUIRED_INTERACTION_STEPS = new Set([6, 10, 11, 13, 14, 16, 18, 19, 20]);
+
 const TUTORIAL_DIALOG_STEPS_RU: string[][] = [
   [
     'Добро пожаловать в обучение.',
@@ -647,12 +649,9 @@ const TUTORIAL_CORN_CELLS = [
   { x: 3, y: 1 },
 ];
 
-const TUTORIAL_LEFT_CORN_CELL = [{ x: 1, y: 1 }];
-
 type TutorialBoardHighlightsProps = {
   anchorRef: React.RefObject<HTMLDivElement | null>;
   cells: Array<{ x: number; y: number }>;
-  accentCells?: Array<{ x: number; y: number }>;
   highlightBoard?: boolean;
 };
 
@@ -736,7 +735,7 @@ function TutorialElementHighlight({ selectors, className, pad = 0, padX = pad, p
   );
 }
 
-function TutorialBoardHighlights({ anchorRef, cells, accentCells = [], highlightBoard = false }: TutorialBoardHighlightsProps) {
+function TutorialBoardHighlights({ anchorRef, cells, highlightBoard = false }: TutorialBoardHighlightsProps) {
   const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
 
   const measure = useCallback(() => {
@@ -761,15 +760,16 @@ function TutorialBoardHighlights({ anchorRef, cells, accentCells = [], highlight
 
   const layout = computeBoardPixelLayout(viewSize.w, viewSize.h);
   if (highlightBoard) {
+    const highlightPad = 12 * layout.scale;
     return (
       <div className="tutorial-board-highlights" aria-hidden="true">
         <div
           className="tutorial-board-highlight-cell tutorial-board-highlight-cell--board"
           style={{
-            left: layout.startX,
-            top: layout.startY,
-            width: layout.boardW,
-            height: layout.boardH,
+            left: layout.startX - highlightPad,
+            top: layout.startY - highlightPad,
+            width: layout.boardW + highlightPad * 2,
+            height: layout.boardH + highlightPad * 2,
           }}
         />
       </div>
@@ -794,21 +794,6 @@ function TutorialBoardHighlights({ anchorRef, cells, accentCells = [], highlight
           height: highlightBottom - highlightTop + highlightPad * 2,
         }}
       />
-      {accentCells.map((cell) => {
-        const rect = boardCellLocalRect(layout, cell.x, cell.y);
-        return (
-          <div
-            key={`accent-${cell.x}-${cell.y}`}
-            className="tutorial-board-highlight-accent-cell"
-            style={{
-              left: rect.left,
-              top: rect.top,
-              width: rect.width,
-              height: rect.height,
-            }}
-          />
-        );
-      })}
     </div>
   );
 }
@@ -894,7 +879,7 @@ function App() {
   const tutorialMonumentProducesSuffix = uiText(language, '지식을 생산합니다.', 'Knowledge.', '知识。', 'знания.');
   const tutorialFinishLabel = uiText(language, '종료', 'Finish', '完成', 'Готово');
   const tutorialExitLabel = uiText(language, '튜토리얼 종료', 'Exit Tutorial', '退出教程', 'Выйти из обучения');
-  const tutorialNextLabel = uiText(language, '다음 >>', 'Next >>', '下一步 >>', 'Далее >>');
+  const tutorialAnywhereLabel = 'Press anywhere to continue';
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -1292,6 +1277,23 @@ function App() {
     openMenuUnlessSpinning(toggleRelicShop);
   }, [openMenuUnlessSpinning, toggleRelicShop]);
 
+  const handleTutorialNext = useCallback(() => {
+    if (tutorialDialogStep === 22) {
+      if (isRelicShopOpen) toggleRelicShop();
+      setTutorialDialogStep(23);
+      return;
+    }
+    setTutorialDialogStep((step) => {
+      if ((step === 7 || step === 8) && useGameStore.getState().tutorialSpinStep !== 'corn_done') {
+        return step;
+      }
+      if (step === 9 && useGameStore.getState().phase !== 'selection') {
+        return step;
+      }
+      return Math.min(step + 1, tutorialDialogSteps.length - 1);
+    });
+  }, [isRelicShopOpen, toggleRelicShop, tutorialDialogStep, tutorialDialogSteps.length]);
+
   const isTutorialInteractionAllowed = useCallback((target: EventTarget | null) => {
     if (!isTutorialMode) return true;
     if (!(target instanceof Element)) return false;
@@ -1312,27 +1314,35 @@ function App() {
   }, [isTutorialMode, tutorialDialogStep]);
 
   const blockUnhandledTutorialInteraction = useCallback((event: React.SyntheticEvent) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const isGlobalTutorialControl =
+      target?.closest('.pause-btn-top') ||
+      target?.closest('.pause-overlay') ||
+      target?.closest('.tutorial-exit-button');
+    const advancesOnAnywherePress =
+      isTutorialMode &&
+      tutorialDialogStep !== tutorialDialogSteps.length - 1 &&
+      !TUTORIAL_REQUIRED_INTERACTION_STEPS.has(tutorialDialogStep);
+
+    if (advancesOnAnywherePress && !isGlobalTutorialControl) {
+      if (event.type === 'click') {
+        handleTutorialNext();
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (isTutorialInteractionAllowed(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
-  }, [isTutorialInteractionAllowed]);
-
-  const handleTutorialNext = useCallback(() => {
-    if (tutorialDialogStep === 22) {
-      if (isRelicShopOpen) toggleRelicShop();
-      setTutorialDialogStep(23);
-      return;
-    }
-    setTutorialDialogStep((step) => {
-      if ((step === 7 || step === 8) && useGameStore.getState().tutorialSpinStep !== 'corn_done') {
-        return step;
-      }
-      if (step === 9 && useGameStore.getState().phase !== 'selection') {
-        return step;
-      }
-      return Math.min(step + 1, tutorialDialogSteps.length - 1);
-    });
-  }, [isRelicShopOpen, toggleRelicShop, tutorialDialogStep, tutorialDialogSteps.length]);
+  }, [
+    handleTutorialNext,
+    isTutorialInteractionAllowed,
+    isTutorialMode,
+    tutorialDialogStep,
+    tutorialDialogSteps.length,
+  ]);
 
   const handleTutorialFinish = useCallback(() => {
     if (isRelicShopOpen) toggleRelicShop();
@@ -1978,7 +1988,6 @@ function App() {
         <TutorialBoardHighlights
           anchorRef={gameAreaRef}
           cells={TUTORIAL_CORN_CELLS}
-          accentCells={TUTORIAL_LEFT_CORN_CELL}
         />
       )}
       {isTutorialMode && tutorialDialogStep === 7 && (
@@ -2057,16 +2066,13 @@ function App() {
               >
                 {tutorialFinishLabel}
               </button>
-            ) : ![6, 10, 11, 13, 14, 16, 18, 19, 20].includes(tutorialDialogStep) && (
-              <button
-                type="button"
-                className="tutorial-dialog-next"
-                onClick={handleTutorialNext}
-                disabled={tutorialNextDisabled}
+            ) : !TUTORIAL_REQUIRED_INTERACTION_STEPS.has(tutorialDialogStep) && (
+              <span
+                className="tutorial-dialog-continue-hint"
                 aria-disabled={tutorialNextDisabled}
               >
-                {tutorialNextLabel}
-              </button>
+                {tutorialAnywhereLabel}
+              </span>
             )}
           </div>
         </div>

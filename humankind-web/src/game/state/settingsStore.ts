@@ -7,37 +7,39 @@ import {
     type KeyBindingAction,
     type KeyBindings,
 } from '../input/keyBindings';
+import { migrateLegacyGameSpeed, type GameSpeedPreset } from './gameSpeed';
 
 export type Language = 'en' | 'ko' | 'zh' | 'ru';
-export type EffectSpeed = '1x' | '2x' | '4x' | 'instant';
-export type SpinSpeed = '1x' | '2x' | '4x' | 'instant';
+export type EffectSpeed = GameSpeedPreset;
+export type SpinSpeed = GameSpeedPreset;
 export type ScreenMode = 'windowed' | 'fullscreen' | 'borderless';
 
 const SETTINGS_KEY = 'humankind.settings.v1';
-const SETTINGS_VERSION = 1;
+const INITIAL_SETUP_KEY = 'humankind.initialSetup.v1';
+const SETTINGS_VERSION = 2;
 
 /** 효과 속도별 슬롯 간 딜레이(ms) */
 export const EFFECT_SPEED_DELAY: Record<EffectSpeed, number> = {
-    '1x': 300,
-    '2x': 150,
-    '4x': 75,
-    'instant': 0,
+    '1x': 150,
+    '2x': 75,
+    '4x': 38,
+    '8x': 19,
 };
 
 /** 전투 바운스 애니메이션 지속시간(ms) — 효과 속도에 비례 */
 export const COMBAT_BOUNCE_DURATION: Record<EffectSpeed, number> = {
-    '1x': 300,
-    '2x': 150,
-    '4x': 75,
-    'instant': 0,
+    '1x': 150,
+    '2x': 75,
+    '4x': 38,
+    '8x': 19,
 };
 
 /** 스핀 속도 설정: { speed 배수, stopInterval(ms) } */
 export const SPIN_SPEED_CONFIG: Record<SpinSpeed, { speedMul: number; stopInterval: number }> = {
-    '1x': { speedMul: 3.6, stopInterval: 50 },
-    '2x': { speedMul: 6, stopInterval: 50 },
-    '4x': { speedMul: 10, stopInterval: 50 },
-    'instant': { speedMul: 0, stopInterval: 0 },
+    '1x': { speedMul: 6, stopInterval: 50 },
+    '2x': { speedMul: 10, stopInterval: 50 },
+    '4x': { speedMul: 20, stopInterval: 25 },
+    '8x': { speedMul: 40, stopInterval: 12.5 },
 };
 
 export interface ResolutionOption {
@@ -84,9 +86,11 @@ export interface SettingsState {
     developerMode: boolean;
     crtEffect: boolean;
     keyBindings: KeyBindings;
+    initialSetupComplete: boolean;
 
     setResolution: (width: number, height: number) => void;
     setLanguage: (lang: Language) => void;
+    setGameSpeed: (speed: GameSpeedPreset) => void;
     setEffectSpeed: (speed: EffectSpeed) => void;
     setSpinSpeed: (speed: SpinSpeed) => void;
     setMasterVolume: (volume: number) => void;
@@ -98,6 +102,7 @@ export interface SettingsState {
     setCrtEffect: (enabled: boolean) => void;
     setKeyBinding: (action: KeyBindingAction, code: string) => void;
     resetKeyBindings: () => void;
+    completeInitialSetup: () => void;
 }
 
 type PersistedSettings = Pick<
@@ -118,7 +123,7 @@ type PersistedSettings = Pick<
 >;
 
 interface SavedSettings {
-    version: typeof SETTINGS_VERSION;
+    version: number;
     savedAt: number;
     settings: PersistedSettings;
 }
@@ -128,7 +133,7 @@ const defaultSettings: PersistedSettings = {
     resolutionHeight: _initH,
     language: 'en',
     effectSpeed: '1x',
-    spinSpeed: '2x',
+    spinSpeed: '1x',
     masterVolume: 1,
     musicVolume: 1,
     effectVolume: 1,
@@ -148,13 +153,18 @@ const storage = (): Storage | null => {
 };
 
 const hasSavedSettings = () => storage()?.getItem(SETTINGS_KEY) != null;
+const hadSavedSettingsAtLaunch = hasSavedSettings();
+
+function loadInitialSetupComplete(): boolean {
+    return storage()?.getItem(INITIAL_SETUP_KEY) === 'complete' || hadSavedSettingsAtLaunch;
+}
 
 const isLanguage = (value: unknown): value is Language =>
     value === 'en' || value === 'ko' || value === 'zh' || value === 'ru';
 const isEffectSpeed = (value: unknown): value is EffectSpeed =>
-    value === '1x' || value === '2x' || value === '4x' || value === 'instant';
+    value === '1x' || value === '2x' || value === '4x' || value === '8x';
 const isSpinSpeed = (value: unknown): value is SpinSpeed =>
-    value === '1x' || value === '2x' || value === '4x' || value === 'instant';
+    value === '1x' || value === '2x' || value === '4x' || value === '8x';
 const isScreenMode = (value: unknown): value is ScreenMode =>
     value === 'windowed' || value === 'fullscreen' || value === 'borderless';
 
@@ -186,22 +196,33 @@ function getBrowserLanguage(): Language {
     return defaultSettings.language;
 }
 
+function loadSpeed(value: unknown, version: number): GameSpeedPreset | null {
+    if (version === SETTINGS_VERSION) {
+        return isEffectSpeed(value) ? value : null;
+    }
+    return version === 1 ? migrateLegacyGameSpeed(value) : null;
+}
+
 function loadSettings(): PersistedSettings {
     const raw = storage()?.getItem(SETTINGS_KEY);
     if (!raw) return { ...defaultSettings, language: getBrowserLanguage() };
 
     try {
         const save = JSON.parse(raw) as Partial<SavedSettings>;
-        if (save.version !== SETTINGS_VERSION || save.settings == null) return defaultSettings;
+        if ((save.version !== 1 && save.version !== SETTINGS_VERSION) || save.settings == null) {
+            return defaultSettings;
+        }
 
         const legacyFullscreen = (save.settings as { fullscreen?: unknown }).fullscreen;
+        const effectSpeed = loadSpeed(save.settings.effectSpeed, save.version);
+        const spinSpeed = loadSpeed(save.settings.spinSpeed, save.version);
 
         return {
             resolutionWidth: sanitizeDimension(save.settings.resolutionWidth, defaultSettings.resolutionWidth),
             resolutionHeight: sanitizeDimension(save.settings.resolutionHeight, defaultSettings.resolutionHeight),
             language: isLanguage(save.settings.language) ? save.settings.language : defaultSettings.language,
-            effectSpeed: isEffectSpeed(save.settings.effectSpeed) ? save.settings.effectSpeed : defaultSettings.effectSpeed,
-            spinSpeed: isSpinSpeed(save.settings.spinSpeed) ? save.settings.spinSpeed : defaultSettings.spinSpeed,
+            effectSpeed: effectSpeed ?? defaultSettings.effectSpeed,
+            spinSpeed: spinSpeed ?? defaultSettings.spinSpeed,
             masterVolume: clampVolume(save.settings.masterVolume),
             musicVolume: clampVolume(save.settings.musicVolume),
             effectVolume: clampVolume(save.settings.effectVolume),
@@ -255,6 +276,7 @@ const initialSettings = loadSettings();
 
 export const useSettingsStore = create<SettingsState>((set) => ({
     ...initialSettings,
+    initialSetupComplete: loadInitialSetupComplete(),
 
     setResolution: (width, height) => {
         set((state) => {
@@ -272,6 +294,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             return { language: lang };
         });
         applyLanguageToDOM(lang);
+    },
+
+    setGameSpeed: (speed) => {
+        set((state) => {
+            const next = { ...state, effectSpeed: speed, spinSpeed: speed };
+            saveSettings(next);
+            return { effectSpeed: speed, spinSpeed: speed };
+        });
     },
 
     setEffectSpeed: (speed) => {
@@ -372,6 +402,11 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             saveSettings(next);
             return { keyBindings };
         });
+    },
+
+    completeInitialSetup: () => {
+        storage()?.setItem(INITIAL_SETUP_KEY, 'complete');
+        set({ initialSetupComplete: true });
     },
 }));
 
@@ -566,9 +601,9 @@ function persistScreenModeState(screenMode: ScreenMode) {
 /** #root에 data-lang 속성 설정 (CSS 폰트 전환용) */
 function applyLanguageToDOM(lang: Language) {
     const root = document.getElementById('root');
-    if (!root) return;
-    root.setAttribute('data-lang', lang);
-    const fontFamily = lang === 'zh' ? 'Noto Sans SC' : 'Mulmaru';
+    document.documentElement?.setAttribute?.('data-lang', lang);
+    root?.setAttribute('data-lang', lang);
+    const fontFamily = lang === 'zh' ? 'ZLabsPixel CN' : 'Mulmaru';
     document.fonts?.load(`16px "${fontFamily}"`).catch(() => {});
 }
 

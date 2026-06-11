@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSettingsStore, getResolutionOptions, type Language, type EffectSpeed, type SpinSpeed, type ScreenMode } from '../game/state/settingsStore';
+import { GAME_SPEED_PRESETS, getGameSpeed } from '../game/state/gameSpeed';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { usePreGameStore } from '../game/state/preGameStore';
@@ -26,14 +27,14 @@ const EFFECT_SPEED_OPTIONS: { value: EffectSpeed; label: string }[] = [
     { value: '1x', label: '1x' },
     { value: '2x', label: '2x' },
     { value: '4x', label: '4x' },
-    { value: 'instant', label: 'Instant' },
+    { value: '8x', label: '8x' },
 ];
 
 const SPIN_SPEED_OPTIONS: { value: SpinSpeed; label: string }[] = [
     { value: '1x', label: '1x' },
     { value: '2x', label: '2x' },
     { value: '4x', label: '4x' },
-    { value: 'instant', label: 'Instant' },
+    { value: '8x', label: '8x' },
 ];
 
 const SCREEN_MODE_OPTIONS: { value: ScreenMode; labelKey: string }[] = [
@@ -71,6 +72,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         keyBindings,
         setResolution,
         setLanguage,
+        setGameSpeed,
         setEffectSpeed,
         setSpinSpeed,
         setMasterVolume,
@@ -122,6 +124,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
     const currentResOption = resOptions.find(o => o.width === resolutionWidth && o.height === resolutionHeight);
     const currentResLabel = currentResOption ? currentResOption.label : `${resolutionWidth} x ${resolutionHeight}`;
     const isFillScreenMode = screenMode !== 'windowed';
+    const gameSpeed = getGameSpeed(spinSpeed, effectSpeed);
 
     const handleResume = () => {
         setScreen('main');
@@ -242,6 +245,27 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
                         {/* ── Gameplay Tab ── */}
                         {activeTab === 'gameplay' && (
                             <>
+                                <div className="settings-row">
+                                    <div className="settings-row-label">{t('settings.gameSpeed', language)}</div>
+                                    <div className="settings-row-controls">
+                                        {GAME_SPEED_PRESETS.map((speed) => (
+                                            <button
+                                                key={speed}
+                                                className={`settings-seg-btn ${gameSpeed === speed ? 'active' : ''}`}
+                                                onClick={() => setGameSpeed(speed)}
+                                            >
+                                                {speed}
+                                            </button>
+                                        ))}
+                                        <button
+                                            className={`settings-seg-btn ${gameSpeed === 'custom' ? 'active' : ''}`}
+                                            disabled
+                                        >
+                                            {t('settings.gameSpeed.custom', language)}
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="settings-row">
                                     <div className="settings-row-label">{t('settings.spinSpeed', language)}</div>
                                     <div className="settings-row-controls">

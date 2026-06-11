@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../settingsStore', () => ({
-    EFFECT_SPEED_DELAY: { '1x': 500, '2x': 250, '4x': 125, instant: 0 },
-    COMBAT_BOUNCE_DURATION: { '1x': 300, '2x': 200, '4x': 100, instant: 0 },
+    EFFECT_SPEED_DELAY: { '1x': 150, '2x': 75, '4x': 38, '8x': 19 },
+    COMBAT_BOUNCE_DURATION: { '1x': 150, '2x': 75, '4x': 38, '8x': 19 },
 }));
 
 import {
@@ -12,27 +12,33 @@ import {
 
 describe('turnPresentationTimeline', () => {
     it('builds slot presentation timing separately from effect totals', () => {
-        expect(buildSlotEffectPresentationPlan({ effectSpeed: 'instant', contributorCount: 2 })).toEqual({
+        expect(buildSlotEffectPresentationPlan({ effectSpeed: '8x', contributorCount: 2 })).toEqual({
             hasContributors: true,
-            phase1DelayMs: 0,
-            phase2DelayMs: 0,
-            continueDelayMs: 0,
+            phase1DelayMs: 23,
+            phase2DelayMs: 45,
+            continueDelayMs: 19,
         });
 
         expect(buildSlotEffectPresentationPlan({ effectSpeed: '1x', contributorCount: 0 }).hasContributors).toBe(false);
     });
 
-    it('keeps instant combat timelines synchronous', () => {
-        expect(buildCombatPresentationPlan('instant')).toMatchObject({
-            bounceDurationMs: 0,
-            initialEffectDelayMs: 0,
+    it('gives the new 8x preset a faster combat floor than 4x', () => {
+        expect(buildCombatPresentationPlan('4x')).toMatchObject({
+            bounceDurationMs: 38,
+            removalDelayMs: 200,
+            initialEffectDelayMs: 300,
+        });
+        expect(buildCombatPresentationPlan('8x')).toMatchObject({
+            bounceDurationMs: 19,
+            removalDelayMs: 100,
+            initialEffectDelayMs: 150,
         });
     });
 
     it('keeps combat attack cadence aligned with the effect iteration delay', () => {
         expect(buildCombatPresentationPlan('1x')).toMatchObject({
-            bounceDurationMs: 300,
-            stepDelayMs: 800,
+            bounceDurationMs: 150,
+            stepDelayMs: 300,
         });
     });
 });

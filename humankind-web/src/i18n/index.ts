@@ -78,6 +78,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'settings.resolution': 'Resolution',
         'settings.language': 'Language',
         'settings.back': 'BACK',
+        'settings.gameSpeed': 'Game Speed',
+        'settings.gameSpeed.custom': 'Custom',
         'settings.effectSpeed': 'Effect Speed',
         'settings.spinSpeed': 'Spin Speed',
         'settings.lang.en': 'English',
@@ -124,6 +126,10 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'settings.resetProgress.confirm': 'Reset all game data? Saved runs, tutorial completion, leader progression, and achievements will be deleted. Settings will be kept.',
         'settings.resetProgress.cancel': 'Cancel',
         'settings.resetProgress.confirmButton': 'Reset',
+        'initialSetup.language.title': 'Choose your language',
+        'initialSetup.next': 'Next',
+        'initialSetup.gameSpeed.title': 'Choose game speed',
+        'initialSetup.gameSpeed.description': 'You can change this later in Gameplay settings.',
 
         // Game UI
         'game.spin': 'SPIN',
@@ -1073,6 +1079,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'settings.resolution': '해상도',
         'settings.language': '언어',
         'settings.back': '뒤로',
+        'settings.gameSpeed': '게임 속도',
+        'settings.gameSpeed.custom': '사용자 설정',
         'settings.effectSpeed': '효과 속도',
         'settings.spinSpeed': '스핀 속도',
         'settings.lang.en': '영어',
@@ -1119,6 +1127,10 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'settings.resetProgress.confirm': '모든 게임 데이터를 초기화할까요? 저장된 런, 튜토리얼 완료 여부, 지도자 진행도, 도전과제가 삭제됩니다. 설정값은 유지됩니다.',
         'settings.resetProgress.cancel': '취소',
         'settings.resetProgress.confirmButton': '초기화',
+        'initialSetup.language.title': '언어를 선택하세요',
+        'initialSetup.next': '다음',
+        'initialSetup.gameSpeed.title': '게임 속도를 선택하세요',
+        'initialSetup.gameSpeed.description': '나중에 게임플레이 설정에서 변경할 수 있습니다.',
 
         // Game UI (스핀 = 보드 돌리기 버튼, 턴 = 게임 턴 개념)
         'game.spin': '스핀',

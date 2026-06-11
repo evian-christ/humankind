@@ -15,8 +15,8 @@
 }
 
 @font-face {
-  font-family: 'Noto Sans SC';
-  src: url('/fonts/NotoSansSC-VariableFont_wght.ttf') format('truetype');
+  font-family: 'ZLabsPixel CN';
+  src: url('/fonts/ZLabsPixel_12px_M_CN.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
@@ -33,10 +33,14 @@
   --app-cursor-img: url('/assets/ui/cursor.png?v=2');
 }
 
+:root[data-lang="zh"],
 #root[data-lang="zh"] {
-  --game-font-family: 'Noto Sans SC';
+  --game-font-family: 'ZLabsPixel CN';
 }
 
+:where(button, input, select, textarea) {
+  font-family: inherit;
+}
 
 * {
   margin: 0;
@@ -66,6 +70,7 @@ body {
   transform: translate(-50%, -50%);
   transform-origin: center center;
   background: #000000;
+  font-family: var(--game-font-family), sans-serif;
   overflow: hidden;
 }
 
@@ -2388,6 +2393,314 @@ button.spin-btn:disabled:active {
   overflow-y: auto;
 }
 
+.initial-setup-root {
+  position: absolute;
+  inset: 0;
+  z-index: 550;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 32px;
+  --game-font-family: 'Mulmaru';
+  font-family: var(--game-font-family), sans-serif;
+  background: #242424;
+}
+
+.initial-setup-root[data-lang="zh"] {
+  --game-font-family: 'ZLabsPixel CN';
+}
+
+.initial-setup-root.is-finishing {
+  pointer-events: none;
+  animation: initial-setup-fade-out 140ms ease-in forwards;
+}
+
+@keyframes initial-setup-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.demo-start-root--entering {
+  animation: main-menu-fade-in 190ms ease-out both;
+}
+
+@keyframes main-menu-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.initial-setup-panel {
+  position: relative;
+  width: min(620px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 26px;
+  box-sizing: border-box;
+  padding: 46px 48px 48px;
+  color: #ffffff;
+  background: #151515;
+  border: 2px solid #555;
+  border-radius: 10px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.initial-setup-progress {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.initial-setup-title {
+  margin: 0;
+  color: #ffffff;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 38px;
+  line-height: 1.2;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.initial-setup-description {
+  margin: -10px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 19px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.initial-setup-options {
+  display: grid;
+  gap: 12px;
+}
+
+.initial-setup-language-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.initial-setup-language-picker {
+  position: relative;
+  z-index: 2;
+}
+
+.initial-setup-language-trigger {
+  width: 100%;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 1fr 24px;
+  align-items: center;
+  gap: 20px;
+  box-sizing: border-box;
+  padding: 10px 20px;
+  color: #ffffff;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 24px;
+  line-height: 1.1;
+  text-align: left;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+    #181818;
+  border: 2px solid #5c5c5c;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 5px 12px rgba(0, 0, 0, 0.28);
+  cursor: var(--app-cursor-pointer);
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.initial-setup-language-trigger:hover,
+.initial-setup-language-trigger:focus-visible,
+.initial-setup-language-picker.is-open .initial-setup-language-trigger {
+  transform: translateY(-1px);
+  border-color: #bdbdbd;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 7px 18px rgba(0, 0, 0, 0.34),
+    0 0 0 2px rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+.initial-setup-language-label {
+  min-width: 0;
+  color: #ffffff;
+}
+
+.initial-setup-language-chevron {
+  width: 12px;
+  height: 12px;
+  justify-self: end;
+  border-right: 3px solid #bdbdbd;
+  border-bottom: 3px solid #bdbdbd;
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.initial-setup-language-picker.is-open .initial-setup-language-chevron {
+  transform: translateY(3px) rotate(225deg);
+}
+
+.initial-setup-language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 7px;
+  overflow: hidden;
+  background: #121212;
+  border: 2px solid #747474;
+  border-radius: 8px;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.initial-setup-language-option {
+  width: 100%;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 1fr 28px;
+  align-items: center;
+  gap: 20px;
+  box-sizing: border-box;
+  padding: 7px 13px;
+  color: #c2c2c2;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 22px;
+  line-height: 1.1;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: var(--app-cursor-pointer);
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.initial-setup-language-option:hover,
+.initial-setup-language-option:focus-visible {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.14);
+  outline: none;
+}
+
+.initial-setup-language-option.is-selected {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.initial-setup-language-check {
+  justify-self: end;
+  color: #ffffff;
+  font-family: Inter, sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.initial-setup-continue {
+  min-height: 58px;
+  padding: 10px 18px;
+  color: #ffffff;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 23px;
+  line-height: 1.1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid #777;
+  border-radius: 6px;
+  cursor: var(--app-cursor-pointer);
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.initial-setup-continue:hover,
+.initial-setup-continue:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #cccccc;
+  outline: none;
+}
+
+.initial-setup-continue:disabled {
+  opacity: 0.58;
+  cursor: default;
+  transform: none;
+}
+
+.initial-setup-options--speeds {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.initial-setup-option {
+  min-height: 58px;
+  padding: 10px 14px;
+  color: #b8b8b8;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 23px;
+  line-height: 1.1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid #444;
+  border-radius: 6px;
+  cursor: var(--app-cursor-pointer);
+  transition:
+    transform 140ms ease,
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.initial-setup-option:hover,
+.initial-setup-option:focus-visible {
+  transform: translateY(-1px);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #999;
+  outline: none;
+}
+
+.initial-setup-option.active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #cccccc;
+}
+
+@media (max-width: 680px) {
+  .initial-setup-panel {
+    padding: 42px 24px 28px;
+  }
+
+  .initial-setup-options--speeds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .main-menu {
   width: min(100%, 720px);
   min-height: min(100%, 560px);
@@ -3184,7 +3497,7 @@ button.spin-btn:disabled:active {
   justify-content: center;
   box-sizing: border-box;
   padding: clamp(28px, 5vw, 80px);
-  background: rgba(0, 0, 0, 0.64);
+  background: rgba(0, 0, 0, 0.78);
   color: #ffffff;
   font-family: var(--game-font-family), sans-serif;
   text-align: center;
@@ -3227,7 +3540,11 @@ button.spin-btn:disabled:active {
   background: transparent;
   z-index: 622;
   align-items: flex-start;
-  padding-top: 112px;
+  padding-top: clamp(48px, 5.5vh, 64px);
+}
+
+.tutorial-dialog-overlay--selection-cards .tutorial-dialog-continue-hint {
+  margin-top: 18px;
 }
 
 .tutorial-dialog-overlay--monument-card {
@@ -3313,10 +3630,14 @@ button.spin-btn:disabled:active {
 }
 
 .tutorial-dialog-overlay--relic-shop-button {
-  align-items: flex-end;
-  justify-content: flex-start;
-  padding-left: 46px;
-  padding-bottom: 166px;
+  padding: 0;
+}
+
+.tutorial-dialog-overlay--relic-shop-button .tutorial-dialog-text {
+  position: absolute;
+  left: calc(50% - 453px);
+  bottom: 137px;
+  transform: translateX(-50%);
 }
 
 .tutorial-dialog-overlay--relics {
@@ -3335,7 +3656,34 @@ button.spin-btn:disabled:active {
 
 .tutorial-dialog-overlay--finish {
   z-index: 650;
-  background: rgba(0, 0, 0, 0.76);
+  background: rgba(0, 0, 0, 0.86);
+}
+
+.tutorial-dialog-overlay {
+  z-index: 700;
+}
+
+.tutorial-dialog-overlay--owned-monument,
+.tutorial-dialog-overlay--owned-close {
+  z-index: 10002;
+}
+
+.tutorial-highlight-food-demand .tutorial-dialog-overlay,
+.tutorial-highlight-food-resource .tutorial-dialog-overlay,
+.tutorial-highlight-spin-button .tutorial-dialog-overlay,
+.tutorial-highlight-selection-cards .tutorial-dialog-overlay,
+.tutorial-highlight-monument-card .tutorial-dialog-overlay,
+.tutorial-highlight-owned-symbols-button .tutorial-dialog-overlay,
+.tutorial-highlight-owned-monument .tutorial-dialog-overlay,
+.tutorial-highlight-owned-close .tutorial-dialog-overlay,
+.tutorial-highlight-knowledge-status .tutorial-dialog-overlay,
+.tutorial-highlight-knowledge-button .tutorial-dialog-overlay,
+.tutorial-highlight-ancient-research .tutorial-dialog-overlay,
+.tutorial-highlight-knowledge-back .tutorial-dialog-overlay,
+.tutorial-highlight-relic-shop-button .tutorial-dialog-overlay,
+.tutorial-highlight-relics .tutorial-dialog-overlay,
+.tutorial-highlight-relic-buy .tutorial-dialog-overlay {
+  background: transparent;
 }
 
 .tutorial-dialog-overlay--owned-close .tutorial-dialog-text {
@@ -3344,7 +3692,7 @@ button.spin-btn:disabled:active {
 
 .tutorial-dialog-overlay--left-corn {
   background: transparent;
-  z-index: 622;
+  z-index: 700;
   align-items: center;
   padding-top: 360px;
 }
@@ -3408,6 +3756,41 @@ button.spin-btn:disabled:active {
     color 140ms ease,
     text-shadow 140ms ease,
     transform 140ms ease;
+}
+
+.tutorial-dialog-continue-hint {
+  margin-top: 46px;
+  padding-bottom: 6px;
+  align-self: center;
+  color: rgba(255, 247, 208, 0.76);
+  font-family: var(--game-font-family), sans-serif;
+  font-size: clamp(20px, 1.9vw, 27px);
+  font-weight: 800;
+  letter-spacing: 0;
+  opacity: 0.78;
+  pointer-events: none;
+  user-select: none;
+  text-shadow:
+    0 0 12px rgba(255, 232, 148, 0.48),
+    0 3px 14px rgba(0, 0, 0, 0.9);
+  animation: tutorial-continue-hint-pulse 1.6s ease-in-out infinite;
+}
+
+.tutorial-dialog-continue-hint[aria-disabled='true'] {
+  color: rgba(255, 255, 255, 0.42);
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+  animation: none;
+}
+
+@keyframes tutorial-continue-hint-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.025);
+  }
 }
 
 .tutorial-dialog-next:not(.tutorial-dialog-finish):not(:disabled) {
@@ -3527,25 +3910,21 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-food-demand .food-demand-mini {
   position: relative;
   z-index: 1;
-  background: rgba(0, 0, 0, 0.82);
-  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 12px rgba(255, 211, 92, 0.1),
-    0 0 28px rgba(255, 226, 132, 0.62),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-food-resource .resource-group--food {
   position: relative;
   z-index: 1;
-  background: rgba(0, 0, 0, 0.82);
-  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 12px rgba(255, 211, 92, 0.1),
-    0 0 28px rgba(255, 226, 132, 0.62),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-spin-button .bottom-action-bar {
@@ -3563,13 +3942,11 @@ button.spin-btn:disabled:active {
   z-index: 1;
   opacity: 1;
   filter: none;
-  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 12px rgba(255, 211, 92, 0.1),
-    0 0 28px rgba(255, 226, 132, 0.62),
-    0 12px 32px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-left-corn .symbol-tooltip {
@@ -3577,7 +3954,7 @@ button.spin-btn:disabled:active {
 }
 
 .tutorial-highlight-selection-cards .selection-overlay {
-  background: rgba(0, 0, 0, 0.76);
+  background: rgba(0, 0, 0, 0.86);
 }
 
 .tutorial-highlight-selection-cards .selection-title,
@@ -3592,12 +3969,12 @@ button.spin-btn:disabled:active {
   outline: 3px solid rgba(255, 246, 201, 0.95);
   outline-offset: 18px;
   box-shadow:
-    0 0 0 22px rgba(255, 211, 92, 0.08),
-    0 0 34px rgba(255, 226, 132, 0.66);
+    0 0 16px rgba(255, 246, 201, 0.92),
+    0 0 38px rgba(255, 211, 92, 0.74);
 }
 
 .tutorial-highlight-monument-card .selection-overlay {
-  background: rgba(0, 0, 0, 0.76);
+  background: rgba(0, 0, 0, 0.86);
 }
 
 .tutorial-highlight-monument-card .selection-title,
@@ -3613,8 +3990,8 @@ button.spin-btn:disabled:active {
   outline: 3px solid rgba(255, 246, 201, 0.95);
   outline-offset: 18px;
   box-shadow:
-    0 0 0 22px rgba(255, 211, 92, 0.08),
-    0 0 34px rgba(255, 226, 132, 0.66);
+    0 0 16px rgba(255, 246, 201, 0.92),
+    0 0 38px rgba(255, 211, 92, 0.74);
 }
 
 .tutorial-highlight-owned-symbols-button .bottom-action-bar {
@@ -3629,16 +4006,15 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols {
   position: relative;
   z-index: 1;
-  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 12px rgba(255, 211, 92, 0.1),
-    0 0 28px rgba(255, 226, 132, 0.62),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-owned-monument .owned-symbols-modal {
-  background: rgba(0, 0, 0, 0.64) !important;
+  background: rgba(0, 0, 0, 0.78) !important;
 }
 
 .tutorial-highlight-owned-monument .owned-symbol-item {
@@ -3651,12 +4027,12 @@ button.spin-btn:disabled:active {
   outline: 3px solid rgba(255, 246, 201, 0.95);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 14px rgba(255, 211, 92, 0.08),
-    0 0 28px rgba(255, 226, 132, 0.66);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-owned-close .owned-symbols-modal {
-  background: rgba(0, 0, 0, 0.64) !important;
+  background: rgba(0, 0, 0, 0.78) !important;
 }
 
 .tutorial-highlight-owned-close .owned-symbols-close-btn {
@@ -3665,8 +4041,8 @@ button.spin-btn:disabled:active {
   outline: 3px solid rgba(255, 246, 201, 0.95);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 14px rgba(255, 211, 92, 0.08),
-    0 0 28px rgba(255, 226, 132, 0.66);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-knowledge-status .hud-top {
@@ -3682,13 +4058,11 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-knowledge-status .level-info-mini {
   position: relative;
   z-index: 1;
-  background: rgba(0, 0, 0, 0.82);
-  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 12px rgba(255, 211, 92, 0.1),
-    0 0 28px rgba(255, 226, 132, 0.62),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-knowledge-button .bottom-action-bar {
@@ -3703,12 +4077,11 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-knowledge-button .relic-shop-btn--knowledge {
   position: relative;
   z-index: 1;
-  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 12px rgba(255, 211, 92, 0.1),
-    0 0 28px rgba(255, 226, 132, 0.62),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-relic-shop-button .bottom-action-bar {
@@ -3723,12 +4096,11 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-relic-shop-button .relic-shop-btn--relic {
   position: relative;
   z-index: 1;
-  outline: 2px solid rgba(255, 246, 201, 0.92);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 12px rgba(255, 211, 92, 0.1),
-    0 0 28px rgba(255, 226, 132, 0.62),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-highlight-relics .selection-overlay--relic,
@@ -3750,12 +4122,12 @@ button.spin-btn:disabled:active {
   z-index: 641;
   pointer-events: none;
   box-sizing: border-box;
-  border: 3px solid rgba(255, 246, 201, 0.95);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
+  outline-offset: 0;
   box-shadow:
     0 0 0 3000px rgba(0, 0, 0, 0.58),
-    0 0 0 20px rgba(255, 211, 92, 0.08),
-    0 0 34px rgba(255, 226, 132, 0.66),
-    inset 0 0 24px rgba(255, 226, 132, 0.18);
+    0 0 16px rgba(255, 246, 201, 0.92),
+    0 0 38px rgba(255, 211, 92, 0.74);
 }
 
 .tutorial-highlight-relic-buy .relic-shop-header,
@@ -3774,9 +4146,8 @@ button.spin-btn:disabled:active {
   outline: 3px solid rgba(255, 246, 201, 0.95);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 14px rgba(255, 211, 92, 0.08),
-    0 0 28px rgba(255, 226, 132, 0.66),
-    0 12px 32px rgba(0, 0, 0, 0.55);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
 }
 
 .tutorial-board-highlights {
@@ -3788,27 +4159,68 @@ button.spin-btn:disabled:active {
 
 .tutorial-board-highlight-cell {
   position: absolute;
-  border: 3px solid rgba(255, 246, 201, 0.95);
+  outline: 3px solid rgba(255, 246, 201, 0.96);
   z-index: 1;
   box-shadow:
     0 0 0 3000px rgba(0, 0, 0, 0.64),
-    0 0 0 10px rgba(255, 211, 92, 0.1),
-    0 0 30px rgba(255, 226, 132, 0.66),
-    inset 0 0 24px rgba(255, 226, 132, 0.22);
-}
-
-.tutorial-board-highlight-accent-cell {
-  position: absolute;
-  z-index: 2;
-  border: 3px solid rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 0 0 7px rgba(255, 246, 201, 0.16),
-    0 0 24px rgba(255, 255, 255, 0.7),
-    inset 0 0 22px rgba(255, 255, 255, 0.18);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 34px rgba(255, 211, 92, 0.74);
 }
 
 .tutorial-board-highlight-cell--board {
-  border-width: 3px;
+  outline-width: 3px;
+}
+
+.tutorial-highlight-food-demand .food-demand-mini,
+.tutorial-highlight-food-resource .resource-group--food,
+.tutorial-highlight-spin-button .spin-btn,
+.tutorial-highlight-selection-cards .selection-cards,
+.tutorial-highlight-monument-card .selection-card-frame:first-child,
+.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+.tutorial-highlight-owned-monument .owned-symbol-item--monument,
+.tutorial-highlight-owned-close .owned-symbols-close-btn,
+.tutorial-highlight-knowledge-status .level-info-mini,
+.tutorial-highlight-knowledge-button .relic-shop-btn--knowledge,
+.tutorial-highlight-relic-shop-button .relic-shop-btn--relic,
+.tutorial-relic-display-highlight,
+.tutorial-highlight-relic-buy .relic-card-buy-btn,
+.tutorial-board-highlight-cell {
+  transform-origin: center;
+  animation: tutorial-highlight-focus-in 460ms cubic-bezier(0.2, 0.82, 0.25, 1) both;
+  will-change: transform;
+}
+
+@keyframes tutorial-highlight-focus-in {
+  from {
+    transform: scale(1.18);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-highlight-food-demand .food-demand-mini,
+  .tutorial-highlight-food-resource .resource-group--food,
+  .tutorial-highlight-spin-button .spin-btn,
+  .tutorial-highlight-selection-cards .selection-cards,
+  .tutorial-highlight-monument-card .selection-card-frame:first-child,
+  .tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+  .tutorial-highlight-owned-monument .owned-symbol-item--monument,
+  .tutorial-highlight-owned-close .owned-symbols-close-btn,
+  .tutorial-highlight-knowledge-status .level-info-mini,
+  .tutorial-highlight-knowledge-button .relic-shop-btn--knowledge,
+  .tutorial-highlight-relic-shop-button .relic-shop-btn--relic,
+  .tutorial-relic-display-highlight,
+  .tutorial-highlight-relic-buy .relic-card-buy-btn,
+  .tutorial-board-highlight-cell,
+  .tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era,
+  .tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area,
+  .tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era,
+  .tutorial-highlight-knowledge-back .knowledge-upgrades-back-btn {
+    animation: none;
+  }
 }
 
 @keyframes tutorial-dialog-fade-in {
@@ -7120,7 +7532,7 @@ button.spin-btn:disabled:active {
   inset: 0;
   z-index: 4;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.58);
+  background: rgba(0, 0, 0, 0.74);
 }
 
 .tutorial-highlight-ancient-chip .knowledge-upgrade-chip {
@@ -7134,8 +7546,8 @@ button.spin-btn:disabled:active {
   outline-offset: 4px;
   box-shadow:
     0 0 0 3000px rgba(0, 0, 0, 0.58),
-    0 0 0 10px rgba(255, 211, 92, 0.08),
-    0 0 30px rgba(255, 226, 132, 0.66);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 34px rgba(255, 211, 92, 0.74);
 }
 
 .tutorial-highlight-ancient-detail .knowledge-upgrade-tooltip--ancient-era {
@@ -7157,12 +7569,10 @@ button.spin-btn:disabled:active {
   width: 100%;
   margin-top: 12px !important;
   padding: 14px !important;
-  background: rgba(15, 15, 15, 0.98);
   border: 3px solid rgba(255, 246, 201, 0.95) !important;
   box-shadow:
-    0 0 0 14px rgba(255, 211, 92, 0.08),
-    0 0 30px rgba(255, 226, 132, 0.66),
-    0 18px 40px rgba(0, 0, 0, 0.48);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 34px rgba(255, 211, 92, 0.74);
 }
 
 .tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area .upgrade-card-desc-symbols {
@@ -7181,8 +7591,168 @@ button.spin-btn:disabled:active {
   outline: 3px solid rgba(255, 246, 201, 0.95);
   outline-offset: 8px;
   box-shadow:
-    0 0 0 14px rgba(255, 211, 92, 0.08),
-    0 0 28px rgba(255, 226, 132, 0.66);
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
+}
+
+.tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era,
+.tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area,
+.tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era,
+.tutorial-highlight-knowledge-back .knowledge-upgrades-back-btn {
+  transform-origin: center;
+  animation: tutorial-highlight-focus-in 460ms cubic-bezier(0.2, 0.82, 0.25, 1) both;
+  will-change: transform;
+}
+
+.tutorial-highlight-food-demand .food-demand-mini,
+.tutorial-highlight-food-resource .resource-group--food,
+.tutorial-highlight-spin-button .spin-btn,
+.tutorial-highlight-selection-cards .selection-cards,
+.tutorial-highlight-monument-card .selection-card-frame:first-child,
+.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+.tutorial-highlight-owned-monument .owned-symbol-item--monument,
+.tutorial-highlight-owned-close .owned-symbols-close-btn,
+.tutorial-highlight-knowledge-status .level-info-mini,
+.tutorial-highlight-knowledge-button .relic-shop-btn--knowledge,
+.tutorial-highlight-relic-shop-button .relic-shop-btn--relic,
+.tutorial-highlight-relic-buy .relic-card-buy-btn,
+.tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area,
+.tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era,
+.tutorial-highlight-knowledge-back .knowledge-upgrades-back-btn {
+  box-shadow:
+    0 0 8px 2px rgba(255, 246, 201, 0.38),
+    0 0 16px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-relic-display-highlight {
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.74),
+    0 0 8px 2px rgba(255, 246, 201, 0.38),
+    0 0 16px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-board-highlight-cell {
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.76),
+    0 0 8px 2px rgba(255, 246, 201, 0.38),
+    0 0 16px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era {
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.74),
+    0 0 8px 2px rgba(255, 246, 201, 0.38),
+    0 0 16px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area {
+  border-color: transparent !important;
+  outline: 3px solid rgba(255, 246, 201, 0.95);
+  outline-offset: 4px;
+}
+
+.tutorial-highlight-food-demand .food-demand-mini,
+.tutorial-highlight-food-resource .resource-group--food,
+.tutorial-highlight-spin-button .spin-btn,
+.tutorial-highlight-selection-cards .selection-cards,
+.tutorial-highlight-monument-card .selection-card-frame:first-child,
+.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+.tutorial-highlight-owned-monument .owned-symbol-item--monument,
+.tutorial-highlight-owned-close .owned-symbols-close-btn,
+.tutorial-highlight-knowledge-status .level-info-mini,
+.tutorial-highlight-knowledge-button .relic-shop-btn--knowledge,
+.tutorial-highlight-relic-shop-button .relic-shop-btn--relic,
+.tutorial-highlight-relic-buy .relic-card-buy-btn,
+.tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area,
+.tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era,
+.tutorial-highlight-knowledge-back .knowledge-upgrades-back-btn {
+  position: relative;
+  border-color: transparent !important;
+  outline: none;
+  box-shadow: none;
+}
+
+.tutorial-highlight-food-demand .food-demand-mini::after,
+.tutorial-highlight-food-resource .resource-group--food::after,
+.tutorial-highlight-spin-button .spin-btn::after,
+.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols::after,
+.tutorial-highlight-owned-monument .owned-symbol-item--monument::after,
+.tutorial-highlight-owned-close .owned-symbols-close-btn::after,
+.tutorial-highlight-knowledge-status .level-info-mini::after,
+.tutorial-highlight-knowledge-button .relic-shop-btn--knowledge::after,
+.tutorial-highlight-relic-shop-button .relic-shop-btn--relic::after,
+.tutorial-highlight-relic-buy .relic-card-buy-btn::after,
+.tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era::after,
+.tutorial-highlight-knowledge-back .knowledge-upgrades-back-btn::after {
+  content: "";
+  position: absolute;
+  inset: -11px;
+  z-index: 20;
+  pointer-events: none;
+  border: 3px solid rgba(255, 246, 201, 0.96);
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.68),
+    0 0 7px rgba(255, 246, 201, 0.42),
+    0 0 14px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-highlight-selection-cards .selection-cards::after,
+.tutorial-highlight-monument-card .selection-card-frame:first-child::after {
+  content: "";
+  position: absolute;
+  inset: -21px;
+  z-index: 20;
+  pointer-events: none;
+  border: 3px solid rgba(255, 246, 201, 0.96);
+  box-shadow:
+    0 0 7px rgba(255, 246, 201, 0.42),
+    0 0 14px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-highlight-selection-cards .selection-cards::after {
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.68),
+    0 0 7px rgba(255, 246, 201, 0.42),
+    0 0 14px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-highlight-monument-card .selection-card-frame:first-child::after {
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.78),
+    0 0 7px rgba(255, 246, 201, 0.42),
+    0 0 14px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  z-index: 20;
+  pointer-events: none;
+  border: 3px solid rgba(255, 246, 201, 0.96);
+  box-shadow:
+    0 0 0 3000px rgba(0, 0, 0, 0.68),
+    0 0 7px rgba(255, 246, 201, 0.42),
+    0 0 14px rgba(255, 211, 92, 0.2);
+}
+
+.tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era {
+  filter:
+    drop-shadow(0 0 4px rgba(255, 246, 201, 0.42))
+    drop-shadow(0 0 8px rgba(255, 211, 92, 0.2));
+}
+
+.tutorial-relic-display-highlight {
+  box-shadow: 0 0 0 3000px rgba(0, 0, 0, 0.74);
+}
+
+.tutorial-board-highlight-cell {
+  box-shadow: 0 0 0 3000px rgba(0, 0, 0, 0.76);
+}
+
+.tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era {
+  border-color: transparent !important;
+  box-shadow: 0 0 0 3000px rgba(0, 0, 0, 0.74);
 }
 
 .pause-btn-top:active {
@@ -8000,6 +8570,10 @@ button.relic-shop-btn--knowledge {
   z-index: 1;
 }
 
+.settings-seg-btn:disabled {
+  cursor: default;
+}
+
 .settings-seg-btn.active {
   background: rgba(255, 255, 255, 0.12);
   border-color: #aaa;
@@ -8526,7 +9100,7 @@ button.relic-shop-btn--knowledge {
 }
 
 
-/* Fixed chrome typography: keep title and navigation UI in the original game font. */
+/* Shared chrome typography follows the active language font. */
 :where(
   .main-menu-title,
   .main-menu-title-main,
@@ -8553,7 +9127,7 @@ button.relic-shop-btn--knowledge {
   .endgame-title,
   .endgame-btn
 ) {
-  font-family: 'Mulmaru', sans-serif;
+  font-family: var(--game-font-family), sans-serif;
 }
 
 

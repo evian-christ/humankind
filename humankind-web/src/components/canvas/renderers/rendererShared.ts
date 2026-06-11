@@ -9,7 +9,7 @@ export const ASSET_BASE_URL = import.meta.env.BASE_URL;
 export const GAME_CURSOR_POINTER = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, pointer`;
 export const GAME_CURSOR_HELP = `url('${ASSET_BASE_URL}assets/ui/cursor.png?v=2') 0 0, help`;
 export const DEFAULT_GAME_FONT_FAMILY = 'Mulmaru';
-export const ZH_GAME_FONT_FAMILY = 'Noto Sans SC';
+export const ZH_GAME_FONT_FAMILY = 'ZLabsPixel CN';
 const DYNAMIC_CHILD_DESTROY_OPTIONS: Parameters<PIXI.Container['destroy']>[0] = {
     children: true,
     context: true,

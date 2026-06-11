@@ -44,26 +44,26 @@ const MARKED_FOR_DESTRUCTION_ALPHA = 0.38;
 const DESTROY_REMOVAL_BLINKS = 2;
 const DESTROY_REMOVAL_BLINK_MIN_ALPHA = 0.12;
 const DESTROY_REMOVAL_BLINK_DURATION_MS: Record<SettingsState['effectSpeed'], number> = {
-    '1x': 520,
-    '2x': 360,
-    '4x': 240,
-    instant: 0,
+    '1x': 360,
+    '2x': 240,
+    '4x': 120,
+    '8x': 60,
 };
 const ACTIVE_SYMBOL_ASCENT_MS: Record<SettingsState['effectSpeed'], number> = {
-    '1x': 180,
-    '2x': 120,
-    '4x': 75,
-    instant: 0,
+    '1x': 120,
+    '2x': 75,
+    '4x': 38,
+    '8x': 19,
 };
 const PRODUCTION_STICKER_DEPTH = 0.11;
 const PRODUCTION_STICKER_LIFT = 0.05;
 const PRODUCTION_STICKER_DRIFT_X = 0.14;
 const PRODUCTION_STICKER_DRIFT_Y = 0.18;
 const PRODUCTION_STICKER_FLOAT_TIME_SCALE: Record<SettingsState['effectSpeed'], number> = {
-    '1x': 1,
-    '2x': 1.35,
-    '4x': 1.8,
-    instant: 1,
+    '1x': 1.35,
+    '2x': 1.8,
+    '4x': 3.6,
+    '8x': 7.2,
 };
 
 const clampPlaybackRate = (value: number) => Math.min(4, Math.max(0.25, value));
@@ -306,14 +306,15 @@ export class PixiGameApp {
     }
 
     private getActiveSlotMotion(cellHeight: number, effectSpeed: SettingsState['effectSpeed']) {
-        if (!this.activeSlotMotion || effectSpeed === 'instant') {
+        if (!this.activeSlotMotion) {
             return { x: 0, y: 0, shadowScale: 0, shadowAlpha: 0 };
         }
 
         const now = getNowMs();
         const liftY = -cellHeight * 0.18;
         const ascentMs = Math.max(1, ACTIVE_SYMBOL_ASCENT_MS[effectSpeed]);
-        const descentMs = Math.max(70, EFFECT_SPEED_DELAY[effectSpeed]);
+        const descentMinMs = effectSpeed === '8x' ? 35 : 70;
+        const descentMs = Math.max(descentMinMs, EFFECT_SPEED_DELAY[effectSpeed]);
         const phaseElapsed = now - this.activeSlotMotion.phaseStartedAtMs;
         const slotElapsed = now - this.activeSlotMotion.slotStartedAtMs;
 
@@ -371,11 +372,6 @@ export class PixiGameApp {
 
     private syncProductionScaleMotions(state: GameState, settings: SettingsState) {
         const effectSpeed = settings.effectSpeed;
-        if (effectSpeed === 'instant') {
-            this.productionScaleMotions.clear();
-            return;
-        }
-
         const now = getNowMs();
         const activeSlot = state.phase === 'processing' && state.effectPhase === 3 ? state.activeSlot : null;
         const activeKey = activeSlot ? `${activeSlot.x}:${activeSlot.y}` : null;
@@ -782,8 +778,7 @@ export class PixiGameApp {
         if (
             state.phase === 'processing' &&
             !!state.activeSlot &&
-            state.effectPhase != null &&
-            useSettingsStore.getState().effectSpeed !== 'instant'
+            state.effectPhase != null
         ) {
             needsTransientRender = true;
         }
@@ -838,17 +833,6 @@ export class PixiGameApp {
         // Reel spinning
         if (this.spinActive) {
             const spinConfig = SPIN_SPEED_CONFIG[useSettingsStore.getState().spinSpeed];
-
-            // instant: 즉시 완료
-            if (spinConfig.speedMul === 0) {
-                for (const reel of this.reels) {
-                    reel.scrollY = reel.targetScrollY;
-                    reel.stopped = true;
-                    reel.reelContainer.y = reel.stripInitialY + reel.scrollY;
-                }
-                this.finishSpin();
-                return;
-            }
 
             this.spinElapsed += dt;
             const REEL_SPEED = 1.2 * spinConfig.speedMul;
@@ -1112,22 +1096,24 @@ export class PixiGameApp {
                     : 0;
 
                 const symDef = symbol.definition;
+                const canUseBoardSymbolAction =
+                    state.phase === 'idle' || state.phase === 'food_payment';
                 const canButcherPasture =
-                    state.phase === 'idle' &&
+                    canUseBoardSymbolAction &&
                     (symDef.id === S.cattle || symDef.id === S.sheep) &&
                     !symbol.is_marked_for_destruction &&
                     boardHasAdjacentPlains(state.board, x, y);
                 const canOpenLoot =
-                    state.phase === 'idle' &&
+                    canUseBoardSymbolAction &&
                     !symbol.is_marked_for_destruction &&
                     isOpenableLoot(symDef.id);
                 const canUseEdict =
-                    state.phase === 'idle' &&
+                    canUseBoardSymbolAction &&
                     symDef.id === S.edict &&
                     !symbol.is_marked_for_destruction &&
                     boardHasDestroyableAdjacentSymbol(state.board, x, y);
                 const canConsumeTribalVillage =
-                    state.phase === 'idle' &&
+                    canUseBoardSymbolAction &&
                     symDef.id === S.tribal_village &&
                     !symbol.is_marked_for_destruction;
 
@@ -1184,7 +1170,13 @@ export class PixiGameApp {
                     actionBtn.addChild(lbl);
                     actionBtn.x = cellWidth / 2;
                     actionBtn.y = cellHeight / 2;
-                    actionBtn.visible = false;
+                    const pointer = this.pointerPosition?.source;
+                    actionBtn.visible =
+                        !!pointer &&
+                        pointer.x >= cellX &&
+                        pointer.x <= cellX + cellWidth &&
+                        pointer.y >= cellY &&
+                        pointer.y <= cellY + cellHeight;
                     actionBtn.eventMode = 'none';
                     cellRoot.addChild(actionBtn);
 

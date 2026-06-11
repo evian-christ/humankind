@@ -8,6 +8,7 @@ import {
   type LocalizedText,
 } from '../game/data/demoAchievements';
 import { t } from '../i18n';
+import InitialSetupScreen from './InitialSetupScreen';
 import PauseMenu from './PauseMenu';
 
 const textForLanguage = (text: LocalizedText, language: Language) => (
@@ -185,7 +186,7 @@ function DemoAchievementsPanel({ language }: { language: Language }) {
   );
 }
 
-export default function DemoStartScreen() {
+function DemoMainMenu({ isEntering = false }: { isEntering?: boolean }) {
   const language = useSettingsStore((s) => s.language);
   const proceedToLeaderSelect = usePreGameStore((s) => s.proceedToLeaderSelect);
   const proceedToLeaderProgress = usePreGameStore((s) => s.proceedToLeaderProgress);
@@ -244,14 +245,14 @@ export default function DemoStartScreen() {
   }, []);
 
   return (
-    <div className="demo-start-root">
+    <div className={`demo-start-root${isEntering ? ' demo-start-root--entering' : ''}`}>
       <div className="main-menu-proof-code" aria-label={`Steam proof code ${steamProofCode}`}>
         {steamProofCode}
       </div>
       <DemoAchievementsPanel language={language} />
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
-        <div className="main-menu-version" aria-label="version b1.2.0">
-          b1.2.0
+        <div className="main-menu-version" aria-label="version b1.2.2">
+          b1.2.2
         </div>
         <h1 className="main-menu-title main-menu-title--image">
           <img
@@ -364,4 +365,21 @@ export default function DemoStartScreen() {
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
   );
+}
+
+export default function DemoStartScreen() {
+  const initialSetupComplete = useSettingsStore((s) => s.initialSetupComplete);
+  const completeInitialSetup = useSettingsStore((s) => s.completeInitialSetup);
+  const [mainMenuEntering, setMainMenuEntering] = useState(false);
+
+  return initialSetupComplete
+    ? <DemoMainMenu isEntering={mainMenuEntering} />
+    : (
+      <InitialSetupScreen
+        onComplete={() => {
+          setMainMenuEntering(true);
+          completeInitialSetup();
+        }}
+      />
+    );
 }
