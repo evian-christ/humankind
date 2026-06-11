@@ -460,9 +460,6 @@ export const createTurnFlowActions = ({
             const bonusKnowledge = post.bonusKnowledge;
             const bonusAddSymbolIds = post.addSymbolIds;
             const agiVictory = post.agiVictory;
-            if (post.refreshRelicShop) {
-                get().refreshRelicShop(true);
-            }
             const relicOwnEffectFloats = post.relicOwnEffectFloats;
             const knowledgeOwnEffectFloats = post.knowledgeOwnEffectFloats;
             const urWheelInstanceId: string | null = post.urWheelPlan?.instanceId ?? null;

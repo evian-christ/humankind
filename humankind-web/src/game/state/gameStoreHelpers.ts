@@ -1,6 +1,6 @@
 import { SYMBOLS, S, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
-import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID } from '../data/knowledgeUpgrades';
+import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID } from '../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import { RELIC_ID } from '../logic/relics/relicIds';
 import { useRelicStore } from './relicStore';

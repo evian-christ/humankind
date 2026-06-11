@@ -2,13 +2,8 @@ import type { LeaderId } from '../../data/leaders';
 import { isLeaderUnlockActive } from '../../data/leaders';
 import type { PlayerSymbolInstance } from '../../types';
 import { FOOD_PRODUCING_IDS, GOLD_PRODUCING_IDS, KNOWLEDGE_PRODUCING_IDS, SymbolType, S } from '../../data/symbolDefinitions';
-import {
-    CARAVANSERAI_UPGRADE_ID,
-    HORSEMANSHIP_UPGRADE_ID,
-} from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
 import { countNonConsumableRelics } from '../relics/relicClassification';
-import { randomBaseNormalSymbolId } from '../symbolEffects/core';
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];
 export type EffectEntry = { x: number; y: number; food: number; gold: number; knowledge: number };
@@ -44,7 +39,6 @@ export interface PostEffectsResult {
     bonusGold: number;
     bonusKnowledge: number;
     agiVictory: boolean;
-    refreshRelicShop: boolean;
     relicOwnEffectFloats: RelicFloat[];
     knowledgeOwnEffectFloats: KnowledgeFloat[];
     /** 우르 전차 바퀴(3) 처리 계획(애니메이션은 호출자가 결정) */
@@ -75,8 +69,6 @@ export function runPostEffectsHooks(args: {
         leaderProgressLevel = 1,
         currentEra = 1,
         currentGold = 0,
-        unlockedKnowledgeUpgrades,
-        getAdjacentCoords,
         relics,
         ownedSymbols = [],
         relicStoreApi,
@@ -100,7 +92,6 @@ export function runPostEffectsHooks(args: {
     let bonusGold = 0;
     let bonusKnowledge = 0;
     let agiVictory = false;
-    let refreshRelicShop = false;
     const addSymbolIds: number[] = [];
     const relicOwnEffectFloats: RelicFloat[] = [];
     const knowledgeOwnEffectFloats: KnowledgeFloat[] = [];
@@ -606,7 +597,6 @@ export function runPostEffectsHooks(args: {
         bonusGold,
         bonusKnowledge,
         agiVictory,
-        refreshRelicShop,
         relicOwnEffectFloats,
         knowledgeOwnEffectFloats,
         urWheelPlan,

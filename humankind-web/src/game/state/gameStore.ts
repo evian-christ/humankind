@@ -57,26 +57,6 @@ export const BOARD_CELL_HEIGHT_PX   = 163.2;  // 1920 기준 셀 세로
 export const BOARD_COL_GAP_PX       = 12;     // 1920 기준 열 간격
 /** slot_bg 스프라이트가 보드 바깥으로 더 나오는 여백(1920 기준) */
 export const BOARD_BG_SPRITE_PADDING_PX = 8;
-
-
-
-/** 작물 심볼 ID 목록 (카르멜 산 화덕 재 효과용) */
-const _CROP_SYMBOL_IDS = [S.wheat, S.rice, S.banana, S.fish]; // Wheat, Rice, Banana, Fish
-
-// 시대별 심볼 등장 확률 테이블 (종교 미해금)
-const _ERA_PROBABILITIES_BASE: Record<number, Record<number, number>> = {
-    1: { 1: 75, 2: 0, 3: 0, 4: 25 },
-    2: { 1: 40, 2: 45, 3: 0, 4: 15 },
-    3: { 1: 20, 2: 35, 3: 35, 4: 10 },
-};
-
-// 시대별 심볼 등장 확률 테이블 (특수 0 해금 후)
-const _ERA_PROBABILITIES_WITH_SPECIAL: Record<number, Record<number, number>> = {
-    1: { 0: 0, 1: 75, 2: 0, 3: 0, 4: 25 },
-    2: { 0: 10, 1: 35, 2: 40, 3: 0, 4: 15 },
-    3: { 0: 10, 1: 20, 2: 30, 3: 30, 4: 10 },
-};
-
 export type GamePhase =
     | 'idle'
     | 'spinning'

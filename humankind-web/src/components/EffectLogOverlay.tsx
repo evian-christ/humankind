@@ -442,7 +442,6 @@ const getEntryTitle = (entry: GameEventLogEntry, language: Language) => {
 
 const getEntrySubtitle = (entry: GameEventLogEntry, language: Language) => {
     const meta = isRecord(entry.meta) ? entry.meta : {};
-    const action = asString(meta.action);
     const parts: string[] = [];
 
     if (entry.slot) parts.push(slotLabel(entry.slot, language));

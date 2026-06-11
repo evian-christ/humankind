@@ -254,11 +254,6 @@ export function createSlotEffectPipeline(args: CreateSlotEffectPipelineArgs): Sl
     };
 }
 
-export function shouldDeferReligionEffect(symbolId: number): boolean {
-    void symbolId;
-    return false;
-}
-
 const isBeforeSlot = (candidate: { x: number; y: number }, active: { x: number; y: number }): boolean =>
     candidate.y < active.y || (candidate.y === active.y && candidate.x < active.x);
 

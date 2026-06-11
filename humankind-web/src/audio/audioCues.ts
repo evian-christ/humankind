@@ -25,11 +25,6 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         volume: 0.42,
         preload: true,
     },
-    reel_stop: {
-        src: audioUrl('reel_stop.wav'),
-        volume: 0.54,
-        preload: true,
-    },
     button_hover: {
         src: audioUrl('board_screen/button_hover.wav'),
         volume: 0.42,
@@ -90,10 +85,6 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         volume: 0.72,
         preload: true,
     },
-    symbol_activate: {
-        src: audioUrl('symbol_activate.wav'),
-        volume: 0.66,
-    },
     resource_food: {
         src: audioUrl('board_screen/food_add.wav'),
         volume: 0.66,
@@ -130,30 +121,10 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         loop: true,
         preload: true,
     },
-    combat_hit: {
-        src: audioUrl('combat_hit.wav'),
-        volume: 0.9,
-    },
-    symbol_destroy: {
-        src: audioUrl('symbol_destroy.wav'),
-        volume: 0.78,
-    },
-    era_transition: {
-        src: audioUrl('era_transition.wav'),
-        volume: 1.02,
-    },
     selection_open: {
         src: audioUrl('board_screen/symbol_choice_open.wav'),
         volume: 0.6,
         preload: true,
-    },
-    game_over: {
-        src: audioUrl('game_over.wav'),
-        volume: 0.1,
-    },
-    victory: {
-        src: audioUrl('victory.wav'),
-        volume: 1.08,
     },
     main_theme: {
         src: audioUrl('board_screen/bgm/main_theme.mp3'),
@@ -277,11 +248,6 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         layer: 'gameplay',
         description: 'Looping reel motion bed while the board spin animation is active.',
     },
-    reel_stop: {
-        id: 'reel_stop',
-        layer: 'gameplay',
-        description: 'A slot reel column settles into its final board position.',
-    },
     button_hover: {
         id: 'button_hover',
         layer: 'ui',
@@ -342,11 +308,6 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         layer: 'ui',
         description: 'The symbol choice options are rerolled.',
     },
-    symbol_activate: {
-        id: 'symbol_activate',
-        layer: 'gameplay',
-        description: 'A symbol becomes the active effect slot during turn processing.',
-    },
     resource_food: {
         id: 'resource_food',
         layer: 'gameplay',
@@ -382,35 +343,10 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         layer: 'milestone',
         description: 'Looping leader progress XP fill sound with pitch tied to bar fill percent.',
     },
-    combat_hit: {
-        id: 'combat_hit',
-        layer: 'combat',
-        description: 'A combat unit attacks or damages an adjacent target.',
-    },
-    symbol_destroy: {
-        id: 'symbol_destroy',
-        layer: 'gameplay',
-        description: 'A board symbol is removed by combat, a relic, or an effect.',
-    },
-    era_transition: {
-        id: 'era_transition',
-        layer: 'milestone',
-        description: 'Knowledge progression advances the run into a new era.',
-    },
     selection_open: {
         id: 'selection_open',
         layer: 'ui',
         description: 'A symbol, relic, or upgrade choice overlay opens.',
-    },
-    game_over: {
-        id: 'game_over',
-        layer: 'milestone',
-        description: 'The run fails after turn-end phase resolution.',
-    },
-    victory: {
-        id: 'victory',
-        layer: 'milestone',
-        description: 'The run reaches a victory condition.',
     },
     main_theme: {
         id: 'main_theme',

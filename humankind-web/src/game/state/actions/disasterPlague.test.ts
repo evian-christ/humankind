@@ -2,8 +2,32 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createInstance, createEmptyBoard } from '../gameStoreHelpers';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import { handleDisasterEffects } from '../../logic/symbolEffects/handlers/disasterEffects';
+import { createEffectState } from '../../logic/symbolEffects/core';
+import { DEFAULT_RELIC_EFFECTS, type ActiveRelicEffects } from '../../logic/symbolEffects/types';
 import { createSelectionFlowActions } from './selectionFlow';
 import type { GameState } from '../gameStore';
+import type { PlayerSymbolInstance } from '../../types';
+
+const runDisasterEffect = (
+    symbolInstance: PlayerSymbolInstance,
+    initialFood = 0,
+    relicEffectOverrides: Partial<ActiveRelicEffects> = {},
+) => {
+    const state = createEffectState();
+    state.food = initialFood;
+    const handled = handleDisasterEffects({
+        symbolInstance,
+        boardGrid: createEmptyBoard(),
+        x: 0,
+        y: 0,
+        ctx: { upgrades: [] },
+        relicEffects: { ...DEFAULT_RELIC_EFFECTS, ...relicEffectOverrides },
+        state,
+        adj: [],
+        upgrades: [],
+    });
+    return { handled, state };
+};
 
 describe('Disaster Plague (ID 78) Tests', () => {
     afterEach(() => {
@@ -48,12 +72,7 @@ describe('Disaster Plague (ID 78) Tests', () => {
             plagueInstance.effect_counter = 3;
             plagueInstance.is_marked_for_destruction = false;
 
-            const stateMock = { food: 0 } as any;
-            const handled = handleDisasterEffects({
-                symbolInstance: plagueInstance,
-                relicEffects: {},
-                state: stateMock,
-            } as any);
+            const { handled } = runDisasterEffect(plagueInstance);
 
             expect(handled).toBe(true);
             expect(plagueInstance.effect_counter).toBe(2);
@@ -65,12 +84,7 @@ describe('Disaster Plague (ID 78) Tests', () => {
             plagueInstance.effect_counter = 1;
             plagueInstance.is_marked_for_destruction = false;
 
-            const stateMock = { food: 0 } as any;
-            const handled = handleDisasterEffects({
-                symbolInstance: plagueInstance,
-                relicEffects: {},
-                state: stateMock,
-            } as any);
+            const { handled } = runDisasterEffect(plagueInstance);
 
             expect(handled).toBe(true);
             expect(plagueInstance.effect_counter).toBe(0);
@@ -81,15 +95,14 @@ describe('Disaster Plague (ID 78) Tests', () => {
             const plagueInstance = createInstance(SYMBOLS[S.plague]!, []);
             plagueInstance.effect_counter = 2;
 
-            const stateMock = { food: 10 } as any;
-            const handled = handleDisasterEffects({
-                symbolInstance: plagueInstance,
-                relicEffects: { terraFossilDisasterFood: true },
-                state: stateMock,
-            } as any);
+            const { handled, state } = runDisasterEffect(
+                plagueInstance,
+                10,
+                { terraFossilDisasterFood: true },
+            );
 
             expect(handled).toBe(true);
-            expect(stateMock.food).toBe(12);
+            expect(state.food).toBe(12);
         });
     });
 

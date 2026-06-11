@@ -37,7 +37,6 @@ const GOLD_INFLATION_LINEAR_PER_LEVEL = 0.05;
 const GOLD_INFLATION_QUADRATIC_PER_LEVEL = 0.0017;
 
 // Turn-only fiction timeline for HUD display.
-// Source of truth: anchors_temp.ts keeps the full 0-100 turn year curve.
 export const TIMELINE_YEAR_ANCHORS = [
     { turn: 0, year: -10000 },
     { turn: 1, year: -8500 },

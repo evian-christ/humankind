@@ -173,8 +173,8 @@ export function computeReligionDeferredEffects(args: {
             if (maxAdjFood === -Infinity) maxAdjFood = 0;
 
             let food = 0;
-            let gold = 0;
-            let knowledge = 0;
+            const gold = 0;
+            const knowledge = 0;
             if (sym.definition.id === S.christianity) {
                 food = hasTheocracy ? Math.max(boardWideMaxFood, maxAdjFood) : maxAdjFood;
             } else if (sym.definition.id === S.islam) {

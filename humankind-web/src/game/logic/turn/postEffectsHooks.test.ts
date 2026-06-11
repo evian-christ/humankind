@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runPostEffectsHooks } from './postEffectsHooks';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
-import { SymbolType } from '../../data/symbolTypes';
 import { CARAVANSERAI_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { RELIC_ID } from '../relics/relicIds';
 import type { PlayerSymbolInstance } from '../../types';
@@ -354,30 +353,6 @@ describe('postEffectsHooks', () => {
 
         expect(result.bonusKnowledge).toBe(0);
         expect(effects).toEqual([]);
-    });
-
-    it('does not defer Relic Caravan shop refresh to post effects', () => {
-        const board = createEmptyBoard();
-        const relicCaravan = createInstance(SYMBOLS[S.relic_caravan]!, 'relic-caravan');
-        relicCaravan.is_marked_for_destruction = true;
-        board[1][1] = relicCaravan;
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [],
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(result.refreshRelicShop).toBe(false);
     });
 
     it('lets AGI Core absorb all board knowledge production and trigger victory at 500', () => {
