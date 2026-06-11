@@ -35,7 +35,7 @@ export const createRelicActivationActions = ({
 }: RelicActivationDeps) => ({
     activateClickableRelic: (instanceId: string) => {
         const state = get();
-        if (state.phase !== 'idle') return;
+        if (state.phase !== 'idle' && state.phase !== 'food_payment') return;
         const relic = useRelicStore.getState().relics.find((r) => r.instanceId === instanceId);
         if (!relic) return;
         const defId = relic.definition.id;

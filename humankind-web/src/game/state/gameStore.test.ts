@@ -81,6 +81,38 @@ describe('gameStore pasture butchering', () => {
         lootChoicesSpy.mockRestore();
     });
 
+    it('levels up immediately when a player action grants enough knowledge', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const loot = createInstance(Sym.loot, 'knowledge_loot');
+        board[1][1] = loot;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [loot],
+            phase: 'loot_reward_selection',
+            pendingLootSlot: { x: 1, y: 1, symbolId: Sym.loot.id },
+            era: 0,
+            level: 0,
+            knowledge: 49,
+            levelUpResearchPoints: 0,
+            knowledgeResearchCredits: [],
+            lastEffects: [],
+        });
+
+        useGameStore.getState().selectLootReward(11);
+
+        const next = useGameStore.getState();
+        expect(next.level).toBe(1);
+        expect(next.era).toBe(1);
+        expect(next.knowledge).toBe(3);
+        expect(next.levelUpResearchPoints).toBe(1);
+        expect(next.knowledgeResearchCredits).toEqual([
+            { grantLevel: 1, minLevel: 1, maxLevel: 1 },
+        ]);
+    });
+
     it('increments adjacent plains counters when Pasture Management is researched', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
@@ -281,6 +313,59 @@ describe('gameStore pasture butchering', () => {
         expect(useRelicStore.getState().relics).toHaveLength(0);
     });
 
+    it('allows a consumable relic to open its selection while food payment is pending', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+
+        useRelicStore.getState().resetRelics();
+        useRelicStore.getState().addRelic(RELICS[RELIC_ID.MILITARY_LEVY]!);
+        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
+
+        useGameStore.setState({
+            phase: 'food_payment',
+            pendingFoodPayment: true,
+            era: 1,
+            religionUnlocked: false,
+            unlockedKnowledgeUpgrades: [],
+            symbolChoices: [],
+            symbolSelectionRelicSourceId: null,
+        });
+
+        useGameStore.getState().activateClickableRelic(relicInstanceId);
+
+        const next = useGameStore.getState();
+        expect(next.phase).toBe('selection');
+        expect(next.pendingFoodPayment).toBe(true);
+        expect(next.symbolSelectionRelicSourceId).toBe(RELIC_ID.MILITARY_LEVY);
+        expect(useRelicStore.getState().relics).toHaveLength(0);
+        useGameStore.setState({ pendingFoodPayment: false });
+    });
+
+    it('allows an instant-use relic during food payment without leaving the payment phase', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+
+        useRelicStore.getState().resetRelics();
+        useRelicStore.getState().addRelic(RELICS[RELIC_ID.EGYPTIAN_GRANARY_MODEL]!);
+        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
+
+        useGameStore.setState({
+            phase: 'food_payment',
+            pendingFoodPayment: true,
+            era: 1,
+            food: 0,
+            relicFloats: [],
+        });
+
+        useGameStore.getState().activateClickableRelic(relicInstanceId);
+
+        const next = useGameStore.getState();
+        expect(next.phase).toBe('food_payment');
+        expect(next.pendingFoodPayment).toBe(true);
+        expect(next.food).toBe(30);
+        useGameStore.setState({ pendingFoodPayment: false });
+    });
+
     it('scales Trojan Gold Loot with gold inflation before the era changes', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
@@ -385,5 +470,128 @@ describe('gameStore pasture butchering', () => {
         expect(storeAfterSecondSelect.phase).toBe('idle');
         expect(storeAfterSecondSelect.bonusSelectionQueue).toEqual([]);
         expect(storeAfterSecondSelect.symbolSelectionSymbolSourceId).toBeNull();
+    });
+
+    it('allows pasture animals to be butchered during food payment', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const cattle = createInstance(Sym.cattle, 'payment_cattle');
+        const plains = createInstance(Sym.plains, 'payment_plains');
+        board[1][1] = cattle;
+        board[0][0] = plains;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [cattle, plains],
+            phase: 'food_payment',
+            pendingFoodPayment: true,
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            unlockedKnowledgeUpgrades: [],
+            lastEffects: [],
+        });
+
+        useGameStore.getState().butcherPastureAnimalAt(1, 1);
+
+        expect(useGameStore.getState().board[1][1]).toBeNull();
+        expect(useGameStore.getState().phase).toBe('food_payment');
+        expect(useGameStore.getState().food).toBe(10);
+        useGameStore.setState({ pendingFoodPayment: false });
+    });
+
+    it('returns to food payment after opening loot during food payment', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const rewardMod = await import('../data/rewardDefinitions');
+        const lootChoicesSpy = vi.spyOn(rewardMod, 'generateLootRewardChoices').mockReturnValue([
+            rewardMod.REWARDS[1]!,
+        ]);
+        const board = createEmptyBoard();
+        const loot = createInstance(Sym.loot, 'payment_loot');
+        board[1][1] = loot;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [loot],
+            phase: 'food_payment',
+            pendingFoodPayment: true,
+            era: 1,
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+        });
+
+        useGameStore.getState().openLootAt(1, 1);
+        useGameStore.getState().selectLootReward(1);
+
+        expect(useGameStore.getState().phase).toBe('food_payment');
+        expect(useGameStore.getState().food).toBe(8);
+        lootChoicesSpy.mockRestore();
+        useGameStore.setState({ pendingFoodPayment: false });
+    });
+
+    it('returns to food payment after using an edict during food payment', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const edict = createInstance(Sym.edict, 'payment_edict');
+        const wheat = createInstance(Sym.wheat, 'payment_wheat');
+        board[1][1] = edict;
+        board[2][1] = wheat;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [edict, wheat],
+            phase: 'food_payment',
+            pendingFoodPayment: true,
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+        });
+
+        useGameStore.getState().activateEdictAt(1, 1);
+        vi.useFakeTimers();
+        try {
+            useGameStore.getState().confirmEdictDestroyAt(2, 1);
+            expect(useGameStore.getState().phase).toBe('food_payment');
+            await vi.advanceTimersByTimeAsync(360);
+        } finally {
+            vi.useRealTimers();
+            useGameStore.setState({ pendingFoodPayment: false });
+        }
+    });
+
+    it('returns to food payment after consuming a tribal village during food payment', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const board = createEmptyBoard();
+        const village = createInstance(Sym.tribal_village, 'payment_village');
+        board[1][1] = village;
+
+        useGameStore.setState({
+            board,
+            playerSymbols: [village],
+            phase: 'food_payment',
+            pendingFoodPayment: true,
+            era: 1,
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            lastEffects: [],
+            bonusSelectionQueue: [],
+        });
+
+        useGameStore.getState().consumeTribalVillageAt(1, 1);
+        expect(useGameStore.getState().phase).toBe('selection');
+        useGameStore.getState().skipSelection();
+        useGameStore.getState().skipSelection();
+
+        expect(useGameStore.getState().phase).toBe('food_payment');
+        expect(useGameStore.getState().pendingFoodPayment).toBe(true);
+        useGameStore.setState({ pendingFoodPayment: false });
     });
 });

@@ -795,6 +795,22 @@ describe('selectionFlow actions', () => {
         expect(harness.get().pendingOblivionFurnaceRelicId).toBeNull();
     });
 
+    it('returns to food payment when an oblivion furnace pick is cancelled during pending payment', () => {
+        const relicDef = RELICS[RELIC_ID.OBLIVION_FURNACE]!;
+        useRelicStore.getState().addRelic(relicDef);
+        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
+        const harness = createHarness({
+            phase: 'oblivion_furnace_board',
+            pendingFoodPayment: true,
+            pendingOblivionFurnaceRelicId: relicInstanceId,
+        });
+
+        harness.actions.cancelOblivionFurnacePick();
+
+        expect(harness.get().phase).toBe('food_payment');
+        expect(harness.get().pendingOblivionFurnaceRelicId).toBeNull();
+    });
+
     it('unlocks AGI Project without immediately granting AGI Core', () => {
         const harness = createHarness({
             phase: 'idle',

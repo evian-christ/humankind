@@ -27,6 +27,7 @@ import {
     isKnowledgeUpgradeLockedByResearchCutoff,
 } from '../data/knowledgeUpgradeTiers';
 import { SymbolType } from '../data/symbolDefinitions';
+import { applyKnowledgeAndLevelUps } from '../logic/progression/eraTransition';
 
 const KNOWLEDGE_LEVELUP_BASE = 50;
 const KNOWLEDGE_LEVELUP_STEP = 5;
@@ -367,6 +368,48 @@ export const getEraFromLevel = (level: number): number => {
     if (level < 10) return 1;
     if (level < 20) return 2;
     return 3;
+};
+
+export const resolveKnowledgeProgression = (
+    state: {
+        level: number;
+        knowledge: number;
+        levelUpResearchPoints: number;
+        knowledgeResearchCredits?: readonly KnowledgeResearchCredit[] | null;
+    },
+    deltaKnowledge: number,
+): {
+    knowledge: number;
+    level: number;
+    era: number;
+    levelUpResearchPoints: number;
+    knowledgeResearchCredits: KnowledgeResearchCredit[];
+} => {
+    const progression = applyKnowledgeAndLevelUps(
+        {
+            level: state.level,
+            knowledge: state.knowledge,
+            deltaKnowledge,
+            getEraFromLevel,
+        },
+        getKnowledgeRequiredForLevel,
+    );
+    const knowledgeResearchCredits = [
+        ...normalizeKnowledgeResearchCredits(
+            state.level,
+            state.levelUpResearchPoints ?? 0,
+            state.knowledgeResearchCredits,
+        ),
+        ...createKnowledgeResearchCreditsForLevelGain(state.level, progression.newLevel),
+    ];
+
+    return {
+        knowledge: progression.newKnowledge,
+        level: progression.newLevel,
+        era: progression.newEra,
+        levelUpResearchPoints: knowledgeResearchCredits.length,
+        knowledgeResearchCredits,
+    };
 };
 
 export const calculateFoodCost = (turn: number): number => {

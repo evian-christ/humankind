@@ -61,6 +61,7 @@ import {
     getRerollCost,
     isUpgradeLegalForKnowledgePick,
     normalizeKnowledgeResearchCredits,
+    resolveKnowledgeProgression,
 } from '../gameCalculations';
 import { saveGameState } from '../saveGame';
 import type { GamePhase, GameState } from '../gameStore';
@@ -501,7 +502,7 @@ export const createSelectionFlowActions = ({
 
         if (foodDelta !== 0) patch.food = state.food + foodDelta;
         if (goldDelta !== 0) patch.gold = state.gold + goldDelta;
-        if (knowledgeDelta !== 0) patch.knowledge = state.knowledge + knowledgeDelta;
+        if (knowledgeDelta !== 0) Object.assign(patch, resolveKnowledgeProgression(state, knowledgeDelta));
 
         set({
             ...patch,
@@ -802,7 +803,7 @@ export const createSelectionFlowActions = ({
         const rewardPatch = (s: GameState) => ({
             food: s.food + dFood,
             gold: s.gold + dGold,
-            knowledge: s.knowledge + dKnowledge,
+            ...resolveKnowledgeProgression(s, dKnowledge),
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
@@ -822,7 +823,7 @@ export const createSelectionFlowActions = ({
             board: markedBoard,
             playerSymbols: newSymbols,
             lastEffects: [...(state.lastEffects ?? []), ...boardEffects],
-            phase: phaseAfterTurnFlowComplete(),
+            phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
             pendingOblivionFurnaceRelicId: null,
             destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
         });
@@ -854,7 +855,7 @@ export const createSelectionFlowActions = ({
         const state = get();
         if (state.phase !== 'oblivion_furnace_board') return;
         set({
-            phase: phaseAfterTurnFlowComplete(),
+            phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
             pendingOblivionFurnaceRelicId: null,
         });
     },

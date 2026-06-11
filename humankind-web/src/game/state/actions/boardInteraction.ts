@@ -22,6 +22,7 @@ import {
     REWARDS,
     type LootTier,
 } from '../../data/rewardDefinitions';
+import { resolveKnowledgeProgression } from '../gameCalculations';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -45,6 +46,12 @@ const isBoardDestroyBlockedType = (type: SymbolType) =>
 
 const BOARD_DESTROY_BLINK_DURATION_MS = 360;
 
+const isBoardActionPhase = (phase: GameState['phase']) =>
+    phase === 'idle' || phase === 'food_payment';
+
+const phaseAfterBoardAction = (state: GameState): GameState['phase'] =>
+    state.pendingFoodPayment ? 'food_payment' : 'idle';
+
 const getNowMs = () =>
     typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
         ? globalThis.performance.now()
@@ -60,7 +67,7 @@ const destroyedSymbol = (symbol: { definition: { id: number }; instanceId: strin
 export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: BoardInteractionDeps) => ({
     butcherPastureAnimalAt: (x: number, y: number) => {
         const prev = get();
-        if (prev.phase !== 'idle') return;
+        if (!isBoardActionPhase(prev.phase)) return;
         const sym = prev.board[x]?.[y];
         const sid = sym?.definition.id;
         if (!sym || sym.is_marked_for_destruction || (sid !== S.cattle && sid !== S.sheep)) return;
@@ -96,13 +103,12 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             symAgg.addSymbolDefIds,
             prev.unlockedKnowledgeUpgrades || [],
         );
-
         set({
             board: newBoard,
             playerSymbols: newSymbols,
             food: prev.food + dFood,
             gold: prev.gold + dGold,
-            knowledge: prev.knowledge + dKnowledge,
+            ...resolveKnowledgeProgression(prev, dKnowledge),
             forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
@@ -126,7 +132,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
     },
     openLootAt: (x: number, y: number) => {
         const prev = get();
-        if (prev.phase !== 'idle') return;
+        if (!isBoardActionPhase(prev.phase)) return;
         const loot = prev.board[x]?.[y];
         const sid = loot?.definition.id;
         if (!loot || loot.is_marked_for_destruction || !LOOT_IDS.has(sid ?? -1)) return;
@@ -174,9 +180,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             playerSymbols: newPlayerSymbols,
             food: prev.food + food,
             gold: prev.gold + gold,
-            knowledge: prev.knowledge + knowledge,
+            ...resolveKnowledgeProgression(prev, knowledge),
             lastEffects: [...prev.lastEffects, { x, y, food, gold, knowledge }],
-            phase: 'idle',
+            phase: phaseAfterBoardAction(prev),
             lootRewardChoices: [],
             pendingLootSlot: null,
         });
@@ -220,7 +226,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
     },
     activateEdictAt: (x: number, y: number) => {
         const prev = get();
-        if (prev.phase !== 'idle') return;
+        if (!isBoardActionPhase(prev.phase)) return;
         const edict = prev.board[x]?.[y];
         if (!edict || edict.definition.id !== S.edict || edict.is_marked_for_destruction) return;
 
@@ -293,13 +299,13 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             playerSymbols: newSymbols,
             food: state.food + dFood,
             gold: state.gold + dGold,
-            knowledge: state.knowledge + dKnowledge,
+            ...resolveKnowledgeProgression(state, dKnowledge),
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: state.isRelicShopOpen || symAgg.openRelicShop,
             lastEffects: [...state.lastEffects, ...boardEffects],
-            phase: 'idle',
+            phase: phaseAfterBoardAction(state),
             pendingEdictSource: null,
             pendingOblivionFurnaceRelicId: null,
             destroyRemovalBlinkStartedAtMs: getNowMs(),
@@ -333,14 +339,14 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const state = get();
         if (state.phase !== 'oblivion_furnace_board' || !state.pendingEdictSource) return;
         set({
-            phase: 'idle',
+            phase: phaseAfterBoardAction(state),
             pendingEdictSource: null,
             pendingOblivionFurnaceRelicId: null,
         });
     },
     consumeTribalVillageAt: (x: number, y: number) => {
         const prev = get();
-        if (prev.phase !== 'idle') return;
+        if (!isBoardActionPhase(prev.phase)) return;
         const sym = prev.board[x]?.[y];
         const sid = sym?.definition.id;
         if (!sym || sym.is_marked_for_destruction || sid !== S.tribal_village) return;
@@ -365,8 +371,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         );
 
         // 첫 번째 standard 선택지 계산
+        const knowledgeProgression = resolveKnowledgeProgression(prev, dKnowledge);
         const selCtx = {
-            era: prev.era,
+            era: knowledgeProgression.era,
             religionUnlocked: prev.religionUnlocked,
             upgrades: (prev.unlockedKnowledgeUpgrades || []).map(Number),
             ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
@@ -392,7 +399,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             playerSymbols: newSymbols,
             food: prev.food + dFood,
             gold: prev.gold + dGold,
-            knowledge: prev.knowledge + dKnowledge,
+            ...knowledgeProgression,
             forceTerrainInNextSymbolChoices: nextForceTerrain,
             forceEventsInNextSymbolChoices: nextForceEvents,
             freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
