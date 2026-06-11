@@ -116,6 +116,7 @@ const clampGain = (value: number) => Math.min(8, Math.max(0, Number.isFinite(val
 const DEFAULT_LOOP_FADE_IN_MS = 650;
 const MIN_LOOP_FADE_IN_MS = 250;
 const MAIN_THEME_MIN_FADE_IN_MS = 3000;
+const MUSIC_OUTPUT_GAIN = 0.5;
 const DEFAULT_PLAYLIST_GAP_MIN_MS = 2000;
 const DEFAULT_PLAYLIST_GAP_MAX_MS = 3000;
 
@@ -678,7 +679,7 @@ export class AudioManager {
 
     private resolveMusicGain(cueVolume: number, playVolume: number) {
         if (this.muted) return 0;
-        return clamp01(this.masterVolume * this.musicVolume * cueVolume * playVolume);
+        return clamp01(this.masterVolume * this.musicVolume * cueVolume * playVolume * MUSIC_OUTPUT_GAIN);
     }
 
     private resolveAmbientGain(cueVolume: number, playVolume: number) {
