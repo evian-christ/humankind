@@ -45,7 +45,6 @@ const RelicSelection = () => {
     const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
     const phase = useGameStore((s) => s.phase);
     const language = useSettingsStore((s) => s.language);
-    const developerMode = useSettingsStore((s) => s.developerMode);
     const [purchaseDeniedHint, setPurchaseDeniedHint] = useState<{ key: number; slotIndex: number } | null>(null);
     const purchaseInputLockedRef = useRef(true);
 
@@ -62,7 +61,7 @@ const RelicSelection = () => {
     }, [isRelicShopOpen]);
 
     useEffect(() => {
-        if (!isRelicShopOpen || !developerMode) return;
+        if (!import.meta.env.DEV || !isRelicShopOpen) return;
 
         const handleKeyDown = (event: KeyboardEvent) => {
             const target = event.target as HTMLElement | null;
@@ -75,7 +74,7 @@ const RelicSelection = () => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [developerMode, isRelicShopOpen, refreshRelicShop]);
+    }, [isRelicShopOpen, refreshRelicShop]);
 
     if (!isRelicShopOpen) return null;
 

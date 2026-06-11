@@ -43,9 +43,6 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'settings.musicVolume': 'Музыка',
     'settings.ambientVolume': 'Окружение',
     'settings.effectVolume': 'Эффекты',
-    'settings.developerMode': 'Режим разработчика',
-    'settings.developerMode.on': 'Вкл.',
-    'settings.developerMode.off': 'Выкл.',
     'settings.crtEffect': 'Эффект CRT',
     'settings.crtEffect.on': 'Вкл.',
     'settings.crtEffect.off': 'Выкл.',
@@ -615,8 +612,4 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'knowledgeUpgrade.73.name': 'Племенная федерация',
     'knowledgeUpgrade.74.name': 'Наемники',
     'knowledgeUpgrade.75.name': 'Всеобщая мобилизация',
-    'knowledgeUpgrade.obsolete.11.name': 'Золотая торговля',
-    'knowledgeUpgrade.obsolete.12.name': 'Хранилище реликвий',
-    'knowledgeUpgrade.obsolete.13.name': 'Процветание неба и земли',
-    'knowledgeUpgrade.obsolete.14.name': 'Основания объединения',
 };

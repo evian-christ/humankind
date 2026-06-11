@@ -5,7 +5,6 @@ import {
     type BalanceSimulationSummary,
     type BalanceUpgradeStrategy,
 } from '../game/simulation/balanceSimulator';
-import { useSettingsStore } from '../game/state/settingsStore';
 
 const panelStyle: CSSProperties = {
     position: 'fixed',
@@ -59,12 +58,10 @@ const BalanceSimulatorOverlay = () => {
     const [running, setRunning] = useState(false);
     const [runNumber, setRunNumber] = useState(0);
     const [lastSeed, setLastSeed] = useState<number | null>(null);
-    const developerMode = useSettingsStore((s) => s.developerMode);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.code === 'F4') {
-                if (!useSettingsStore.getState().developerMode) return;
                 const target = e.target as HTMLElement;
                 if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
                 e.preventDefault();
@@ -78,10 +75,6 @@ const BalanceSimulatorOverlay = () => {
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
-
-    useEffect(() => {
-        if (!developerMode) setOpen(false);
-    }, [developerMode]);
 
     const topPicked = useMemo(() => summary?.topPickedSymbols.slice(0, 12) ?? [], [summary]);
 

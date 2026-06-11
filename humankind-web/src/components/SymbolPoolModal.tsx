@@ -42,14 +42,12 @@ const SymbolPoolModal = () => {
     const [open, setOpen] = useState(false);
     const { era, religionUnlocked } = useGameStore();
     const language = useSettingsStore((s) => s.language);
-    const developerMode = useSettingsStore((s) => s.developerMode);
 
     useRegisterBoardTooltipBlock('symbol-pool-modal', open);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.code !== 'F3') return;
-            if (!useSettingsStore.getState().developerMode) return;
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
             e.preventDefault();
@@ -58,10 +56,6 @@ const SymbolPoolModal = () => {
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
-
-    useEffect(() => {
-        if (!developerMode) setOpen(false);
-    }, [developerMode]);
 
     const probabilities = useMemo(() => {
         if (!open) return [];
@@ -149,6 +143,8 @@ const SymbolPoolModal = () => {
                         </span>
                         <button
                             onClick={() => setOpen(false)}
+                            aria-label={t('ownedSymbols.close', language)}
+                            title={t('ownedSymbols.close', language)}
                             style={{
                                 background: 'none',
                                 border: '1px solid #4b5563',

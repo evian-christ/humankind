@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import { useGameStore } from './game/state/gameStore';
+import { scheduleGameLifecycleTimeout } from './game/state/gameLifecycleRun';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore, type Language } from './game/state/settingsStore';
 import { usePreGameStore } from './game/state/preGameStore';
@@ -844,7 +845,6 @@ function useViewportClampedBottomHudTooltip() {
 
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
-  const returnToLeaderSelect = usePreGameStore((s) => s.returnToLeaderSelect);
   const returnToIntro = usePreGameStore((s) => s.returnToIntro);
   const completeTutorial = usePreGameStore((s) => s.completeTutorial);
   const {
@@ -923,7 +923,6 @@ function App() {
     audioManager.registerCue('level_up', DEFAULT_AUDIO_CUES.level_up);
     audioManager.registerCue('xp_fill', DEFAULT_AUDIO_CUES.xp_fill);
     audioManager.registerCue('selection_open', DEFAULT_AUDIO_CUES.selection_open);
-    audioManager.registerCue('victory', DEFAULT_AUDIO_CUES.victory);
     audioManager.registerCue('main_theme', DEFAULT_AUDIO_CUES.main_theme);
     audioManager.registerCue('board_ambient', DEFAULT_AUDIO_CUES.board_ambient);
     audioManager.registerCue('gameover_music', DEFAULT_AUDIO_CUES.gameover_music);
@@ -1374,7 +1373,7 @@ function App() {
     fadeOutGameOverMusic();
 
     if (!lastLeaderProgressAward) {
-      window.setTimeout(handleGameOverMainMenu, GAME_OVER_AUDIO_FADE_OUT_MS);
+      scheduleGameLifecycleTimeout(handleGameOverMainMenu, GAME_OVER_AUDIO_FADE_OUT_MS);
       return;
     }
 
@@ -1385,7 +1384,7 @@ function App() {
     fadeOutGameOverMusic();
 
     if (!lastLeaderProgressAward) {
-      window.setTimeout(handleGameOverMainMenu, GAME_OVER_AUDIO_FADE_OUT_MS);
+      scheduleGameLifecycleTimeout(handleGameOverMainMenu, GAME_OVER_AUDIO_FADE_OUT_MS);
       return;
     }
 
@@ -1903,29 +1902,6 @@ function App() {
         </div>
       )}
 
-      {/* ===== VICTORY OVERLAY ===== */}
-      {isInGame && phase === 'victory' && false && (
-        <div className="endgame-overlay">
-          <div className="endgame-panel">
-            <div className="endgame-title endgame-victory">{t('game.victory', language)}</div>
-            <div className="endgame-subtitle">{t('game.turn', language)} {turn}</div>
-            {lastLeaderProgressAward ? (
-              <div className="endgame-leader-xp">
-                <span>{uiText(language, '지도자 경험치', 'Leader XP', '领袖经验值', 'Опыт лидера')}</span>
-                <strong>+{lastLeaderProgressAward?.xpAwarded}</strong>
-                <small>
-                  {t('leaderProgress.currentLevel', language).replace('{level}', String(lastLeaderProgressAward?.next.level ?? 1))}
-                  {(lastLeaderProgressAward?.levelsGained ?? 0) > 0
-                    ? ` (+${lastLeaderProgressAward?.levelsGained})`
-                    : ''}
-                </small>
-              </div>
-            ) : null}
-            <button className="endgame-btn" onClick={returnToLeaderSelect}>{t('game.restart', language)}</button>
-          </div>
-        </div>
-      )}
-
       {isInGame && phase === 'victory' && (
         <div className="endgame-overlay endgame-overlay--victory">
           <div className={`endgame-panel ${showVictoryProgress && lastLeaderProgressAward ? '' : 'endgame-panel--victory-intro'}`}>
@@ -1956,13 +1932,13 @@ function App() {
       )}
 
       {/* ===== DEV OVERLAY (F1) ===== */}
-      <DevOverlay />
+      {import.meta.env.DEV && <DevOverlay />}
 
       {/* ===== DATA BROWSER (F2) ===== */}
-      <DataBrowser />
+      {import.meta.env.DEV && <DataBrowser />}
 
       {/* ===== SYMBOL POOL PROBABILITY (F3) ===== */}
-      <SymbolPoolModal />
+      {import.meta.env.DEV && <SymbolPoolModal />}
 
       {/* ===== OWNED SYMBOLS LIST (button ⋯) ===== */}
       <OwnedSymbolsModal open={ownedSymbolsOpen} onClose={handleOwnedSymbolsClose} />
@@ -1979,7 +1955,7 @@ function App() {
       />
 
       {/* ===== BALANCE SIMULATOR (F4) ===== */}
-      <BalanceSimulatorOverlay />
+      {import.meta.env.DEV && <BalanceSimulatorOverlay />}
 
       {isTutorialMode && tutorialDialogStep === 4 && (
         <TutorialBoardHighlights anchorRef={gameAreaRef} cells={TUTORIAL_CORN_CELLS} />

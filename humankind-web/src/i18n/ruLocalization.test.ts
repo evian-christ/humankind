@@ -6,18 +6,7 @@ import { RELICS } from '../game/data/relicDefinitions';
 import { STATUSES } from '../game/data/statusDefinitions';
 import { SYMBOLS_BY_KEY } from '../game/data/symbolDefinitions';
 import { t } from './index';
-
-const allowedLatinWords = new Set([
-    'AGI',
-    'HP',
-    'Lv',
-]);
-
-function latinWords(value: string): string[] {
-    return Array.from(value.replace(/\{[A-Za-z0-9_]+\}/g, '').matchAll(/[A-Za-z][A-Za-z']*/g))
-        .map((match) => match[0])
-        .filter((word) => !allowedLatinWords.has(word));
-}
+import { getRussianFallback } from './ruFallback';
 
 function mojibakeChars(value: string): string[] {
     return Array.from(value.matchAll(/[\u3400-\u9fff\uf900-\ufaff\ufffd?]/g))
@@ -25,37 +14,25 @@ function mojibakeChars(value: string): string[] {
 }
 
 describe('Russian localization coverage', () => {
-    it('does not leave English words in gameplay names and effect text', () => {
-        const keys = [
-            ...Object.keys(SYMBOLS_BY_KEY).flatMap((key) => [
-                `symbol.${key}.name`,
-                `symbol.${key}.desc`,
-            ]),
-            ...Object.keys(RELICS).flatMap((id) => [
-                `relic.${id}.name`,
-                `relic.${id}.desc`,
-            ]),
-            ...Object.keys(KNOWLEDGE_UPGRADES).flatMap((id) => [
-                `knowledgeUpgrade.${id}.name`,
-                `knowledgeUpgrade.${id}.desc`,
-            ]),
-            ...Object.values(GAME_EVENTS).flatMap((event) => [
-                `event.${event.key}.name`,
-                `event.${event.key}.desc`,
-                `event.${event.key}.availability`,
-            ]),
-            ...Object.values(STATUSES).flatMap((status) => [
-                `status.${status.key}.name`,
-                `status.${status.key}.desc`,
-            ]),
-        ];
+    it('preserves untranslated English words in automatic fallback text', () => {
+        const fallback = getRussianFallback(
+            'symbol.test.desc',
+            'Gain 3 Gold when adjacent to a Workshop.',
+        );
 
-        const failures = keys
-            .map((key) => ({ key, value: t(key, 'ru') }))
-            .map(({ key, value }) => ({ key, value, words: latinWords(value) }))
-            .filter(({ words }) => words.length > 0);
+        expect(fallback).toContain('Workshop');
+        expect(fallback).toContain('\u0437\u043e\u043b\u043e\u0442\u043e');
+    });
 
-        expect(failures).toEqual([]);
+    it('preserves placeholders while translating known fallback terms', () => {
+        const fallback = getRussianFallback(
+            'relic.test.desc',
+            'Gain {amount} Knowledge from each Archive.',
+        );
+
+        expect(fallback).toContain('{amount}');
+        expect(fallback).toContain('Archive');
+        expect(fallback).toContain('\u0437\u043d\u0430\u043d\u0438\u044f');
     });
 
     it('does not emit mojibake characters in Russian gameplay text', () => {

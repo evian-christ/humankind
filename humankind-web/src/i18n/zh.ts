@@ -59,9 +59,6 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'settings.musicVolume': '音乐音量',
     'settings.ambientVolume': '环境音量',
     'settings.effectVolume': '音效音量',
-    'settings.developerMode': '开发者模式',
-    'settings.developerMode.on': '开',
-    'settings.developerMode.off': '关',
     'settings.crtEffect': 'CRT 效果',
     'settings.crtEffect.on': '开',
     'settings.crtEffect.off': '关',
@@ -845,14 +842,6 @@ export const ZH_TRANSLATIONS: Record<string, string> = {
     'knowledgeUpgrade.75.desc': '获得 4 个征兵令。',
 
     // Obsolete Knowledge Upgrades
-    'knowledgeUpgrade.obsolete.11.name': '黄金贸易',
-    'knowledgeUpgrade.obsolete.11.desc': '每当遗物商店刷新时，库存中的一个随机遗物半价。',
-    'knowledgeUpgrade.obsolete.12.name': '遗物宝库',
-    'knowledgeUpgrade.obsolete.12.desc': '你每拥有一个非消耗型遗物：每回合 +1 知识。',
-    'knowledgeUpgrade.obsolete.13.name': '天地丰饶',
-    'knowledgeUpgrade.obsolete.13.desc': '棋盘上每 2 个符号：每回合 +1 食物。棋盘上每 2 个空位：每回合 +1 知识。',
-    'knowledgeUpgrade.obsolete.14.name': '统一根基',
-    'knowledgeUpgrade.obsolete.14.desc': '每次进入新时代时，获得 1 个古代遗物残骸和 1 个开拓者。',
 
     // Destroy Selection
 

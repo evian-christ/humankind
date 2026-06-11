@@ -83,7 +83,6 @@ export interface SettingsState {
     effectVolume: number;
     ambientVolume: number;
     screenMode: ScreenMode;
-    developerMode: boolean;
     crtEffect: boolean;
     keyBindings: KeyBindings;
     initialSetupComplete: boolean;
@@ -98,7 +97,6 @@ export interface SettingsState {
     setEffectVolume: (volume: number) => void;
     setAmbientVolume: (volume: number) => void;
     setScreenMode: (mode: ScreenMode) => void;
-    setDeveloperMode: (enabled: boolean) => void;
     setCrtEffect: (enabled: boolean) => void;
     setKeyBinding: (action: KeyBindingAction, code: string) => void;
     resetKeyBindings: () => void;
@@ -117,7 +115,6 @@ type PersistedSettings = Pick<
     | 'effectVolume'
     | 'ambientVolume'
     | 'screenMode'
-    | 'developerMode'
     | 'crtEffect'
     | 'keyBindings'
 >;
@@ -139,7 +136,6 @@ const defaultSettings: PersistedSettings = {
     effectVolume: 1,
     ambientVolume: 1,
     screenMode: 'windowed',
-    developerMode: false,
     crtEffect: true,
     keyBindings: { ...DEFAULT_KEY_BINDINGS },
 };
@@ -162,8 +158,6 @@ function loadInitialSetupComplete(): boolean {
 const isLanguage = (value: unknown): value is Language =>
     value === 'en' || value === 'ko' || value === 'zh' || value === 'ru';
 const isEffectSpeed = (value: unknown): value is EffectSpeed =>
-    value === '1x' || value === '2x' || value === '4x' || value === '8x';
-const isSpinSpeed = (value: unknown): value is SpinSpeed =>
     value === '1x' || value === '2x' || value === '4x' || value === '8x';
 const isScreenMode = (value: unknown): value is ScreenMode =>
     value === 'windowed' || value === 'fullscreen' || value === 'borderless';
@@ -232,9 +226,6 @@ function loadSettings(): PersistedSettings {
                 : legacyFullscreen === true
                     ? 'fullscreen'
                     : defaultSettings.screenMode,
-            developerMode: typeof save.settings.developerMode === 'boolean'
-                ? save.settings.developerMode
-                : defaultSettings.developerMode,
             crtEffect: typeof save.settings.crtEffect === 'boolean'
                 ? save.settings.crtEffect
                 : defaultSettings.crtEffect,
@@ -263,7 +254,6 @@ function saveSettings(state: PersistedSettings): void {
             effectVolume: state.effectVolume,
             ambientVolume: state.ambientVolume,
             screenMode: state.screenMode,
-            developerMode: state.developerMode,
             crtEffect: state.crtEffect,
             keyBindings: state.keyBindings,
         },
@@ -367,14 +357,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
             return { screenMode: mode };
         });
         applyScreenModeToDOM(mode);
-    },
-
-    setDeveloperMode: (enabled) => {
-        set((state) => {
-            const next = { ...state, developerMode: enabled };
-            saveSettings(next);
-            return { developerMode: enabled };
-        });
     },
 
     setCrtEffect: (enabled) => {

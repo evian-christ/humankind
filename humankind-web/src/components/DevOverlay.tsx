@@ -80,12 +80,10 @@ const DevOverlay = () => {
     const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, devTriggerNaturalDisaster, barbarianSymbolThreat, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
-    const developerMode = useSettingsStore(s => s.developerMode);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.code !== 'F1') return;
-            if (!useSettingsStore.getState().developerMode) return;
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
             e.preventDefault();
@@ -94,10 +92,6 @@ const DevOverlay = () => {
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
-
-    useEffect(() => {
-        if (!developerMode) setOpen(false);
-    }, [developerMode]);
 
     if (!open) return null;
 

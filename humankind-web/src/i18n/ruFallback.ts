@@ -68,10 +68,6 @@ const EXACT: Record<string, string> = {
     'knowledgeUpgrade.68.desc': '\u041f\u0435\u0440\u0432\u044b\u0439 \u043f\u0435\u0440\u0435\u0431\u0440\u043e\u0441 \u0432 \u043a\u0430\u0436\u0434\u043e\u0439 \u0444\u0430\u0437\u0435 \u0432\u044b\u0431\u043e\u0440\u0430 \u0431\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u044b\u0439.',
 };
 
-function translateName(name: string): string {
-    return NAME_FALLBACKS[name.trim()] ?? R.upgrade;
-}
-
 function protectPlaceholders(value: string): [string, string[]] {
     const placeholders: string[] = [];
     const text = value.replace(/\{[A-Za-z0-9_]+\}/g, (match) => {
@@ -118,13 +114,12 @@ function sanitize(value: string): string {
     const [protectedText, placeholders] = protectPlaceholders(value);
     let text = translateCommon(protectedText);
     text = text.replace(/\bx([0-9])\b/g, '\u00d7$1');
-    text = text.replace(/\b[A-Za-z][A-Za-z']*\b/g, '');
     text = restorePlaceholders(text, placeholders);
     return text.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:])/g, '$1').trim();
 }
 
 function escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^\${}()|[\]\\]/g, '\\$&');
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function fallbackName(key: string, english: string): string {
