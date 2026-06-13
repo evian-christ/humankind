@@ -50,6 +50,15 @@
   cursor: none !important; /* Force hide all browser cursors */
 }
 
+html,
+body {
+  overscroll-behavior: none;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
 
 body {
   overflow: hidden;

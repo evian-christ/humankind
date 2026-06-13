@@ -15,7 +15,8 @@
         "title": "Humankind in a nutshell DEMO",
         "width": 1280,
         "height": 720,
-        "resizable": true,
+        "resizable": false,
+        "maximizable": false,
         "fullscreen": false
       }
     ],
