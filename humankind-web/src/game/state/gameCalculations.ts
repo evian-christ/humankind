@@ -8,8 +8,10 @@ import {
     FEUDALISM_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    LAND_ALLOTMENT_UPGRADE_ID,
     LAW_CODE_UPGRADE_ID,
     MATHEMATICS_UPGRADE_ID,
+    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
@@ -18,6 +20,7 @@ import {
     TRIBAL_FEDERATION_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
+    TERRACE_ENGINEERING_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
     BUTTRESS_UPGRADE_ID,
     getKnowledgeUpgradeDirectPrerequisites,
@@ -451,6 +454,9 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
     const gold = (state.qinCurrencyStandardTurnsRemaining ?? 0) > 0 ? baseGold * 2 : baseGold;
     const food =
         (upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 1 : 0) +
+        (upgrades.includes(LAND_ALLOTMENT_UPGRADE_ID) ? 1 : 0) +
+        (upgrades.includes(MEGALITHIC_SETTLEMENTS_UPGRADE_ID) ? 1 : 0) +
+        (upgrades.includes(TERRACE_ENGINEERING_UPGRADE_ID) ? 3 : 0) +
         (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(TRIBAL_FEDERATION_UPGRADE_ID) ? 1 : 0) +

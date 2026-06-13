@@ -16,6 +16,8 @@ import {
     MASON_GUILD_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MATERIALS_ENGINEERING_UPGRADE_ID,
+    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
@@ -25,10 +27,11 @@ import {
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
+    TERRACE_ENGINEERING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
-import { BOARD_HEIGHT, BOARD_WIDTH, countOnBoard, findMountainSameColumn, SEA_TERRAIN_ID } from '../core';
+import { BOARD_HEIGHT, BOARD_WIDTH, countOnBoard, SEA_TERRAIN_ID } from '../core';
 import type { SymbolEffectHandler } from '../core';
 import type { BoardGrid } from '../types';
 
@@ -118,7 +121,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             });
             if (nearRainforest) {
                 let p = (symbolInstance.effect_counter || 0) + 1;
-                const threshold = upgrades.includes(PLANTATION_UPGRADE_ID) ? 7 : 10;
+                const threshold = upgrades.includes(PLANTATION_UPGRADE_ID) ? 5 : 10;
                 if (p >= threshold) {
                     p = 0;
                     symbolInstance.banana_permanent_food_bonus = perm + 1;
@@ -153,27 +156,13 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
         }
 
         case S.stone:
-            state.gold += upgrades.includes(MINING_UPGRADE_ID) || upgrades.includes(MASON_GUILD_UPGRADE_ID) ? 2 : 1;
-            {
-                if (upgrades.includes(MASON_GUILD_UPGRADE_ID)) {
-                    const mountainCoords = [];
-                    for (let bx = 0; bx < BOARD_WIDTH; bx += 1) {
-                        for (let by = 0; by < BOARD_HEIGHT; by += 1) {
-                            if (boardGrid[bx][by]?.definition.id === S.mountain) mountainCoords.push({ x: bx, y: by });
-                        }
-                    }
-                    if (mountainCoords.length > 0) {
-                        state.gold += 4;
-                        state.contributors.push(...mountainCoords);
-                    }
-                } else {
-                    const mountainCol = findMountainSameColumn(boardGrid, x);
-                    if (mountainCol) {
-                        state.gold += upgrades.includes(MINING_UPGRADE_ID) ? 4 : 2;
-                        state.contributors.push(mountainCol);
-                    }
-                }
-            }
+            state.gold += 1;
+            if (upgrades.includes(MINING_UPGRADE_ID)) state.gold += 1;
+            if (upgrades.includes(MASON_GUILD_UPGRADE_ID)) state.gold += 2;
+            if (upgrades.includes(MATERIALS_ENGINEERING_UPGRADE_ID)) state.gold += 4;
+            if (upgrades.includes(MEGALITHIC_SETTLEMENTS_UPGRADE_ID)) state.knowledge += 2;
+            if (upgrades.includes(TERRACE_ENGINEERING_UPGRADE_ID)) state.knowledge += 3;
+            if (upgrades.includes(MATERIALS_ENGINEERING_UPGRADE_ID)) state.knowledge += 4;
             return true;
 
         case S.monument:
@@ -207,10 +196,10 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                 if (upgrades.includes(OCEANIC_ROUTES_UPGRADE_ID)) {
                     if (effectiveSeaCount >= 2) {
                         food = 8;
-                        gold = 8;
+                        gold = 5;
                     } else {
                         food = 5;
-                        gold = 5;
+                        gold = 3;
                     }
                 } else if (upgrades.includes(FISHERY_GUILD_UPGRADE_ID)) {
                     if (effectiveSeaCount >= 2) {
@@ -255,20 +244,17 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             const seaCoords = getBoardCoordsBySymbolId(boardGrid, SEA_TERRAIN_ID);
             const effectiveSeaCount = getEffectiveSeaCount(boardGrid, upgrades);
             if (effectiveSeaCount >= 1) {
-                let gold = 2;
+                let rewards = [1, 1, 1];
                 if (upgrades.includes(OCEANIC_ROUTES_UPGRADE_ID)) {
-                    if (effectiveSeaCount >= 3) gold = 30;
-                    else if (effectiveSeaCount >= 2) gold = 20;
-                    else gold = 10;
+                    rewards = [3, 3, 4];
                 } else if (upgrades.includes(MARITIME_TRADE_UPGRADE_ID)) {
-                    if (effectiveSeaCount >= 3) gold = 10;
-                    else if (effectiveSeaCount >= 2) gold = 7;
-                    else gold = 5;
-                } else {
-                    if (effectiveSeaCount >= 3) gold = 5;
-                    else if (effectiveSeaCount >= 2) gold = 3;
-                    if (upgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID)) gold += 2;
+                    rewards = [2, 2, 3];
+                } else if (upgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID)) {
+                    rewards = [1, 2, 2];
                 }
+                const gold = rewards
+                    .slice(0, Math.min(effectiveSeaCount, rewards.length))
+                    .reduce((total, reward) => total + reward, 0);
                 state.gold += gold;
                 state.contributors.push(...seaCoords);
             }
@@ -352,15 +338,11 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             const rainforestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.rainforest);
             if (rainforestAdj.length === 0) return true;
             if (upgrades.includes(TROPICAL_DEVELOPMENT_UPGRADE_ID)) {
-                state.food += Math.floor(Math.random() * 10) + 1;
-                state.gold += Math.floor(Math.random() * 10) + 1;
-                state.knowledge += Math.floor(Math.random() * 10) + 1;
+                state.gold += 15;
+                state.knowledge += 15;
             } else {
-                const amount = Math.floor(Math.random() * 10) + 1;
-                const resourceIdx = Math.floor(Math.random() * 3);
-                if (resourceIdx === 0) state.food += amount;
-                else if (resourceIdx === 1) state.gold += amount;
-                else state.knowledge += amount;
+                if (Math.random() < 0.5) state.gold += 10;
+                else state.knowledge += 10;
             }
             rainforestAdj.forEach((pos) => state.contributors.push(pos));
             return true;
@@ -403,10 +385,9 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                 const id = boardGrid[pos.x][pos.y]?.definition.id;
                 return id === S.forest || id === S.rainforest;
             });
-            if (upgrades.includes(CHIEFDOM_UPGRADE_ID)) {
-                state.food += hasForestOrRain ? 4 : 1;
-            } else {
-                state.food += hasForestOrRain ? 2 : 1;
+            state.food += 1;
+            if (hasForestOrRain) {
+                state.food += upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 4 : 2;
             }
             const mountainAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.mountain);
             if (mountainAdj.length > 0) {

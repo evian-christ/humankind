@@ -35,6 +35,16 @@ describe('Russian localization coverage', () => {
         expect(fallback).toContain('\u0437\u043d\u0430\u043d\u0438\u044f');
     });
 
+    it('describes unit pool changes without implying owned units are replaced', () => {
+        const descriptions = [33, 48, 55, 62]
+            .map((id) => t(`knowledgeUpgrade.${id}.desc`, 'ru'));
+
+        descriptions.forEach((description) => {
+            expect(description).toContain('\u0438\u0437 \u043f\u0443\u043b\u0430 \u0432\u044b\u0431\u043e\u0440\u0430');
+            expect(description).not.toMatch(/\b(Removes|adds|Replaces)\b/);
+        });
+    });
+
     it('does not emit mojibake characters in Russian gameplay text', () => {
         const keys = [
             ...Object.keys(SYMBOLS_BY_KEY).flatMap((key) => [

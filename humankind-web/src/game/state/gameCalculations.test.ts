@@ -24,8 +24,10 @@ import {
     FORESTRY_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
+    LAND_ALLOTMENT_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     MASON_GUILD_UPGRADE_ID,
+    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
@@ -58,6 +60,7 @@ import {
     PRINTING_PRESS_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
+    TERRACE_ENGINEERING_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
     TRIBAL_FEDERATION_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
@@ -330,15 +333,10 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('requires Mining before Mason Guild at level 12', () => {
+    it('allows Mason Guild without Mining at level 12', () => {
         expect(isUpgradeLegalForKnowledgePick(
             MASON_GUILD_UPGRADE_ID,
             [FEUDALISM_UPGRADE_ID],
-            12,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            MASON_GUILD_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, MINING_UPGRADE_ID],
             12,
         )).toBe(true);
     });
@@ -823,6 +821,24 @@ describe('getHudTurnStartPassiveTotals', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [TRIBAL_FEDERATION_UPGRADE_ID],
         })).toEqual({ food: 1, gold: 1, knowledge: 2 });
+    });
+
+    it('applies Land Allotment passive food production', () => {
+        expect(getHudTurnStartPassiveTotals({
+            unlockedKnowledgeUpgrades: [LAND_ALLOTMENT_UPGRADE_ID],
+        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
+    });
+
+    it('applies Megalithic Settlements passive food production', () => {
+        expect(getHudTurnStartPassiveTotals({
+            unlockedKnowledgeUpgrades: [MEGALITHIC_SETTLEMENTS_UPGRADE_ID],
+        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
+    });
+
+    it('applies Terrace Engineering passive food production', () => {
+        expect(getHudTurnStartPassiveTotals({
+            unlockedKnowledgeUpgrades: [TERRACE_ENGINEERING_UPGRADE_ID],
+        })).toEqual({ food: 3, gold: 1, knowledge: 2 });
     });
 
     it('applies Mercenaries passive gold production', () => {

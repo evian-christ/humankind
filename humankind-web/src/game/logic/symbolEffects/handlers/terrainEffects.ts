@@ -11,6 +11,7 @@ import {
     FOREIGN_TRADE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
@@ -82,11 +83,15 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.mountain:
-            if (upgrades.includes(FEUDALISM_UPGRADE_ID)) {
-                state.food += 2;
-                state.knowledge += 4;
+            if (upgrades.includes(MODERN_AGE_UPGRADE_ID)) {
+                state.food += 10;
+                state.knowledge += 10;
+            } else if (upgrades.includes(FEUDALISM_UPGRADE_ID)) {
+                state.food += 5;
+                state.knowledge += 5;
             } else {
-                state.food += 1;
+                state.food += 2;
+                state.knowledge += 2;
             }
             if (relicEffects.quarryEmptyGold) {
                 adj.forEach(pos => {

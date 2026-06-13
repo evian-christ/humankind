@@ -22,8 +22,12 @@ import {
     HUNTING_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
+    LAND_ALLOTMENT_UPGRADE_ID,
+    MASON_GUILD_UPGRADE_ID,
     MECHANICS_UPGRADE_ID,
+    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
+    MINING_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
@@ -331,7 +335,7 @@ describe('selectionFlow actions', () => {
 
     it('wraps Banana progress through Plantation threshold during Jungle Expedition event', () => {
         const banana = createInstance(SYMBOLS[S.banana]!, []);
-        banana.effect_counter = 6;
+        banana.effect_counter = 4;
         const rainforest = createInstance(SYMBOLS[S.rainforest]!, []);
         const board = createEmptyBoard();
         board[1][1] = banana;
@@ -603,6 +607,23 @@ describe('selectionFlow actions', () => {
         ).toHaveLength(3);
     });
 
+    it('grants 1 State Reorganization when Mining is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 3,
+            era: 1,
+            unlockedKnowledgeUpgrades: [],
+        });
+
+        harness.actions.selectUpgrade(MINING_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MINING_UPGRADE_ID);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
+        ).toHaveLength(1);
+    });
+
     it('grants 2 Pioneers and 1 State Reorganization when Great Migration is researched', () => {
         const harness = createHarness({
             phase: 'idle',
@@ -621,6 +642,60 @@ describe('selectionFlow actions', () => {
         expect(
             useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
         ).toHaveLength(1);
+    });
+
+    it('grants 3 Pioneers when Land Allotment is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 2,
+            era: 1,
+            unlockedKnowledgeUpgrades: [],
+        });
+
+        harness.actions.selectUpgrade(LAND_ALLOTMENT_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(LAND_ALLOTMENT_UPGRADE_ID);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
+        ).toHaveLength(3);
+    });
+
+    it('grants 1 Pioneer when Megalithic Settlements is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 7,
+            era: 1,
+            unlockedKnowledgeUpgrades: [],
+        });
+
+        harness.actions.selectUpgrade(MEGALITHIC_SETTLEMENTS_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MEGALITHIC_SETTLEMENTS_UPGRADE_ID);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
+        ).toHaveLength(1);
+    });
+
+    it('grants 2 Pioneers and 2 State Reorganizations when Mason Guild is researched', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 12,
+            era: 2,
+            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(MASON_GUILD_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MASON_GUILD_UPGRADE_ID);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
+        ).toHaveLength(2);
+        expect(
+            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
+        ).toHaveLength(2);
     });
 
     it.each([

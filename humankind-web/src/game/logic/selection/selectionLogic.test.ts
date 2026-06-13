@@ -139,7 +139,7 @@ describe('selectionLogic', () => {
         expect(crossbowman?.base_hp).toBe(6);
     });
 
-    it('removes medieval and terrain symbols from the pool after modern age', () => {
+    it('keeps medieval symbols while removing terrain symbols after modern age', () => {
         const pool = buildFlatPool({
             era: 3,
             religionUnlocked: false,
@@ -147,7 +147,7 @@ describe('selectionLogic', () => {
             ownedRelicDefIds: [],
         });
 
-        expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
+        expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(true);
         expect(pool.some((sym) => sym.type === SymbolType.TERRAIN)).toBe(false);
     });
 

@@ -52,7 +52,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "005.png" }),
     def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol. When Desert destroys a symbol: +5 Food.", sprite: "006.png" }),
     def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+2 Food per 2 adjacent empty slots. (Post-Arid Preservation: +4, Post-Oasis Reclamation: +6)", sprite: "007.png" }),
-    def('mountain', { name: "Mountain", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "008.png" }),
+    def('mountain', { name: "Mountain", type: SymbolType.TERRAIN, description: "+2 Food, +2 Knowledge.", sprite: "008.png" }),
 
     // Normal: grassland deck
     def('wheat', { name: "Wheat", type: SymbolType.NORMAL, description: "Wheat: every 10 turns: 10 Food. Adjacent to Grassland: +1/turn.", sprite: "009.png" }),
@@ -77,21 +77,21 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('horse', { name: "Horse", type: SymbolType.NORMAL, description: "+2 Food, +2 Gold. Triggers even when not placed on the board.", sprite: "015.png" }),
 
     // Normal: sea deck
-    def('fish', { name: "Fish", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +1 Food; 2+ Seas: +2 Food; 3+ Seas: +4 Food.", sprite: "016.png" }),
-    def('crab', { name: "Crab", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +1 Food, +1 Gold; 2+ Seas: +2 Food, +2 Gold.", sprite: "017.png" }),
-    def('pearl', { name: "Pearl", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +2 Gold; 2+ Seas: +3 Gold; 3+ Seas: +5 Gold.", sprite: "018.png" }),
-    def('compass', { name: "Compass", type: SymbolType.NORMAL, description: "If 1+ Sea on board: +5 Knowledge; 2+ Seas: +10 Knowledge; 3+ Seas: +15 Knowledge.", sprite: "019.png" }),
+    def('fish', { name: "Fish", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +1 Food; 2+ Seas: +1 Food; 3+ Seas: +2 Food.", sprite: "016.png" }),
+    def('crab', { name: "Crab", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +1 Food, +1 Gold; 2+ Seas: +1 Food, +1 Gold.", sprite: "017.png" }),
+    def('pearl', { name: "Pearl", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +1 Gold; 2+ Seas: +1 Gold; 3+ Seas: +1 Gold.", sprite: "018.png" }),
+    def('compass', { name: "Compass", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +5 Knowledge; 2+ Seas: +5 Knowledge; 3+ Seas: +5 Knowledge.", sprite: "019.png" }),
 
     // Normal: forest deck
     def('deer', { name: "Deer", type: SymbolType.NORMAL, description: "+1 Food per adjacent Forest.", sprite: "020.png" }),
     def('fur', { name: "Fur", type: SymbolType.NORMAL, description: "+2 Gold per 2 Forests placed on the board.", sprite: "022.png" }),
 
     // Normal: rainforest deck
-    def('banana', { name: "Banana", type: SymbolType.NORMAL, description: "+1 Food; every 10 turns adjacent to Rainforest: +1 additional Food production.", sprite: "023.png" }),
+    def('banana', { name: "Banana", type: SymbolType.NORMAL, description: "+1 Food; every 10 turns adjacent to Rainforest: +1 Food production.", sprite: "023.png" }),
     def('expedition', {
         name: "Expedition",
         type: SymbolType.NORMAL,
-        description: "When adjacent to Rainforest: produces a random 1-10 Food, Gold, or Knowledge.",
+        description: "When adjacent to Rainforest: produces 10 Gold or Knowledge.",
         sprite: "024.png",
     }),
 
@@ -117,7 +117,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     }),
 
     // Normal: mountain / special position
-    def('stone', { name: "Stone", type: SymbolType.NORMAL, description: "+1 Gold; when a Mountain is in the same column: +2 additional Gold.", sprite: "029.png" }),
+    def('stone', { name: "Stone", type: SymbolType.NORMAL, description: "+1 Gold.", sprite: "029.png" }),
 
     // Normal: bridge / hybrid
     def('wild_berries', { name: "Wild Berries", type: SymbolType.NORMAL, description: "+1 Food; when adjacent to Forest or Rainforest: +2 Food; when adjacent to Mountain: +2 Knowledge.", sprite: "030.png" }),
@@ -142,7 +142,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+4 Knowledge per 4 empty slots.", sprite: "045.png" }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.ANCIENT, description: "+1 Food. Destroyed after 5 turns.", sprite: "046.png" }),
     def('bronze_tribute_chest', { name: "Bronze Tribute Chest", type: SymbolType.ANCIENT, description: "+1 Gold. Destroyed after 3 turns.", sprite: "086.png" }),
-    def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +2 additional Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
+    def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +2 Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
     def('foxtail_millet', { name: "Foxtail Millet", type: SymbolType.ANCIENT, description: "+5 Food per 2 adjacent Terrain symbols.", sprite: "088.png" }),
 
     // Medieval

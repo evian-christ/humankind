@@ -6,6 +6,7 @@ import {
     ARCHITECTURE_UPGRADE_ID,
     CASTLE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
+    CHIEFDOM_UPGRADE_ID,
     MERCANTILISM_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
@@ -19,10 +20,13 @@ import {
     IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
+    MATERIALS_ENGINEERING_UPGRADE_ID,
     MASON_GUILD_UPGRADE_ID,
+    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
     MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
@@ -32,6 +36,7 @@ import {
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
+    TERRACE_ENGINEERING_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     TROPICAL_AGRICULTURE_UPGRADE_ID,
@@ -158,16 +163,22 @@ describe('symbolEffectResolution', () => {
         expect(chest.is_marked_for_destruction).toBe(true);
     });
 
-    it('upgrades Mountain with Medieval Age to produce food and knowledge', () => {
+    it('upgrades Mountain production in the Medieval and Modern Ages', () => {
         const board = createEmptyBoard();
         const mountain = createInstance(Sym.mountain, 'mountain');
         board[1][1] = mountain;
 
         const baseResult = processSingleSymbolEffects(mountain, board, 1, 1, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(mountain, board, 1, 1, { upgrades: [FEUDALISM_UPGRADE_ID] });
+        const medievalResult = processSingleSymbolEffects(mountain, board, 1, 1, {
+            upgrades: [FEUDALISM_UPGRADE_ID],
+        });
+        const modernResult = processSingleSymbolEffects(mountain, board, 1, 1, {
+            upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
+        });
 
-        expect(baseResult).toMatchObject({ food: 1, gold: 0, knowledge: 0 });
-        expect(upgradedResult).toMatchObject({ food: 2, gold: 0, knowledge: 4 });
+        expect(baseResult).toMatchObject({ food: 2, gold: 0, knowledge: 2 });
+        expect(medievalResult).toMatchObject({ food: 5, gold: 0, knowledge: 5 });
+        expect(modernResult).toMatchObject({ food: 10, gold: 0, knowledge: 10 });
     });
 
     it('collects terrain disabled by flood and initializes flood counter', () => {
@@ -1040,26 +1051,22 @@ describe('symbolEffectResolution', () => {
         expect(educationResult.contributors).toEqual([{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 2, y: 2 }]);
     });
 
-    it('makes Stone produce base Gold and same-column Mountain bonus, upgraded by Mining', () => {
+    it('makes Stone produce 1 base Gold and Mining add 1 Gold without Mountain synergy', () => {
         const board = createEmptyBoard();
         const stone = createInstance(Sym.stone, 'stone');
-        const isolatedStone = createInstance(Sym.stone, 'isolated_stone');
-        board[1][0] = isolatedStone;
         board[2][0] = stone;
         board[2][3] = createInstance(Sym.mountain, 'mountain');
 
-        const isolatedBaseResult = processSingleSymbolEffects(isolatedStone, board, 1, 0, { upgrades: [] });
-        const isolatedMiningResult = processSingleSymbolEffects(isolatedStone, board, 1, 0, { upgrades: [MINING_UPGRADE_ID] });
         const baseResult = processSingleSymbolEffects(stone, board, 2, 0, { upgrades: [] });
         const miningResult = processSingleSymbolEffects(stone, board, 2, 0, { upgrades: [MINING_UPGRADE_ID] });
 
-        expect(isolatedBaseResult.gold).toBe(1);
-        expect(isolatedMiningResult.gold).toBe(2);
-        expect(baseResult.gold).toBe(3);
-        expect(miningResult.gold).toBe(6);
+        expect(baseResult.gold).toBe(1);
+        expect(baseResult.contributors).toBeUndefined();
+        expect(miningResult.gold).toBe(2);
+        expect(miningResult.contributors).toBeUndefined();
     });
 
-    it('makes Mason Guild Stone use any Mountain on the board for its bonus', () => {
+    it('makes Mason Guild add 2 Gold to Stone without Mountain synergy', () => {
         const board = createEmptyBoard();
         const stone = createInstance(Sym.stone, 'stone');
         board[0][0] = stone;
@@ -1067,8 +1074,73 @@ describe('symbolEffectResolution', () => {
 
         const result = processSingleSymbolEffects(stone, board, 0, 0, { upgrades: [MASON_GUILD_UPGRADE_ID] });
 
-        expect(result.gold).toBe(6);
-        expect(result.contributors).toEqual([{ x: 4, y: 3 }]);
+        expect(result.gold).toBe(3);
+        expect(result.contributors).toBeUndefined();
+    });
+
+    it('stacks Mining Gold with the Mason Guild Stone upgrade', () => {
+        const board = createEmptyBoard();
+        const stone = createInstance(Sym.stone, 'stone');
+        board[0][0] = stone;
+        board[4][3] = createInstance(Sym.mountain, 'mountain');
+
+        const result = processSingleSymbolEffects(stone, board, 0, 0, {
+            upgrades: [MINING_UPGRADE_ID, MASON_GUILD_UPGRADE_ID],
+        });
+
+        expect(result.gold).toBe(4);
+        expect(result.contributors).toBeUndefined();
+    });
+
+    it('adds 2 Knowledge to Stone and stacks with its Gold upgrades', () => {
+        const board = createEmptyBoard();
+        const stone = createInstance(Sym.stone, 'stone');
+        board[0][0] = stone;
+        board[4][3] = createInstance(Sym.mountain, 'mountain');
+
+        const result = processSingleSymbolEffects(stone, board, 0, 0, {
+            upgrades: [
+                MINING_UPGRADE_ID,
+                MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
+                MASON_GUILD_UPGRADE_ID,
+            ],
+        });
+
+        expect(result.gold).toBe(4);
+        expect(result.knowledge).toBe(2);
+        expect(result.contributors).toBeUndefined();
+    });
+
+    it('adds 3 Knowledge to Stone and stacks with Megalithic Settlements', () => {
+        const board = createEmptyBoard();
+        const stone = createInstance(Sym.stone, 'stone');
+        board[0][0] = stone;
+
+        const result = processSingleSymbolEffects(stone, board, 0, 0, {
+            upgrades: [MEGALITHIC_SETTLEMENTS_UPGRADE_ID, TERRACE_ENGINEERING_UPGRADE_ID],
+        });
+
+        expect(result.gold).toBe(1);
+        expect(result.knowledge).toBe(5);
+    });
+
+    it('adds 4 Gold and 4 Knowledge to Stone and stacks with all Stone upgrades', () => {
+        const board = createEmptyBoard();
+        const stone = createInstance(Sym.stone, 'stone');
+        board[0][0] = stone;
+
+        const result = processSingleSymbolEffects(stone, board, 0, 0, {
+            upgrades: [
+                MINING_UPGRADE_ID,
+                MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
+                MASON_GUILD_UPGRADE_ID,
+                TERRACE_ENGINEERING_UPGRADE_ID,
+                MATERIALS_ENGINEERING_UPGRADE_ID,
+            ],
+        });
+
+        expect(result.gold).toBe(8);
+        expect(result.knowledge).toBe(9);
     });
 
     it('makes Library produce knowledge per board symbol with Scientific Theory', () => {
@@ -1105,7 +1177,7 @@ describe('symbolEffectResolution', () => {
 
         expect(fishResult.food).toBe(1);
         expect(fishResult.contributors).toEqual([{ x: 2, y: 1 }]);
-        expect(pearlResult.gold).toBe(2);
+        expect(pearlResult.gold).toBe(1);
         expect(pearlResult.contributors).toEqual([{ x: 2, y: 1 }]);
 
         board[1][2] = createInstance(Sym.sea, 'sea_2');
@@ -1115,7 +1187,7 @@ describe('symbolEffectResolution', () => {
         const pearlThreeSeas = processSingleSymbolEffects(pearl, board, 4, 3, { upgrades: [] });
 
         expect(fishThreeSeas.food).toBe(4);
-        expect(pearlThreeSeas.gold).toBe(5);
+        expect(pearlThreeSeas.gold).toBe(3);
     });
 
     it('applies tiered crab rewards and keeps seafaring as a food upgrade', () => {
@@ -1159,8 +1231,40 @@ describe('symbolEffectResolution', () => {
             { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID] },
         );
 
-        expect(result.gold).toBe(4);
+        expect(result.gold).toBe(1);
         expect(result.contributors).toEqual([{ x: 4, y: 2 }]);
+    });
+
+    it.each([
+        { name: 'base', upgrades: [], expected: [1, 2, 3] },
+        { name: 'Celestial Navigation', upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID], expected: [1, 3, 5] },
+        {
+            name: 'Maritime Trade',
+            upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID],
+            expected: [2, 4, 7],
+        },
+        {
+            name: 'Oceanic Routes',
+            upgrades: [
+                CELESTIAL_NAVIGATION_UPGRADE_ID,
+                MARITIME_TRADE_UPGRADE_ID,
+                OCEANIC_ROUTES_UPGRADE_ID,
+            ],
+            expected: [3, 6, 10],
+        },
+    ])('applies $name pearl rewards cumulatively at each sea threshold', ({ upgrades, expected }) => {
+        for (let seaCount = 1; seaCount <= 3; seaCount += 1) {
+            const board = createEmptyBoard();
+            const pearl = createInstance(Sym.pearl, `pearl_${seaCount}`);
+            board[0][0] = pearl;
+            for (let index = 0; index < seaCount; index += 1) {
+                board[index + 1][0] = createInstance(Sym.sea, `sea_${index}`);
+            }
+
+            const result = processSingleSymbolEffects(pearl, board, 0, 0, { upgrades });
+
+            expect(result.gold).toBe(expected[seaCount - 1]);
+        }
     });
 
     it('applies tiered compass knowledge from board-wide sea counts', () => {
@@ -1214,7 +1318,7 @@ describe('symbolEffectResolution', () => {
         );
 
         expect(fishResult.food).toBe(2);
-        expect(pearlResult.gold).toBe(3);
+        expect(pearlResult.gold).toBe(2);
         expect(compassResult.knowledge).toBe(10);
     });
 
@@ -1274,9 +1378,31 @@ describe('symbolEffectResolution', () => {
             { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID] },
         );
 
-        expect(pearlResult.gold).toBe(7);
+        expect(pearlResult.gold).toBe(4);
         expect(seaResult.gold).toBe(2);
     });
+
+    it.each([
+        { seaCount: 1, expectedFood: 5, expectedGold: 3 },
+        { seaCount: 2, expectedFood: 8, expectedGold: 5 },
+    ])(
+        'applies Oceanic Routes crab rewards with $seaCount effective Seas',
+        ({ seaCount, expectedFood, expectedGold }) => {
+            const board = createEmptyBoard();
+            const crab = createInstance(Sym.crab, 'crab');
+            board[0][0] = crab;
+            for (let index = 0; index < seaCount; index += 1) {
+                board[index + 1][0] = createInstance(Sym.sea, `sea_${index}`);
+            }
+
+            const result = processSingleSymbolEffects(crab, board, 0, 0, {
+                upgrades: [OCEANIC_ROUTES_UPGRADE_ID],
+            });
+
+            expect(result.food).toBe(expectedFood);
+            expect(result.gold).toBe(expectedGold);
+        },
+    );
 
     it('applies Oceanic Routes as the highest tier for fish crab pearl and sea', () => {
         const board = createEmptyBoard();
@@ -1301,8 +1427,8 @@ describe('symbolEffectResolution', () => {
 
         expect(fishResult.food).toBe(15);
         expect(crabResult.food).toBe(8);
-        expect(crabResult.gold).toBe(8);
-        expect(pearlResult.gold).toBe(30);
+        expect(crabResult.gold).toBe(5);
+        expect(pearlResult.gold).toBe(10);
         expect(seaResult.gold).toBe(3);
     });
 
@@ -1325,7 +1451,7 @@ describe('symbolEffectResolution', () => {
     it('upgrades banana cadence with Plantation', () => {
         const board = createEmptyBoard();
         const banana = createInstance(Sym.banana, 'banana');
-        banana.effect_counter = 6;
+        banana.effect_counter = 4;
         board[1][1] = banana;
         board[1][2] = createInstance(Sym.rainforest, 'rainforest');
 
@@ -1342,15 +1468,20 @@ describe('symbolEffectResolution', () => {
         expect(banana.effect_counter).toBe(0);
     });
 
-    it('lets Expedition produce one random resource when adjacent to Rainforest', () => {
+    it.each([
+        { random: 0.2, expectedGold: 10, expectedKnowledge: 0 },
+        { random: 0.8, expectedGold: 0, expectedKnowledge: 10 },
+    ])('lets Expedition produce 10 Gold or Knowledge when adjacent to Rainforest', ({
+        random,
+        expectedGold,
+        expectedKnowledge,
+    }) => {
         const board = createEmptyBoard();
         const expedition = createInstance(Sym.expedition, 'expedition');
         board[1][1] = expedition;
         board[1][2] = createInstance(Sym.rainforest, 'rainforest');
 
-        const randomSpy = vi.spyOn(Math, 'random')
-            .mockReturnValueOnce(0.6)
-            .mockReturnValueOnce(0.8);
+        const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(random);
 
         const result = processSingleSymbolEffects(
             expedition,
@@ -1361,8 +1492,8 @@ describe('symbolEffectResolution', () => {
         );
 
         expect(result.food).toBe(0);
-        expect(result.gold).toBe(0);
-        expect(result.knowledge).toBe(7);
+        expect(result.gold).toBe(expectedGold);
+        expect(result.knowledge).toBe(expectedKnowledge);
         expect(result.contributors).toEqual([{ x: 1, y: 2 }]);
 
         randomSpy.mockRestore();
@@ -1374,11 +1505,6 @@ describe('symbolEffectResolution', () => {
         const rainforest = createInstance(Sym.rainforest, 'rainforest');
         board[1][1] = expedition;
         board[1][2] = rainforest;
-
-        const randomSpy = vi.spyOn(Math, 'random')
-            .mockReturnValueOnce(0.0)
-            .mockReturnValueOnce(0.4)
-            .mockReturnValueOnce(0.9);
 
         const expeditionResult = processSingleSymbolEffects(
             expedition,
@@ -1395,14 +1521,12 @@ describe('symbolEffectResolution', () => {
             { upgrades: [TROPICAL_DEVELOPMENT_UPGRADE_ID] },
         );
 
-        expect(expeditionResult.food).toBe(1);
-        expect(expeditionResult.gold).toBe(5);
-        expect(expeditionResult.knowledge).toBe(10);
+        expect(expeditionResult.food).toBe(0);
+        expect(expeditionResult.gold).toBe(15);
+        expect(expeditionResult.knowledge).toBe(15);
         expect(rainforestResult.food).toBe(5);
         expect(rainforestResult.gold).toBe(5);
         expect(rainforestResult.knowledge).toBe(5);
-
-        randomSpy.mockRestore();
     });
 
     it('applies the new Forest thresholds and unique-terrain bonus', () => {
@@ -1606,5 +1730,40 @@ describe('symbolEffectResolution', () => {
 
         expect(result.food).toBe(5);
         expect(honey.is_marked_for_destruction).toBe(false);
+    });
+
+    it('stacks Wild Berries base food with terrain adjacency bonuses', () => {
+        const isolatedBoard = createEmptyBoard();
+        const isolatedWildBerries = createInstance(Sym.wild_berries, 'isolated_wild_berries');
+        isolatedBoard[1][1] = isolatedWildBerries;
+
+        const board = createEmptyBoard();
+        const wildBerries = createInstance(Sym.wild_berries, 'wild_berries');
+        board[1][1] = wildBerries;
+        board[1][2] = createInstance(Sym.forest, 'forest');
+        board[2][1] = createInstance(Sym.mountain, 'mountain');
+
+        const isolatedResult = processSingleSymbolEffects(
+            isolatedWildBerries,
+            isolatedBoard,
+            1,
+            1,
+            { upgrades: [] },
+        );
+        const result = processSingleSymbolEffects(wildBerries, board, 1, 1, { upgrades: [] });
+        const upgradedResult = processSingleSymbolEffects(
+            wildBerries,
+            board,
+            1,
+            1,
+            { upgrades: [CHIEFDOM_UPGRADE_ID] },
+        );
+
+        expect(isolatedResult.food).toBe(1);
+        expect(isolatedResult.knowledge).toBe(0);
+        expect(result.food).toBe(3);
+        expect(result.knowledge).toBe(2);
+        expect(upgradedResult.food).toBe(5);
+        expect(upgradedResult.knowledge).toBe(5);
     });
 });

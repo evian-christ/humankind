@@ -7,6 +7,10 @@ import {
     GREAT_MIGRATION_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    LAND_ALLOTMENT_UPGRADE_ID,
+    MASON_GUILD_UPGRADE_ID,
+    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
+    MINING_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
@@ -94,8 +98,12 @@ const SINGLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
     CHIEFDOM_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
+    MINING_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     GREAT_MIGRATION_UPGRADE_ID,
+]);
+const DOUBLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
+    MASON_GUILD_UPGRADE_ID,
 ]);
 const MILITARY_LEVY_GRANT_UPGRADE_IDS = new Set<number>([
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -194,7 +202,7 @@ const triggerBananaEffectsOnce = (
     let foodGain = 0;
     const effects: BoardEffectDelta[] = [];
     const plantation = upgrades.map(Number).includes(PLANTATION_UPGRADE_ID);
-    const threshold = plantation ? 7 : 10;
+    const threshold = plantation ? 5 : 10;
 
     for (let x = 0; x < board.length; x += 1) {
         const col = board[x];
@@ -685,6 +693,15 @@ export const createSelectionFlowActions = ({
             }
         }
 
+        if (DOUBLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS.has(uid)) {
+            const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
+            if (oblDef) {
+                const rs = useRelicStore.getState();
+                for (let i = 0; i < 2; i++) rs.addRelic(oblDef);
+                grantedRelicForAchievement = true;
+            }
+        }
+
         if (MILITARY_LEVY_GRANT_UPGRADE_IDS.has(uid)) {
             const militaryLevyDef = RELICS[RELIC_ID.MILITARY_LEVY];
             if (militaryLevyDef) {
@@ -695,11 +712,22 @@ export const createSelectionFlowActions = ({
             }
         }
 
-        if (uid === COLONIALISM_UPGRADE_ID || uid === GREAT_MIGRATION_UPGRADE_ID) {
+        if (
+            uid === COLONIALISM_UPGRADE_ID ||
+            uid === GREAT_MIGRATION_UPGRADE_ID ||
+            uid === LAND_ALLOTMENT_UPGRADE_ID ||
+            uid === MEGALITHIC_SETTLEMENTS_UPGRADE_ID ||
+            uid === MASON_GUILD_UPGRADE_ID
+        ) {
             const tribeJoinDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
             if (tribeJoinDef) {
                 const rs = useRelicStore.getState();
-                const count = uid === GREAT_MIGRATION_UPGRADE_ID ? 2 : 3;
+                const count =
+                    uid === MEGALITHIC_SETTLEMENTS_UPGRADE_ID
+                        ? 1
+                        : uid === GREAT_MIGRATION_UPGRADE_ID || uid === MASON_GUILD_UPGRADE_ID
+                          ? 2
+                          : 3;
                 for (let i = 0; i < count; i++) rs.addRelic(tribeJoinDef);
                 grantedRelicForAchievement = true;
             }

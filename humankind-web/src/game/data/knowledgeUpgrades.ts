@@ -54,23 +54,6 @@ export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
     ];
 }
 
-export function buildModernAgeDescSymbols(): KnowledgeUpgradeDescSymbol[] {
-    const poolRemoveKeys = Object.values(SYMBOLS)
-        .filter((s) => s.type === SymbolType.MEDIEVAL)
-        .map((s) => s.key as SymbolKey)
-        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
-
-    const poolAddKeys = Object.values(SYMBOLS)
-        .filter((s) => s.type === SymbolType.MODERN && s.key !== 'agi_core')
-        .map((s) => s.key as SymbolKey)
-        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
-
-    return [
-        ...poolRemoveKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_remove' as const })),
-        ...poolAddKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_add' as const })),
-    ];
-}
-
 export interface KnowledgeUpgrade {
     id: number;
     name: string;
@@ -164,6 +147,10 @@ export const TOTAL_MOBILIZATION_UPGRADE_ID = 75;
 export const TROPICAL_AGRICULTURE_UPGRADE_ID = 76;
 export const MASON_GUILD_UPGRADE_ID = 77;
 export const GREAT_MIGRATION_UPGRADE_ID = 78;
+export const LAND_ALLOTMENT_UPGRADE_ID = 79;
+export const MEGALITHIC_SETTLEMENTS_UPGRADE_ID = 80;
+export const TERRACE_ENGINEERING_UPGRADE_ID = 81;
+export const MATERIALS_ENGINEERING_UPGRADE_ID = 82;
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
     [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID]: {
@@ -258,15 +245,45 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: MINING_UPGRADE_ID,
         name: 'Mining',
         type: SymbolType.ANCIENT,
-        description: 'Upgrades Stone. Melee units gain +1 Attack and +2 HP.',
+        description: 'Upgrades Stone. Gain 1 State Reorganization.',
         sprite: '006.png',
         descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
+        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
+    },
+    [MEGALITHIC_SETTLEMENTS_UPGRADE_ID]: {
+        id: MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
+        name: 'Megalithic Settlements',
+        type: SymbolType.ANCIENT,
+        description: 'Upgrades Stone. Base Food production +1. Gain 1 Pioneer.',
+        sprite: '006.png',
+        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
+        descRelics: [{ relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 1 }],
     },
     [MASON_GUILD_UPGRADE_ID]: {
         id: MASON_GUILD_UPGRADE_ID,
         name: 'Mason Guild',
         type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Stone. Melee units gain +1 Attack and +2 HP.',
+        description: 'Upgrades Stone. Gain 2 Pioneers and 2 State Reorganizations.',
+        sprite: '006.png',
+        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
+        descRelics: [
+            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 2 },
+            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 2 },
+        ],
+    },
+    [TERRACE_ENGINEERING_UPGRADE_ID]: {
+        id: TERRACE_ENGINEERING_UPGRADE_ID,
+        name: 'Terrace Engineering',
+        type: SymbolType.MEDIEVAL,
+        description: 'Upgrades Stone. Base Food production +3.',
+        sprite: '006.png',
+        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
+    },
+    [MATERIALS_ENGINEERING_UPGRADE_ID]: {
+        id: MATERIALS_ENGINEERING_UPGRADE_ID,
+        name: 'Materials Engineering',
+        type: SymbolType.MODERN,
+        description: 'Upgrades Stone.',
         sprite: '006.png',
         descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
     },
@@ -432,7 +449,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: MECHANICS_UPGRADE_ID,
         name: 'Mechanics',
         type: SymbolType.MEDIEVAL,
-        description: 'Replaces Archer with Crossbowman. Ranged units gain +1 Attack and +2 HP.',
+        description: 'Removes Archer from the selection pool and adds Crossbowman. Ranged units gain +1 Attack and +2 HP.',
         sprite: '033.png',
         descSymbols: [
             { symbolKey: 'archer', relation: 'pool_remove' },
@@ -443,7 +460,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: GUNPOWDER_UPGRADE_ID,
         name: 'Stirrups',
         type: SymbolType.MEDIEVAL,
-        description: 'Replaces Warrior with Knight. Melee units gain +2 Attack and +4 HP.',
+        description: 'Removes Warrior from the selection pool and adds Knight. Melee units gain +2 Attack and +4 HP.',
         sprite: '048.png',
         descSymbols: [
             { symbolKey: 'warrior', relation: 'pool_remove' },
@@ -454,7 +471,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: BALLISTICS_UPGRADE_ID,
         name: 'Ballistics',
         type: SymbolType.MODERN,
-        description: 'Replaces Crossbowman with Cannon. Ranged units gain +1 Attack and +2 HP.',
+        description: 'Removes Crossbowman from the selection pool and adds Cannon. Ranged units gain +1 Attack and +2 HP.',
         sprite: '055.png',
         descSymbols: [
             { symbolKey: 'crossbowman', relation: 'pool_remove' },
@@ -465,7 +482,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: INTERCHANGEABLE_PARTS_UPGRADE_ID,
         name: 'Interchangeable Parts',
         type: SymbolType.MODERN,
-        description: 'Replaces Knight with Infantry. Melee units gain +2 Attack and +4 HP.',
+        description: 'Removes Knight from the selection pool and adds Infantry. Melee units gain +2 Attack and +4 HP.',
         sprite: '062.png',
         descSymbols: [
             { symbolKey: 'cavalry', relation: 'pool_remove' },
@@ -573,6 +590,14 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 2 },
             { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
         ],
+    },
+    [LAND_ALLOTMENT_UPGRADE_ID]: {
+        id: LAND_ALLOTMENT_UPGRADE_ID,
+        name: 'Land Allotment',
+        type: SymbolType.ANCIENT,
+        description: 'Base Food production +1. Gain 3 Pioneers.',
+        sprite: '072.png',
+        descRelics: [{ relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 3 }],
     },
     [TRIBAL_FEDERATION_UPGRADE_ID]: {
         id: TRIBAL_FEDERATION_UPGRADE_ID,
@@ -825,9 +850,9 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: MODERN_AGE_UPGRADE_ID,
         name: 'Modern Age',
         type: SymbolType.MODERN,
-        description: 'Medieval symbols no longer appear. Unlocks all Modern symbols. Terrain symbols no longer appear.',
+        description: 'Terrain symbols no longer appear. Modern symbols are not available in the demo. Upgrades Mountain.',
         sprite: '051.png',
-        descSymbols: buildModernAgeDescSymbols(),
+        descSymbols: [{ symbolKey: 'mountain', relation: 'effect_modify' }],
     },
     [AGI_PROJECT_UPGRADE_ID]: {
         id: AGI_PROJECT_UPGRADE_ID,
@@ -910,7 +935,6 @@ export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> 
     [DESERT_STORAGE_UPGRADE_ID]: [DRY_STORAGE_UPGRADE_ID],
     [CARAVANSERAI_UPGRADE_ID]: [DESERT_STORAGE_UPGRADE_ID],
     [OASIS_RECOVERY_UPGRADE_ID]: [CARAVANSERAI_UPGRADE_ID],
-    [MASON_GUILD_UPGRADE_ID]: [MINING_UPGRADE_ID],
 };
 
 const KNOWLEDGE_UPGRADE_DEPENDENTS = Object.entries(KNOWLEDGE_UPGRADE_PREREQUISITES).reduce<
