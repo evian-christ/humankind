@@ -35,6 +35,9 @@ const BASE_REROLL_GOLD_COST = 1;
 const GOLD_INFLATION_LEVEL_CAP = 30;
 const GOLD_INFLATION_LINEAR_PER_LEVEL = 0.05;
 const GOLD_INFLATION_QUADRATIC_PER_LEVEL = 0.0017;
+const INITIAL_FOOD_COST = 20;
+const INITIAL_FOOD_COST_INCREMENT = 30;
+const FOOD_COST_INCREMENT_GROWTH = 20;
 
 // Turn-only fiction timeline for HUD display.
 export const TIMELINE_YEAR_ANCHORS = [
@@ -412,15 +415,12 @@ export const resolveKnowledgeProgression = (
 };
 
 export const calculateFoodCost = (turn: number): number => {
-    const base = 50;
-    const nth = Math.floor(turn / 10);
-    if (nth < 1) return base;
-
-    let extra = 0;
-    for (let k = 1; k <= nth - 1; k++) {
-        extra += 25 + 25 * k;
-    }
-    return base + extra;
+    const paymentNumber = Math.max(1, Math.floor(turn / 10));
+    const completedPaymentCount = paymentNumber - 1;
+    const growingIncrements =
+        completedPaymentCount * INITIAL_FOOD_COST_INCREMENT +
+        (completedPaymentCount * (completedPaymentCount - 1) / 2) * FOOD_COST_INCREMENT_GROWTH;
+    return INITIAL_FOOD_COST + growingIncrements;
 };
 
 export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {

@@ -64,6 +64,7 @@ import {
     WRITING_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import {
+    calculateFoodCost,
     getGoldInflationMultiplier,
     getHudTurnStartPassiveTotals,
     getInflatedGoldCost,
@@ -80,6 +81,17 @@ import {
     isUpgradeLegalForKnowledgePick,
     normalizeKnowledgeResearchCredits,
 } from './gameCalculations';
+
+describe('food payment costs', () => {
+    it('uses the same accelerating curve in every game', () => {
+        expect(calculateFoodCost(10)).toBe(20);
+        expect(calculateFoodCost(20)).toBe(50);
+        expect(calculateFoodCost(30)).toBe(100);
+        expect(calculateFoodCost(40)).toBe(170);
+        expect(calculateFoodCost(50)).toBe(260);
+        expect(calculateFoodCost(100)).toBe(1010);
+    });
+});
 
 describe('gold inflation costs', () => {
     it('scales gold costs by knowledge level milestones', () => {
