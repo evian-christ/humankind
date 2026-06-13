@@ -151,8 +151,8 @@ describe('gameStore pasture butchering', () => {
         const plainsB = createInstance(Sym.plains, 'plains_b');
         board[1][1] = cattle;
         board[0][0] = plainsA;
-        board[3][1] = sheep;
-        board[4][0] = plainsB;
+        board[2][1] = sheep;
+        board[2][0] = plainsB;
 
         useGameStore.setState({
             board,
@@ -166,7 +166,7 @@ describe('gameStore pasture butchering', () => {
         });
 
         useGameStore.getState().butcherPastureAnimalAt(1, 1);
-        useGameStore.getState().butcherPastureAnimalAt(3, 1);
+        useGameStore.getState().butcherPastureAnimalAt(2, 1);
 
         const next = useGameStore.getState();
         expect(next.food).toBe(30);

@@ -32,8 +32,10 @@ import {
     createEmptyBoard,
     createInstance,
     createStartingBoard,
+    expandBoardAt,
     getStandardSymbolChoiceCount,
     phaseAfterTurnFlowComplete,
+    shiftBoardToMatchExpansion,
 } from './gameStoreHelpers';
 import { createSelectionFlowActions } from './actions/selectionFlow';
 import { createRelicActivationActions } from './actions/relicActivation';
@@ -188,6 +190,8 @@ export interface GameState {
     levelUpResearchPoints: number;
     /** Research pick tickets with the upgrade tier range each unspent point can pay for. */
     knowledgeResearchCredits?: KnowledgeResearchCredit[];
+    /** Era upgrades grant three single-slot board expansions. */
+    pendingBoardExpansions: number;
     /** 유물 상점 오버레이 열림 여부 */
     isRelicShopOpen: boolean;
     /** 자동 재입고 이후 아직 확인하지 않은 신규 입고 배지 */
@@ -237,6 +241,7 @@ export interface GameState {
     refreshRelicShop: (force?: boolean) => void;
     buyRelic: (relicId: number) => void;
     selectUpgrade: (upgradeId: number) => void;
+    expandBoardSlotAt: (x: number, y: number) => void;
 
     initializeGame: () => void;
     startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => void;
@@ -282,13 +287,20 @@ export interface GameState {
 }
 
 const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => {
+    const board = useGameStore.getState().board;
     const adj: { x: number; y: number }[] = [];
     for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
             if (dx === 0 && dy === 0) continue;
             const nx = x + dx;
             const ny = y + dy;
-            if (nx >= 0 && nx < BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT) adj.push({ x: nx, y: ny });
+            if (
+                nx >= 0 &&
+                nx < board.length &&
+                ny >= 0 &&
+                ny < (board[nx]?.length ?? 0) &&
+                Object.prototype.hasOwnProperty.call(board[nx], ny)
+            ) adj.push({ x: nx, y: ny });
         }
     }
     return adj;
@@ -408,6 +420,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     levelUpResearchPoints: 0,
     knowledgeResearchCredits: [],
+    pendingBoardExpansions: 0,
     isRelicShopOpen: false,
     hasNewRelicShopStock: false,
     rerollsThisTurn: 0,
@@ -441,6 +454,24 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
     clearEventLog: () => set({ eventLog: [] }),
+
+    expandBoardSlotAt: (x, y) => {
+        const state = get();
+        if (state.pendingBoardExpansions <= 0) return;
+        const expanded = expandBoardAt(state.board, x, y);
+        if (!expanded) return;
+        const shiftedPrev = shiftBoardToMatchExpansion(state.prevBoard, expanded.shiftX, expanded.shiftY, expanded.board);
+        set({
+            board: expanded.board,
+            prevBoard: shiftedPrev,
+            pendingBoardExpansions: state.pendingBoardExpansions - 1,
+            lastEffects: [],
+            counterDisplayOverrides: [],
+            activeSlot: null,
+            activeContributors: [],
+            pendingContributors: [],
+        });
+    },
 
     ...createTurnFlowActions({
         get,

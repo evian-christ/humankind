@@ -1,10 +1,7 @@
 import * as PIXI from 'pixi.js';
-import {
-    BOARD_WIDTH,
-    BOARD_HEIGHT,
-    useGameStore,
-} from '../../game/state/gameStore';
+import { useGameStore } from '../../game/state/gameStore';
 import type { GameState } from '../../game/state/gameStore';
+import { getActiveBoardCoords, isBoardSlotActive } from '../../game/state/gameStoreHelpers';
 import { EFFECT_SPEED_DELAY, SPIN_SPEED_CONFIG, useSettingsStore } from '../../game/state/settingsStore';
 import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
@@ -26,6 +23,7 @@ import {
     boardHasAdjacentPlains,
     boardHasDestroyableAdjacentSymbol,
     clearPixiContainer,
+    getBoardSymbolSpriteSize,
     isOpenableLoot,
 } from './renderers/rendererShared';
 import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
@@ -37,6 +35,7 @@ import {
 import { createCrtScreenFilter } from './CrtScreenFilter';
 import { mapCrtOutputToSource, mapCrtSourceToOutput } from './crtProjection';
 import { BOARD_DISPLAY_SCALE } from '../../game/layout/boardPixelLayout';
+import { useBoardViewStore } from '../../game/state/boardViewStore';
 
 const SPIN_AUDIO_ESTIMATE_TICK_MS = 1000 / 60;
 const CONTRIBUTOR_WOBBLE_SECOND_SOUND_MS = 140;
@@ -124,8 +123,10 @@ function estimateSpinDurationMs(args: {
     cellHeight: number;
     speedMul: number;
     stopInterval: number;
+    boardWidth: number;
+    boardHeight: number;
 }) {
-    const { cellHeight, speedMul, stopInterval } = args;
+    const { cellHeight, speedMul, stopInterval, boardWidth, boardHeight } = args;
     if (speedMul <= 0) return 0;
 
     const reelSpeed = 1.2 * speedMul;
@@ -133,14 +134,14 @@ function estimateSpinDurationMs(args: {
     const baseRandomCount = 12;
     let latestStopMs = 0;
 
-    for (let col = 0; col < BOARD_WIDTH; col++) {
+    for (let col = 0; col < boardWidth; col++) {
         let elapsedMs = 0;
         let scrollY = 0;
         let stopped = false;
         let started = false;
         const startDelay = col * stopInterval;
         const colRandomCount = baseRandomCount + col;
-        const targetScrollY = (BOARD_HEIGHT + colRandomCount) * cellHeight;
+        const targetScrollY = (boardHeight + colRandomCount) * cellHeight;
 
         while (!stopped && elapsedMs < 15000) {
             elapsedMs += SPIN_AUDIO_ESTIMATE_TICK_MS;
@@ -274,6 +275,15 @@ export class PixiGameApp {
     private handlePointerExit = () => {
         this.pointerPosition = null;
         this.clearAllHover();
+    };
+
+    private handleBoardWheel = (event: WheelEvent) => {
+        if (event.deltaY === 0) return;
+        event.preventDefault();
+        const { zoom, setZoom } = useBoardViewStore.getState();
+        const nextZoom = zoom * Math.exp(-event.deltaY * 0.0012);
+        setZoom(nextZoom);
+        this.renderBoard(useGameStore.getState(), useSettingsStore.getState());
     };
 
     private getPulse01() {
@@ -512,6 +522,7 @@ export class PixiGameApp {
         canvas.addEventListener('pointermove', this.handleCanvasPointerMove);
         canvas.addEventListener('pointerleave', this.handlePointerExit);
         canvas.addEventListener('pointercancel', this.handlePointerExit);
+        canvas.addEventListener('wheel', this.handleBoardWheel, { passive: false });
         window.addEventListener('blur', this.handlePointerExit);
     }
 
@@ -522,6 +533,7 @@ export class PixiGameApp {
         canvas?.removeEventListener('pointermove', this.handleCanvasPointerMove);
         canvas?.removeEventListener('pointerleave', this.handlePointerExit);
         canvas?.removeEventListener('pointercancel', this.handlePointerExit);
+        canvas?.removeEventListener('wheel', this.handleBoardWheel);
         window.removeEventListener('blur', this.handlePointerExit);
     }
 
@@ -563,16 +575,8 @@ export class PixiGameApp {
             onHoverRelic,
         });
         this.statusRenderer = new StatusRenderer({
-            bgContainer: this.bgContainer,
-            hitContainer: this.hitContainer,
-            onHoverStatus: (status) => {
-                if (!status) {
-                    onHoverStatus(null);
-                    return;
-                }
-                const projected = this.projectScreenPoint(status.screenX, status.screenY);
-                onHoverStatus({ ...status, screenX: projected.x, screenY: projected.y });
-            },
+            bgContainer: this.flatRelicContainer,
+            onHoverStatus,
         });
         this.upgradeRenderer = new UpgradeRenderer((upgrade) => {
             if (!upgrade) {
@@ -692,7 +696,10 @@ export class PixiGameApp {
         events.mapPositionToPoint = (point, clientX, clientY) => {
             mapPositionToPoint(point, clientX, clientY);
             if (!this.crtEnabled) return;
-            if (this.relicRenderer.containsScreenPoint(point.x, point.y)) return;
+            if (
+                this.relicRenderer.containsScreenPoint(point.x, point.y)
+                || this.statusRenderer.containsScreenPoint(point.x, point.y)
+            ) return;
             const mapped = mapCrtOutputToSource(
                 point.x,
                 point.y,
@@ -758,7 +765,7 @@ export class PixiGameApp {
         }
 
         this.relicRenderer.validateHover(pointer?.output ?? null);
-        this.statusRenderer.validateHover(pointer?.source ?? null);
+        this.statusRenderer.syncHover(pointer?.output ?? null);
     }
 
     private onTick(ticker: PIXI.Ticker) {
@@ -938,7 +945,12 @@ export class PixiGameApp {
 
         this.combatRenderer.clearIfNoAnimation(!!state.combatAnimation);
 
-        const frame = this.boardRenderer.beginFrame(this.app, state, settings);
+        const frame = this.boardRenderer.beginFrame(
+            this.app,
+            state,
+            settings,
+            useBoardViewStore.getState().zoom,
+        );
         if (!frame) return;
         const {
             startX,
@@ -953,8 +965,10 @@ export class PixiGameApp {
         } = frame;
         const lang = settings.language;
         const fontFamily = frame.fontFamily;
-        const fs = BOARD_DISPLAY_SCALE;
+        const fs = scale;
         const rowGap = frame.rowGap;
+        const boardWidth = frame.boardWidth;
+        const boardHeight = frame.boardHeight;
 
         // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
 
@@ -967,7 +981,7 @@ export class PixiGameApp {
             this.reels = [];
             this.spinElapsed = 0;
 
-            const totalBoardSlots = BOARD_WIDTH * BOARD_HEIGHT;
+            const totalBoardSlots = getActiveBoardCoords(state.board).length;
             const reelPool: (SymbolDefinition | null)[] = state.playerSymbols.slice(0, totalBoardSlots).map(s => s.definition);
             const emptyCount = totalBoardSlots - reelPool.length;
             for (let i = 0; i < emptyCount; i++) reelPool.push(null);
@@ -981,16 +995,19 @@ export class PixiGameApp {
                     cellHeight,
                     speedMul: currentSpinConfig.speedMul,
                     stopInterval: currentSpinConfig.stopInterval,
+                    boardWidth,
+                    boardHeight,
                 }));
             }
 
-            for (let col = 0; col < BOARD_WIDTH; col++) {
+            for (let col = 0; col < boardWidth; col++) {
                 const colX = startX + gridOffsetX + col * (cellWidth + colGap);
                 const colYStart = startY + gridOffsetY;
-                const visibleHeight = cellHeight * BOARD_HEIGHT;
-
                 const mask = new PIXI.Graphics();
-                mask.rect(colX, colYStart, cellWidth, visibleHeight);
+                for (let row = 0; row < boardHeight; row++) {
+                    if (!isBoardSlotActive(state.board, col, row)) continue;
+                    mask.rect(colX, colYStart + row * cellHeight, cellWidth, cellHeight);
+                }
                 mask.fill({ color: 0xffffff });
                 this.spinContainer.addChild(mask);
 
@@ -1000,7 +1017,7 @@ export class PixiGameApp {
 
                 const extraPerCol = 1;
                 const colRandomCount = RANDOM_COUNT + col * extraPerCol;
-                const stripOffsetY = -(BOARD_HEIGHT + colRandomCount) * cellHeight;
+                const stripOffsetY = -(boardHeight + colRandomCount) * cellHeight;
 
                 const createSymbolGroup = (def: SymbolDefinition | null, yPos: number) => {
                     const group = new PIXI.Container();
@@ -1008,9 +1025,7 @@ export class PixiGameApp {
                     group.y = yPos;
                     const spritePath = def ? getSymbolSpriteUrl(def) : null;
                     if (spritePath) {
-                        const SPRITE_PX = 32;
-                        const rawSize = Math.min(cellWidth - 6, cellHeight) * 0.85;
-                        const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
+                        const spriteSize = getBoardSymbolSpriteSize(cellWidth, cellHeight);
                         const sprite = PIXI.Sprite.from(spritePath);
                         sprite.x = cellWidth / 2;
                         sprite.y = cellHeight / 2;
@@ -1022,22 +1037,22 @@ export class PixiGameApp {
                     return group;
                 };
 
-                for (let row = 0; row < BOARD_HEIGHT; row++) {
-                    const sym = state.board[col][row];
+                for (let row = 0; row < boardHeight; row++) {
+                    const sym = state.board[col]?.[row];
                     reelStrip.addChild(createSymbolGroup(sym ? sym.definition : null, colYStart + row * cellHeight));
                 }
 
                 for (let i = 0; i < colRandomCount; i++) {
-                    reelStrip.addChild(createSymbolGroup(pickRandomFromPool(), colYStart + (BOARD_HEIGHT + i) * cellHeight));
+                    reelStrip.addChild(createSymbolGroup(pickRandomFromPool(), colYStart + (boardHeight + i) * cellHeight));
                 }
 
-                for (let i = 0; i < BOARD_HEIGHT; i++) {
+                for (let i = 0; i < boardHeight; i++) {
                     const prevSym = state.prevBoard[col]?.[i];
-                    reelStrip.addChild(createSymbolGroup(prevSym ? prevSym.definition : null, colYStart + (BOARD_HEIGHT + colRandomCount + i) * cellHeight));
+                    reelStrip.addChild(createSymbolGroup(prevSym ? prevSym.definition : null, colYStart + (boardHeight + colRandomCount + i) * cellHeight));
                 }
 
                 reelStrip.y = stripOffsetY;
-                const targetScrollY = (BOARD_HEIGHT + colRandomCount) * cellHeight;
+                const targetScrollY = (boardHeight + colRandomCount) * cellHeight;
                 const colStartDelay = col * currentSpinConfig.stopInterval;
 
                 this.reels.push({
@@ -1050,9 +1065,10 @@ export class PixiGameApp {
         }
 
         // Draw slots (non-spinning)
-        for (let x = 0; x < BOARD_WIDTH; x++) {
+        for (let x = 0; x < boardWidth; x++) {
             if (state.phase === 'spinning') continue;
-            for (let y = 0; y < BOARD_HEIGHT; y++) {
+            for (let y = 0; y < boardHeight; y++) {
+                if (!isBoardSlotActive(state.board, x, y)) continue;
                 const cellX = startX + gridOffsetX + x * (cellWidth + colGap);
                 const cellY = startY + gridOffsetY + y * (cellHeight + rowGap);
                 const symbol = state.board[x][y];
@@ -1234,7 +1250,6 @@ export class PixiGameApp {
                     this.hitContainer.addChild(hitArea);
                 }
 
-                const innerW = cellWidth - 6;
                 const rarityColor = getSymbolColor(symDef.type);
 
                 // Processing highlight: 1) 본체만 lift, 2) contributors는 밝은 초록 틴트 + 위아래 흔들림
@@ -1318,9 +1333,7 @@ export class PixiGameApp {
 
                 const spritePath = getSymbolSpriteUrl(symDef);
                 if (spritePath) {
-                    const SPRITE_PX = 32;
-                    const rawSize = Math.min(innerW, cellHeight) * 0.85;
-                    const spriteSize = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
+                    const spriteSize = getBoardSymbolSpriteSize(cellWidth, cellHeight);
                     const spriteCenterX = cellX + cellWidth / 2 + activeOffsetX + preShakeX + earthquakeShakeX;
                     const spriteCenterY = cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
                     const texture = PIXI.Texture.from(spritePath);
@@ -1394,8 +1407,7 @@ export class PixiGameApp {
 
                 // 클릭 가능한 액션 심볼: 우상단 경고 배지
                 if (isActionable) {
-                    const actionSpriteRawSize = Math.min(innerW, cellHeight) * 0.85;
-                    const actionSpriteSize = 32 * Math.max(1, Math.floor(actionSpriteRawSize / 32));
+                    const actionSpriteSize = getBoardSymbolSpriteSize(cellWidth, cellHeight);
                     const actionSpriteCenterX = cellX + cellWidth / 2 + activeOffsetX + preShakeX;
                     const actionSpriteCenterY =
                         cellY + cellHeight / 2 + activeOffsetY + wobbleY + preShakeY;
@@ -1444,7 +1456,7 @@ export class PixiGameApp {
                     if (perm > 0) {
                         const permText = new PIXI.Text({
                             text: `+${perm}`,
-                            style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
+                            style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 36 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3.5 * fs } }),
                         });
                         permText.anchor.set(0.5, 0.5);
                         permText.x = cellX + 25 * fs + activeOffsetX;
@@ -1465,7 +1477,7 @@ export class PixiGameApp {
                 if (boardCounterOverlay) {
                     const counterText = new PIXI.Text({
                         text: boardCounterOverlay,
-                        style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
+                        style: new PIXI.TextStyle({ fill: '#8b7355', fontSize: 36 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3.5 * fs } }),
                     });
                     counterText.anchor.set(0.5, 0.5);
                     counterText.x = cellX + cellWidth - 21 * fs + activeOffsetX;
@@ -1476,7 +1488,7 @@ export class PixiGameApp {
                 if (symDef.base_attack !== undefined && symDef.base_attack > 0) {
                     const atkBg = new PIXI.Text({
                         text: '⚔',
-                        style: new PIXI.TextStyle({ fill: '#ff8c42', fontSize: 60 * fs, fontFamily }),
+                        style: new PIXI.TextStyle({ fill: '#ff8c42', fontSize: 68 * fs, fontFamily }),
                     });
                     atkBg.anchor.set(0.5, 0.5);
                     atkBg.x = cellX + 24 * fs + activeOffsetX;
@@ -1486,7 +1498,7 @@ export class PixiGameApp {
 
                     const atkText = new PIXI.Text({
                         text: String(symDef.base_attack),
-                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
+                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 36 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3.5 * fs } }),
                     });
                     atkText.anchor.set(0.5, 0.5);
                     atkText.x = cellX + 25 * fs + activeOffsetX;
@@ -1497,7 +1509,7 @@ export class PixiGameApp {
                 if (symDef.base_hp !== undefined && symDef.base_hp > 0) {
                     const hpBg = new PIXI.Text({
                         text: '♥',
-                        style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: 60 * fs, fontFamily }),
+                        style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: 68 * fs, fontFamily }),
                     });
                     hpBg.anchor.set(0.5, 0.5);
                     hpBg.x = cellX + cellWidth - 20 * fs + activeOffsetX;
@@ -1507,7 +1519,7 @@ export class PixiGameApp {
 
                     const hpText = new PIXI.Text({
                         text: String(symbol.enemy_hp ?? symDef.base_hp),
-                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 30 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3 * fs } }),
+                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 36 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3.5 * fs } }),
                     });
                     hpText.anchor.set(0.5, 0.5);
                     hpText.x = cellX + cellWidth - 21 * fs + activeOffsetX;
@@ -1534,10 +1546,7 @@ export class PixiGameApp {
                 const defFly = absorbedInst.definition;
                 const path = getSymbolSpriteUrl(defFly);
                 if (path) {
-                    const SPRITE_PX = 32;
-                    const innerW = cellWidth - 6;
-                    const rawSize = Math.min(innerW, cellHeight) * 0.85;
-                    const spriteSizeBase = SPRITE_PX * Math.max(1, Math.floor(rawSize / SPRITE_PX));
+                    const spriteSizeBase = getBoardSymbolSpriteSize(cellWidth, cellHeight);
                     const fromCX =
                         startX + gridOffsetX + ax * (cellWidth + colGap) + cellWidth / 2;
                     const fromCY =
@@ -1583,13 +1592,12 @@ export class PixiGameApp {
         this.statusRenderer.render(
             state,
             viewScale,
-            startX + gridOffsetX,
-            startY + gridOffsetY + BOARD_HEIGHT * cellHeight + (BOARD_HEIGHT - 1) * rowGap,
             w,
+            frame.height,
             fontFamily,
         );
         const boardLeft = startX + gridOffsetX;
-        const boardRight = boardLeft + BOARD_WIDTH * cellWidth + (BOARD_WIDTH - 1) * colGap;
+        const boardRight = boardLeft + boardWidth * cellWidth + Math.max(0, boardWidth - 1) * colGap;
         this.relicRenderer.render(state, viewScale, w, boardLeft, boardRight, fontFamily);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
@@ -1628,7 +1636,7 @@ export class PixiGameApp {
         }
 
         this.relicRenderer.syncHoverAfterRebuild(this.pointerPosition?.output ?? null);
-        this.statusRenderer.syncHoverAfterRebuild(this.pointerPosition?.source ?? null);
+        this.statusRenderer.syncHover(this.pointerPosition?.output ?? null);
         this.upgradeRenderer.syncHoverAfterRebuild();
 
         if (this.hudHoverSnapshot && this.onHoverHudStat) {

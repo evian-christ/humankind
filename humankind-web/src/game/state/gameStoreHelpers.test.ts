@@ -3,6 +3,9 @@ import {
     aggregateCollectionDestroyEffects,
     createStoredFoodDestroyEffects,
     createStartingBoard,
+    expandBoardAt,
+    getActiveBoardCoords,
+    getBoardExpansionCandidates,
     ensureStartingWildSeedsOwned,
     createInstance,
     placeOralTraditionAtBoardCenter,
@@ -10,48 +13,51 @@ import {
 import { S, SYMBOLS } from '../data/symbolDefinitions';
 
 describe('gameStoreHelpers starting layout', () => {
-    it('creates a starting board with oral tradition and five wild seeds in fixed slots', () => {
+    it('creates a starting board with oral tradition and one wild seed in fixed slots', () => {
         const { board, playerSymbols } = createStartingBoard();
 
         expect(playerSymbols.map((sym) => sym.definition.id)).toEqual([
             S.oral_tradition,
             S.wild_seeds,
-            S.wild_seeds,
-            S.wild_seeds,
-            S.wild_seeds,
-            S.wild_seeds,
         ]);
-        expect(board[2][1]?.definition.id).toBe(S.oral_tradition);
-        expect(board[0][1]?.definition.id).toBe(S.wild_seeds);
-        expect(board[1][2]?.definition.id).toBe(S.wild_seeds);
-        expect(board[4][1]?.definition.id).toBe(S.wild_seeds);
-        expect(board[3][2]?.definition.id).toBe(S.wild_seeds);
-        expect(board[2][3]?.definition.id).toBe(S.wild_seeds);
+        expect(board).toHaveLength(3);
+        expect(board.every((col) => col.length === 2)).toBe(true);
+        expect(board[1][0]?.definition.id).toBe(S.oral_tradition);
+        expect(board[1][1]?.definition.id).toBe(S.wild_seeds);
     });
 
-    it('tops up missing starting wild seeds to five copies', () => {
+    it('tops up missing starting wild seeds to one copy', () => {
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
-        const withOneSeed = [
-            oral,
-            createInstance(SYMBOLS[S.wild_seeds]!, []),
-        ];
 
-        const result = ensureStartingWildSeedsOwned(withOneSeed);
+        const result = ensureStartingWildSeedsOwned([oral]);
 
-        expect(result.filter((sym) => sym.definition.id === S.wild_seeds)).toHaveLength(5);
+        expect(result.filter((sym) => sym.definition.id === S.wild_seeds)).toHaveLength(1);
+    });
+
+    it('adds one irregular slot and preserves holes when expanding above the board', () => {
+        const { board } = createStartingBoard();
+
+        expect(getBoardExpansionCandidates(board)).toHaveLength(10);
+        const expanded = expandBoardAt(board, 1, -1);
+
+        expect(expanded).not.toBeNull();
+        expect(getActiveBoardCoords(expanded!.board)).toHaveLength(7);
+        expect(Object.prototype.hasOwnProperty.call(expanded!.board[0], 0)).toBe(false);
+        expect(expanded!.board[1][0]).toBeNull();
+        expect(expanded!.board[1][1]?.definition.id).toBe(S.oral_tradition);
     });
 
     it('moves the center occupant when anchoring oral tradition', () => {
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
         const wildSeed = createInstance(SYMBOLS[S.wild_seeds]!, []);
-        const board = Array(5).fill(null).map(() => Array(4).fill(null));
+        const board = Array(3).fill(null).map(() => Array(2).fill(null));
         board[0][0] = oral;
-        board[2][1] = wildSeed;
+        board[1][0] = wildSeed;
 
         const result = placeOralTraditionAtBoardCenter(board, [oral, wildSeed]);
         const placedIds = result.board.flat().filter(Boolean).map((sym) => sym!.instanceId);
 
-        expect(result.board[2][1]?.instanceId).toBe(oral.instanceId);
+        expect(result.board[1][0]?.instanceId).toBe(oral.instanceId);
         expect(placedIds).toEqual(expect.arrayContaining([oral.instanceId, wildSeed.instanceId]));
         expect(placedIds).toHaveLength(2);
     });

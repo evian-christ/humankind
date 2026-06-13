@@ -21,11 +21,19 @@ describe('board pixel layout', () => {
     it('keeps cell rectangles inside the scaled board coordinate system', () => {
         const layout = computeBoardPixelLayout(1920, 1080);
         const first = boardCellLocalRect(layout, 0, 0);
-        const last = boardCellLocalRect(layout, 4, 3);
+        const last = boardCellLocalRect(layout, 2, 1);
 
         expect(first.width).toBeCloseTo(170.4 * 0.8);
         expect(first.height).toBeCloseTo(163.2 * 0.8);
         expect(last.left + last.width).toBeLessThanOrEqual(layout.startX + layout.boardW);
         expect(last.top + last.height).toBeLessThanOrEqual(layout.startY + layout.boardH);
+    });
+
+    it('applies the user zoom multiplier around the centered board', () => {
+        const layout = computeBoardPixelLayout(1920, 1080, 3, 2, 1.5);
+
+        expect(layout.scale).toBeCloseTo(1.2);
+        expect(layout.boardW).toBeCloseTo(912 * 1.2);
+        expect(layout.startX).toBeCloseTo((1920 - layout.boardW) / 2);
     });
 });

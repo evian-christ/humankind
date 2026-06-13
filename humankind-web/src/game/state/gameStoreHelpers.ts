@@ -7,16 +7,12 @@ import { useRelicStore } from './relicStore';
 import type { GamePhase } from './gameStore';
 import type { BoardEffectDelta } from '../logic/turn/turnTypes';
 
-export const BOARD_WIDTH = 5;
-export const BOARD_HEIGHT = 4;
+export const BOARD_WIDTH = 3;
+export const BOARD_HEIGHT = 2;
 
-export const ORAL_TRADITION_ANCHOR = { x: 2, y: 1 } as const;
+export const ORAL_TRADITION_ANCHOR = { x: 1, y: 0 } as const;
 export const STARTING_WILD_SEED_ANCHORS = [
-    { x: 0, y: 1 },
-    { x: 1, y: 2 },
-    { x: 4, y: 1 },
-    { x: 3, y: 2 },
-    { x: 2, y: 3 },
+    { x: 1, y: 1 },
 ] as const;
 
 let instanceCounter = 0;
@@ -54,7 +50,7 @@ export const placeOralTraditionAtBoardCenter = (
     if (oralIdx < 0) return { board, playerSymbols: symList };
 
     const oralInst = symList[oralIdx]!;
-    const b = board.map((col) => [...col]);
+    const b = board.map((col) => col.map((cell) => cell));
     const { x: ax, y: ay } = ORAL_TRADITION_ANCHOR;
     let oralX = -1;
     let oralY = -1;
@@ -102,7 +98,7 @@ export const placeStartingWildSeeds = (
     const wildSeedInstances = symList.filter((s) => s.definition.id === S.wild_seeds);
     if (wildSeedInstances.length === 0) return { board, playerSymbols: symList };
 
-    const b = board.map((col) => [...col]);
+    const b = board.map((col) => col.map((cell) => cell));
 
     for (const inst of wildSeedInstances) {
         for (let x = 0; x < BOARD_WIDTH; x++) {
@@ -126,6 +122,97 @@ export const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] =>
     Array(BOARD_WIDTH)
         .fill(null)
         .map(() => Array(BOARD_HEIGHT).fill(null));
+
+export const isBoardSlotActive = (
+    board: (PlayerSymbolInstance | null)[][],
+    x: number,
+    y: number,
+): boolean =>
+    x >= 0 &&
+    x < board.length &&
+    y >= 0 &&
+    y < (board[x]?.length ?? 0) &&
+    Object.prototype.hasOwnProperty.call(board[x], y);
+
+export const cloneBoardPreservingSlots = (
+    board: (PlayerSymbolInstance | null)[][],
+): (PlayerSymbolInstance | null)[][] =>
+    board.map((column) => column.map((cell) => cell));
+
+export const getActiveBoardCoords = (
+    board: (PlayerSymbolInstance | null)[][],
+): Array<{ x: number; y: number }> => {
+    const coords: Array<{ x: number; y: number }> = [];
+    for (let x = 0; x < board.length; x++) {
+        for (let y = 0; y < (board[x]?.length ?? 0); y++) {
+            if (isBoardSlotActive(board, x, y)) coords.push({ x, y });
+        }
+    }
+    return coords;
+};
+
+export const getBoardExpansionCandidates = (
+    board: (PlayerSymbolInstance | null)[][],
+): Array<{ x: number; y: number }> => {
+    const candidates = new Map<string, { x: number; y: number }>();
+    for (const slot of getActiveBoardCoords(board)) {
+        for (const { dx, dy } of [
+            { dx: -1, dy: 0 },
+            { dx: 1, dy: 0 },
+            { dx: 0, dy: -1 },
+            { dx: 0, dy: 1 },
+        ]) {
+            const x = slot.x + dx;
+            const y = slot.y + dy;
+            if (isBoardSlotActive(board, x, y)) continue;
+            candidates.set(`${x},${y}`, { x, y });
+        }
+    }
+    return [...candidates.values()];
+};
+
+export const expandBoardAt = (
+    board: (PlayerSymbolInstance | null)[][],
+    targetX: number,
+    targetY: number,
+): { board: (PlayerSymbolInstance | null)[][]; shiftX: number; shiftY: number } | null => {
+    if (!getBoardExpansionCandidates(board).some(({ x, y }) => x === targetX && y === targetY)) return null;
+
+    const shiftX = targetX < 0 ? -targetX : 0;
+    const shiftY = targetY < 0 ? -targetY : 0;
+    const width = Math.max(board.length + shiftX, targetX + shiftX + 1);
+    const currentHeight = Math.max(0, ...board.map((col) => col.length));
+    const height = Math.max(currentHeight + shiftY, targetY + shiftY + 1);
+    const next = Array.from({ length: width }, () => new Array<PlayerSymbolInstance | null>(height));
+
+    for (let x = 0; x < board.length; x++) {
+        for (let y = 0; y < (board[x]?.length ?? 0); y++) {
+            if (!isBoardSlotActive(board, x, y)) continue;
+            next[x + shiftX][y + shiftY] = board[x][y] ?? null;
+        }
+    }
+    next[targetX + shiftX][targetY + shiftY] = null;
+    return { board: next, shiftX, shiftY };
+};
+
+export const shiftBoardToMatchExpansion = (
+    board: (PlayerSymbolInstance | null)[][],
+    shiftX: number,
+    shiftY: number,
+    shapeBoard: (PlayerSymbolInstance | null)[][],
+): (PlayerSymbolInstance | null)[][] => {
+    const next: (PlayerSymbolInstance | null)[][] = shapeBoard.map((col) => col.map(() => null));
+    for (let x = 0; x < board.length; x++) {
+        for (let y = 0; y < (board[x]?.length ?? 0); y++) {
+            if (!isBoardSlotActive(board, x, y)) continue;
+            const nx = x + shiftX;
+            const ny = y + shiftY;
+            if (!isBoardSlotActive(shapeBoard, nx, ny)) continue;
+            next[nx][ny] = board[x][y] ?? null;
+        }
+    }
+    return next;
+};
 
 export const getStandardSymbolChoiceCount = (board: (PlayerSymbolInstance | null)[][]): number =>
     board.some((col) => col.some((cell) => cell?.definition.id === S.heatwave)) ? 2 : 3;

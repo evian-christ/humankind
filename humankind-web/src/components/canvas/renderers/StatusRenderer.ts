@@ -3,22 +3,23 @@ import { getActiveStatusIdsForTurn, STATUSES } from '../../../game/data/statusDe
 import type { StatusDefinition } from '../../../game/data/statusDefinitions';
 import type { GameState } from '../../../game/state/gameStore';
 import type { HoveredStatus } from '../types';
-import { ASSET_BASE_URL, GAME_CURSOR_HELP } from './rendererShared';
+import { ASSET_BASE_URL } from './rendererShared';
 
 export class StatusRenderer {
+    private static readonly BOTTOM_ACTION_BAR_WIDTH = 1003;
+    private static readonly BOTTOM_ACTION_BUTTON_SIZE = 97;
+    private static readonly BOTTOM_ACTION_OFFSET = 24;
+
     private bgContainer: PIXI.Container;
-    private hitContainer: PIXI.Container;
     private onHoverStatus: (status: HoveredStatus | null) => void;
-    private hitBoundsByStatusId = new Map<number, PIXI.Rectangle>();
+    private hitTargets: Array<{ status: StatusDefinition; bounds: PIXI.Rectangle }> = [];
     private hoverSnapshot: { statusId: number; screenX: number; screenY: number } | null = null;
 
     constructor(args: {
         bgContainer: PIXI.Container;
-        hitContainer: PIXI.Container;
         onHoverStatus: (status: HoveredStatus | null) => void;
     }) {
         this.bgContainer = args.bgContainer;
-        this.hitContainer = args.hitContainer;
         this.onHoverStatus = args.onHoverStatus;
     }
 
@@ -28,32 +29,44 @@ export class StatusRenderer {
         this.onHoverStatus(null);
     }
 
-    public validateHover(pointer: { x: number; y: number } | null) {
-        if (!this.hoverSnapshot) return;
-        const bounds = this.hitBoundsByStatusId.get(this.hoverSnapshot.statusId);
-        if (!pointer || !bounds?.contains(pointer.x, pointer.y)) {
+    public containsScreenPoint(x: number, y: number) {
+        return this.hitTargets.some(({ bounds }) => bounds.contains(x, y));
+    }
+
+    public syncHover(pointer: { x: number; y: number } | null) {
+        const target = pointer
+            ? this.hitTargets.find(({ bounds }) => bounds.contains(pointer.x, pointer.y))
+            : undefined;
+        if (!target) {
             this.clearHover();
+            return;
         }
+        if (
+            this.hoverSnapshot?.statusId === target.status.id
+            && this.hoverSnapshot.screenX === target.bounds.x
+            && this.hoverSnapshot.screenY === target.bounds.y
+        ) return;
+
+        this.hoverSnapshot = {
+            statusId: target.status.id,
+            screenX: target.bounds.x,
+            screenY: target.bounds.y,
+        };
+        this.onHoverStatus({
+            status: target.status,
+            screenX: target.bounds.x,
+            screenY: target.bounds.y,
+        });
     }
 
-    public syncHoverAfterRebuild(pointer: { x: number; y: number } | null) {
-        this.validateHover(pointer);
-        if (!this.hoverSnapshot) return;
-        const status = STATUSES[this.hoverSnapshot.statusId];
-        if (status) {
-            this.onHoverStatus({
-                status,
-                screenX: this.hoverSnapshot.screenX,
-                screenY: this.hoverSnapshot.screenY,
-            });
-        } else {
-            this.hoverSnapshot = null;
-            this.onHoverStatus(null);
-        }
-    }
-
-    public render(state: GameState, scale: number, boardLeft: number, boardBottom: number, screenWidth: number, fontFamily: string) {
-        this.hitBoundsByStatusId.clear();
+    public render(
+        state: GameState,
+        scale: number,
+        screenWidth: number,
+        screenHeight: number,
+        fontFamily: string,
+    ) {
+        this.hitTargets = [];
         const activeStatuses = state.activeStatuses ?? (
             state.activeStatusIds.length > 0
                 ? state.activeStatusIds.map((id) => ({
@@ -75,28 +88,32 @@ export class StatusRenderer {
 
         const iconSize = 64 * scale;
         const gapX = 8 * scale;
-        const gapY = 8 * scale;
-        const maxRight = screenWidth - 16 * scale;
+        const buttonTop =
+            screenHeight
+            - StatusRenderer.BOTTOM_ACTION_OFFSET
+            - StatusRenderer.BOTTOM_ACTION_BUTTON_SIZE;
+        const actionBarWidth = Math.min(
+            StatusRenderer.BOTTOM_ACTION_BAR_WIDTH,
+            screenWidth - 32 * scale,
+        );
 
         const panel = new PIXI.Container();
-        panel.x = boardLeft;
-        panel.y = boardBottom + 12 * scale;
+        panel.x = (screenWidth - actionBarWidth) / 2 + 8 * scale;
+        panel.y = buttonTop - iconSize - 24 * scale;
         this.bgContainer.addChildAt(panel, Math.min(1, this.bgContainer.children.length));
 
         let iconX = 0;
-        let iconY = 0;
         for (const { status, remainingTurns } of statuses) {
-            if (iconX > 0 && panel.x + iconX + iconSize > maxRight) {
-                iconX = 0;
-                iconY += iconSize + gapY;
-            }
             const worldIconX = panel.x + iconX;
-            const worldIconY = panel.y + iconY;
+            const worldIconY = panel.y;
 
-            this.renderFrame(panel, iconX, iconY, iconSize, scale);
-            this.renderIcon(panel, status, iconX, iconY, iconSize);
-            this.renderCounter(panel, remainingTurns, iconX, iconY, iconSize, scale, fontFamily);
-            this.renderHitArea(status, worldIconX, worldIconY, iconSize);
+            this.renderFrame(panel, iconX, 0, iconSize, scale);
+            this.renderIcon(panel, status, iconX, 0, iconSize);
+            this.renderCounter(panel, remainingTurns, iconX, 0, iconSize, scale, fontFamily);
+            this.hitTargets.push({
+                status,
+                bounds: new PIXI.Rectangle(worldIconX, worldIconY, iconSize, iconSize),
+            });
 
             iconX += iconSize + gapX;
         }
@@ -131,30 +148,6 @@ export class StatusRenderer {
         placeholder.x = iconX + iconSize / 2;
         placeholder.y = iconY + iconSize / 2;
         panel.addChild(placeholder);
-    }
-
-    private renderHitArea(status: StatusDefinition, worldIconX: number, worldIconY: number, iconSize: number) {
-        const hitArea = new PIXI.Graphics();
-        const bounds = new PIXI.Rectangle(worldIconX, worldIconY, iconSize, iconSize);
-        this.hitBoundsByStatusId.set(status.id, bounds);
-        hitArea.rect(bounds.x, bounds.y, bounds.width, bounds.height);
-        hitArea.fill({ color: 0x000000, alpha: 0 });
-        hitArea.eventMode = 'static';
-        hitArea.cursor = GAME_CURSOR_HELP;
-
-        hitArea.on('pointerover', () => {
-            this.hoverSnapshot = {
-                statusId: status.id,
-                screenX: worldIconX,
-                screenY: worldIconY,
-            };
-            this.onHoverStatus({ status, screenX: worldIconX, screenY: worldIconY });
-        });
-        hitArea.on('pointerout', () => {
-            this.hoverSnapshot = null;
-            this.onHoverStatus(null);
-        });
-        this.hitContainer.addChild(hitArea);
     }
 
     private renderCounter(

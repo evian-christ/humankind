@@ -7,10 +7,6 @@ import type {
     LootMergeResolution,
     SymbolEffectContext,
 } from './types';
-
-export const BOARD_WIDTH = 5;
-export const BOARD_HEIGHT = 4;
-
 export const SEA_TERRAIN_ID = S.sea;
 
 export interface EffectState {
@@ -75,14 +71,19 @@ export const buildEffectResult = (state: EffectState): EffectResult => {
     return result;
 };
 
-export const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => {
+export const getAdjacentCoords = (
+    x: number,
+    y: number,
+    width = 5,
+    height = 4,
+): { x: number; y: number }[] => {
     const adj: { x: number; y: number }[] = [];
     for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
             if (dx === 0 && dy === 0) continue;
             const nx = x + dx;
             const ny = y + dy;
-            if (nx >= 0 && nx < BOARD_WIDTH && ny >= 0 && ny < BOARD_HEIGHT) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                 adj.push({ x: nx, y: ny });
             }
         }
@@ -96,12 +97,16 @@ export const getEffectiveAdjacentCoords = (
     y: number,
     allSymbolsAdjacent = false,
 ): { x: number; y: number }[] => {
-    const coords = getAdjacentCoords(x, y);
+    const width = boardGrid.length;
+    const height = boardGrid[x]?.length ?? boardGrid[0]?.length ?? 0;
+    const coords = getAdjacentCoords(x, y, width, height)
+        .filter((pos) => Object.prototype.hasOwnProperty.call(boardGrid[pos.x], pos.y));
     if (!allSymbolsAdjacent) return coords;
 
     const seen = new Set(coords.map((pos) => `${pos.x},${pos.y}`));
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
+    for (let bx = 0; bx < boardGrid.length; bx++) {
+        for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+            if (!Object.prototype.hasOwnProperty.call(boardGrid[bx], by)) continue;
             if (bx === x && by === y) continue;
             const symbol = boardGrid[bx]?.[by];
             if (!symbol || symbol.is_marked_for_destruction) continue;
@@ -115,8 +120,10 @@ export const getEffectiveAdjacentCoords = (
 };
 
 export const hasSeaOrHarborAdjacent = (boardGrid: BoardGrid, x: number, y: number): boolean =>
-    getAdjacentCoords(x, y).some((p) => {
-        const nid = boardGrid[p.x][p.y]?.definition.id;
+    getAdjacentCoords(x, y, boardGrid.length, boardGrid[x]?.length ?? boardGrid[0]?.length ?? 0)
+    .filter((p) => Object.prototype.hasOwnProperty.call(boardGrid[p.x], p.y))
+    .some((p) => {
+        const nid = boardGrid[p.x]?.[p.y]?.definition.id;
         return nid === SEA_TERRAIN_ID;
     });
 
@@ -124,8 +131,8 @@ export const findMountainSameColumn = (
     boardGrid: BoardGrid,
     stoneX: number,
 ): { x: number; y: number } | null => {
-    for (let yy = 0; yy < BOARD_HEIGHT; yy++) {
-        const cell = boardGrid[stoneX][yy];
+    for (let yy = 0; yy < (boardGrid[stoneX]?.length ?? 0); yy++) {
+        const cell = boardGrid[stoneX]?.[yy];
         if (cell?.definition.id === S.mountain) return { x: stoneX, y: yy };
     }
     return null;
@@ -133,9 +140,10 @@ export const findMountainSameColumn = (
 
 export const countPlacedSymbols = (boardGrid: BoardGrid): number => {
     let n = 0;
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
-            if (boardGrid[bx][by]) n++;
+    for (let bx = 0; bx < boardGrid.length; bx++) {
+        for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+            if (!Object.prototype.hasOwnProperty.call(boardGrid[bx], by)) continue;
+            if (boardGrid[bx]?.[by]) n++;
         }
     }
     return n;
@@ -143,9 +151,10 @@ export const countPlacedSymbols = (boardGrid: BoardGrid): number => {
 
 export const countOnBoard = (boardGrid: BoardGrid, targetId: number): number => {
     let count = 0;
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
-            if (boardGrid[bx][by]?.definition.id === targetId) count++;
+    for (let bx = 0; bx < boardGrid.length; bx++) {
+        for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+            if (!Object.prototype.hasOwnProperty.call(boardGrid[bx], by)) continue;
+            if (boardGrid[bx]?.[by]?.definition.id === targetId) count++;
         }
     }
     return count;
@@ -153,19 +162,20 @@ export const countOnBoard = (boardGrid: BoardGrid, targetId: number): number => 
 
 export const countEmptySlots = (boardGrid: BoardGrid): number => {
     let emptySlots = 0;
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
-            if (!boardGrid[bx][by]) emptySlots++;
+    for (let bx = 0; bx < boardGrid.length; bx++) {
+        for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+            if (!Object.prototype.hasOwnProperty.call(boardGrid[bx], by)) continue;
+            if (!boardGrid[bx]?.[by]) emptySlots++;
         }
     }
     return emptySlots;
 };
 
-export const isCorner = (x: number, y: number): boolean =>
+export const isCorner = (x: number, y: number, width = 5, height = 4): boolean =>
     (x === 0 && y === 0) ||
-    (x === 0 && y === BOARD_HEIGHT - 1) ||
-    (x === BOARD_WIDTH - 1 && y === 0) ||
-    (x === BOARD_WIDTH - 1 && y === BOARD_HEIGHT - 1);
+    (x === 0 && y === height - 1) ||
+    (x === width - 1 && y === 0) ||
+    (x === width - 1 && y === height - 1);
 
 export const randomBaseNormalSymbolId = (): number => {
     const pool = Object.values(SYMBOLS).filter((s) => s.type === SymbolType.NORMAL && !EXCLUDED_FROM_BASE_POOL.has(s.id));

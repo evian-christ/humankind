@@ -28,21 +28,22 @@ const createInstanceFactory = () => {
     });
 };
 
-const createEmptyBoard = (): BoardGrid => Array(5).fill(null).map(() => Array(4).fill(null));
+const createEmptyBoard = (width = 5, height = 4): BoardGrid =>
+    Array(width).fill(null).map(() => Array(height).fill(null));
 
 describe('prepareTurn', () => {
-    it('places at most 20 symbols on a 5x4 board', () => {
+    it('places at most 6 symbols on a 3x2 board', () => {
         const createInstance = createInstanceFactory();
         const playerSymbols = Array.from({ length: 25 }, () => createInstance(Sym.wheat));
 
         const result = prepareTurn({
-            board: createEmptyBoard(),
+            board: createEmptyBoard(3, 2),
             playerSymbols,
             turn: 3,
             level: 12,
             era: 2,
-            boardWidth: 5,
-            boardHeight: 4,
+            boardWidth: 3,
+            boardHeight: 2,
             unlockedKnowledgeUpgrades: [],
             threatState: {
                 barbarianSymbolThreat: 0,
@@ -56,9 +57,9 @@ describe('prepareTurn', () => {
 
         const placedCount = result.board.flat().filter(Boolean).length;
 
-        expect(result.board).toHaveLength(5);
-        expect(result.board.every((col) => col.length === 4)).toBe(true);
-        expect(placedCount).toBe(20);
+        expect(result.board).toHaveLength(3);
+        expect(result.board.every((col) => col.length === 2)).toBe(true);
+        expect(placedCount).toBe(6);
     });
 
     it('keeps Oral Tradition fixed at the center on the first turn', () => {
@@ -67,13 +68,13 @@ describe('prepareTurn', () => {
         const playerSymbols = [createInstance(Sym.wheat), oral, createInstance(Sym.rice)];
 
         const result = prepareTurn({
-            board: createEmptyBoard(),
+            board: createEmptyBoard(3, 2),
             playerSymbols,
             turn: 0,
             level: 12,
             era: 2,
-            boardWidth: 5,
-            boardHeight: 4,
+            boardWidth: 3,
+            boardHeight: 2,
             unlockedKnowledgeUpgrades: [],
             threatState: {
                 barbarianSymbolThreat: 0,
@@ -85,7 +86,7 @@ describe('prepareTurn', () => {
             getThreatLabel: (key) => key,
         });
 
-        expect(result.board[2][1]?.instanceId).toBe(oral.instanceId);
+        expect(result.board[1][0]?.instanceId).toBe(oral.instanceId);
         expect(result.turn).toBe(1);
     });
 
@@ -171,7 +172,7 @@ describe('prepareTurn', () => {
                 ) {
                     const positions = items as readonly { x: number; y: number }[];
                     const preferred = [
-                        { x: 2, y: 1 },
+                        { x: 1, y: 0 },
                         { x: 0, y: 0 },
                         { x: 0, y: 1 },
                     ];
@@ -185,13 +186,13 @@ describe('prepareTurn', () => {
         };
 
         const result = prepareTurn({
-            board: createEmptyBoard(),
+            board: createEmptyBoard(3, 2),
             playerSymbols,
             turn: 0,
             level: 12,
             era: 2,
-            boardWidth: 5,
-            boardHeight: 4,
+            boardWidth: 3,
+            boardHeight: 2,
             unlockedKnowledgeUpgrades: [],
             threatState: {
                 barbarianSymbolThreat: 0,
@@ -205,7 +206,7 @@ describe('prepareTurn', () => {
 
         const placedIds = result.board.flat().filter(Boolean).map((sym) => sym!.instanceId);
 
-        expect(result.board[2][1]?.instanceId).toBe(oral.instanceId);
+        expect(result.board[1][0]?.instanceId).toBe(oral.instanceId);
         expect(placedIds).toEqual(expect.arrayContaining([
             wildSeedA.instanceId,
             oral.instanceId,

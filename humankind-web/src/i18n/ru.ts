@@ -163,7 +163,7 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'pregame.demoSubtitle': 'Краткое вступление перед выбором лидера.',
     'pregame.demoTutorialTitle': 'Как играть',
     'pregame.demoTutorial.1': 'Ваша цель - пережить выплаты еды и развить цивилизацию, собирая сильные сочетания символов.',
-    'pregame.demoTutorial.2': 'Каждый ход нажимайте SPIN. Ваши символы случайно размещаются на поле 5x4, затем их эффекты срабатывают автоматически.',
+    'pregame.demoTutorial.2': 'Каждый ход нажимайте SPIN. Ваши символы случайно размещаются на поле 3x2, затем их эффекты срабатывают автоматически.',
     'pregame.demoTutorial.3': 'Еда помогает выжить, золото оплачивает перебросы и реликвии, а знания ведут к новым эпохам и сильным улучшениям.',
     'pregame.demoTutorial.4': 'После ходов и событий вы получаете шанс добавить новые символы. Выбирайте те, что усиливают друг друга соседством, ландшафтом или разрушением.',
     'pregame.demoTutorial.5': 'Каждые 10 ходов народ требует еду. Если вы не сможете заплатить, забег закончится.',
@@ -282,6 +282,8 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'resource.knowledge': ' знания ',
 
     'oblivionBoard.title': 'Выберите символ на поле',
+    'boardExpansion.title': 'Расширение поля: осталось {count}',
+    'boardExpansion.addSlot': 'Добавить одну ячейку',
     'oblivionBoard.remove': 'Удалить',
     'oblivionBoard.cancel': 'Отмена',
     'edictBoard.title': 'Указ: уничтожить соседний символ',

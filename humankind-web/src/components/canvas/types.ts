@@ -64,6 +64,7 @@ export interface CellLayout {
     cellWidth: number; cellHeight: number;
     gridOffsetX: number; gridOffsetY: number;
     colGap: number;
+    scale: number;
 }
 
 export interface ReelState {

@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
-import { BOARD_HEIGHT, BOARD_WIDTH } from '../../../game/state/gameStore';
 import type { GameState } from '../../../game/state/gameStore';
+import { isBoardSlotActive } from '../../../game/state/gameStoreHelpers';
 import type { SettingsState } from '../../../game/state/settingsStore';
 import { computeBoardPixelLayout } from '../../../game/layout/boardPixelLayout';
 import type { CellLayout } from '../types';
@@ -22,6 +22,8 @@ export interface BoardRenderFrame {
     scale: number;
     viewScale: number;
     fontFamily: string;
+    boardWidth: number;
+    boardHeight: number;
 }
 
 export class BoardRenderer {
@@ -41,12 +43,19 @@ export class BoardRenderer {
         this.boardContainer = args.boardContainer;
     }
 
-    public beginFrame(app: PIXI.Application, state: GameState, settings: SettingsState): BoardRenderFrame | null {
+    public beginFrame(
+        app: PIXI.Application,
+        state: GameState,
+        settings: SettingsState,
+        zoom: number,
+    ): BoardRenderFrame | null {
         if (!app.renderer) return null;
 
         const width = app.screen?.width || 1920;
         const height = app.screen?.height || 1080;
-        const viewLayout = computeBoardPixelLayout(width, height);
+        const boardWidth = state.board.length;
+        const boardHeight = Math.max(0, ...state.board.map((col) => col.length));
+        const viewLayout = computeBoardPixelLayout(width, height, boardWidth, boardHeight, zoom);
         const frame: BoardRenderFrame = {
             width,
             height,
@@ -63,12 +72,14 @@ export class BoardRenderer {
             scale: viewLayout.scale,
             viewScale: viewLayout.viewScale,
             fontFamily: getGameFontFamily(settings.language),
+            boardWidth,
+            boardHeight,
         };
 
         this.renderBackground(frame);
         this.renderBoardAura(frame, state);
-        this.renderSlotCells(frame);
-        this.renderSlotNumbers(frame);
+        this.renderSlotCells(frame, state);
+        this.renderSlotNumbers(frame, state);
         return frame;
     }
 
@@ -82,6 +93,7 @@ export class BoardRenderer {
             gridOffsetX: frame.gridOffsetX,
             gridOffsetY: frame.gridOffsetY,
             colGap: frame.colGap,
+            scale: frame.scale,
         };
     }
 
@@ -116,8 +128,12 @@ export class BoardRenderer {
         const auraGraphics = new PIXI.Graphics();
         const boardX = frame.startX + frame.gridOffsetX;
         const boardY = frame.startY + frame.gridOffsetY;
-        const boardWidth = BOARD_WIDTH * frame.cellWidth + (BOARD_WIDTH - 1) * frame.colGap;
-        const boardHeight = BOARD_HEIGHT * frame.cellHeight + (BOARD_HEIGHT - 1) * frame.rowGap;
+        const activeSlots: Array<{ x: number; y: number }> = [];
+        for (let y = 0; y < frame.boardHeight; y++) {
+            for (let x = 0; x < frame.boardWidth; x++) {
+                if (isBoardSlotActive(state.board, x, y)) activeSlots.push({ x, y });
+            }
+        }
         const isDestroyPick = state.phase === 'oblivion_furnace_board';
         const wasDestroyAuraActive = this.isDestroyAuraActive;
         if (isDestroyPick && !wasDestroyAuraActive && this.destroyAuraElapsedMs <= 0) {
@@ -142,18 +158,20 @@ export class BoardRenderer {
         }));
 
         const drawAuraBand = (graphics: PIXI.Graphics, spread: number, color: number, alpha: number) => {
-            graphics
-                .roundRect(
-                    boardX - spread,
-                    boardY - spread,
-                    boardWidth + spread * 2,
-                    boardHeight + spread * 2,
+            const bridgeX = frame.colGap / 2;
+            const bridgeY = frame.rowGap / 2;
+            for (const { x, y } of activeSlots) {
+                const cellX = boardX + x * (frame.cellWidth + frame.colGap);
+                const cellY = boardY + y * (frame.cellHeight + frame.rowGap);
+                graphics.roundRect(
+                    cellX - spread - bridgeX,
+                    cellY - spread - bridgeY,
+                    frame.cellWidth + spread * 2 + bridgeX * 2,
+                    frame.cellHeight + spread * 2 + bridgeY * 2,
                     spread,
-                )
-                .fill({ color, alpha })
-                .rect(boardX, boardY, boardWidth, boardHeight)
-                .cut()
-                .beginPath();
+                );
+            }
+            graphics.fill({ color, alpha });
         };
 
         for (const { spread, alpha, color } of auraBands) {
@@ -166,8 +184,9 @@ export class BoardRenderer {
             auraGraphics.filters = [new BlurFilterCtor(auraBlur)];
         }
 
-        const auraCenterX = boardX + boardWidth / 2;
-        const auraCenterY = boardY + boardHeight / 2;
+        const auraBounds = auraGraphics.getLocalBounds();
+        const auraCenterX = auraBounds.x + auraBounds.width / 2;
+        const auraCenterY = auraBounds.y + auraBounds.height / 2;
         auraGraphics.pivot.set(auraCenterX, auraCenterY);
         auraGraphics.position.set(auraCenterX, auraCenterY);
         this.slotAuraGraphics = auraGraphics;
@@ -190,10 +209,11 @@ export class BoardRenderer {
         this.tick(0);
     }
 
-    private renderSlotCells(frame: BoardRenderFrame) {
+    private renderSlotCells(frame: BoardRenderFrame, state: GameState) {
         const cellGraphics = new PIXI.Graphics();
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < BOARD_WIDTH; x++) {
+        for (let y = 0; y < frame.boardHeight; y++) {
+            for (let x = 0; x < frame.boardWidth; x++) {
+                if (!isBoardSlotActive(state.board, x, y)) continue;
                 const cellX = frame.startX + frame.gridOffsetX + x * (frame.cellWidth + frame.colGap);
                 const cellY = frame.startY + frame.gridOffsetY + y * (frame.cellHeight + frame.rowGap);
                 cellGraphics.rect(cellX, cellY, frame.cellWidth, frame.cellHeight);
@@ -203,12 +223,14 @@ export class BoardRenderer {
         this.boardContainer.addChild(cellGraphics);
     }
 
-    private renderSlotNumbers(frame: BoardRenderFrame) {
-        for (let y = 0; y < BOARD_HEIGHT; y++) {
-            for (let x = 0; x < BOARD_WIDTH; x++) {
+    private renderSlotNumbers(frame: BoardRenderFrame, state: GameState) {
+        let slotNum = 0;
+        for (let y = 0; y < frame.boardHeight; y++) {
+            for (let x = 0; x < frame.boardWidth; x++) {
+                if (!isBoardSlotActive(state.board, x, y)) continue;
+                slotNum += 1;
                 const cellX = frame.startX + frame.gridOffsetX + x * (frame.cellWidth + frame.colGap);
                 const cellY = frame.startY + frame.gridOffsetY + y * (frame.cellHeight + frame.rowGap);
-                const slotNum = y * BOARD_WIDTH + x + 1;
                 const text = new PIXI.Text({
                     text: slotNum.toString(),
                     style: new PIXI.TextStyle({

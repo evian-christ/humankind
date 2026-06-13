@@ -6,6 +6,7 @@ import type { GameState } from '../gameStore';
 import {
     createEmptyBoard,
     createStartingBoard,
+    cloneBoardPreservingSlots,
     ensureStartingWildSeedsOwned,
     ensureOralTraditionOwned,
     placeStartingWildSeeds,
@@ -59,6 +60,7 @@ const createCommonResetPatch = () => ({
     qinCurrencyStandardTurnsRemaining: 0,
     levelUpResearchPoints: 0,
     knowledgeResearchCredits: [],
+    pendingBoardExpansions: 0,
     isRelicShopOpen: false,
     hasNewRelicShopStock: false,
     rerollsThisTurn: 0,
@@ -158,7 +160,7 @@ export const createGameLifecycleActions = ({
             playerSymbols: placed.playerSymbols,
             relicChoices: initialRelicChoices,
             relicHalfPriceRelicId: initialHalfPriceRelicId,
-            prevBoard: placed.board.map((col) => [...col]),
+            prevBoard: cloneBoardPreservingSlots(placed.board),
             ...createCommonResetPatch(),
         });
     },
@@ -198,7 +200,7 @@ export const createGameLifecycleActions = ({
         board[3][1] = cornB;
         set({
             board,
-            prevBoard: board.map((col) => [...col]),
+            prevBoard: cloneBoardPreservingSlots(board),
             playerSymbols: [cornA, cornB],
             tutorialSpinStep: null,
             phase: 'idle',
@@ -213,7 +215,7 @@ export const createGameLifecycleActions = ({
         board[1][0] = cornA;
         board[4][2] = cornB;
         set({
-            prevBoard: state.board.map((col) => [...col]),
+            prevBoard: cloneBoardPreservingSlots(state.board),
             board,
             turn: 1,
             phase: 'spinning',
@@ -240,7 +242,7 @@ export const createGameLifecycleActions = ({
         board[4][2] = cornSymbols[1];
         board[2][1] = monument;
         set({
-            prevBoard: state.board.map((col) => [...col]),
+            prevBoard: cloneBoardPreservingSlots(state.board),
             board,
             turn: state.turn + 1,
             phase: 'spinning',

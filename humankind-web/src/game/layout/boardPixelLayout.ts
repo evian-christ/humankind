@@ -1,8 +1,7 @@
 import type { CellLayout } from '../../components/canvas/types';
+import { BOARD_HEIGHT, BOARD_WIDTH } from '../state/gameStoreHelpers';
 
-/** `gameStore.ts`의 BOARD_* 와 동일 — 변경 시 양쪽 맞출 것 */
-const BOARD_WIDTH = 5;
-const BOARD_HEIGHT = 4;
+/** 보드 배경과 셀의 1920x1080 기준 픽셀 규격. */
 const BOARD_LAYOUT_WIDTH_PX = 912;
 const BOARD_LAYOUT_HEIGHT_PX = 664;
 const BOARD_CELL_WIDTH_PX = 170.4;
@@ -23,19 +22,25 @@ export type BoardViewLayout = CellLayout & {
 };
 
 /** Pixi `renderBoard`와 동일한 보드·셀 배치 (뷰 픽셀 기준). */
-export function computeBoardPixelLayout(viewW: number, viewH: number): BoardViewLayout {
+export function computeBoardPixelLayout(
+    viewW: number,
+    viewH: number,
+    boardWidth = BOARD_WIDTH,
+    boardHeight = BOARD_HEIGHT,
+    zoom = 1,
+): BoardViewLayout {
     const w = viewW;
     const h = viewH;
     const viewScale = Math.min(w / BASE_W, h / BASE_H);
-    const scale = viewScale * BOARD_DISPLAY_SCALE;
+    const scale = viewScale * BOARD_DISPLAY_SCALE * zoom;
     const boardW = BOARD_LAYOUT_WIDTH_PX * scale;
     const boardH = BOARD_LAYOUT_HEIGHT_PX * scale;
     const cellWidth = BOARD_CELL_WIDTH_PX * scale;
     const cellHeight = BOARD_CELL_HEIGHT_PX * scale;
     const colGap = BOARD_COL_GAP_PX * scale;
 
-    const totalSlotsWidth = cellWidth * BOARD_WIDTH + colGap * (BOARD_WIDTH - 1);
-    const totalSlotsHeight = cellHeight * BOARD_HEIGHT;
+    const totalSlotsWidth = cellWidth * boardWidth + colGap * Math.max(0, boardWidth - 1);
+    const totalSlotsHeight = cellHeight * boardHeight;
     const gridOffsetX = (boardW - totalSlotsWidth) / 2;
     const gridOffsetY = (boardH - totalSlotsHeight) / 2;
 

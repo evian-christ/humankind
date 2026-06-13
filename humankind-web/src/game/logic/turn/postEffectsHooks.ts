@@ -213,7 +213,12 @@ export function runPostEffectsHooks(args: {
     const gobekliRelic = getRelicInst(RELIC_ID.GOBEKLI_PILLAR);
     if (gobekliRelic) {
         let emptySlots = 0;
-        for (let x = 0; x < boardWidth; x++) for (let y = 0; y < boardHeight; y++) if (!board[x][y]) emptySlots++;
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                if (!Object.prototype.hasOwnProperty.call(board[x], y)) continue;
+                if (!board[x][y]) emptySlots++;
+            }
+        }
         if (emptySlots > 0) {
             bonusFood += emptySlots;
             relicOwnEffectFloats.push({
@@ -305,6 +310,7 @@ export function runPostEffectsHooks(args: {
         let hasForest = false;
         for (let x = 0; x < boardWidth; x++) {
             for (let y = 0; y < boardHeight; y++) {
+                if (!Object.prototype.hasOwnProperty.call(board[x], y)) continue;
                 const cell = board[x][y];
                 if (cell && !cell.is_marked_for_destruction && cell.definition.id === S.forest) hasForest = true;
             }
@@ -482,6 +488,7 @@ export function runPostEffectsHooks(args: {
         let emptySlots = 0;
         for (let qx = 0; qx < boardWidth; qx++) {
             for (let qy = 0; qy < boardHeight; qy++) {
+                if (!Object.prototype.hasOwnProperty.call(board[qx], qy)) continue;
                 const cell = board[qx][qy];
                 if (cell && !cell.is_marked_for_destruction) placedSymbols++;
                 else emptySlots++;

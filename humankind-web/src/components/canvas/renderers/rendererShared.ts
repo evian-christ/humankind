@@ -1,5 +1,4 @@
 import * as PIXI from 'pixi.js';
-import { BOARD_HEIGHT, BOARD_WIDTH } from '../../../game/state/gameStore';
 import type { Language } from '../../../game/state/settingsStore';
 import { S, SymbolType } from '../../../game/data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../../game/types';
@@ -31,6 +30,12 @@ export function clearPixiContainer(container: PIXI.Container) {
     }
 }
 
+const SYMBOL_SPRITE_CELL_RATIO = 96 / (163.2 * 0.8);
+
+export function getBoardSymbolSpriteSize(cellWidth: number, cellHeight: number): number {
+    return Math.min(cellWidth, cellHeight) * SYMBOL_SPRITE_CELL_RATIO;
+}
+
 export const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19, 24, 37, 39, 40]);
 
 export function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
@@ -39,7 +44,13 @@ export function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][],
             if (dx === 0 && dy === 0) continue;
             const nx = x + dx;
             const ny = y + dy;
-            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+            if (
+                nx < 0 ||
+                nx >= board.length ||
+                ny < 0 ||
+                ny >= (board[nx]?.length ?? 0) ||
+                !Object.prototype.hasOwnProperty.call(board[nx], ny)
+            ) continue;
             if (board[nx][ny]?.definition.id === S.plains) return true;
         }
     }
@@ -52,7 +63,13 @@ export function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance |
             if (dx === 0 && dy === 0) continue;
             const nx = x + dx;
             const ny = y + dy;
-            if (nx < 0 || nx >= BOARD_WIDTH || ny < 0 || ny >= BOARD_HEIGHT) continue;
+            if (
+                nx < 0 ||
+                nx >= board.length ||
+                ny < 0 ||
+                ny >= (board[nx]?.length ?? 0) ||
+                !Object.prototype.hasOwnProperty.call(board[nx], ny)
+            ) continue;
             const candidate = board[nx][ny];
             if (
                 candidate &&

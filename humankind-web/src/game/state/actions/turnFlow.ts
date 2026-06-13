@@ -148,16 +148,15 @@ interface TurnFlowDeps {
     buildActiveRelicEffects: () => ActiveRelicEffects;
 }
 
-export const createTurnFlowActions = ({
-    get,
-    set,
-    boardWidth,
-    boardHeight,
-    processSingleSymbolEffects,
-    createInstance,
-    getAdjacentCoords,
-    buildActiveRelicEffects,
-}: TurnFlowDeps) => {
+export const createTurnFlowActions = (deps: TurnFlowDeps) => {
+    const {
+        get,
+        set,
+        processSingleSymbolEffects,
+        createInstance,
+        getAdjacentCoords,
+        buildActiveRelicEffects,
+    } = deps;
     const turnRuns = createTurnRunScheduler();
     const awardTerminalLeaderProgress = (outcome: LeaderGameOutcome) => {
         const state = get();
@@ -259,6 +258,7 @@ export const createTurnFlowActions = ({
             food: state.food - foodCost,
             phase: 'idle' as GamePhase,
             pendingFoodPayment: false,
+            pendingBoardExpansions: state.pendingBoardExpansions + 1,
         });
         get().appendEventLog({
             turn: state.turn,
@@ -278,7 +278,10 @@ export const createTurnFlowActions = ({
     },
     spinBoard: () => {
         const state = get();
+        const currentBoardWidth = state.board.length;
+        const currentBoardHeight = Math.max(0, ...state.board.map((col) => col.length));
         if ((state.levelUpResearchPoints ?? 0) > 0) return;
+        if (state.pendingBoardExpansions > 0) return;
         if (state.phase !== 'idle') return;
         turnRuns.cancelCurrent();
 
@@ -290,8 +293,8 @@ export const createTurnFlowActions = ({
             turn: state.turn,
             level: state.level,
             era: state.era,
-            boardWidth,
-            boardHeight,
+            boardWidth: currentBoardWidth,
+            boardHeight: currentBoardHeight,
             unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
             threatState: {
                 barbarianSymbolThreat: state.barbarianSymbolThreat,
@@ -362,6 +365,8 @@ export const createTurnFlowActions = ({
 
     startProcessing: () => {
         const state = get();
+        const currentBoardWidth = state.board.length;
+        const currentBoardHeight = Math.max(0, ...state.board.map((col) => col.length));
         if (state.isTutorialMode && state.tutorialSpinStep === 'monument_spin') {
             set({ tutorialSpinStep: 'monument_processing' });
         }
@@ -396,8 +401,8 @@ export const createTurnFlowActions = ({
 
         const slotPipeline = createSlotEffectPipeline({
             board: get().board,
-            boardWidth,
-            boardHeight,
+            boardWidth: currentBoardWidth,
+            boardHeight: currentBoardHeight,
             baseTotals,
         });
         const relicEffects = buildActiveRelicEffects();
@@ -441,8 +446,8 @@ export const createTurnFlowActions = ({
                     : getAdjacentCoords(x, y);
             const post = runPostEffectsHooks({
                 board: currentBoard,
-                boardWidth,
-                boardHeight,
+                boardWidth: currentBoardWidth,
+                boardHeight: currentBoardHeight,
                 effects,
                 leaderId: stateAtFinish.leaderId,
                 leaderProgressLevel: stateAtFinish.leaderProgressLevel,
@@ -553,8 +558,8 @@ export const createTurnFlowActions = ({
                         symbolsToAdd: [...toAdd, ...bonusAddSymbolIds],
                         symbolDefinitions: SYMBOLS,
                         unlockedKnowledgeUpgrades: finishUpgrades,
-                        boardWidth,
-                        boardHeight,
+                        boardWidth: currentBoardWidth,
+                        boardHeight: currentBoardHeight,
                         createSymbolInstance: createInstance,
                     });
 
@@ -777,8 +782,8 @@ export const createTurnFlowActions = ({
                 completeSlotEffects({
                     pipeline: slotPipeline,
                     board: get().board,
-                    boardWidth,
-                    boardHeight,
+                    boardWidth: currentBoardWidth,
+                    boardHeight: currentBoardHeight,
                     getAdjacentCoords,
                     unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
                     relicEffects: buildActiveRelicEffects(),
@@ -1000,12 +1005,12 @@ export const createTurnFlowActions = ({
             });
         };
 
-        const combatEvents = collectCombatEvents(combatBoard, boardWidth, boardHeight);
+        const combatEvents = collectCombatEvents(combatBoard, currentBoardWidth, currentBoardHeight);
 
         const startEffectPhase = () => {
             if (!turnRun.isActive()) return;
-            const combatDestroyedIds = new Set(collectCombatDestroyedSymbols(get().board, boardWidth, boardHeight));
-            const combatKilledEnemies = collectCombatKilledEnemies(get().board, boardWidth, boardHeight);
+            const combatDestroyedIds = new Set(collectCombatDestroyedSymbols(get().board, currentBoardWidth, currentBoardHeight));
+            const combatKilledEnemies = collectCombatKilledEnemies(get().board, currentBoardWidth, currentBoardHeight);
             const combatLootCount = combatKilledEnemies.length;
             if (combatKilledEnemies.length > 0) {
                 const relics = useRelicStore.getState().relics;
@@ -1090,8 +1095,8 @@ export const createTurnFlowActions = ({
             const board = get().board;
             const result = resolveCombatStep({
                 board,
-                width: boardWidth,
-                height: boardHeight,
+                width: currentBoardWidth,
+                height: currentBoardHeight,
                 event: { ax, ay },
                 getAdjacentCoords,
                 getEffectiveMaxHP,
@@ -1140,7 +1145,7 @@ export const createTurnFlowActions = ({
         };
 
         if (hasClovis) {
-            const pos = pickClovisPreDamageTarget(combatBoard, boardWidth, boardHeight);
+            const pos = pickClovisPreDamageTarget(combatBoard, currentBoardWidth, currentBoardHeight);
             const effectSpeed = useSettingsStore.getState().effectSpeed;
             const combatPlan = buildCombatPresentationPlan(effectSpeed);
 

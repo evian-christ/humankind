@@ -6,7 +6,7 @@ import { GAME_EVENTS, isGameEventDefinition } from '../data/eventDefinitions';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
 import type { GamePhase, GameState, GameEventLogEntry } from './gameStore';
-import { createEmptyBoard } from './gameStoreHelpers';
+import { createEmptyBoard, isBoardSlotActive } from './gameStoreHelpers';
 import { normalizeKnowledgeResearchCredits, type KnowledgeResearchCredit } from './gameCalculations';
 import { useRelicStore, type RelicInstance } from './relicStore';
 
@@ -14,7 +14,7 @@ const SAVE_KEY = 'humankind.save.v1';
 const SAVE_VERSION = 1;
 const MAX_SAVED_EVENT_LOG = 400;
 
-type SerializedBoard = (string | null)[][];
+type SerializedBoard = (string | null | false)[][];
 
 interface SerializedSymbol {
     definitionId: number;
@@ -66,6 +66,7 @@ interface SavedGame {
         qinCurrencyStandardTurnsRemaining?: number;
         levelUpResearchPoints: number;
         knowledgeResearchCredits?: KnowledgeResearchCredit[];
+        pendingBoardExpansions?: number;
         isRelicShopOpen: boolean;
         hasNewRelicShopStock: boolean;
         rerollsThisTurn: number;
@@ -134,17 +135,26 @@ const deserializeSymbol = (
 };
 
 const serializeBoard = (board: (PlayerSymbolInstance | null)[][]): SerializedBoard =>
-    board.map((col) => col.map((symbol) => symbol?.instanceId ?? null));
+    board.map((col, x) =>
+        Array.from({ length: col.length }, (_, y) =>
+            isBoardSlotActive(board, x, y) ? col[y]?.instanceId ?? null : false,
+        ),
+    );
 
 const deserializeBoard = (
     savedBoard: SerializedBoard,
     symbolByInstanceId: Map<string, PlayerSymbolInstance>,
 ): (PlayerSymbolInstance | null)[][] => {
-    const board = createEmptyBoard();
-    for (let x = 0; x < board.length; x++) {
-        for (let y = 0; y < board[x].length; y++) {
-            const instanceId = savedBoard[x]?.[y] ?? null;
-            board[x][y] = instanceId ? symbolByInstanceId.get(instanceId) ?? null : null;
+    const board = savedBoard.length > 0
+        ? savedBoard.map((col) => new Array<PlayerSymbolInstance | null>(col.length))
+        : createEmptyBoard();
+    for (let x = 0; x < savedBoard.length; x++) {
+        for (let y = 0; y < (savedBoard[x]?.length ?? 0); y++) {
+            const instanceId = savedBoard[x]?.[y];
+            if (instanceId === false) continue;
+            board[x][y] = typeof instanceId === 'string'
+                ? symbolByInstanceId.get(instanceId) ?? null
+                : null;
         }
     }
     return board;
@@ -241,6 +251,7 @@ export function saveGameState(state: GameState): void {
             qinCurrencyStandardTurnsRemaining: state.qinCurrencyStandardTurnsRemaining,
             levelUpResearchPoints: state.levelUpResearchPoints,
             knowledgeResearchCredits: state.knowledgeResearchCredits ?? [],
+            pendingBoardExpansions: state.pendingBoardExpansions,
             isRelicShopOpen: state.isRelicShopOpen,
             hasNewRelicShopStock: state.hasNewRelicShopStock,
             rerollsThisTurn: state.rerollsThisTurn,
@@ -352,6 +363,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             qinCurrencyStandardTurnsRemaining: save.state.qinCurrencyStandardTurnsRemaining ?? 0,
             levelUpResearchPoints: knowledgeResearchCredits.length,
             knowledgeResearchCredits,
+            pendingBoardExpansions: save.state.pendingBoardExpansions ?? 0,
             isRelicShopOpen: save.state.isRelicShopOpen,
             hasNewRelicShopStock: save.state.hasNewRelicShopStock,
             rerollsThisTurn: save.state.rerollsThisTurn,

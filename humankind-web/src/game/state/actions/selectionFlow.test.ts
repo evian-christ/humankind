@@ -81,6 +81,7 @@ const makeState = (): GameState => {
         unlockedKnowledgeUpgrades: [],
         qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
+        pendingBoardExpansions: 0,
         isRelicShopOpen: false,
         hasNewRelicShopStock: false,
         rerollsThisTurn: 0,
@@ -113,6 +114,7 @@ const makeState = (): GameState => {
         refreshRelicShop: () => {},
         buyRelic: () => {},
         selectUpgrade: () => {},
+        expandBoardSlotAt: () => {},
         initializeGame: () => {},
         startGameWithDraft: () => {},
         startTutorialGame: () => {},
@@ -455,6 +457,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().phase).toBe('selection');
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(0);
+        expect(harness.get().pendingBoardExpansions).toBe(3);
     });
 
     it('keeps pre-transition upgrades researchable while transition research points remain', () => {
@@ -483,11 +486,27 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(FEUDALISM_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(1);
+        expect(harness.get().pendingBoardExpansions).toBe(3);
 
         harness.actions.selectUpgrade(HUNTING_UPGRADE_ID);
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(HUNTING_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(0);
+    });
+
+    it('grants three board expansions when entering the Modern Age', () => {
+        const harness = createHarness({
+            phase: 'idle',
+            levelUpResearchPoints: 1,
+            level: 20,
+            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
+        });
+
+        harness.actions.selectUpgrade(MODERN_AGE_UPGRADE_ID);
+
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MODERN_AGE_UPGRADE_ID);
+        expect(harness.get().levelUpResearchPoints).toBe(0);
+        expect(harness.get().pendingBoardExpansions).toBe(3);
     });
 
     it('locks upgrades at or below the remaining research point cutoff', () => {

@@ -7,6 +7,7 @@ import { RELICS } from '../../data/relicDefinitions';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
+    cloneBoardPreservingSlots,
     createBoardDestroyResourceEffects,
     createStoredFoodDestroyEffects,
     getBoardOnlyDestroyEffectTotals,
@@ -88,7 +89,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;
 
         const instanceIds = [sym.instanceId];
-        const newBoard = prev.board.map((col) => [...col]);
+        const newBoard = cloneBoardPreservingSlots(prev.board);
         newBoard[x][y] = null;
         if ((prev.unlockedKnowledgeUpgrades || []).includes(PASTURE_MANAGEMENT_UPGRADE_ID)) {
             adjacentPlains.forEach((p) => {
@@ -172,7 +173,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         const { food, gold, knowledge } = getRewardAmounts(reward, prev.era);
 
-        const newBoard = prev.board.map((col) => [...col]);
+        const newBoard = cloneBoardPreservingSlots(prev.board);
         newBoard[x][y] = null;
         const newPlayerSymbols = prev.playerSymbols.filter((s) => s.instanceId !== loot.instanceId);
 
@@ -361,7 +362,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;
 
         const instanceIds = [sym.instanceId];
-        const newBoard = prev.board.map((col) => [...col]);
+        const newBoard = cloneBoardPreservingSlots(prev.board);
         newBoard[x][y] = null;
 
         const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));

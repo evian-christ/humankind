@@ -11,6 +11,17 @@ const createEmptyBoard = (width: number, height: number): BoardGrid => {
     return Array(width).fill(null).map(() => Array(height).fill(null));
 };
 
+const createEmptyBoardFromShape = (board: BoardGrid, width: number, height: number): BoardGrid => {
+    if (board.length === 0) return createEmptyBoard(width, height);
+    return board.map((col, x) => {
+        const next = new Array<BoardGrid[number][number]>(col.length);
+        for (let y = 0; y < col.length; y++) {
+            if (Object.prototype.hasOwnProperty.call(board[x], y)) next[y] = null;
+        }
+        return next;
+    });
+};
+
 const increaseBarbarianInvasionThreat = (current: number): number =>
     Math.min(100, Number((current + BARBARIAN_INVASION_THREAT_STEP).toFixed(1)));
 
@@ -23,7 +34,7 @@ const placeOralTraditionAtBoardCenter = (
     if (oralIdx < 0) return { board, playerSymbols: symList };
 
     const oralInst = symList[oralIdx]!;
-    const b = board.map((col) => [...col]);
+    const b = board.map((col) => col.map((cell) => cell));
 
     const ax = Math.floor(b.length / 2);
     const ay = Math.max(0, Math.floor((b[0]?.length ?? 1) / 2) - 1);
@@ -166,19 +177,19 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         }
     }
 
-    const newBoard = createEmptyBoard(boardWidth, boardHeight);
+    const newBoard = createEmptyBoardFromShape(board, boardWidth, boardHeight);
     const combatAndEnemy = rng.shuffle(newPlayerSymbols
         .filter((s) => s.definition.type === SymbolType.ENEMY || s.definition.type === SymbolType.UNIT));
     const friendly = rng.shuffle(newPlayerSymbols
         .filter((s) => s.definition.type !== SymbolType.ENEMY && s.definition.type !== SymbolType.UNIT));
-    const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, boardWidth * boardHeight);
-
     const positions: BoardCoord[] = [];
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
-            positions.push({ x, y });
+    for (let x = 0; x < newBoard.length; x++) {
+        for (let y = 0; y < (newBoard[x]?.length ?? 0); y++) {
+            if (Object.prototype.hasOwnProperty.call(newBoard[x], y)) positions.push({ x, y });
         }
     }
+    const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, positions.length);
+
     const shuffledPositions = rng.shuffle(positions);
 
     shuffledSymbols.forEach((instance, idx) => {
@@ -197,8 +208,9 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         newThreats.map((n) => [n.instanceId, { label: n.label, key: n.key }]),
     );
     const pendingNewThreatFloats: TurnPreparationOutput['pendingNewThreatFloats'] = [];
-    for (let x = 0; x < boardWidth; x++) {
-        for (let y = 0; y < boardHeight; y++) {
+    for (let x = 0; x < anchoredBoard.length; x++) {
+        for (let y = 0; y < (anchoredBoard[x]?.length ?? 0); y++) {
+            if (!Object.prototype.hasOwnProperty.call(anchoredBoard[x], y)) continue;
             const inst = anchoredBoard[x][y];
             if (inst && newThreatLabels.has(inst.instanceId)) {
                 const threat = newThreatLabels.get(inst.instanceId)!;

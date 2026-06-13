@@ -2,12 +2,15 @@ import { SYMBOLS, S, SymbolType } from '../../data/symbolDefinitions';
 import {
     CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
     GREAT_MIGRATION_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
     NATIONALISM_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
@@ -48,6 +51,7 @@ import { useRelicStore } from '../relicStore';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
+    cloneBoardPreservingSlots,
     createBoardDestroyResourceEffects,
     createStoredFoodDestroyEffects,
     getBoardOnlyDestroyEffectTotals,
@@ -175,9 +179,10 @@ const countBoardSymbols = (board: GameState['board'], symbolId: number): number 
 
 const countBoardEmptySlots = (board: GameState['board']): number => {
     let count = 0;
-    for (const col of board) {
-        for (const cell of col) {
-            if (cell == null) count++;
+    for (let x = 0; x < board.length; x++) {
+        for (let y = 0; y < (board[x]?.length ?? 0); y++) {
+            if (!Object.prototype.hasOwnProperty.call(board[x], y)) continue;
+            if (board[x][y] == null) count++;
         }
     }
     return count;
@@ -430,7 +435,7 @@ export const createSelectionFlowActions = ({
             const bananaTrigger = triggerBananaEffectsOnce(state.board, state.unlockedKnowledgeUpgrades || []);
             foodDelta += bananaTrigger.foodGain;
             if (bananaTrigger.effects.length > 0) {
-                patch.board = state.board.map((col) => [...col]);
+                patch.board = cloneBoardPreservingSlots(state.board);
                 patch.lastEffects = [...(state.lastEffects ?? []), ...bananaTrigger.effects];
             }
         } else if (event.key === 'desert_caravan') {
@@ -712,18 +717,8 @@ export const createSelectionFlowActions = ({
         let religionUnlocked = state.religionUnlocked;
         if (uid === THEOLOGY_UPGRADE_ID) religionUnlocked = true;
 
-        const newBoard = [...state.board.map((row) => [...row])];
+        const newBoard = cloneBoardPreservingSlots(state.board);
         const newPlayerSymbols = [...state.playerSymbols];
-
-        for (let y = 0; y < state.board.length; y++) {
-            for (let x = 0; x < state.board[y].length; x++) {
-                const cell = state.board[y][x];
-                if (cell) {
-                    const match = newPlayerSymbols.find((s) => s.instanceId === cell.instanceId);
-                    newBoard[y][x] = match ?? null;
-                }
-            }
-        }
 
         const baseUnlock = {
             unlockedKnowledgeUpgrades: newUnlocked,
@@ -737,6 +732,15 @@ export const createSelectionFlowActions = ({
                 : state.relicFloats,
             levelUpResearchPoints: nextResearchPts,
             knowledgeResearchCredits: nextResearchCredits,
+            pendingBoardExpansions:
+                state.pendingBoardExpansions +
+                (
+                    uid === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ||
+                    uid === FEUDALISM_UPGRADE_ID ||
+                    uid === MODERN_AGE_UPGRADE_ID
+                        ? 3
+                        : 0
+                ),
         };
 
         if (state.returnPhaseAfterDevKnowledgeUpgrade != null) {

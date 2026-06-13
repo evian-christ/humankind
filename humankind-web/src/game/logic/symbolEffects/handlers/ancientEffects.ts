@@ -12,7 +12,10 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.totem:
-            if (relicEffects.allSymbolsAreCorner || isCorner(x, y)) state.knowledge += 12;
+            if (
+                relicEffects.allSymbolsAreCorner ||
+                isCorner(x, y, boardGrid.length, boardGrid[x]?.length ?? boardGrid[0]?.length ?? 0)
+            ) state.knowledge += 12;
             return true;
 
         case S.omen:

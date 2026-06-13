@@ -237,7 +237,9 @@ export function buildSlotOrder(boardWidth: number, boardHeight: number): Array<{
 }
 
 export function createSlotEffectPipeline(args: CreateSlotEffectPipelineArgs): SlotEffectPipeline {
-    const { board, boardWidth, boardHeight, baseTotals } = args;
+    const { board, baseTotals } = args;
+    const boardWidth = board.length;
+    const boardHeight = board[0]?.length ?? 0;
     const allSymbolsAdjacent = false;
     const getPhaseAdjacentCoords = (x: number, y: number) =>
         getEffectiveAdjacentCoords(board, x, y, allSymbolsAdjacent);
@@ -680,7 +682,7 @@ export function applyGeneratedSymbols(args: ApplyGeneratedSymbolsArgs): {
         boardHeight,
         createSymbolInstance,
     } = args;
-    const nextBoard = board.map((col) => [...col]);
+    const nextBoard = board.map((col) => col.map((cell) => cell));
     const nextPlayerSymbols = [...playerSymbols];
 
     for (const symbolId of symbolsToSpawnOnBoard) {

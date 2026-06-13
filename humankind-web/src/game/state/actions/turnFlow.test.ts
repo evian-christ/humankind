@@ -72,6 +72,7 @@ const makeState = (): GameState => {
         unlockedKnowledgeUpgrades: [],
         qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
+        pendingBoardExpansions: 0,
         isRelicShopOpen: false,
         hasNewRelicShopStock: false,
         rerollsThisTurn: 2,
@@ -103,6 +104,7 @@ const makeState = (): GameState => {
         refreshRelicShop: () => {},
         buyRelic: () => {},
         selectUpgrade: () => {},
+        expandBoardSlotAt: () => {},
         initializeGame: () => {},
         startGameWithDraft: () => {},
         startTutorialGame: () => {},
@@ -166,8 +168,8 @@ const createHarness = (
         actions: createTurnFlowActions({
             get,
             set,
-            boardWidth: 5,
-            boardHeight: 4,
+            boardWidth: 3,
+            boardHeight: 2,
             processSingleSymbolEffects:
                 deps.processSingleSymbolEffects ??
                 (() => ({
@@ -245,7 +247,7 @@ describe('turnFlow actions', () => {
         expect(harness.get().pendingFoodPayment).toBe(true);
     });
 
-    it('payFoodCost subtracts the payment and returns to idle', () => {
+    it('payFoodCost subtracts the payment and grants one board expansion', () => {
         const harness = createHarness({
             phase: 'food_payment',
             turn: 10,
@@ -258,6 +260,23 @@ describe('turnFlow actions', () => {
         expect(harness.get().food).toBe(50 - calculateFoodCost(10));
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().pendingFoodPayment).toBe(false);
+        expect(harness.get().pendingBoardExpansions).toBe(1);
+    });
+
+    it('keeps the payment fixed when the board has been expanded', () => {
+        const expandedBoard = Array.from({ length: 5 }, () => Array(3).fill(null));
+        const harness = createHarness({
+            board: expandedBoard,
+            phase: 'food_payment',
+            turn: 10,
+            food: calculateFoodCost(10),
+            pendingFoodPayment: true,
+        });
+
+        harness.actions.payFoodCost();
+
+        expect(harness.get().food).toBe(0);
+        expect(harness.get().phase).toBe('idle');
     });
 
     it('payFoodCost moves to game_over without subtracting when food is insufficient', () => {
@@ -272,6 +291,7 @@ describe('turnFlow actions', () => {
 
         expect(harness.get().food).toBe(0);
         expect(harness.get().phase).toBe('game_over');
+        expect(harness.get().pendingBoardExpansions).toBe(0);
     });
 
     it('waits for symbol selection before requesting food payment', () => {

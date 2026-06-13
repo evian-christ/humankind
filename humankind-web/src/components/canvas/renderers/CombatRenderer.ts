@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { BOARD_HEIGHT, BOARD_WIDTH, useGameStore } from '../../../game/state/gameStore';
+import { useGameStore } from '../../../game/state/gameStore';
 import { COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../../game/state/settingsStore';
 import { getSymbolColor } from '../../../game/data/symbolDefinitions';
 import { t } from '../../../i18n';
@@ -7,7 +7,12 @@ import { audioManager } from '../../../audio/audioManager';
 import type { CellLayout, CombatBounce } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { getSymbolSpriteUrl } from '../../../game/data/symbolSpritePaths';
-import { clearPixiContainer, destroyPixiChild, getGameFontFamily } from './rendererShared';
+import {
+    clearPixiContainer,
+    destroyPixiChild,
+    getBoardSymbolSpriteSize,
+    getGameFontFamily,
+} from './rendererShared';
 
 const RANGED_ATTACKER_KEYS = new Set(['archer', 'crossbowman', 'cannon']);
 
@@ -53,10 +58,17 @@ export class CombatRenderer {
 
         this.clearBounce();
 
-        const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = cellLayout;
+        const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, scale } = cellLayout;
         const { ax, ay, tx, ty, atkDmg } = anim;
 
-        if (ax < 0 || ax >= BOARD_WIDTH || ay < 0 || ay >= BOARD_HEIGHT) return;
+        const board = useGameStore.getState().board;
+        if (
+            ax < 0 ||
+            ax >= board.length ||
+            ay < 0 ||
+            ay >= (board[ax]?.length ?? 0) ||
+            !Object.prototype.hasOwnProperty.call(board[ax], ay)
+        ) return;
 
         const aCX = startX + gridOffsetX + ax * (cellWidth + colGap) + cellWidth / 2;
         const aCY = startY + gridOffsetY + ay * cellHeight + cellHeight / 2;
@@ -66,7 +78,6 @@ export class CombatRenderer {
         const moveToX = aCX + (tCX - aCX) * 0.55;
         const moveToY = aCY + (tCY - aCY) * 0.55;
 
-        const board = useGameStore.getState().board;
         const attackerDef = board[ax]?.[ay]?.definition;
         if (attackerDef?.base_attack && attackerDef.base_attack > 0) {
             const cueId = RANGED_ATTACKER_KEYS.has(attackerDef.key) ? 'attack_ranged' : 'attack_melee';
@@ -76,7 +87,7 @@ export class CombatRenderer {
 
         const attackerSpriteUrl = attackerDef ? getSymbolSpriteUrl(attackerDef) : null;
         if (attackerSpriteUrl) {
-            const spriteSize = 32 * Math.max(1, Math.floor((Math.min(cellWidth - 6, cellHeight) * 0.85) / 32));
+            const spriteSize = getBoardSymbolSpriteSize(cellWidth, cellHeight);
             const sp = PIXI.Sprite.from(attackerSpriteUrl);
             sp.anchor.set(0.5);
             sp.width = spriteSize;
@@ -89,7 +100,12 @@ export class CombatRenderer {
             const container = new PIXI.Container();
             const txt = new PIXI.Text({
                 text: symName,
-                style: new PIXI.TextStyle({ fill: rarityColor, fontSize: 32, fontFamily, stroke: { color: '#000000', width: 2 } }),
+                style: new PIXI.TextStyle({
+                    fill: rarityColor,
+                    fontSize: 32 * scale,
+                    fontFamily,
+                    stroke: { color: '#000000', width: 2 * scale },
+                }),
             });
             txt.anchor.set(0.5);
             container.addChild(txt);

@@ -86,7 +86,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     6: {
         id: 6,
         name: "바빌로니아 세계 지도",
-        description: "매 턴 식량 +1 생산. 보드 마지막 (20) 자리에 배치된 심볼의 생산량이 0 이하일 경우, 이 유물의 식량 생산량이 영구적으로 1 증가.",
+        description: "매 턴 식량 +1 생산. 보드 마지막 (6) 자리에 배치된 심볼의 생산량이 0 이하일 경우, 이 유물의 식량 생산량이 영구적으로 1 증가.",
         cost: 28,
         rarity: "uncommon",
         type: SymbolType.NORMAL,

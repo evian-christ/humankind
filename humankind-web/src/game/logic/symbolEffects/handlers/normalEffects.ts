@@ -28,15 +28,15 @@ import {
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
-import { BOARD_HEIGHT, BOARD_WIDTH, countOnBoard, findMountainSameColumn, SEA_TERRAIN_ID } from '../core';
+import { countOnBoard, findMountainSameColumn, SEA_TERRAIN_ID } from '../core';
 import type { SymbolEffectHandler } from '../core';
 import type { BoardGrid } from '../types';
 
 const getBoardCoordsBySymbolId = (boardGrid: BoardGrid, targetId: number): { x: number; y: number }[] => {
     const coords: { x: number; y: number }[] = [];
-    for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-        for (let by = 0; by < BOARD_HEIGHT; by++) {
-            if (boardGrid[bx][by]?.definition.id === targetId) coords.push({ x: bx, y: by });
+    for (let bx = 0; bx < boardGrid.length; bx++) {
+        for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+            if (boardGrid[bx]?.[by]?.definition.id === targetId) coords.push({ x: bx, y: by });
         }
     }
     return coords;
@@ -157,9 +157,9 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             {
                 if (upgrades.includes(MASON_GUILD_UPGRADE_ID)) {
                     const mountainCoords = [];
-                    for (let bx = 0; bx < BOARD_WIDTH; bx += 1) {
-                        for (let by = 0; by < BOARD_HEIGHT; by += 1) {
-                            if (boardGrid[bx][by]?.definition.id === S.mountain) mountainCoords.push({ x: bx, y: by });
+                    for (let bx = 0; bx < boardGrid.length; bx += 1) {
+                        for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by += 1) {
+                            if (boardGrid[bx]?.[by]?.definition.id === S.mountain) mountainCoords.push({ x: bx, y: by });
                         }
                     }
                     if (mountainCoords.length > 0) {
@@ -381,9 +381,9 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
 
         case S.honey: {
             const terrainCounts = new Map<number, number>();
-            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-                for (let by = 0; by < BOARD_HEIGHT; by++) {
-                    const s = boardGrid[bx][by];
+            for (let bx = 0; bx < boardGrid.length; bx++) {
+                for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+                    const s = boardGrid[bx]?.[by];
                     if (s?.definition.type !== SymbolType.TERRAIN) continue;
                     terrainCounts.set(s.definition.id, (terrainCounts.get(s.definition.id) ?? 0) + 1);
                 }
@@ -418,9 +418,9 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
 
         case S.spices: {
             const terrainTypes = new Set<number>();
-            for (let bx = 0; bx < BOARD_WIDTH; bx++) {
-                for (let by = 0; by < BOARD_HEIGHT; by++) {
-                    const s = boardGrid[bx][by];
+            for (let bx = 0; bx < boardGrid.length; bx++) {
+                for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
+                    const s = boardGrid[bx]?.[by];
                     if (s?.definition.type === SymbolType.TERRAIN) terrainTypes.add(s.definition.id);
                 }
             }

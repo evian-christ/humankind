@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useGameStore, BOARD_WIDTH, BOARD_HEIGHT } from '../game/state/gameStore';
+import { useGameStore } from '../game/state/gameStore';
+import { isBoardSlotActive } from '../game/state/gameStoreHelpers';
 import { SymbolType } from '../game/data/symbolDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { t } from '../i18n';
@@ -11,6 +12,7 @@ import {
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { mapCrtSourceToOutput } from './canvas/crtProjection';
 import './oblivionBoardOverlay.css';
+import { useBoardViewStore } from '../game/state/boardViewStore';
 
 type Props = { anchorRef: RefObject<HTMLElement | null> };
 type Point = { x: number; y: number };
@@ -77,6 +79,7 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
     const cancelEdictPick = useGameStore((s) => s.cancelEdictPick);
     const language = useSettingsStore((s) => s.language);
     const crtEffect = useSettingsStore((s) => s.crtEffect);
+    const boardZoom = useBoardViewStore((s) => s.zoom);
     const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
     const [hovered, setHovered] = useState<{ x: number; y: number } | null>(null);
     const [motion, setMotion] = useState<OverlayMotion>('entering');
@@ -140,20 +143,24 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
 
     const occupiedCells = useMemo(() => {
         const out: { x: number; y: number }[] = [];
+        const boardWidth = board.length;
+        const boardHeight = Math.max(0, ...board.map((col) => col.length));
         if (pendingEdictSource) {
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dy = -1; dy <= 1; dy++) {
                     if (dx === 0 && dy === 0) continue;
                     const x = pendingEdictSource.x + dx;
                     const y = pendingEdictSource.y + dy;
-                    if (x < 0 || x >= BOARD_WIDTH || y < 0 || y >= BOARD_HEIGHT) continue;
+                    if (x < 0 || x >= boardWidth || y < 0 || y >= boardHeight) continue;
+                    if (!isBoardSlotActive(board, x, y)) continue;
                     if (board[x][y]) out.push({ x, y });
                 }
             }
             return out;
         }
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-            for (let y = 0; y < BOARD_HEIGHT; y++) {
+        for (let x = 0; x < boardWidth; x++) {
+            for (let y = 0; y < boardHeight; y++) {
+                if (!isBoardSlotActive(board, x, y)) continue;
                 if (board[x][y]) out.push({ x, y });
             }
         }
@@ -162,12 +169,20 @@ const OblivionFurnaceBoardOverlay = ({ anchorRef }: Props) => {
 
     if (phase !== 'oblivion_furnace_board' || viewSize.w <= 0 || viewSize.h <= 0) return null;
 
-    const layout = computeBoardPixelLayout(viewSize.w, viewSize.h);
+    const boardWidth = board.length;
+    const boardHeight = Math.max(0, ...board.map((col) => col.length));
+    const layout = computeBoardPixelLayout(
+        viewSize.w,
+        viewSize.h,
+        boardWidth,
+        boardHeight,
+        boardZoom,
+    );
     const titleH = Math.max(28 * BOARD_DISPLAY_SCALE, 30 * layout.scale);
     /** 슬롯 그리드 안쪽(흰 칸 영역) — 바깥 보드 패널 테두리/패딩 제외 */
     const innerLeft = layout.startX + layout.gridOffsetX;
     const innerWidth =
-        BOARD_WIDTH * layout.cellWidth + (BOARD_WIDTH - 1) * layout.colGap;
+        boardWidth * layout.cellWidth + Math.max(0, boardWidth - 1) * layout.colGap;
     /** 세로는 보드 패널 밖(상단) — 가로만 슬롯 그리드와 맞춤 */
     const gapAboveBoard = 6 * BOARD_DISPLAY_SCALE;
     const titleTop = Math.max(4, layout.startY - titleH - gapAboveBoard);

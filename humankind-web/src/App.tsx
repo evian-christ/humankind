@@ -11,6 +11,7 @@ import SymbolSelection from './components/SymbolSelection';
 import RelicSelection from './components/RelicSelection';
 import LootRewardSelection from './components/LootRewardSelection';
 import OblivionFurnaceBoardOverlay from './components/OblivionFurnaceBoardOverlay';
+import BoardExpansionOverlay from './components/BoardExpansionOverlay';
 import DemoStartScreen from './components/DemoStartScreen';
 import LeaderSelectScreen from './components/LeaderSelectScreen';
 import LeaderProgressScreen from './components/LeaderProgressScreen';
@@ -31,6 +32,7 @@ import { audioManager } from './audio/audioManager';
 import type { AudioPlaybackHandle } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
 import { boardCellLocalRect, computeBoardPixelLayout } from './game/layout/boardPixelLayout';
+import { useBoardViewStore } from './game/state/boardViewStore';
 import { S } from './game/data/symbolDefinitions';
 import { viewportPointToRootPoint } from './ui/cursorPosition';
 
@@ -738,6 +740,7 @@ function TutorialElementHighlight({ selectors, className, pad = 0, padX = pad, p
 
 function TutorialBoardHighlights({ anchorRef, cells, highlightBoard = false }: TutorialBoardHighlightsProps) {
   const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
+  const boardZoom = useBoardViewStore((state) => state.zoom);
 
   const measure = useCallback(() => {
     const el = anchorRef.current;
@@ -759,7 +762,7 @@ function TutorialBoardHighlights({ anchorRef, cells, highlightBoard = false }: T
 
   if (viewSize.w <= 0 || viewSize.h <= 0) return null;
 
-  const layout = computeBoardPixelLayout(viewSize.w, viewSize.h);
+  const layout = computeBoardPixelLayout(viewSize.w, viewSize.h, undefined, undefined, boardZoom);
   if (highlightBoard) {
     const highlightPad = 12 * layout.scale;
     return (
@@ -1447,7 +1450,9 @@ function App() {
 
       if (action === 'knowledge') {
         if (isKnowledgeOpen) setIsKnowledgeOpen(false);
-        else if (!isUserMenuOpen) openMenuUnlessSpinning(() => setIsKnowledgeOpen(true));
+        else if (!isUserMenuOpen && useGameStore.getState().pendingBoardExpansions <= 0) {
+          openMenuUnlessSpinning(() => setIsKnowledgeOpen(true));
+        }
         return;
       }
 
@@ -1478,13 +1483,19 @@ function App() {
     tutorialDialogStep,
   ]);
 
+  const pendingBoardExpansions = useGameStore((s) => s.pendingBoardExpansions);
   const boardIsForegroundForTooltips =
     phase !== 'oblivion_furnace_board' &&
     phase !== 'game_over' &&
     phase !== 'victory' &&
-    !isRelicShopOpen;
+    !isRelicShopOpen &&
+    pendingBoardExpansions <= 0;
 
   const suppressBoardTooltips = !boardIsForegroundForTooltips || fullscreenModalBlocksBoardTooltips;
+
+  useEffect(() => {
+    if (pendingBoardExpansions > 0) setIsKnowledgeOpen(false);
+  }, [pendingBoardExpansions]);
 
   const knowledge = useGameStore((s) => s.knowledge);
   const food = useGameStore((s) => s.food);
@@ -1679,6 +1690,7 @@ function App() {
       <div className="game-area" ref={gameAreaRef}>
         <GameCanvas onReady={handleCanvasReady} suppressBoardTooltips={suppressBoardTooltips} />
         {phase === 'oblivion_furnace_board' && <OblivionFurnaceBoardOverlay anchorRef={gameAreaRef} />}
+        {pendingBoardExpansions > 0 && <BoardExpansionOverlay anchorRef={gameAreaRef} />}
       </div>
 
       {/* ===== 보드 하단: 왼쪽(유물) · 중앙 고정(스핀) · 오른쪽(⋯, 메뉴) ===== */}
@@ -1737,7 +1749,11 @@ function App() {
                 : t('game.knowledgeUpgradeTreeTitle', language)
             }
             {...knowledgeHudTooltip.bindButtonHoverHandlers}
-            onClick={() => openMenuUnlessSpinning(() => setIsKnowledgeOpen(true))}
+            onClick={() => {
+              if (pendingBoardExpansions <= 0) {
+                openMenuUnlessSpinning(() => setIsKnowledgeOpen(true));
+              }
+            }}
             data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
           >
             {levelUpResearchPoints > 0 && (
