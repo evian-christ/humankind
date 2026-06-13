@@ -261,7 +261,6 @@ function DemoMainMenu({ isEntering = false }: { isEntering?: boolean }) {
             alt="Humankind in a nutshell"
             draggable={false}
           />
-          <span className="main-menu-title-demo">DEMO</span>
         </h1>
 
         <nav className="main-menu-actions" aria-label={t('mainMenu.actionsLabel', language)}>
@@ -333,21 +332,6 @@ function DemoMainMenu({ isEntering = false }: { isEntering?: boolean }) {
           </button>
         </nav>
       </main>
-      <a
-        className="main-menu-steam-button"
-        href="https://store.steampowered.com/app/1779280/"
-        target="_blank"
-        rel="noreferrer"
-        aria-label="Wishlist on Steam"
-      >
-        <span className="main-menu-steam-button-text">Wishlist on</span>
-        <img
-          className="main-menu-steam-button-logo"
-          src="./capsules/steam-removebg-preview.png"
-          alt="Steam"
-          draggable={false}
-        />
-      </a>
       <button
         type="button"
         className="main-menu-settings-button"
