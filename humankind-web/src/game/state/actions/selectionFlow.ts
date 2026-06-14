@@ -261,12 +261,6 @@ const pickRandomSymbols = (symbols: PlayerSymbolInstance[], count: number): Play
     return picked;
 };
 
-const removeSymbolsFromBoard = (
-    board: GameState['board'],
-    removedIds: ReadonlySet<string>,
-): GameState['board'] =>
-    board.map((col) => col.map((cell) => (cell && removedIds.has(cell.instanceId) ? null : cell)));
-
 const findBoardSlotByInstanceId = (board: GameState['board'], instanceId: string) => {
     for (let x = 0; x < board.length; x++) {
         const col = board[x];
@@ -391,6 +385,9 @@ export const createSelectionFlowActions = ({
         let knowledgeDelta = 0;
         let destroyedSymbols: ReturnType<typeof makeDestroyedSymbolSnapshots> = [];
         let addedSymbolIds: number[] = [];
+        let destroyedBoardIds: Set<string> | null = null;
+        let destroyBlinkStartedAtMs: number | null = null;
+        let boardForSelectionResolution: GameState['board'] | null = null;
 
         if (event.reward) {
             foodDelta += event.reward.food ?? 0;
@@ -483,6 +480,10 @@ export const createSelectionFlowActions = ({
         } else if (event.key === 'capital_relocation') {
             const removed = pickRandomSymbols(state.playerSymbols, CAPITAL_RELOCATION_DESTROY_COUNT);
             const removedIds = new Set(removed.map((symbol) => symbol.instanceId));
+            const markedBoard = markBoardSymbolsForRemoval(state.board, removedIds);
+            destroyedBoardIds = removedIds;
+            destroyBlinkStartedAtMs = getNowMs();
+            boardForSelectionResolution = removeBoardSymbolsByInstanceIds(state.board, removedIds);
             destroyedSymbols = makeDestroyedSymbolSnapshots(removed, state.board);
             const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
             addedSymbolIds = symAgg.addSymbolDefIds;
@@ -495,7 +496,8 @@ export const createSelectionFlowActions = ({
                 symAgg.addSymbolDefIds,
                 state.unlockedKnowledgeUpgrades || [],
             );
-            patch.board = removeSymbolsFromBoard(state.board, removedIds);
+            patch.board = markedBoard;
+            patch.destroyRemovalBlinkStartedAtMs = destroyBlinkStartedAtMs;
             foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
             goldDelta += symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
             knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
@@ -518,6 +520,7 @@ export const createSelectionFlowActions = ({
             ...resolveAfterSelection({
                 ...state,
                 ...patch,
+                ...(boardForSelectionResolution ? { board: boardForSelectionResolution } : {}),
             }, phaseAfterTurnFlowComplete),
         });
         get().appendEventLog({
@@ -534,6 +537,19 @@ export const createSelectionFlowActions = ({
                 addSymbolIds: addedSymbolIds,
             },
         });
+        if (destroyedBoardIds && destroyBlinkStartedAtMs != null) {
+            const removedIds = destroyedBoardIds;
+            const blinkStartedAtMs = destroyBlinkStartedAtMs;
+            scheduleGameLifecycleTimeout(() => {
+                set((current) => {
+                    const isCurrentBlink = current.destroyRemovalBlinkStartedAtMs === blinkStartedAtMs;
+                    return {
+                        board: removeBoardSymbolsByInstanceIds(current.board, removedIds),
+                        ...(isCurrentBlink ? { destroyRemovalBlinkStartedAtMs: null } : {}),
+                    };
+                });
+            }, BOARD_DESTROY_BLINK_DURATION_MS);
+        }
         saveGameState(get());
     },
 

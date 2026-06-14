@@ -70,14 +70,18 @@ describe('gameStore pasture butchering', () => {
 
         useGameStore.getState().openLootAt(1, 1);
         expect(useGameStore.getState().phase).toBe('loot_reward_selection');
+        vi.useFakeTimers();
         useGameStore.getState().selectLootReward(1);
 
         const next = useGameStore.getState();
-        expect(next.board[1][1]).toBeNull();
+        expect(next.board[1][1]?.is_marked_for_destruction).toBe(true);
         expect(next.phase).toBe('idle');
         expect(next.food).toBe(8);
         expect(next.gold).toBe(0);
         expect(next.knowledge).toBe(0);
+        await vi.advanceTimersByTimeAsync(360);
+        expect(useGameStore.getState().board[1][1]).toBeNull();
+        vi.useRealTimers();
         lootChoicesSpy.mockRestore();
     });
 
@@ -133,12 +137,16 @@ describe('gameStore pasture butchering', () => {
             lastEffects: [],
         });
 
+        vi.useFakeTimers();
         useGameStore.getState().butcherPastureAnimalAt(1, 1);
 
         const next = useGameStore.getState();
-        expect(next.board[1][1]).toBeNull();
+        expect(next.board[1][1]?.is_marked_for_destruction).toBe(true);
         expect(next.board[0][0]?.effect_counter).toBe(1);
         expect(next.food).toBe(10);
+        await vi.advanceTimersByTimeAsync(360);
+        expect(useGameStore.getState().board[1][1]).toBeNull();
+        vi.useRealTimers();
     });
 
     it('upgrades cattle and sheep butcher rewards with Nomadic Tradition', async () => {
@@ -202,14 +210,18 @@ describe('gameStore pasture butchering', () => {
 
         useGameStore.getState().openLootAt(1, 1);
         expect(useGameStore.getState().phase).toBe('loot_reward_selection');
+        vi.useFakeTimers();
         useGameStore.getState().selectLootReward(16);
 
         const next = useGameStore.getState();
-        expect(next.board[1][1]).toBeNull();
+        expect(next.board[1][1]?.is_marked_for_destruction).toBe(true);
         expect(next.phase).toBe('idle');
         expect(next.food).toBe(0);
         expect(next.gold).toBe(0);
         expect(useRelicStore.getState().relics).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(360);
+        expect(useGameStore.getState().board[1][1]).toBeNull();
+        vi.useRealTimers();
         lootChoicesSpy.mockRestore();
         vi.restoreAllMocks();
     });
@@ -439,14 +451,18 @@ describe('gameStore pasture butchering', () => {
         });
 
         // 부족 마을 소모
+        vi.useFakeTimers();
         useGameStore.getState().consumeTribalVillageAt(1, 1);
 
         const storeAfterConsume = useGameStore.getState();
-        expect(storeAfterConsume.board[1][1]).toBeNull();
+        expect(storeAfterConsume.board[1][1]?.is_marked_for_destruction).toBe(true);
         expect(storeAfterConsume.phase).toBe('selection');
         expect(storeAfterConsume.bonusSelectionQueue).toEqual(['any', 'any']);
         expect(storeAfterConsume.symbolSelectionSymbolSourceId).toBe(Sym.tribal_village.id);
         expect(storeAfterConsume.symbolChoices.length).toBeGreaterThan(0);
+        await vi.advanceTimersByTimeAsync(360);
+        expect(useGameStore.getState().board[1][1]).toBeNull();
+        vi.useRealTimers();
 
         // 첫 번째 심볼 선택 (선택지 중 첫 번째 심볼 ID 선택)
         const firstChoice = storeAfterConsume.symbolChoices[0];
@@ -493,11 +509,15 @@ describe('gameStore pasture butchering', () => {
             lastEffects: [],
         });
 
+        vi.useFakeTimers();
         useGameStore.getState().butcherPastureAnimalAt(1, 1);
 
-        expect(useGameStore.getState().board[1][1]).toBeNull();
+        expect(useGameStore.getState().board[1][1]?.is_marked_for_destruction).toBe(true);
         expect(useGameStore.getState().phase).toBe('food_payment');
         expect(useGameStore.getState().food).toBe(10);
+        await vi.advanceTimersByTimeAsync(360);
+        expect(useGameStore.getState().board[1][1]).toBeNull();
+        vi.useRealTimers();
         useGameStore.setState({ pendingFoodPayment: false });
     });
 
@@ -593,5 +613,50 @@ describe('gameStore pasture butchering', () => {
         expect(useGameStore.getState().phase).toBe('food_payment');
         expect(useGameStore.getState().pendingFoodPayment).toBe(true);
         useGameStore.setState({ pendingFoodPayment: false });
+    });
+
+    it('sets up the tutorial adjacency spin with four symbols around the sea', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        const cornA = createInstance(Sym.corn, 'tutorial-corn-a');
+        const cornB = createInstance(Sym.corn, 'tutorial-corn-b');
+        const monument = createInstance(Sym.monument, 'tutorial-monument');
+
+        useGameStore.setState({
+            board: createEmptyBoard(),
+            playerSymbols: [cornA, cornB, monument],
+            phase: 'idle',
+            isTutorialMode: true,
+            tutorialSpinStep: 'monument_done',
+        });
+
+        useGameStore.getState().setupTutorialAdjacencyStep();
+        const prepared = useGameStore.getState();
+        expect(prepared.playerSymbols.map((symbol) => symbol.definition.id)).toEqual([
+            Sym.corn.id,
+            Sym.corn.id,
+            Sym.monument.id,
+            Sym.sea.id,
+            Sym.pearl.id,
+        ]);
+        expect(prepared.board[2][1]?.definition.id).toBe(Sym.sea.id);
+        expect(prepared.board[3][1]?.definition.id).toBe(Sym.pearl.id);
+
+        useGameStore.getState().spinTutorialAdjacencyStep();
+        const spun = useGameStore.getState();
+        expect(spun.phase).toBe('spinning');
+        expect(spun.tutorialSpinStep).toBe('adjacency_spin');
+        expect(spun.board[2][1]?.definition.id).toBe(Sym.sea.id);
+        expect([
+            spun.board[1][0]?.definition.id,
+            spun.board[2][0]?.definition.id,
+            spun.board[1][1]?.definition.id,
+            spun.board[3][2]?.definition.id,
+        ]).toEqual([
+            Sym.corn.id,
+            Sym.corn.id,
+            Sym.monument.id,
+            Sym.pearl.id,
+        ]);
     });
 });

@@ -1461,34 +1461,42 @@ button.spin-btn:disabled:active {
 
 .selection-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: stretch;
   justify-content: center;
-  gap: 10px;
+  gap: 28px;
+  width: 1136px;
 }
 
 .selection-reroll-btn,
 .selection-skip-btn {
-  width: 220px;
-  min-height: 56px;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 104px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   font-family: var(--game-font-family), sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  padding: 10px 26px;
+  font-size: 28px;
+  font-weight: 900;
+  padding: 18px 32px;
+  border: 10px solid #1b120c;
+  border-top-color: #4a3528;
+  border-right-color: #0b0705;
+  border-bottom-color: #070403;
+  border-left-color: #2d1f17;
   border-radius: 14px;
   letter-spacing: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.025) 100%),
-    rgba(0, 0, 0, 0.88);
-  border: 2px solid rgba(255, 255, 255, 0.58);
-  color: rgba(255, 255, 255, 0.82);
+  background: #101010;
+  color: #ffffff;
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    inset 0 2px 0 rgba(255, 255, 255, 0.12),
+    inset -3px 0 0 rgba(0, 0, 0, 0.26),
+    inset 3px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.24);
   transition:
     transform 140ms ease,
     border-color 140ms ease,
@@ -1496,47 +1504,73 @@ button.spin-btn:disabled:active {
     box-shadow 140ms ease,
     color 140ms ease,
     opacity 140ms ease;
+  cursor: var(--app-cursor-pointer);
 }
 
 .selection-reroll-btn {
-  border-color: rgba(251, 191, 36, 0.68);
   color: #fbbf24;
 }
 
-.selection-reroll-btn:hover:not(:disabled) {
+.selection-reroll-btn:hover:not([aria-disabled='true']),
+.selection-skip-btn:hover {
   transform: translateY(-2px);
-  background-color: rgba(0, 0, 0, 0.96);
-  border-color: #fbbf24;
-  color: #ffd766;
+  border-top-color: #5a4030;
+  border-right-color: #130c08;
+  border-bottom-color: #0a0604;
+  border-left-color: #38271d;
+  background: #121212;
   box-shadow:
     0 14px 30px rgba(0, 0, 0, 0.5),
-    0 0 18px rgba(251, 191, 36, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset -3px 0 0 rgba(0, 0, 0, 0.3),
+    inset 3px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.28);
 }
 
-.selection-reroll-btn:disabled {
-  opacity: 0.32;
-  cursor: default;
+.selection-reroll-btn:hover:not([aria-disabled='true']) {
+  color: #ffd766;
+}
+
+.selection-reroll-btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
   transform: none;
-  box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .selection-skip-btn {
-  border-color: rgba(255, 255, 255, 0.38);
-  color: rgba(255, 255, 255, 0.58);
+  color: rgba(255, 255, 255, 0.82);
 }
 
-.selection-skip-btn:hover {
-  transform: translateY(-2px);
-  background-color: rgba(0, 0, 0, 0.96);
-  border-color: rgba(255, 255, 255, 0.78);
-  color: rgba(255, 255, 255, 0.88);
+.selection-reroll-btn:active:not([aria-disabled='true']),
+.selection-skip-btn:active {
+  transform: translateY(4px);
+  border-top-color: #080504;
+  border-right-color: #39281e;
+  border-bottom-color: #4a3528;
+  border-left-color: #0f0a07;
+  background: #0d0d0d;
   box-shadow:
-    0 14px 30px rgba(0, 0, 0, 0.5),
-    0 0 18px rgba(255, 255, 255, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 8px 18px rgba(0, 0, 0, 0.34),
+    inset 0 3px 0 rgba(0, 0, 0, 0.28),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.selection-reroll-cost-dot {
+  color: #fbbf24;
+  font-size: 22px;
+  line-height: 1;
+  transform: translateY(1px);
+}
+
+.selection-reroll-cost {
+  color: #fbbf24;
+  font-weight: 900;
+}
+
+.selection-reroll-count {
+  margin-left: 6px;
+  opacity: 0.75;
+  font-size: 0.72em;
 }
 
 /* ===== RELIC MUSEUM SHOP ===== */
@@ -3729,16 +3763,17 @@ button.spin-btn:disabled:active {
   margin-top: 12px;
 }
 
-.tutorial-dialog-inline-resource {
+.tutorial-dialog-resource-token {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  white-space: nowrap;
 }
 
-.tutorial-dialog-inline-resource img {
-  width: 34px;
-  height: 34px;
+.tutorial-dialog-resource-token img {
+  width: 1em;
+  height: 1em;
+  margin-right: 0.18em;
+  flex: 0 0 auto;
   image-rendering: pixelated;
 }
 
@@ -4178,6 +4213,17 @@ button.spin-btn:disabled:active {
 
 .tutorial-board-highlight-cell--board {
   outline-width: 3px;
+}
+
+.tutorial-board-highlight-cell--group-backdrop {
+  outline-color: rgba(255, 246, 201, 0.72);
+}
+
+.tutorial-board-highlight-cell--outline-only {
+  z-index: 2;
+  box-shadow:
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 28px rgba(255, 211, 92, 0.68);
 }
 
 .tutorial-highlight-food-demand .food-demand-mini,
@@ -7757,6 +7803,12 @@ button.spin-btn:disabled:active {
 
 .tutorial-board-highlight-cell {
   box-shadow: 0 0 0 3000px rgba(0, 0, 0, 0.76);
+}
+
+.tutorial-board-highlight-cell.tutorial-board-highlight-cell--outline-only {
+  box-shadow:
+    0 0 7px rgba(255, 246, 201, 0.42),
+    0 0 14px rgba(255, 211, 92, 0.2);
 }
 
 .tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era {

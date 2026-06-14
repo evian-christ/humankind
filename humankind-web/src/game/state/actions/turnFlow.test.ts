@@ -110,6 +110,8 @@ const makeState = (): GameState => {
         spinTutorialCornStep: () => {},
         setupTutorialSelectionStep: () => {},
         spinTutorialMonumentStep: () => {},
+        setupTutorialAdjacencyStep: () => {},
+        spinTutorialAdjacencyStep: () => {},
         devAddSymbol: () => {},
         devRemoveSymbol: () => {},
         devSetStat: () => {},

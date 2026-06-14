@@ -365,6 +365,9 @@ export const createTurnFlowActions = ({
         if (state.isTutorialMode && state.tutorialSpinStep === 'monument_spin') {
             set({ tutorialSpinStep: 'monument_processing' });
         }
+        if (state.isTutorialMode && state.tutorialSpinStep === 'adjacency_spin') {
+            set({ tutorialSpinStep: 'adjacency_processing' });
+        }
         if (state.pendingNewThreatFloats?.length) {
             set({ phase: 'showing_new_threats' });
             return;
@@ -719,6 +722,21 @@ export const createTurnFlowActions = ({
                                 symbolChoices: [],
                                 symbolSelectionRelicSourceId: null,
                                 tutorialSpinStep: 'monument_done',
+                            });
+                            return;
+                        }
+
+                        if (finalState.isTutorialMode && finalState.tutorialSpinStep === 'adjacency_processing') {
+                            set({
+                                phase: 'idle' as GamePhase,
+                                activeSlot: null,
+                                activeContributors: [],
+                                pendingContributors: [],
+                                effectPhase: null,
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                symbolChoices: [],
+                                symbolSelectionRelicSourceId: null,
+                                tutorialSpinStep: 'adjacency_done',
                             });
                             return;
                         }

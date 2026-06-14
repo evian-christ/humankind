@@ -124,6 +124,8 @@ const makeState = (): GameState => {
         spinTutorialCornStep: () => {},
         setupTutorialSelectionStep: () => {},
         spinTutorialMonumentStep: () => {},
+        setupTutorialAdjacencyStep: () => {},
+        spinTutorialAdjacencyStep: () => {},
         devAddSymbol: () => {},
         devRemoveSymbol: () => {},
         devSetStat: () => {},
@@ -361,7 +363,8 @@ describe('selectionFlow actions', () => {
         });
     });
 
-    it('destroys random owned symbols and grants resources for Capital Relocation event', () => {
+    it('blinks random owned symbols before removing them for Capital Relocation event', async () => {
+        vi.useFakeTimers();
         vi.spyOn(Math, 'random').mockReturnValue(0);
         const symbols = [
             createInstance(SYMBOLS[S.oral_tradition]!, []),
@@ -393,9 +396,16 @@ describe('selectionFlow actions', () => {
             symbols[3]!.instanceId,
             symbols[4]!.instanceId,
         ]);
+        expect(harness.get().board[0]?.[0]?.is_marked_for_destruction).toBe(true);
+        expect(harness.get().board[1]?.[0]?.is_marked_for_destruction).toBe(true);
+        expect(harness.get().destroyRemovalBlinkStartedAtMs).not.toBeNull();
+        expect(harness.get().board[2]?.[0]?.instanceId).toBe(symbols[2]!.instanceId);
+
+        await vi.advanceTimersByTimeAsync(360);
+
         expect(harness.get().board[0]?.[0]).toBeNull();
         expect(harness.get().board[1]?.[0]).toBeNull();
-        expect(harness.get().board[2]?.[0]?.instanceId).toBe(symbols[2]!.instanceId);
+        expect(harness.get().destroyRemovalBlinkStartedAtMs).toBeNull();
     });
 
     it('preserves Royal Colony event forcing when Capital Relocation destroys it', () => {
