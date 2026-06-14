@@ -95,7 +95,7 @@ export class StatusRenderer {
 
             this.renderFrame(panel, iconX, iconY, iconSize, scale);
             this.renderIcon(panel, status, iconX, iconY, iconSize);
-            this.renderCounter(panel, remainingTurns, iconX, iconY, iconSize, scale, fontFamily);
+            this.renderCounter(panel, status, remainingTurns, iconX, iconY, iconSize, scale, fontFamily);
             this.renderHitArea(status, worldIconX, worldIconY, iconSize);
 
             iconX += iconSize + gapX;
@@ -159,6 +159,7 @@ export class StatusRenderer {
 
     private renderCounter(
         panel: PIXI.Container,
+        status: StatusDefinition,
         remainingTurns: number,
         iconX: number,
         iconY: number,
@@ -166,7 +167,7 @@ export class StatusRenderer {
         scale: number,
         fontFamily: string,
     ) {
-        if (remainingTurns <= 0) return;
+        if (status.badge !== 'remainingTurns' || remainingTurns <= 0) return;
 
         const counterText = new PIXI.Text({
             text: String(remainingTurns),

@@ -2,7 +2,8 @@ import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
 import { getEnemyDefinitionForLevel, getEnemyPoolForLevel } from '../../data/enemyPools';
 import {
     BARBARIAN_INVASION_GRACE_TURNS,
-    BARBARIAN_INVASION_THREAT_STEP,
+    NATURAL_DISASTER_CHANCE,
+    getNextBarbarianInvasionChance,
     getActiveStatusIdsForTurn,
 } from '../../data/statusDefinitions';
 import type { BoardGrid, BoardCoord, ThreatLabelKey, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
@@ -10,9 +11,6 @@ import type { BoardGrid, BoardCoord, ThreatLabelKey, TurnPreparationInput, TurnP
 const createEmptyBoard = (width: number, height: number): BoardGrid => {
     return Array(width).fill(null).map(() => Array(height).fill(null));
 };
-
-const increaseBarbarianInvasionThreat = (current: number): number =>
-    Math.min(100, Number((current + BARBARIAN_INVASION_THREAT_STEP).toFixed(1)));
 
 const placeOralTraditionAtBoardCenter = (
     board: BoardGrid,
@@ -81,10 +79,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         forcedNaturalDisasterId = null,
     } = input;
 
-    const {
-        barbarianSymbolThreat,
-        naturalDisasterThreat,
-    } = threatState;
+    const { barbarianSymbolThreat } = threatState;
 
     const newPlayerSymbols = [...playerSymbols];
     const spinUpgrades = unlockedKnowledgeUpgrades || [];
@@ -95,7 +90,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         if (turn < BARBARIAN_INVASION_GRACE_TURNS) {
             nextBarbarianSymbolThreat = 0;
         } else {
-            const currentBarbarianSymbolThreat = increaseBarbarianInvasionThreat(barbarianSymbolThreat);
+            const currentBarbarianSymbolThreat = getNextBarbarianInvasionChance(barbarianSymbolThreat);
             let spawnedBarbarianInvasion = false;
             if (rng.next() * 100 < currentBarbarianSymbolThreat) {
                 const pool = getEnemyPoolForLevel(level);
@@ -118,7 +113,8 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     }
 
     if (turn > 0 || forcedNaturalDisasterId !== null) {
-        const shouldSpawnNaturalDisaster = forcedNaturalDisasterId !== null || rng.next() * 100 < 3;
+        const shouldSpawnNaturalDisaster =
+            forcedNaturalDisasterId !== null || rng.next() * 100 < NATURAL_DISASTER_CHANCE;
         if (shouldSpawnNaturalDisaster) {
             const floodId = S.flood;
             const earthquakeId = S.earthquake;
@@ -212,7 +208,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         threatState: {
             barbarianSymbolThreat: turn > 0 ? nextBarbarianSymbolThreat : barbarianSymbolThreat,
             barbarianCampThreat: 0,
-            naturalDisasterThreat: turn > 0 ? 3 : naturalDisasterThreat,
+            naturalDisasterThreat: NATURAL_DISASTER_CHANCE,
         },
         pendingNewThreatFloats,
         activeStatusIds: getActiveStatusIdsForTurn(turn),

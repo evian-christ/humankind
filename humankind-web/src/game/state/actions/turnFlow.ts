@@ -7,7 +7,7 @@ import {
 import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
 import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
-import { decrementActiveStatuses, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
+import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { useSettingsStore, type EffectSpeed } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
@@ -216,7 +216,7 @@ export const createTurnFlowActions = ({
             get().refreshRelicShop(true);
         }
 
-        const nextActiveStatuses = decrementActiveStatuses(state.activeStatuses ?? []);
+        const nextActiveStatuses = createActiveStatusesForTurn(state.turn);
         const statusPatch = {
             activeStatuses: nextActiveStatuses,
             activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
@@ -742,7 +742,7 @@ export const createTurnFlowActions = ({
                         }
 
                         if (finalState.turn > 0 && finalState.turn % 10 === 0) {
-                            const nextActiveStatuses = decrementActiveStatuses(finalState.activeStatuses ?? []);
+                            const nextActiveStatuses = createActiveStatusesForTurn(finalState.turn);
                             const basePatch = {
                                 pendingFoodPayment: true,
                                 activeSlot: null,

@@ -130,7 +130,10 @@ describe('prepareTurn', () => {
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
         });
-        expect(lastGracePreparedTurn.activeStatusIds).toEqual([STATUS_ID.CLAN_FORMATION]);
+        expect(lastGracePreparedTurn.activeStatusIds).toEqual([
+            STATUS_ID.CLAN_FORMATION,
+            STATUS_ID.DISASTER_OMEN,
+        ]);
 
         const expiredPreparedTurn = prepareTurn({
             board: createEmptyBoard(),
@@ -150,7 +153,10 @@ describe('prepareTurn', () => {
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
         });
-        expect(expiredPreparedTurn.activeStatusIds).toEqual([]);
+        expect(expiredPreparedTurn.activeStatusIds).toEqual([
+            STATUS_ID.BARBARIAN_STIRRING,
+            STATUS_ID.DISASTER_OMEN,
+        ]);
     });
 
     it('does not drop a symbol displaced by first-turn Oral Tradition anchoring', () => {
@@ -252,7 +258,7 @@ describe('prepareTurn', () => {
         expect(result.threatState).toEqual({
             barbarianSymbolThreat: 0,
             barbarianCampThreat: 0,
-            naturalDisasterThreat: 0,
+            naturalDisasterThreat: 3,
         });
     });
 

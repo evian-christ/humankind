@@ -8,6 +8,7 @@ import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
 import { isConsumableRelicId } from '../game/logic/relics/relicClassification';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
+import { getNextBarbarianInvasionChance } from '../game/data/statusDefinitions';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
@@ -48,6 +49,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const language = useSettingsStore((s) => s.language);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
     const level = useGameStore((s) => s.level);
+    const barbarianInvasionChance = useGameStore((s) => s.barbarianSymbolThreat);
+    const naturalDisasterChance = useGameStore((s) => s.naturalDisasterThreat);
 
     suppressBoardTooltipsRef.current = suppressBoardTooltips;
 
@@ -181,6 +184,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             combatShaking: initial.combatShaking,
             pendingNewThreatFloats: initial.pendingNewThreatFloats,
             unlockedKnowledgeUpgrades: initial.unlockedKnowledgeUpgrades,
+            barbarianSymbolThreat: initial.barbarianSymbolThreat,
+            naturalDisasterThreat: initial.naturalDisasterThreat,
             activeStatusIds: initial.activeStatusIds,
             activeStatuses: initial.activeStatuses,
         };
@@ -208,6 +213,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 state.combatShaking !== prev.combatShaking ||
                 state.pendingNewThreatFloats !== prev.pendingNewThreatFloats ||
                 state.unlockedKnowledgeUpgrades !== prev.unlockedKnowledgeUpgrades ||
+                state.barbarianSymbolThreat !== prev.barbarianSymbolThreat ||
+                state.naturalDisasterThreat !== prev.naturalDisasterThreat ||
                 state.activeStatusIds !== prev.activeStatusIds ||
                 state.activeStatuses !== prev.activeStatuses;
 
@@ -233,6 +240,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 combatShaking: state.combatShaking,
                 pendingNewThreatFloats: state.pendingNewThreatFloats,
                 unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
+                barbarianSymbolThreat: state.barbarianSymbolThreat,
+                naturalDisasterThreat: state.naturalDisasterThreat,
                 activeStatusIds: state.activeStatusIds,
                 activeStatuses: state.activeStatuses,
             };
@@ -460,6 +469,19 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                             .map((line: string, i: number) => (
                                 <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
                             ))}
+                        {hoveredStatus.status.badge === 'barbarianInvasionChance' && (
+                            <div className="symbol-tooltip-desc-line">
+                                {t('status.currentChance', language).replace(
+                                    '{chance}',
+                                    String(getNextBarbarianInvasionChance(barbarianInvasionChance)),
+                                )}
+                            </div>
+                        )}
+                        {hoveredStatus.status.badge === 'naturalDisasterChance' && (
+                            <div className="symbol-tooltip-desc-line">
+                                {t('status.currentChance', language).replace('{chance}', String(naturalDisasterChance))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

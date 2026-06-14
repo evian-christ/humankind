@@ -291,14 +291,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             save.state.knowledgeResearchCredits,
         );
 
-        const activeStatuses =
-            save.state.activeStatuses ??
-            (save.state.activeStatusIds
-                ? save.state.activeStatusIds.map((id) => ({
-                    id,
-                    remainingTurns: Math.max(1, createActiveStatusesForTurn(save.state.turn).find((status) => status.id === id)?.remainingTurns ?? 1),
-                }))
-                : createActiveStatusesForTurn(save.state.turn));
+        const activeStatuses = createActiveStatusesForTurn(save.state.turn);
 
         return {
             leaderId: save.state.leaderId,
