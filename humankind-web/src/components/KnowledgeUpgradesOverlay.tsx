@@ -129,7 +129,8 @@ function getNearestOpenTierColumn(
     ) ?? null;
 }
 
-function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
+// eslint-disable-next-line react-refresh/only-export-components
+export function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
     const knownCols = new Map<number, number>();
     let previousTierCols: number[] = [];
 
@@ -152,10 +153,10 @@ function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
                 hasPrereq: prereqCols.length > 0,
                 col: KNOWLEDGE_TREE_ERA_SPINE_IDS.has(upgradeId)
                     ? KNOWLEDGE_TREE_CENTER_COL
-                    : affinityCol != null
-                    ? affinityCol
                     : prereqCols.length > 0
                     ? Math.round(prereqCols.reduce((sum, col) => sum + col, 0) / prereqCols.length)
+                    : affinityCol != null
+                    ? affinityCol
                     : getEvenTierColumn(order, tier.ids.length),
             };
         });
@@ -213,6 +214,25 @@ const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
 const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#120303';
 const KNOWLEDGE_TOOLTIP_PIN_DELAY_MS = 1000;
 const KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS = 180;
+const KNOWLEDGE_ERA_RESEARCH_SUMMARIES = {
+    1: { eraKey: 'era.ancient', minLevel: 1, maxLevel: 9 },
+    10: { eraKey: 'era.medieval', minLevel: 10, maxLevel: 19 },
+    20: { eraKey: 'era.modern', minLevel: 20, maxLevel: 29 },
+} as const;
+
+export function getKnowledgeEraResearchAvailability(
+    unlockedUpgradeIds: readonly number[],
+    minLevel: number,
+    maxLevel: number,
+): { available: number; total: number } {
+    return {
+        available: unlockedUpgradeIds.filter((upgradeId) => {
+            const unlockLevel = getTierLevelForUpgrade(upgradeId);
+            return unlockLevel >= minLevel && unlockLevel <= maxLevel;
+        }).length,
+        total: maxLevel - minLevel + 1,
+    };
+}
 
 function knowledgeTreeChipFrameColor(researched: boolean, locked: boolean, denied: boolean): string {
     return denied
@@ -817,47 +837,21 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 }}
             >
                 <button
-                    className="knowledge-upgrades-back-btn"
+                    className="knowledge-upgrades-back-btn relic-shop-back-btn"
                     type="button"
                     onClick={onClose}
                     style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#94a3b8',
-                        fontSize: '40px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '48px',
-                        height: '48px',
-                        padding: 0,
                         flexShrink: 0,
                         pointerEvents: 'auto',
-                        transition: 'color 0.2s, transform 0.2s',
-                        borderRadius: '50%',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#f8fafc'; e.currentTarget.style.transform = 'translateX(-4px)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.transform = 'translateX(0)'; }}
-                    aria-label="돌아가기"
+                    aria-label={t('knowledgeUpgrade.back', language)}
                 >
-                    ←
+                    <span className="relic-shop-back-icon" aria-hidden>
+                        ←
+                    </span>
+                    <span className="relic-shop-back-label">{t('knowledgeUpgrade.back', language)}</span>
                 </button>
-                <h1
-                    style={{
-                        margin: 0,
-                        flex: 1,
-                        minWidth: 0,
-                        fontFamily: 'var(--game-font-family), sans-serif',
-                        fontSize: 'clamp(22px, 2.4vw, 30px)',
-                        fontWeight: 'bold',
-                        color: '#f1f5f9',
-                        letterSpacing: '0.08em',
-                        lineHeight: 1.2,
-                    }}
-                >
-                    {t('game.knowledgeUpgradeTreeTitle', language)}
-                </h1>
+                <div style={{ flex: 1, minWidth: 0 }} />
                 <div
                     role="status"
                     aria-label={`${t('game.levelUpResearchPointsLabel', language)}: ${levelUpResearchPoints}`}
@@ -948,6 +942,17 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                             const tierUnlockable = currentLevel >= tier.level;
                             const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
                             const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
+                            const eraResearchSummary =
+                                KNOWLEDGE_ERA_RESEARCH_SUMMARIES[
+                                    tier.level as keyof typeof KNOWLEDGE_ERA_RESEARCH_SUMMARIES
+                                ];
+                            const eraResearchAvailability = eraResearchSummary
+                                ? getKnowledgeEraResearchAvailability(
+                                    unlockedUpgrades,
+                                    eraResearchSummary.minLevel,
+                                    eraResearchSummary.maxLevel,
+                                )
+                                : null;
 
                             return (
                                 <div
@@ -990,6 +995,61 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                     >
                                         Lv.{tier.level}
                                     </div>
+
+                                    {eraResearchSummary && eraResearchAvailability && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${KNOWLEDGE_TREE_LABEL_BAND_PX + 88}px`,
+                                                right: `${TIER_ROW_PAD_X + 32}px`,
+                                                bottom: 'calc(50% + 10px)',
+                                                zIndex: 6,
+                                                display: 'flex',
+                                                alignItems: 'flex-end',
+                                                justifyContent: 'space-between',
+                                                color: labelColor,
+                                                fontFamily: 'var(--game-font-family), sans-serif',
+                                                lineHeight: 0.8,
+                                                fontWeight: 'bold',
+                                                textShadow: '0 2px 4px rgba(0,0,0,0.9)',
+                                                whiteSpace: 'nowrap',
+                                                pointerEvents: 'none',
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    fontSize: '40px',
+                                                    letterSpacing: '0.04em',
+                                                }}
+                                            >
+                                                {t('knowledgeUpgrade.eraLabel', language)
+                                                    .replace('{era}', t(eraResearchSummary.eraKey, language))}
+                                            </span>
+                                            <span
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'baseline',
+                                                    gap: '12px',
+                                                    fontSize: '26px',
+                                                    letterSpacing: '0.04em',
+                                                }}
+                                            >
+                                                <span>
+                                                    {t('knowledgeUpgrade.eraResearchAvailability', language)
+                                                        .replace('{era}', t(eraResearchSummary.eraKey, language))
+                                                        .replace('{available}/{total}', '')}
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        fontSize: '42px',
+                                                        letterSpacing: '0.02em',
+                                                    }}
+                                                >
+                                                    {eraResearchAvailability.available}/{eraResearchAvailability.total}
+                                                </span>
+                                            </span>
+                                        </div>
+                                    )}
 
                                     <div
                                         style={{
@@ -1109,30 +1169,53 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                             );
                         })}
                         {connectorLines.length > 0 && (
-                            <svg
-                                aria-hidden
-                                style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    overflow: 'visible',
-                                    pointerEvents: 'none',
-                                    zIndex: 3,
-                                }}
-                            >
-                                {connectorRenderLines
-                                    .filter((seg) => !seg.active && (activeFocusId != null || seg.prerequisiteCount <= 1))
-                                    .map((seg, i) => (
-                                        <KnowledgeConnectorSegment key={`inactive-${i}`} seg={seg} />
-                                    ))}
-                                {connectorRenderLines
-                                    .filter((seg) => seg.active)
-                                    .map((seg, i) => (
-                                        <KnowledgeConnectorSegment key={`active-${i}`} seg={seg} />
-                                    ))}
-                            </svg>
+                            <>
+                                <svg
+                                    aria-hidden
+                                    style={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        overflow: 'visible',
+                                        pointerEvents: 'none',
+                                        zIndex: 3,
+                                    }}
+                                >
+                                    {connectorRenderLines
+                                        .filter((seg) => !seg.active && (activeFocusId != null || seg.prerequisiteCount <= 1))
+                                        .map((seg, i) => (
+                                            <KnowledgeConnectorSegment key={`inactive-${i}`} seg={seg} />
+                                        ))}
+                                    {hoveredId == null && connectorRenderLines
+                                        .filter((seg) => seg.active)
+                                        .map((seg, i) => (
+                                            <KnowledgeConnectorSegment key={`focused-${i}`} seg={seg} />
+                                        ))}
+                                </svg>
+                                {hoveredId != null && (
+                                    <svg
+                                        aria-hidden
+                                        style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            overflow: 'visible',
+                                            pointerEvents: 'none',
+                                            zIndex: 5,
+                                        }}
+                                    >
+                                        {connectorRenderLines
+                                            .filter((seg) => seg.active)
+                                            .map((seg, i) => (
+                                                <KnowledgeConnectorSegment key={`active-${i}`} seg={seg} />
+                                            ))}
+                                    </svg>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

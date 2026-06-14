@@ -147,21 +147,21 @@ describe('knowledgeUpgrades', () => {
             FISHERIES_UPGRADE_ID,
             FOREIGN_TRADE_UPGRADE_ID,
             LAND_ALLOTMENT_UPGRADE_ID,
-        ].map((id) => KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[id])).toEqual([0, 2, 4, 6, 8, 10]);
+        ].map((id) => KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[id])).toEqual([0, 2, 4, 6, 8, 12]);
     });
 
     it('places Megalithic Settlements at level 7 in the Mining lane', () => {
         expect(getKnowledgeUpgradeUnlockLevel(MEGALITHIC_SETTLEMENTS_UPGRADE_ID)).toBe(7);
-        expect(KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[MEGALITHIC_SETTLEMENTS_UPGRADE_ID]).toBe(3);
+        expect(KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[MEGALITHIC_SETTLEMENTS_UPGRADE_ID]).toBe(6);
     });
 
     it('places Terrace Engineering at level 19 in the Mining lane', () => {
         expect(getKnowledgeUpgradeUnlockLevel(TERRACE_ENGINEERING_UPGRADE_ID)).toBe(19);
-        expect(KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[TERRACE_ENGINEERING_UPGRADE_ID]).toBe(3);
+        expect(KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[TERRACE_ENGINEERING_UPGRADE_ID]).toBe(6);
     });
 
     it('places Materials Engineering at level 27 in the Mining lane', () => {
         expect(getKnowledgeUpgradeUnlockLevel(MATERIALS_ENGINEERING_UPGRADE_ID)).toBe(27);
-        expect(KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[MATERIALS_ENGINEERING_UPGRADE_ID]).toBe(3);
+        expect(KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[MATERIALS_ENGINEERING_UPGRADE_ID]).toBe(6);
     });
 });
