@@ -17,6 +17,7 @@ import {
 } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
+    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
@@ -399,7 +400,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const [connectorLines, setConnectorLines] = useState<KnowledgeConnectorLine[]>([]);
     const [tooltipPosition, setTooltipPosition] = useState<KnowledgeUpgradeTooltipPosition | null>(null);
 
-    const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 17 && tutorialStep <= 19;
+    const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 14 && tutorialStep <= 16;
     const activeFocusId = pinnedTooltipId ?? hoveredId ?? (tutorialRestrictsHover ? tutorialFocusId : null);
     const detailId = activeFocusId;
     const detailUpgrade = detailId != null ? KNOWLEDGE_UPGRADES[detailId] : null;
@@ -622,6 +623,17 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         };
     }, [isOpen, updateKnowledgeTreeConnectors, updateDetailTooltipPosition, language, detailId]);
 
+    useLayoutEffect(() => {
+        if (!isOpen || tutorialStep !== 30) return;
+        const scrollEl = treeScrollRef.current;
+        if (!scrollEl) return;
+        const raf = requestAnimationFrame(() => {
+            scrollEl.scrollTop = 0;
+            savedTreeScrollTopRef.current = scrollEl.scrollTop;
+        });
+        return () => cancelAnimationFrame(raf);
+    }, [isOpen, tutorialStep]);
+
     useEffect(() => {
         if (!isOpen) return;
         const handler = (e: KeyboardEvent) => {
@@ -732,10 +744,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             returnPhaseAfterDevKnowledgeUpgrade: phase,
         });
         useGameStore.getState().selectUpgrade(id);
-        if (tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+        if (tutorialStep === 15 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
             setPendingResearchId(null);
             setTutorialFocusId(null);
-            onTutorialStepChange?.(19);
+            onTutorialStepChange?.(16);
             return;
         }
         setPendingResearchId(null);
@@ -765,8 +777,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
 
     const handleChipMouseEnter = (id: number) => {
         const tutorialAllowsAncientResearchHover =
-            tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID;
-        if (tutorialStep === 18 && !tutorialAllowsAncientResearchHover) return;
+            tutorialStep === 15 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID;
+        if (tutorialStep === 15 && !tutorialAllowsAncientResearchHover) return;
         if (tutorialRestrictsHover && !tutorialAllowsAncientResearchHover) return;
         if (pinnedTooltipId === id) {
             clearTooltipReleaseTimer();
@@ -900,6 +912,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     className="knowledge-upgrades-tree-scroll"
                     onScroll={(e) => {
                         savedTreeScrollTopRef.current = e.currentTarget.scrollTop;
+                        if (
+                            tutorialStep === 30 &&
+                            e.currentTarget.scrollTop + e.currentTarget.clientHeight >=
+                                e.currentTarget.scrollHeight - 24
+                        ) {
+                            onTutorialStepChange?.(31);
+                        }
                     }}
                     style={{
                         flex: 1,
@@ -1110,6 +1129,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
                                                             isDenied ? 'knowledge-upgrade-chip--denied' : '',
                                                             id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
+                                                            id === AGI_PROJECT_UPGRADE_ID ? 'knowledge-upgrade-chip--agi-project' : '',
                                                         ].filter(Boolean).join(' ')}
                                                         data-knowledge-upgrade-id={id}
                                                         aria-disabled={visuallyLocked && !unlocked}

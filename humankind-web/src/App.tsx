@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect, useId } from 'react';
 import { useGameStore } from './game/state/gameStore';
 import { scheduleGameLifecycleTimeout } from './game/state/gameLifecycleRun';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
@@ -31,6 +31,7 @@ import { audioManager } from './audio/audioManager';
 import type { AudioPlaybackHandle } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
 import { boardCellLocalRect, computeBoardPixelLayout } from './game/layout/boardPixelLayout';
+import { mapCrtSourceToOutput } from './components/canvas/crtProjection';
 import { S } from './game/data/symbolDefinitions';
 import { viewportPointToRootPoint } from './ui/cursorPosition';
 
@@ -404,16 +405,7 @@ const TUTORIAL_DIALOG_STEPS_KO = [
     '매 스핀 이후엔 무작위 심볼 세 가지 중 하나를 선택할 수 있습니다.',
   ],
   [
-    '기념비를 선택하세요.',
-  ],
-  [
-    '현재 보유 심볼을 확인해봅시다.',
-  ],
-  [
-    '기념비는 지식을 생산합니다.',
-  ],
-  [
-    '이전 화면으로 돌아가세요.',
+    '기념비는 지식을 제공합니다. 기념비를 선택하세요.',
   ],
   [
     '스핀 버튼을 눌러 턴을 진행하세요.',
@@ -452,6 +444,15 @@ const TUTORIAL_DIALOG_STEPS_KO = [
     '상하좌우뿐 아니라 대각선 칸도 인접으로 취급됩니다.',
   ],
   [
+    '보드는 모두 20칸입니다.',
+  ],
+  [
+    '심볼이 20개를 넘으면, 매 턴 20개만 무작위로 나옵니다.',
+  ],
+  [
+    '원하는 심볼이 잘 나오도록 심볼 수를 조절하세요.',
+  ],
+  [
     '유물 상점을 열어보세요.',
   ],
   [
@@ -459,6 +460,23 @@ const TUTORIAL_DIALOG_STEPS_KO = [
   ],
   [
     '유물은 골드를 통해서 구매하니 골드를 많이 모아보세요.',
+  ],
+  [
+    '마지막으로 게임의 승리 조건을 확인해봅시다.',
+    '지식 업그레이드 창을 열어보세요.',
+  ],
+  [
+    '지식 업그레이드의 가장 아래까지 스크롤해보세요.',
+  ],
+  [
+    '레벨 30이 되면 AGI 프로젝트를 연구할 수 있습니다.',
+    '연구하면 AGI 코어가 등장합니다.',
+  ],
+  [
+    'AGI 코어가 지식을 500 흡수하면 게임에서 승리합니다.',
+  ],
+  [
+    '이제 이전 화면으로 돌아가세요.',
   ],
   [
     '기본적인 튜토리얼은 이것으로 끝입니다.',
@@ -501,16 +519,7 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'After each spin, you can choose one of three random symbols.',
   ],
   [
-    'Choose the Monument.',
-  ],
-  [
-    'Let us check your owned symbols.',
-  ],
-  [
-    'Monument produces Knowledge.',
-  ],
-  [
-    'Return to the previous screen.',
+    'Monument gives Knowledge. Choose Monument.',
   ],
   [
     'Press the SPIN button to advance the turn.',
@@ -531,7 +540,7 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'Return to the previous screen.',
   ],
   [
-    'Here are one Sea and one Pearl symbol for you.',
+    'Here are a Sea and a Pearl symbol for you.',
   ],
   [
     'Sea produces 1 Gold for every 4 adjacent symbols.',
@@ -549,6 +558,15 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'Diagonal spaces count as adjacent, along with the spaces above, below, left, and right.',
   ],
   [
+    'The board has 20 spaces.',
+  ],
+  [
+    'If you own more than 20 symbols, only 20 are chosen at random each spin.',
+  ],
+  [
+    'Keep your symbol count under control so the symbols you need are more likely to appear.',
+  ],
+  [
     'Open the Relic Shop.',
   ],
   [
@@ -558,12 +576,29 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'Relics are purchased with Gold, so try to collect plenty of Gold.',
   ],
   [
+    'Finally, let us check how to win the game.',
+    'Open the Knowledge Upgrade window.',
+  ],
+  [
+    'Scroll to the bottom of the Knowledge Upgrade tree.',
+  ],
+  [
+    'At level 30, you can research the AGI Project.',
+    'This makes AGI Core appear.',
+  ],
+  [
+    'You win when AGI Core absorbs 500 Knowledge.',
+  ],
+  [
+    'Now return to the previous screen.',
+  ],
+  [
     'That is the end of the basic tutorial.',
     'Now lead your civilization to prosperity!',
   ],
 ];
 
-const TUTORIAL_REQUIRED_INTERACTION_STEPS = new Set([6, 10, 11, 13, 14, 16, 18, 19, 22, 26]);
+const TUTORIAL_REQUIRED_INTERACTION_STEPS = new Set([6, 10, 11, 13, 15, 16, 19, 26, 29, 30, 33]);
 
 type TutorialResourceKind = 'food' | 'gold' | 'knowledge';
 
@@ -639,16 +674,7 @@ const TUTORIAL_DIALOG_STEPS_RU: string[][] = [
     'После каждого вращения можно выбрать один из трех случайных символов.',
   ],
   [
-    'Выберите монумент.',
-  ],
-  [
-    'Проверим ваши символы.',
-  ],
-  [
-    'Монумент производит знания.',
-  ],
-  [
-    'Вернитесь на предыдущий экран.',
+    'Монумент дает знания. Выберите монумент.',
   ],
   [
     'Нажмите кнопку SPIN, чтобы перейти к следующему ходу.',
@@ -687,6 +713,15 @@ const TUTORIAL_DIALOG_STEPS_RU: string[][] = [
     'Диагональные клетки тоже считаются соседними, как и клетки сверху, снизу, слева и справа.',
   ],
   [
+    'На поле всего 20 клеток.',
+  ],
+  [
+    'Если у вас больше 20 символов, при каждом вращении случайно выбираются только 20.',
+  ],
+  [
+    'Следите за количеством символов, чтобы нужные появлялись чаще.',
+  ],
+  [
     'Откройте лавку реликвий.',
   ],
   [
@@ -694,6 +729,23 @@ const TUTORIAL_DIALOG_STEPS_RU: string[][] = [
   ],
   [
     'Реликвии покупаются за золото, поэтому старайтесь накопить побольше золота.',
+  ],
+  [
+    'Наконец, посмотрим, как победить в игре.',
+    'Откройте окно улучшений знаний.',
+  ],
+  [
+    'Прокрутите дерево улучшений знаний до самого низа.',
+  ],
+  [
+    'На уровне 30 можно изучить проект AGI.',
+    'После этого в игре появится ядро AGI.',
+  ],
+  [
+    'Вы победите, когда ядро AGI поглотит 500 знаний.',
+  ],
+  [
+    'Теперь вернитесь на предыдущий экран.',
   ],
   [
     'Базовое обучение завершено.',
@@ -712,10 +764,7 @@ const TUTORIAL_DIALOG_STEPS_ZH: string[][] = [
   ['每次旋转都会把你的符号放到棋盘上，并触发它们的效果。'],
   ['两个玉米各生产 2 食物，所以你获得了 4 食物。', '像这样收集食物才能生存。'],
   ['每次旋转后，你可以从三个随机符号中选择一个。'],
-  ['请选择纪念碑。'],
-  ['现在查看你拥有的符号。'],
-  ['纪念碑会生产知识。'],
-  ['返回上一个画面。'],
+  ['纪念碑会提供知识。请选择纪念碑。'],
   ['按下“旋转”按钮推进回合。'],
   ['你已经积累了足够知识，达到等级 2。'],
   ['打开知识升级窗口。'],
@@ -728,9 +777,17 @@ const TUTORIAL_DIALOG_STEPS_ZH: string[][] = [
   ['海洋周围放置了 4 个符号，因此生产了 1 金币！'],
   ['“相邻”是指一个符号周围的 8 个格子。'],
   ['除了上下左右，对角线上的格子也算相邻。'],
+  ['棋盘一共有 20 个格子。'],
+  ['如果你拥有超过 20 个符号，每次旋转只会随机选出 20 个。'],
+  ['控制好符号数量，让需要的符号更容易出现。'],
   ['打开遗物商店。'],
   ['遗物拥有多种强力效果，可以帮助你走向繁荣。'],
   ['遗物需要用金币购买，所以尽量多收集金币。'],
+  ['最后来看看如何赢得游戏。', '打开知识升级窗口。'],
+  ['将知识升级树滚动到最下方。'],
+  ['达到等级 30 后可以研究 AGI 项目。', '研究后，AGI 核心就会出现。'],
+  ['当 AGI 核心吸收 500 知识时，你就会获胜。'],
+  ['现在返回上一个画面。'],
   ['基础教程到此结束。', '现在带领你的文明走向繁荣吧！'],
 ];
 
@@ -779,6 +836,8 @@ type TutorialBoardHighlightsProps = {
   cells: Array<{ x: number; y: number }>;
   highlightBoard?: boolean;
   individualCells?: boolean;
+  showGroupBackdrop?: boolean;
+  highlightSymbolBounds?: boolean;
 };
 
 type TutorialElementHighlightProps = {
@@ -787,6 +846,63 @@ type TutorialElementHighlightProps = {
   pad?: number;
   padX?: number;
   padY?: number;
+};
+
+type TutorialHighlightRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+const padTutorialHighlightRect = (rect: TutorialHighlightRect, pad: number): TutorialHighlightRect => ({
+  left: rect.left - pad,
+  top: rect.top - pad,
+  width: rect.width + pad * 2,
+  height: rect.height + pad * 2,
+});
+
+const getTutorialHighlightBounds = (rects: TutorialHighlightRect[]): TutorialHighlightRect => {
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.left + rect.width));
+  const bottom = Math.max(...rects.map((rect) => rect.top + rect.height));
+  return { left, top, width: right - left, height: bottom - top };
+};
+
+const getCrtProjectedRectPath = (
+  rect: TutorialHighlightRect,
+  viewWidth: number,
+  viewHeight: number,
+) => {
+  const points: Array<{ x: number; y: number }> = [];
+  const edgeSteps = 12;
+  const addEdge = (
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    includeStart: boolean,
+  ) => {
+    for (let step = includeStart ? 0 : 1; step <= edgeSteps; step += 1) {
+      const progress = step / edgeSteps;
+      points.push(mapCrtSourceToOutput(
+        startX + (endX - startX) * progress,
+        startY + (endY - startY) * progress,
+        viewWidth,
+        viewHeight,
+      ));
+    }
+  };
+  const right = rect.left + rect.width;
+  const bottom = rect.top + rect.height;
+  addEdge(rect.left, rect.top, right, rect.top, true);
+  addEdge(right, rect.top, right, bottom, false);
+  addEdge(right, bottom, rect.left, bottom, false);
+  addEdge(rect.left, bottom, rect.left, rect.top, false);
+  return `${points.map((point, index) => (
+    `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`
+  )).join(' ')} Z`;
 };
 
 function TutorialElementHighlight({ selectors, className, pad = 0, padX = pad, padY = pad }: TutorialElementHighlightProps) {
@@ -866,8 +982,12 @@ function TutorialBoardHighlights({
   cells,
   highlightBoard = false,
   individualCells = false,
+  showGroupBackdrop = true,
+  highlightSymbolBounds = false,
 }: TutorialBoardHighlightsProps) {
+  const crtEffect = useSettingsStore((state) => state.crtEffect);
   const [viewSize, setViewSize] = useState({ w: 0, h: 0 });
+  const individualMaskId = `tutorial-individual-mask-${useId().replace(/:/g, '')}`;
 
   const measure = useCallback(() => {
     const el = anchorRef.current;
@@ -890,6 +1010,85 @@ function TutorialBoardHighlights({
   if (viewSize.w <= 0 || viewSize.h <= 0) return null;
 
   const layout = computeBoardPixelLayout(viewSize.w, viewSize.h);
+  const cellRects = cells.map((cell) => boardCellLocalRect(layout, cell.x, cell.y));
+  const rects = highlightSymbolBounds
+    ? cellRects.map((cellRect) => {
+        const rawSize = Math.min(cellRect.width - 6 * layout.scale, cellRect.height) * 0.85;
+        const spriteSize = 32 * Math.max(1, Math.floor(rawSize / 32));
+        const highlightPad = 5 * layout.scale;
+        const size = spriteSize + highlightPad * 2;
+        return {
+          left: cellRect.left + (cellRect.width - size) / 2,
+          top: cellRect.top + (cellRect.height - size) / 2,
+          width: size,
+          height: size,
+        };
+      })
+    : cellRects;
+
+  if (crtEffect) {
+    const cellPad = highlightSymbolBounds ? 0 : 5 * layout.scale;
+    const groupPad = 12 * layout.scale;
+    let maskRects: TutorialHighlightRect[];
+    let outlineRects: TutorialHighlightRect[];
+
+    if (highlightBoard) {
+      const boardRect = padTutorialHighlightRect({
+        left: layout.startX,
+        top: layout.startY,
+        width: layout.boardW,
+        height: layout.boardH,
+      }, groupPad);
+      maskRects = [boardRect];
+      outlineRects = [boardRect];
+    } else if (individualCells) {
+      const paddedRects = rects.map((rect) => padTutorialHighlightRect(rect, cellPad));
+      if (showGroupBackdrop) {
+        const groupRect = padTutorialHighlightRect(getTutorialHighlightBounds(rects), groupPad);
+        maskRects = [groupRect];
+        outlineRects = [groupRect, ...paddedRects];
+      } else {
+        maskRects = paddedRects;
+        outlineRects = paddedRects;
+      }
+    } else {
+      const groupRect = padTutorialHighlightRect(getTutorialHighlightBounds(rects), groupPad);
+      maskRects = [groupRect];
+      outlineRects = [groupRect];
+    }
+    const backdropPath = [
+      `M 0 0 H ${viewSize.w} V ${viewSize.h} H 0 Z`,
+      ...maskRects.map((rect) => getCrtProjectedRectPath(rect, viewSize.w, viewSize.h)),
+    ].join(' ');
+
+    return (
+      <svg
+        className={[
+          'tutorial-board-highlights',
+          'tutorial-board-highlights--crt',
+          !showGroupBackdrop && individualCells ? 'tutorial-board-highlights--lighter-mask' : '',
+        ].filter(Boolean).join(' ')}
+        aria-hidden="true"
+        viewBox={`0 0 ${viewSize.w} ${viewSize.h}`}
+        preserveAspectRatio="none"
+      >
+        <path
+          className="tutorial-board-highlight-crt-backdrop"
+          d={backdropPath}
+          fillRule="evenodd"
+          clipRule="evenodd"
+        />
+        {outlineRects.map((rect, index) => (
+          <path
+            className="tutorial-board-highlight-crt-outline"
+            d={getCrtProjectedRectPath(rect, viewSize.w, viewSize.h)}
+            key={`outline-${index}`}
+          />
+        ))}
+      </svg>
+    );
+  }
+
   if (highlightBoard) {
     const highlightPad = 12 * layout.scale;
     return (
@@ -907,9 +1106,8 @@ function TutorialBoardHighlights({
     );
   }
 
-  const rects = cells.map((cell) => boardCellLocalRect(layout, cell.x, cell.y));
   if (individualCells) {
-    const cellPad = 5 * layout.scale;
+    const cellPad = highlightSymbolBounds ? 0 : 5 * layout.scale;
     const groupPad = 12 * layout.scale;
     const groupLeft = Math.min(...rects.map((rect) => rect.left));
     const groupTop = Math.min(...rects.map((rect) => rect.top));
@@ -917,18 +1115,53 @@ function TutorialBoardHighlights({
     const groupBottom = Math.max(...rects.map((rect) => rect.top + rect.height));
     return (
       <div className="tutorial-board-highlights" aria-hidden="true">
-        <div
-          className="tutorial-board-highlight-cell tutorial-board-highlight-cell--group-backdrop"
-          style={{
-            left: groupLeft - groupPad,
-            top: groupTop - groupPad,
-            width: groupRight - groupLeft + groupPad * 2,
-            height: groupBottom - groupTop + groupPad * 2,
-          }}
-        />
+        {showGroupBackdrop && (
+          <div
+            className="tutorial-board-highlight-cell tutorial-board-highlight-cell--group-backdrop"
+            style={{
+              left: groupLeft - groupPad,
+              top: groupTop - groupPad,
+              width: groupRight - groupLeft + groupPad * 2,
+              height: groupBottom - groupTop + groupPad * 2,
+            }}
+          />
+        )}
+        {!showGroupBackdrop && (
+          <svg
+            className="tutorial-board-highlight-mask"
+            viewBox={`0 0 ${viewSize.w} ${viewSize.h}`}
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <mask id={individualMaskId} maskUnits="userSpaceOnUse">
+                <rect width={viewSize.w} height={viewSize.h} fill="white" />
+                {rects.map((rect, index) => (
+                  <rect
+                    key={`${cells[index].x}-${cells[index].y}`}
+                    x={rect.left - cellPad}
+                    y={rect.top - cellPad}
+                    width={rect.width + cellPad * 2}
+                    height={rect.height + cellPad * 2}
+                    fill="black"
+                  />
+                ))}
+              </mask>
+            </defs>
+            <rect
+              className="tutorial-board-highlight-mask-backdrop"
+              width={viewSize.w}
+              height={viewSize.h}
+              mask={`url(#${individualMaskId})`}
+            />
+          </svg>
+        )}
         {rects.map((rect, index) => (
           <div
-            className="tutorial-board-highlight-cell tutorial-board-highlight-cell--outline-only"
+            className={[
+              'tutorial-board-highlight-cell',
+              'tutorial-board-highlight-cell--outline-only',
+              highlightSymbolBounds ? 'tutorial-board-highlight-cell--static' : '',
+            ].filter(Boolean).join(' ')}
             key={`${cells[index].x}-${cells[index].y}`}
             style={{
               left: rect.left - cellPad,
@@ -1040,7 +1273,6 @@ function App() {
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
   const tutorialDialogSteps = useMemo(() => getTutorialDialogSteps(language), [language]);
   const tutorialDialogLabel = uiText(language, '튜토리얼 안내', 'Tutorial guide', '教程指南', 'Подсказка обучения');
-  const tutorialMonumentGainedText = uiText(language, '기념비를 획득했습니다!', 'You gained a Monument!', '你获得了纪念碑！', 'Вы получили монумент!');
   const tutorialFinishLabel = uiText(language, '종료', 'Finish', '完成', 'Готово');
   const tutorialExitLabel = uiText(language, '튜토리얼 종료', 'Exit Tutorial', '退出教程', 'Выйти из обучения');
   const tutorialAnywhereLabel = 'Press anywhere to continue';
@@ -1320,44 +1552,44 @@ function App() {
   }, [isTutorialMode, phase, tutorialDialogStep]);
 
   useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 11 || !ownedSymbolsOpen) return;
+    if (!isTutorialMode || tutorialDialogStep !== 11 || tutorialSpinStep !== 'monument_processing') return;
     setTutorialDialogStep(12);
-  }, [isTutorialMode, ownedSymbolsOpen, tutorialDialogStep]);
-
-  useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 13 || ownedSymbolsOpen) return;
-    setTutorialDialogStep(14);
-  }, [isTutorialMode, ownedSymbolsOpen, tutorialDialogStep]);
-
-  useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 14 || tutorialSpinStep !== 'monument_processing') return;
-    setTutorialDialogStep(15);
   }, [isTutorialMode, tutorialDialogStep, tutorialSpinStep]);
 
   useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 16 || !isKnowledgeOpen) return;
+    if (!isTutorialMode || tutorialDialogStep !== 13 || !isKnowledgeOpen) return;
+    setTutorialDialogStep(14);
+  }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 16 || isKnowledgeOpen) return;
     setTutorialDialogStep(17);
   }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
 
   useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 19 || isKnowledgeOpen) return;
-    setTutorialDialogStep(20);
-  }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
-
-  useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 20) return;
+    if (!isTutorialMode || tutorialDialogStep !== 17) return;
     setupTutorialAdjacencyStep();
   }, [isTutorialMode, setupTutorialAdjacencyStep, tutorialDialogStep]);
 
   useEffect(() => {
-    if (!isTutorialMode || tutorialDialogStep !== 22 || tutorialSpinStep !== 'adjacency_processing') return;
-    setTutorialDialogStep(23);
+    if (!isTutorialMode || tutorialDialogStep !== 19 || tutorialSpinStep !== 'adjacency_processing') return;
+    setTutorialDialogStep(20);
   }, [isTutorialMode, tutorialDialogStep, tutorialSpinStep]);
 
   useEffect(() => {
     if (!isTutorialMode || tutorialDialogStep !== 26 || !isRelicShopOpen) return;
     setTutorialDialogStep(27);
   }, [isRelicShopOpen, isTutorialMode, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 29 || !isKnowledgeOpen) return;
+    setTutorialDialogStep(30);
+  }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
+
+  useEffect(() => {
+    if (!isTutorialMode || tutorialDialogStep !== 33 || isKnowledgeOpen) return;
+    setTutorialDialogStep(34);
+  }, [isKnowledgeOpen, isTutorialMode, tutorialDialogStep]);
 
   // 앱 최초 로드 시 저장된 해상도를 DOM에 적용
   useEffect(() => {
@@ -1404,12 +1636,12 @@ function App() {
       return;
     }
 
-    if (isTutorialMode && tutorialDialogStep === 14) {
+    if (isTutorialMode && tutorialDialogStep === 11) {
       spinTutorialMonumentStep();
       return;
     }
 
-    if (isTutorialMode && tutorialDialogStep === 22) {
+    if (isTutorialMode && tutorialDialogStep === 19) {
       spinTutorialAdjacencyStep();
       return;
     }
@@ -1481,14 +1713,16 @@ function App() {
     if (target.closest('.owned-symbols-modal')) return true;
     if (target.closest('.tutorial-exit-button')) return true;
     if (target.closest('.tutorial-dialog-next')) return true;
-    if ((tutorialDialogStep === 6 || tutorialDialogStep === 14 || tutorialDialogStep === 22) && target.closest('.spin-btn')) return true;
+    if ((tutorialDialogStep === 6 || tutorialDialogStep === 11 || tutorialDialogStep === 19) && target.closest('.spin-btn')) return true;
     if (tutorialDialogStep === 10 && target.closest('.selection-card-frame:first-child .selection-card')) return true;
-    if (tutorialDialogStep === 11 && target.closest('.relic-shop-btn--owned-symbols')) return true;
-    if (tutorialDialogStep === 16 && target.closest('.relic-shop-btn--knowledge')) return true;
-    if (tutorialDialogStep === 18 && target.closest('.knowledge-upgrade-chip--ancient-era')) return true;
-    if (tutorialDialogStep === 18 && target.closest('.knowledge-research-confirm-overlay')) return true;
-    if (tutorialDialogStep === 19 && target.closest('.knowledge-upgrades-back-btn')) return true;
+    if (tutorialDialogStep === 13 && target.closest('.relic-shop-btn--knowledge')) return true;
+    if (tutorialDialogStep === 15 && target.closest('.knowledge-upgrade-chip--ancient-era')) return true;
+    if (tutorialDialogStep === 15 && target.closest('.knowledge-research-confirm-overlay')) return true;
+    if (tutorialDialogStep === 16 && target.closest('.knowledge-upgrades-back-btn')) return true;
     if (tutorialDialogStep === 26 && target.closest('.relic-shop-btn--relic')) return true;
+    if (tutorialDialogStep === 29 && target.closest('.relic-shop-btn--knowledge')) return true;
+    if (tutorialDialogStep === 30 && target.closest('.knowledge-upgrades-tree-scroll')) return true;
+    if (tutorialDialogStep === 33 && target.closest('.knowledge-upgrades-back-btn')) return true;
     return false;
   }, [isTutorialMode, tutorialDialogStep]);
 
@@ -1531,9 +1765,8 @@ function App() {
   }, [completeTutorial, isRelicShopOpen, returnToIntro, toggleRelicShop]);
 
   const handleOwnedSymbolsClose = useCallback(() => {
-    if (isTutorialMode && tutorialDialogStep === 12) return;
     setOwnedSymbolsOpen(false);
-  }, [isTutorialMode, tutorialDialogStep]);
+  }, []);
 
   const handleGameOverMainMenu = useCallback(() => {
     initializeGame();
@@ -1599,7 +1832,7 @@ function App() {
       if (isTutorialMode) {
         const isTutorialSpin =
           action === 'spin' &&
-          (tutorialDialogStep === 6 || tutorialDialogStep === 14 || tutorialDialogStep === 22);
+          (tutorialDialogStep === 6 || tutorialDialogStep === 11 || tutorialDialogStep === 19);
         if (!isTutorialSpin && action !== 'pause') return;
       }
 
@@ -1774,20 +2007,20 @@ function App() {
         isTutorialMode && tutorialDialogStep === 8 ? 'tutorial-highlight-food-resource' : '',
         isTutorialMode && tutorialDialogStep === 9 ? 'tutorial-highlight-selection-cards' : '',
         isTutorialMode && tutorialDialogStep === 10 ? 'tutorial-highlight-monument-card' : '',
-        isTutorialMode && tutorialDialogStep === 11 ? 'tutorial-highlight-owned-symbols-button' : '',
-        isTutorialMode && tutorialDialogStep === 12 ? 'tutorial-highlight-owned-monument' : '',
-        isTutorialMode && tutorialDialogStep === 13 ? 'tutorial-highlight-owned-close' : '',
-        isTutorialMode && tutorialDialogStep === 14 ? 'tutorial-highlight-spin-button' : '',
-        isTutorialMode && tutorialDialogStep === 15 ? 'tutorial-highlight-knowledge-status' : '',
-        isTutorialMode && tutorialDialogStep === 16 ? 'tutorial-highlight-knowledge-button' : '',
-        isTutorialMode && tutorialDialogStep === 17 ? 'tutorial-highlight-knowledge-intro' : '',
-        isTutorialMode && tutorialDialogStep === 18 ? 'tutorial-highlight-ancient-research' : '',
-        isTutorialMode && tutorialDialogStep === 19 ? 'tutorial-highlight-knowledge-back' : '',
-        isTutorialMode && tutorialDialogStep === 22 ? 'tutorial-highlight-spin-button' : '',
+        isTutorialMode && tutorialDialogStep === 11 ? 'tutorial-highlight-spin-button' : '',
+        isTutorialMode && tutorialDialogStep === 12 ? 'tutorial-highlight-knowledge-status' : '',
+        isTutorialMode && tutorialDialogStep === 13 ? 'tutorial-highlight-knowledge-button' : '',
+        isTutorialMode && tutorialDialogStep === 14 ? 'tutorial-highlight-knowledge-intro' : '',
+        isTutorialMode && tutorialDialogStep === 15 ? 'tutorial-highlight-ancient-research' : '',
+        isTutorialMode && tutorialDialogStep === 16 ? 'tutorial-highlight-knowledge-back' : '',
+        isTutorialMode && tutorialDialogStep === 19 ? 'tutorial-highlight-spin-button' : '',
         isTutorialMode && tutorialDialogStep === 26 ? 'tutorial-highlight-relic-shop-button' : '',
         isTutorialMode && tutorialDialogStep === 27 ? 'tutorial-highlight-relics' : '',
         isTutorialMode && tutorialDialogStep === 28 ? 'tutorial-highlight-relic-buy' : '',
-        isTutorialMode && tutorialDialogStep === 29 ? 'tutorial-highlight-finish' : '',
+        isTutorialMode && tutorialDialogStep === 29 ? 'tutorial-highlight-knowledge-button' : '',
+        isTutorialMode && (tutorialDialogStep === 31 || tutorialDialogStep === 32) ? 'tutorial-highlight-agi-project' : '',
+        isTutorialMode && tutorialDialogStep === 33 ? 'tutorial-highlight-knowledge-back' : '',
+        isTutorialMode && tutorialDialogStep === 34 ? 'tutorial-highlight-finish' : '',
       ].filter(Boolean).join(' ')}
       onPointerDownCapture={blockUnhandledTutorialInteraction}
       onClickCapture={blockUnhandledTutorialInteraction}
@@ -2152,29 +2385,45 @@ function App() {
       {isTutorialMode && tutorialDialogStep === 7 && (
         <TutorialBoardHighlights anchorRef={gameAreaRef} cells={[]} highlightBoard />
       )}
-      {isTutorialMode && tutorialDialogStep === 20 && (
+      {isTutorialMode && tutorialDialogStep === 17 && (
         <TutorialBoardHighlights
           anchorRef={gameAreaRef}
           cells={TUTORIAL_ADJACENCY_PREVIEW_CELLS}
-          individualCells
         />
       )}
-      {isTutorialMode && tutorialDialogStep === 21 && (
+      {isTutorialMode && tutorialDialogStep === 18 && (
         <TutorialBoardHighlights anchorRef={gameAreaRef} cells={TUTORIAL_SEA_CELL} />
       )}
-      {isTutorialMode && tutorialDialogStep === 23 && tutorialSpinStep === 'adjacency_done' && (
+      {isTutorialMode && tutorialDialogStep === 20 && tutorialSpinStep === 'adjacency_done' && (
         <TutorialBoardHighlights
           anchorRef={gameAreaRef}
           cells={TUTORIAL_SEA_OCCUPIED_ADJACENT_CELLS}
           individualCells
+          showGroupBackdrop={false}
+          highlightSymbolBounds
         />
       )}
-      {isTutorialMode && (tutorialDialogStep === 24 || tutorialDialogStep === 25) && (
+      {isTutorialMode && tutorialDialogStep === 21 && (
+        <TutorialBoardHighlights
+          anchorRef={gameAreaRef}
+          cells={TUTORIAL_SEA_ADJACENT_CELLS}
+        />
+      )}
+      {isTutorialMode && tutorialDialogStep === 22 && (
         <TutorialBoardHighlights
           anchorRef={gameAreaRef}
           cells={TUTORIAL_SEA_ADJACENT_CELLS}
           individualCells
+          showGroupBackdrop={false}
+          highlightSymbolBounds
         />
+      )}
+      {isTutorialMode && (
+        tutorialDialogStep === 23 ||
+        tutorialDialogStep === 24 ||
+        tutorialDialogStep === 25
+      ) && (
+        <TutorialBoardHighlights anchorRef={gameAreaRef} cells={[]} highlightBoard />
       )}
       {isTutorialMode && tutorialDialogStep === 27 && (
         <TutorialElementHighlight
@@ -2196,8 +2445,8 @@ function App() {
       )}
 
       {isTutorialMode &&
-        !(tutorialDialogStep === 15 && tutorialSpinStep !== 'monument_done') &&
-        !(tutorialDialogStep === 23 && tutorialSpinStep !== 'adjacency_done') && (
+        !(tutorialDialogStep === 12 && tutorialSpinStep !== 'monument_done') &&
+        !(tutorialDialogStep === 20 && tutorialSpinStep !== 'adjacency_done') && (
         <div
           className={[
             'tutorial-dialog-overlay',
@@ -2210,41 +2459,39 @@ function App() {
             tutorialDialogStep === 8 ? 'tutorial-dialog-overlay--food-resource' : '',
             tutorialDialogStep === 9 ? 'tutorial-dialog-overlay--selection-cards' : '',
             tutorialDialogStep === 10 ? 'tutorial-dialog-overlay--monument-card' : '',
-            tutorialDialogStep === 11 ? 'tutorial-dialog-overlay--owned-symbols-button' : '',
-            tutorialDialogStep === 12 ? 'tutorial-dialog-overlay--owned-monument' : '',
-            tutorialDialogStep === 13 ? 'tutorial-dialog-overlay--owned-close' : '',
-            tutorialDialogStep === 14 ? 'tutorial-dialog-overlay--spin-button' : '',
-            tutorialDialogStep === 15 ? 'tutorial-dialog-overlay--knowledge-status' : '',
-            tutorialDialogStep === 16 ? 'tutorial-dialog-overlay--knowledge-button' : '',
-            tutorialDialogStep === 17 ? 'tutorial-dialog-overlay--knowledge-intro' : '',
-            tutorialDialogStep === 18 ? 'tutorial-dialog-overlay--ancient-research' : '',
-            tutorialDialogStep === 19 ? 'tutorial-dialog-overlay--knowledge-back' : '',
-            tutorialDialogStep === 20 || tutorialDialogStep === 21 ||
-              tutorialDialogStep === 23 || tutorialDialogStep === 24 || tutorialDialogStep === 25
+            tutorialDialogStep === 11 ? 'tutorial-dialog-overlay--spin-button' : '',
+            tutorialDialogStep === 12 ? 'tutorial-dialog-overlay--knowledge-status' : '',
+            tutorialDialogStep === 13 ? 'tutorial-dialog-overlay--knowledge-button' : '',
+            tutorialDialogStep === 14 ? 'tutorial-dialog-overlay--knowledge-intro' : '',
+            tutorialDialogStep === 15 ? 'tutorial-dialog-overlay--ancient-research' : '',
+            tutorialDialogStep === 16 ? 'tutorial-dialog-overlay--knowledge-back' : '',
+            tutorialDialogStep === 17 || tutorialDialogStep === 18 ||
+              tutorialDialogStep === 20 || tutorialDialogStep === 21 ||
+              tutorialDialogStep === 22 || tutorialDialogStep === 23 ||
+              tutorialDialogStep === 24 || tutorialDialogStep === 25
               ? 'tutorial-dialog-overlay--board'
               : '',
-            tutorialDialogStep === 22 ? 'tutorial-dialog-overlay--spin-button' : '',
+            tutorialDialogStep === 19 ? 'tutorial-dialog-overlay--spin-button' : '',
             tutorialDialogStep === 26 ? 'tutorial-dialog-overlay--relic-shop-button' : '',
             tutorialDialogStep === 27 ? 'tutorial-dialog-overlay--relics' : '',
             tutorialDialogStep === 28 ? 'tutorial-dialog-overlay--relic-buy' : '',
-            tutorialDialogStep === 29 ? 'tutorial-dialog-overlay--finish' : '',
+            tutorialDialogStep === 29 ? 'tutorial-dialog-overlay--knowledge-button' : '',
+            tutorialDialogStep === 30 ? 'tutorial-dialog-overlay--knowledge-scroll' : '',
+            tutorialDialogStep === 31 || tutorialDialogStep === 32
+              ? 'tutorial-dialog-overlay--agi-project'
+              : '',
+            tutorialDialogStep === 33 ? 'tutorial-dialog-overlay--knowledge-back' : '',
+            tutorialDialogStep === 34 ? 'tutorial-dialog-overlay--finish' : '',
           ].filter(Boolean).join(' ')}
           role="dialog"
           aria-modal="true"
           aria-label={tutorialDialogLabel}
         >
           <div className="tutorial-dialog-text">
-            {tutorialDialogStep === 12 ? (
-              <>
-                <p>{tutorialMonumentGainedText}</p>
-                <p>{renderTutorialText(tutorialDialogSteps[tutorialDialogStep][0])}</p>
-              </>
-            ) : (
-              tutorialDialogSteps[tutorialDialogStep].map((line) => (
-                <p key={line}>{renderTutorialText(line)}</p>
-              ))
-            )}
-            {tutorialDialogStep === 29 ? (
+            {tutorialDialogSteps[tutorialDialogStep].map((line) => (
+              <p key={line}>{renderTutorialText(line)}</p>
+            ))}
+            {tutorialDialogStep === 34 ? (
               <button
                 type="button"
                 className="tutorial-dialog-next tutorial-dialog-finish"

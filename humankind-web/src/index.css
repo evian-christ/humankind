@@ -3672,6 +3672,22 @@ button.spin-btn:disabled:active {
   padding-left: 128px;
 }
 
+.tutorial-dialog-overlay--knowledge-scroll {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 108px;
+}
+
+.tutorial-dialog-overlay--agi-project {
+  z-index: 650;
+  background: transparent;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 108px;
+}
+
 .tutorial-dialog-overlay--relic-shop-button {
   padding: 0;
 }
@@ -3723,6 +3739,7 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-knowledge-button .tutorial-dialog-overlay,
 .tutorial-highlight-ancient-research .tutorial-dialog-overlay,
 .tutorial-highlight-knowledge-back .tutorial-dialog-overlay,
+.tutorial-highlight-agi-project .tutorial-dialog-overlay,
 .tutorial-highlight-relic-shop-button .tutorial-dialog-overlay,
 .tutorial-highlight-relics .tutorial-dialog-overlay,
 .tutorial-highlight-relic-buy .tutorial-dialog-overlay {
@@ -4128,6 +4145,21 @@ button.spin-btn:disabled:active {
     0 0 32px rgba(255, 211, 92, 0.72);
 }
 
+.tutorial-highlight-agi-project .knowledge-upgrade-chip {
+  opacity: 0.22;
+}
+
+.tutorial-highlight-agi-project .knowledge-upgrade-chip--agi-project {
+  opacity: 1;
+  overflow: visible !important;
+  z-index: 10;
+  outline: 3px solid rgba(255, 246, 201, 0.96);
+  outline-offset: 8px;
+  box-shadow:
+    0 0 14px rgba(255, 246, 201, 0.92),
+    0 0 32px rgba(255, 211, 92, 0.72);
+}
+
 .tutorial-highlight-relic-shop-button .bottom-action-bar {
   z-index: 640;
 }
@@ -4224,6 +4256,45 @@ button.spin-btn:disabled:active {
   box-shadow:
     0 0 14px rgba(255, 246, 201, 0.92),
     0 0 28px rgba(255, 211, 92, 0.68);
+}
+
+.tutorial-board-highlight-mask {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.tutorial-board-highlight-mask-backdrop {
+  fill: rgba(0, 0, 0, 0.68);
+}
+
+.tutorial-board-highlight-cell--static {
+  animation: none;
+}
+
+.tutorial-board-highlights--crt {
+  width: 100%;
+  height: 100%;
+}
+
+.tutorial-board-highlight-crt-backdrop {
+  fill: rgba(0, 0, 0, 0.76);
+}
+
+.tutorial-board-highlights--lighter-mask .tutorial-board-highlight-crt-backdrop {
+  fill: rgba(0, 0, 0, 0.68);
+}
+
+.tutorial-board-highlight-crt-outline {
+  fill: none;
+  stroke: rgba(255, 246, 201, 0.96);
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  filter:
+    drop-shadow(0 0 4px rgba(255, 246, 201, 0.42))
+    drop-shadow(0 0 8px rgba(255, 211, 92, 0.2));
 }
 
 .tutorial-highlight-food-demand .food-demand-mini,
