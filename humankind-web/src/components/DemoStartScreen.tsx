@@ -186,7 +186,33 @@ function DemoAchievementsPanel({ language }: { language: Language }) {
   );
 }
 
-function DemoMainMenu({ isEntering = false }: { isEntering?: boolean }) {
+function DemoAchievementsPage({ onBack }: { onBack: () => void }) {
+  const language = useSettingsStore((s) => s.language);
+
+  return (
+    <div className="demo-start-root demo-achievements-page">
+      <button
+        type="button"
+        className="leader-select-back demo-achievements-back"
+        onClick={onBack}
+        aria-label={t('game.back', language)}
+      >
+        <span aria-hidden="true">&lt;</span>
+      </button>
+      <main className="demo-achievements-page-shell" aria-label={textForLanguage(demoAchievementPanelTitle, language)}>
+        <DemoAchievementsPanel language={language} />
+      </main>
+    </div>
+  );
+}
+
+function DemoMainMenu({
+  isEntering = false,
+  onOpenAchievements,
+}: {
+  isEntering?: boolean;
+  onOpenAchievements: () => void;
+}) {
   const language = useSettingsStore((s) => s.language);
   const proceedToLeaderSelect = usePreGameStore((s) => s.proceedToLeaderSelect);
   const proceedToLeaderProgress = usePreGameStore((s) => s.proceedToLeaderProgress);
@@ -249,7 +275,6 @@ function DemoMainMenu({ isEntering = false }: { isEntering?: boolean }) {
       <div className="main-menu-proof-code" aria-label={`Steam proof code ${steamProofCode}`}>
         {steamProofCode}
       </div>
-      <DemoAchievementsPanel language={language} />
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
         <div className="main-menu-version" aria-label="version b1.2.3">
           b1.2.3
@@ -324,8 +349,7 @@ function DemoMainMenu({ isEntering = false }: { isEntering?: boolean }) {
           <button
             type="button"
             className="main-menu-button"
-            disabled
-            aria-disabled="true"
+            onClick={onOpenAchievements}
             aria-label={t('mainMenu.achievements', language)}
           >
             {t('mainMenu.achievements', language)}
@@ -355,13 +379,19 @@ export default function DemoStartScreen() {
   const initialSetupComplete = useSettingsStore((s) => s.initialSetupComplete);
   const completeInitialSetup = useSettingsStore((s) => s.completeInitialSetup);
   const [mainMenuEntering, setMainMenuEntering] = useState(false);
+  const [screen, setScreen] = useState<'mainMenu' | 'achievements'>('mainMenu');
+
+  if (initialSetupComplete && screen === 'achievements') {
+    return <DemoAchievementsPage onBack={() => setScreen('mainMenu')} />;
+  }
 
   return initialSetupComplete
-    ? <DemoMainMenu isEntering={mainMenuEntering} />
+    ? <DemoMainMenu isEntering={mainMenuEntering} onOpenAchievements={() => setScreen('achievements')} />
     : (
       <InitialSetupScreen
         onComplete={() => {
           setMainMenuEntering(true);
+          setScreen('mainMenu');
           completeInitialSetup();
         }}
       />

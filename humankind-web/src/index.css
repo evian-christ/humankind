@@ -2943,6 +2943,47 @@ button.spin-btn:disabled:active {
   box-shadow: 0 1px 0 #0d421b;
 }
 
+.demo-achievements-page {
+  align-items: stretch;
+  justify-content: center;
+  padding: clamp(82px, 10vh, 116px) clamp(22px, 6vw, 86px) clamp(36px, 6vh, 72px);
+}
+
+.demo-achievements-page-shell {
+  width: min(100%, 1120px);
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.demo-achievements-page .demo-achievements-panel {
+  position: static;
+  width: min(100%, 980px);
+  gap: 28px;
+}
+
+.demo-achievements-page .demo-achievements-title {
+  font-size: clamp(34px, 5vw, 64px);
+  text-align: center;
+}
+
+.demo-achievements-page .demo-achievements-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 34px clamp(28px, 4vw, 56px);
+  padding-right: 0;
+}
+
+.demo-achievements-page .demo-achievement-section {
+  min-width: 0;
+}
+
+.demo-achievements-page .demo-achievements-completion {
+  width: min(100%, 720px);
+  align-self: center;
+}
+
 .main-menu-title {
   margin: 0;
   color: #ffffff;
@@ -3207,6 +3248,15 @@ button.spin-btn:disabled:active {
 
   .main-menu-play-options--open {
     transform: translateY(0);
+  }
+
+  .demo-achievements-page {
+    padding: 88px 22px 34px;
+  }
+
+  .demo-achievements-page .demo-achievements-sections {
+    grid-template-columns: 1fr;
+    gap: 30px;
   }
 }
 
