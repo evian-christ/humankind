@@ -10,3 +10,4 @@
 
 # Tooling
 .codex/
+.vite-*.log
