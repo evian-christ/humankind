@@ -350,30 +350,23 @@ const SymbolSelection = () => {
                     <div className="selection-actions">
                         {!hideRerollFromRelicSource && !hideRerollFromSymbolSource && (
                             <button
+                                type="button"
                                 className="selection-reroll-btn"
                                 data-audio-click="symbol_choice_reroll"
                                 onClick={handleRerollClick}
                                 aria-disabled={!canReroll}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px',
-                                    opacity: canReroll ? 1 : 0.55,
-                                    cursor: canReroll ? 'pointer' : 'not-allowed',
-                                }}
                             >
                                 <span>{t('game.reroll', language)}</span>
-                                <span style={{ color: '#fbbf24', fontSize: '20px', lineHeight: 1, transform: 'translateY(1px)' }}>&#9679;</span>
-                                <span style={{ color: '#fbbf24', fontWeight: '900' }}>{visibleRerollCost}</span>
+                                <span className="selection-reroll-cost-dot" aria-hidden="true">&#9679;</span>
+                                <span className="selection-reroll-cost">{visibleRerollCost}</span>
                                 {rerollsLeft !== null && (
-                                    <span style={{ marginLeft: '4px', opacity: 0.75, fontSize: '0.75em' }}>
+                                    <span className="selection-reroll-count">
                                         {rerollsLeft}/{maxRerolls}
                                     </span>
                                 )}
                             </button>
                         )}
-                        <button className="selection-skip-btn" onClick={skipSelection}>
+                        <button type="button" className="selection-skip-btn" onClick={skipSelection}>
                             {t('game.skip', language)}
                         </button>
                     </div>

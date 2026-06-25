@@ -17,6 +17,7 @@ import {
 } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import {
+    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
@@ -73,7 +74,7 @@ type KnowledgeUpgradeTooltipPosition = {
     placement: 'left' | 'right';
 };
 
-/** 칩 열 수 — 개발용 확장 13열 */
+/** Chip columns: expanded to 13 columns for development. */
 const KNOWLEDGE_TREE_GRID_COLS = 13;
 const KNOWLEDGE_TREE_MIN_BRANCH_GAP = 2;
 const KNOWLEDGE_TREE_CENTER_COL = Math.floor(KNOWLEDGE_TREE_GRID_COLS / 2);
@@ -129,7 +130,8 @@ function getNearestOpenTierColumn(
     ) ?? null;
 }
 
-function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
+// eslint-disable-next-line react-refresh/only-export-components
+export function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
     const knownCols = new Map<number, number>();
     let previousTierCols: number[] = [];
 
@@ -152,10 +154,10 @@ function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
                 hasPrereq: prereqCols.length > 0,
                 col: KNOWLEDGE_TREE_ERA_SPINE_IDS.has(upgradeId)
                     ? KNOWLEDGE_TREE_CENTER_COL
-                    : affinityCol != null
-                    ? affinityCol
                     : prereqCols.length > 0
                     ? Math.round(prereqCols.reduce((sum, col) => sum + col, 0) / prereqCols.length)
+                    : affinityCol != null
+                    ? affinityCol
                     : getEvenTierColumn(order, tier.ids.length),
             };
         });
@@ -193,7 +195,7 @@ const KNOWLEDGE_TREE_CHIP = 110;
 const KNOWLEDGE_TREE_GAP = 16;
 const TIER_ROW_PAD_X = 48;
 const TIER_LABEL_W = 72;
-/** Lv 라벨이 들어가는 첫 열 너비(단일 그리드의 1열). */
+/** Reserve one label band so Lv labels do not overlap the grid. */
 const KNOWLEDGE_TREE_LABEL_BAND_PX = TIER_ROW_PAD_X + TIER_LABEL_W + 14;
 const KNOWLEDGE_TREE_BODY_PAD_TOP = 0;
 const TIER_ROW_MIN_H = 130;
@@ -213,6 +215,25 @@ const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
 const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#120303';
 const KNOWLEDGE_TOOLTIP_PIN_DELAY_MS = 1000;
 const KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS = 180;
+const KNOWLEDGE_ERA_RESEARCH_SUMMARIES = {
+    1: { eraKey: 'era.ancient', minLevel: 1, maxLevel: 9 },
+    10: { eraKey: 'era.medieval', minLevel: 10, maxLevel: 19 },
+    20: { eraKey: 'era.modern', minLevel: 20, maxLevel: 29 },
+} as const;
+
+export function getKnowledgeEraResearchAvailability(
+    unlockedUpgradeIds: readonly number[],
+    minLevel: number,
+    maxLevel: number,
+): { available: number; total: number } {
+    return {
+        available: unlockedUpgradeIds.filter((upgradeId) => {
+            const unlockLevel = getTierLevelForUpgrade(upgradeId);
+            return unlockLevel >= minLevel && unlockLevel <= maxLevel;
+        }).length,
+        total: maxLevel - minLevel + 1,
+    };
+}
 
 function knowledgeTreeChipFrameColor(researched: boolean, locked: boolean, denied: boolean): string {
     return denied
@@ -229,7 +250,7 @@ const KNOWLEDGE_CONNECTOR_DIMMED_OPACITY = 0.08;
 const KNOWLEDGE_CONNECTOR_ACTIVE_OPACITY = 0.95;
 const KNOWLEDGE_TIER_AVAILABLE_BG = 'rgba(96,165,250,0.08)';
 
-/** 칩 6열 + 열 사이 간격 */
+/** Grid width: chip columns plus gaps. */
 function knowledgeTreeGridWidthPx(): number {
     return (
         KNOWLEDGE_TREE_GRID_COLS * KNOWLEDGE_TREE_CHIP +
@@ -367,6 +388,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const [pinnedTooltipId, setPinnedTooltipId] = useState<number | null>(null);
     const [deniedChipId, setDeniedChipId] = useState<number | null>(null);
     const [researchPointsMouseHints, setResearchPointsMouseHints] = useState<ResearchPointsMouseHint[]>([]);
+    const [isClosing, setIsClosing] = useState(false);
     const researchHintIdRef = useRef(0);
     const deniedChipTimeoutRef = useRef<number | null>(null);
     const tooltipPinTimeoutRef = useRef<number | null>(null);
@@ -379,7 +401,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const [connectorLines, setConnectorLines] = useState<KnowledgeConnectorLine[]>([]);
     const [tooltipPosition, setTooltipPosition] = useState<KnowledgeUpgradeTooltipPosition | null>(null);
 
-    const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 17 && tutorialStep <= 19;
+    const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 14 && tutorialStep <= 16;
     const activeFocusId = pinnedTooltipId ?? hoveredId ?? (tutorialRestrictsHover ? tutorialFocusId : null);
     const detailId = activeFocusId;
     const detailUpgrade = detailId != null ? KNOWLEDGE_UPGRADES[detailId] : null;
@@ -602,19 +624,48 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         };
     }, [isOpen, updateKnowledgeTreeConnectors, updateDetailTooltipPosition, language, detailId]);
 
+    useLayoutEffect(() => {
+        if (!isOpen || tutorialStep !== 30) return;
+        const scrollEl = treeScrollRef.current;
+        if (!scrollEl) return;
+        const raf = requestAnimationFrame(() => {
+            scrollEl.scrollTop = 0;
+            savedTreeScrollTopRef.current = scrollEl.scrollTop;
+        });
+        return () => cancelAnimationFrame(raf);
+    }, [isOpen, tutorialStep]);
+
+    const closeWithSlide = useCallback(() => {
+        if (isClosing) return;
+        setIsClosing(true);
+        document.body.classList.add('screen-return-from-knowledge');
+        window.setTimeout(() => {
+            document.body.classList.remove('screen-return-from-knowledge');
+            onClose();
+        }, 160);
+    }, [isClosing, onClose]);
+
+    useEffect(() => () => {
+        document.body.classList.remove('screen-return-from-knowledge');
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) setIsClosing(false);
+    }, [isOpen]);
+
     useEffect(() => {
         if (!isOpen) return;
         const handler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 if (pendingResearchId !== null) setPendingResearchId(null);
-                else onClose();
+                else closeWithSlide();
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [isOpen, onClose, pendingResearchId]);
+    }, [closeWithSlide, isOpen, pendingResearchId]);
 
-    // 패널 닫기 (오버레이 닫힐 때 선택 초기화)
+    // Reset transient selection state when the panel closes.
     useEffect(() => {
         if (!isOpen) {
             if (tooltipPinTimeoutRef.current != null) {
@@ -712,10 +763,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             returnPhaseAfterDevKnowledgeUpgrade: phase,
         });
         useGameStore.getState().selectUpgrade(id);
-        if (tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+        if (tutorialStep === 15 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
             setPendingResearchId(null);
             setTutorialFocusId(null);
-            onTutorialStepChange?.(19);
+            onTutorialStepChange?.(16);
             return;
         }
         setPendingResearchId(null);
@@ -745,8 +796,8 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
 
     const handleChipMouseEnter = (id: number) => {
         const tutorialAllowsAncientResearchHover =
-            tutorialStep === 18 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID;
-        if (tutorialStep === 18 && !tutorialAllowsAncientResearchHover) return;
+            tutorialStep === 15 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID;
+        if (tutorialStep === 15 && !tutorialAllowsAncientResearchHover) return;
         if (tutorialRestrictsHover && !tutorialAllowsAncientResearchHover) return;
         if (pinnedTooltipId === id) {
             clearTooltipReleaseTimer();
@@ -790,7 +841,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     return (
         <div
             ref={overlayRef}
-            className="knowledge-upgrades-overlay"
+            className={`knowledge-upgrades-overlay${isClosing ? ' knowledge-upgrades-overlay--closing' : ''}`}
             style={{
                 position: 'fixed',
                 inset: 0,
@@ -800,7 +851,18 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 flexDirection: 'column',
             }}
         >
-            {/* 상단 헤더 */}
+            {/* Edge return control */}
+            <button
+                type="button"
+                className="relic-edge-hotzone knowledge-return-hotzone"
+                onClick={closeWithSlide}
+                aria-label={t('knowledgeUpgrade.back', language)}
+            >
+                <span className="edge-hotzone-label">
+                    <span className="edge-hotzone-arrow edge-hotzone-arrow--right" aria-hidden="true" />
+                    <span className="edge-hotzone-text">돌아가기</span>
+                </span>
+            </button>
             <div
                 style={{
                     position: 'absolute',
@@ -817,47 +879,21 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 }}
             >
                 <button
-                    className="knowledge-upgrades-back-btn"
+                    className="knowledge-upgrades-back-btn relic-shop-back-btn"
                     type="button"
-                    onClick={onClose}
+                    onClick={closeWithSlide}
                     style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#94a3b8',
-                        fontSize: '40px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '48px',
-                        height: '48px',
-                        padding: 0,
                         flexShrink: 0,
                         pointerEvents: 'auto',
-                        transition: 'color 0.2s, transform 0.2s',
-                        borderRadius: '50%',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#f8fafc'; e.currentTarget.style.transform = 'translateX(-4px)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.transform = 'translateX(0)'; }}
-                    aria-label="돌아가기"
+                    aria-label={t('knowledgeUpgrade.back', language)}
                 >
-                    ←
+                    <span className="relic-shop-back-icon" aria-hidden>
+                        ←
+                    </span>
+                    <span className="relic-shop-back-label">{t('knowledgeUpgrade.back', language)}</span>
                 </button>
-                <h1
-                    style={{
-                        margin: 0,
-                        flex: 1,
-                        minWidth: 0,
-                        fontFamily: 'var(--game-font-family), sans-serif',
-                        fontSize: 'clamp(22px, 2.4vw, 30px)',
-                        fontWeight: 'bold',
-                        color: '#f1f5f9',
-                        letterSpacing: '0.08em',
-                        lineHeight: 1.2,
-                    }}
-                >
-                    {t('game.knowledgeUpgradeTreeTitle', language)}
-                </h1>
+                <div style={{ flex: 1, minWidth: 0 }} />
                 <div
                     role="status"
                     aria-label={`${t('game.levelUpResearchPointsLabel', language)}: ${levelUpResearchPoints}`}
@@ -887,7 +923,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 </div>
             </div>
 
-            {/* 트리 본문 — 세로 타임라인 */}
+            {/* Tree body */}
             <div
                 style={{
                     flex: 1,
@@ -906,6 +942,13 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     className="knowledge-upgrades-tree-scroll"
                     onScroll={(e) => {
                         savedTreeScrollTopRef.current = e.currentTarget.scrollTop;
+                        if (
+                            tutorialStep === 30 &&
+                            e.currentTarget.scrollTop + e.currentTarget.clientHeight >=
+                                e.currentTarget.scrollHeight - 24
+                        ) {
+                            onTutorialStepChange?.(31);
+                        }
                     }}
                     style={{
                         flex: 1,
@@ -948,6 +991,17 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                             const tierUnlockable = currentLevel >= tier.level;
                             const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
                             const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
+                            const eraResearchSummary =
+                                KNOWLEDGE_ERA_RESEARCH_SUMMARIES[
+                                    tier.level as keyof typeof KNOWLEDGE_ERA_RESEARCH_SUMMARIES
+                                ];
+                            const eraResearchAvailability = eraResearchSummary
+                                ? getKnowledgeEraResearchAvailability(
+                                    unlockedUpgrades,
+                                    eraResearchSummary.minLevel,
+                                    eraResearchSummary.maxLevel,
+                                )
+                                : null;
 
                             return (
                                 <div
@@ -990,6 +1044,61 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                     >
                                         Lv.{tier.level}
                                     </div>
+
+                                    {eraResearchSummary && eraResearchAvailability && (
+                                        <div
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${KNOWLEDGE_TREE_LABEL_BAND_PX + 88}px`,
+                                                right: `${TIER_ROW_PAD_X + 32}px`,
+                                                bottom: 'calc(50% + 10px)',
+                                                zIndex: 6,
+                                                display: 'flex',
+                                                alignItems: 'flex-end',
+                                                justifyContent: 'space-between',
+                                                color: labelColor,
+                                                fontFamily: 'var(--game-font-family), sans-serif',
+                                                lineHeight: 0.8,
+                                                fontWeight: 'bold',
+                                                textShadow: '0 2px 4px rgba(0,0,0,0.9)',
+                                                whiteSpace: 'nowrap',
+                                                pointerEvents: 'none',
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    fontSize: '40px',
+                                                    letterSpacing: '0.04em',
+                                                }}
+                                            >
+                                                {t('knowledgeUpgrade.eraLabel', language)
+                                                    .replace('{era}', t(eraResearchSummary.eraKey, language))}
+                                            </span>
+                                            <span
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'baseline',
+                                                    gap: '12px',
+                                                    fontSize: '26px',
+                                                    letterSpacing: '0.04em',
+                                                }}
+                                            >
+                                                <span>
+                                                    {t('knowledgeUpgrade.eraResearchAvailability', language)
+                                                        .replace('{era}', t(eraResearchSummary.eraKey, language))
+                                                        .replace('{available}/{total}', '')}
+                                                </span>
+                                                <span
+                                                    style={{
+                                                        fontSize: '42px',
+                                                        letterSpacing: '0.02em',
+                                                    }}
+                                                >
+                                                    {eraResearchAvailability.available}/{eraResearchAvailability.total}
+                                                </span>
+                                            </span>
+                                        </div>
+                                    )}
 
                                     <div
                                         style={{
@@ -1050,6 +1159,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                             visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
                                                             isDenied ? 'knowledge-upgrade-chip--denied' : '',
                                                             id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
+                                                            id === AGI_PROJECT_UPGRADE_ID ? 'knowledge-upgrade-chip--agi-project' : '',
                                                         ].filter(Boolean).join(' ')}
                                                         data-knowledge-upgrade-id={id}
                                                         aria-disabled={visuallyLocked && !unlocked}
@@ -1109,30 +1219,53 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                             );
                         })}
                         {connectorLines.length > 0 && (
-                            <svg
-                                aria-hidden
-                                style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    overflow: 'visible',
-                                    pointerEvents: 'none',
-                                    zIndex: 3,
-                                }}
-                            >
-                                {connectorRenderLines
-                                    .filter((seg) => !seg.active && (activeFocusId != null || seg.prerequisiteCount <= 1))
-                                    .map((seg, i) => (
-                                        <KnowledgeConnectorSegment key={`inactive-${i}`} seg={seg} />
-                                    ))}
-                                {connectorRenderLines
-                                    .filter((seg) => seg.active)
-                                    .map((seg, i) => (
-                                        <KnowledgeConnectorSegment key={`active-${i}`} seg={seg} />
-                                    ))}
-                            </svg>
+                            <>
+                                <svg
+                                    aria-hidden
+                                    style={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        width: '100%',
+                                        height: '100%',
+                                        overflow: 'visible',
+                                        pointerEvents: 'none',
+                                        zIndex: 3,
+                                    }}
+                                >
+                                    {connectorRenderLines
+                                        .filter((seg) => !seg.active && (activeFocusId != null || seg.prerequisiteCount <= 1))
+                                        .map((seg, i) => (
+                                            <KnowledgeConnectorSegment key={`inactive-${i}`} seg={seg} />
+                                        ))}
+                                    {hoveredId == null && connectorRenderLines
+                                        .filter((seg) => seg.active)
+                                        .map((seg, i) => (
+                                            <KnowledgeConnectorSegment key={`focused-${i}`} seg={seg} />
+                                        ))}
+                                </svg>
+                                {hoveredId != null && (
+                                    <svg
+                                        aria-hidden
+                                        style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            overflow: 'visible',
+                                            pointerEvents: 'none',
+                                            zIndex: 5,
+                                        }}
+                                    >
+                                        {connectorRenderLines
+                                            .filter((seg) => seg.active)
+                                            .map((seg, i) => (
+                                                <KnowledgeConnectorSegment key={`active-${i}`} seg={seg} />
+                                            ))}
+                                    </svg>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

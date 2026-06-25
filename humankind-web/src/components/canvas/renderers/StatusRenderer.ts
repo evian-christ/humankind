@@ -1,14 +1,12 @@
 import * as PIXI from 'pixi.js';
-import { getActiveStatusIdsForTurn, STATUSES } from '../../../game/data/statusDefinitions';
+import { getActiveStatusIdsForTurn, getNextBarbarianInvasionChance, STATUSES } from '../../../game/data/statusDefinitions';
 import type { StatusDefinition } from '../../../game/data/statusDefinitions';
 import type { GameState } from '../../../game/state/gameStore';
 import type { HoveredStatus } from '../types';
 import { ASSET_BASE_URL } from './rendererShared';
 
 export class StatusRenderer {
-    private static readonly BOTTOM_ACTION_BAR_WIDTH = 1003;
-    private static readonly BOTTOM_ACTION_BUTTON_SIZE = 97;
-    private static readonly BOTTOM_ACTION_OFFSET = 24;
+    private static readonly SCREEN_EDGE_OFFSET = 24;
 
     private bgContainer: PIXI.Container;
     private onHoverStatus: (status: HoveredStatus | null) => void;
@@ -62,7 +60,6 @@ export class StatusRenderer {
     public render(
         state: GameState,
         scale: number,
-        screenWidth: number,
         screenHeight: number,
         fontFamily: string,
     ) {
@@ -88,18 +85,10 @@ export class StatusRenderer {
 
         const iconSize = 64 * scale;
         const gapX = 8 * scale;
-        const buttonTop =
-            screenHeight
-            - StatusRenderer.BOTTOM_ACTION_OFFSET
-            - StatusRenderer.BOTTOM_ACTION_BUTTON_SIZE;
-        const actionBarWidth = Math.min(
-            StatusRenderer.BOTTOM_ACTION_BAR_WIDTH,
-            screenWidth - 32 * scale,
-        );
 
         const panel = new PIXI.Container();
-        panel.x = (screenWidth - actionBarWidth) / 2 + 8 * scale;
-        panel.y = buttonTop - iconSize - 24 * scale;
+        panel.x = StatusRenderer.SCREEN_EDGE_OFFSET * scale;
+        panel.y = screenHeight - iconSize - StatusRenderer.SCREEN_EDGE_OFFSET * scale;
         this.bgContainer.addChildAt(panel, Math.min(1, this.bgContainer.children.length));
 
         let iconX = 0;
@@ -109,7 +98,7 @@ export class StatusRenderer {
 
             this.renderFrame(panel, iconX, 0, iconSize, scale);
             this.renderIcon(panel, status, iconX, 0, iconSize);
-            this.renderCounter(panel, remainingTurns, iconX, 0, iconSize, scale, fontFamily);
+            this.renderCounter(panel, status, remainingTurns, state, iconX, 0, iconSize, scale, fontFamily);
             this.hitTargets.push({
                 status,
                 bounds: new PIXI.Rectangle(worldIconX, worldIconY, iconSize, iconSize),
@@ -152,20 +141,30 @@ export class StatusRenderer {
 
     private renderCounter(
         panel: PIXI.Container,
+        status: StatusDefinition,
         remainingTurns: number,
+        state: GameState,
         iconX: number,
         iconY: number,
         iconSize: number,
         scale: number,
         fontFamily: string,
     ) {
-        if (remainingTurns <= 0) return;
+        const badgeText = (() => {
+            if (status.badge === 'remainingTurns') return remainingTurns > 0 ? String(remainingTurns) : '';
+            if (status.badge === 'barbarianInvasionChance') {
+                return `${getNextBarbarianInvasionChance(state.barbarianSymbolThreat)}%`;
+            }
+            if (status.badge === 'naturalDisasterChance') return `${state.naturalDisasterThreat}%`;
+            return '';
+        })();
+        if (!badgeText) return;
 
         const counterText = new PIXI.Text({
-            text: String(remainingTurns),
+            text: badgeText,
             style: new PIXI.TextStyle({
                 fill: '#d1d5db',
-                fontSize: 26 * scale,
+                fontSize: (badgeText.length > 2 ? 20 : 26) * scale,
                 fontWeight: 'bold',
                 fontFamily,
                 stroke: { color: '#000000', width: 3 },
