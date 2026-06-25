@@ -12,7 +12,7 @@ export interface RelicInstance {
 
 interface RelicState {
     relics: RelicInstance[];
-    addRelic: (def: RelicDefinition) => void;
+    addRelic: (def: RelicDefinition) => boolean;
     hydrateRelics: (relics: RelicInstance[]) => void;
     removeRelic: (instanceId: string) => void;
     incrementRelicCounter: (instanceId: string) => void;
@@ -23,28 +23,38 @@ interface RelicState {
     resetRelics: () => void;
 }
 
+export const MAX_RELICS = 20;
+
 let nextId = 1;
 
 export const useRelicStore = create<RelicState>((set) => ({
     relics: [],
 
-    addRelic: (def) =>
-        set((state) => ({
-            relics: [...state.relics, {
+    addRelic: (def) => {
+        let added = false;
+        set((state) => {
+            if (state.relics.length >= MAX_RELICS) return state;
+            added = true;
+            return {
+                relics: [...state.relics, {
                 instanceId: `relic_${nextId++}`,
                 definition: def,
                 effect_counter: def.id === 3 || def.id === 9 ? 3 : 0,
                 bonus_stacks: 0,
             }],
-        })),
+            };
+        });
+        return added;
+    },
 
     hydrateRelics: (relics) => {
-        const maxNumericId = relics.reduce((max, relic) => {
+        const cappedRelics = relics.slice(0, MAX_RELICS);
+        const maxNumericId = cappedRelics.reduce((max, relic) => {
             const match = /^relic_(\d+)$/.exec(relic.instanceId);
             return match ? Math.max(max, Number(match[1])) : max;
         }, 0);
         nextId = Math.max(nextId, maxNumericId + 1);
-        set({ relics });
+        set({ relics: cappedRelics });
     },
 
     removeRelic: (instanceId) =>

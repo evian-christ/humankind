@@ -7,6 +7,8 @@ import { getRelicRarityColorHex, type RelicRarity } from '../game/data/relicDefi
 import { t } from '../i18n';
 import { EffectText } from './EffectText';
 import { audioManager } from '../audio/audioManager';
+import { GOLD_RESOURCE_ICON_URL } from '../uiAssetUrls';
+import { MAX_RELICS, useRelicStore } from '../game/state/relicStore';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -44,12 +46,29 @@ const RelicSelection = () => {
     const leaderId = useGameStore((s) => s.leaderId);
     const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
     const phase = useGameStore((s) => s.phase);
+    const relicCount = useRelicStore((s) => s.relics.length);
     const language = useSettingsStore((s) => s.language);
     const [purchaseDeniedHint, setPurchaseDeniedHint] = useState<{ key: number; slotIndex: number } | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
     const purchaseInputLockedRef = useRef(true);
+
+    const closeWithSlide = () => {
+        if (isClosing) return;
+        setIsClosing(true);
+        document.body.classList.add('screen-return-from-relic');
+        window.setTimeout(() => {
+            document.body.classList.remove('screen-return-from-relic');
+            toggleRelicShop();
+        }, 160);
+    };
+
+    useEffect(() => () => {
+        document.body.classList.remove('screen-return-from-relic');
+    }, []);
 
     useEffect(() => {
         if (isRelicShopOpen) {
+            setIsClosing(false);
             purchaseInputLockedRef.current = true;
             const unlockTimer = window.setTimeout(() => {
                 purchaseInputLockedRef.current = false;
@@ -105,19 +124,39 @@ const RelicSelection = () => {
             void audioManager.play('denied');
             return;
         }
+        if (relicCount >= MAX_RELICS) {
+            void audioManager.play('denied');
+            return;
+        }
         void audioManager.play('relic_buy');
         buyRelic(relic.id);
     };
 
     return (
-        <div className="selection-overlay selection-overlay--relic">
+        <div className={`selection-overlay selection-overlay--relic${isClosing ? ' selection-overlay--relic-closing' : ''}`}>
+            <button
+                type="button"
+                className="knowledge-edge-hotzone relic-return-hotzone"
+                onClick={closeWithSlide}
+                aria-label={t('game.back', language)}
+            >
+                <span className="edge-hotzone-label">
+                    <span className="edge-hotzone-arrow edge-hotzone-arrow--left" aria-hidden="true" />
+                    <span className="edge-hotzone-text">돌아가기</span>
+                </span>
+            </button>
+            <div className="relic-shop-restock-indicator" aria-label={relicShopTitle}>
+                <span className="relic-shop-restock-label">{t('game.relicShopTitleShort', language)}</span>
+                <span className="relic-shop-restock-count">{turnsUntilRefresh}</span>
+                <span className="relic-shop-restock-unit">{t('game.turn', language)}</span>
+            </div>
             <header className="relic-shop-header">
                 <div className="relic-shop-header-main">
                     <div className="relic-shop-header-start">
                         <button
                             type="button"
                             className="relic-shop-back-btn"
-                            onClick={toggleRelicShop}
+                            onClick={closeWithSlide}
                             aria-label={t('game.back', language)}
                         >
                             <span className="relic-shop-back-icon" aria-hidden>
@@ -200,6 +239,7 @@ const RelicSelection = () => {
                                         className="relic-card-buy-btn"
                                         data-audio-click="relic_buy"
                                         onClick={() => handleBuyRelic(relic, i)}
+                                        disabled={relicCount >= MAX_RELICS}
                                         aria-label={
                                             isGoldenTradeDiscount(relic)
                                                 ? t('game.relicShopBuyDiscountAria', language)
@@ -212,13 +252,13 @@ const RelicSelection = () => {
                                             <span className="relic-card-buy-price relic-card-buy-price--discount">
                                                 <span className="relic-card-buy-price-was">
                                                     <span className="relic-card-buy-price-icon relic-card-buy-price-icon--was" aria-hidden>
-                                                        &#9679;
+                                                        <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
                                                     </span>
                                                     <span className="relic-card-buy-price-num relic-card-buy-price-num--struck">{getInflatedGoldCost(relic.cost, level)}</span>
                                                 </span>
                                                 <span className="relic-card-buy-price-now">
                                                     <span className="relic-card-buy-price-icon" aria-hidden>
-                                                        &#9679;
+                                                        <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
                                                     </span>
                                                     <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
                                                 </span>
@@ -226,7 +266,7 @@ const RelicSelection = () => {
                                         ) : (
                                             <span className="relic-card-buy-price">
                                                 <span className="relic-card-buy-price-icon" aria-hidden>
-                                                    &#9679;
+                                                    <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
                                                 </span>
                                                 <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
                                             </span>

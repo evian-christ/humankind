@@ -29,7 +29,8 @@ export const createRelicShopFlowActions = ({ get, set }: RelicShopFlowDeps) => (
 
         if (state.gold < effectiveCost) return;
 
-        useRelicStore.getState().addRelic(def);
+        const added = useRelicStore.getState().addRelic(def);
+        if (!added) return;
         recordDemoNonConsumableRelicProgress(state.leaderId, useRelicStore.getState().relics);
 
         set((s) => {

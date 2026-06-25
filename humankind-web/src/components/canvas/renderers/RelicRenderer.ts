@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { useGameStore } from '../../../game/state/gameStore';
 import type { GameState } from '../../../game/state/gameStore';
-import { useRelicStore } from '../../../game/state/relicStore';
+import { MAX_RELICS, useRelicStore } from '../../../game/state/relicStore';
 import { useSettingsStore } from '../../../game/state/settingsStore';
 import type { RelicInstance } from '../../../game/state/relicStore';
 import {
@@ -77,8 +77,6 @@ export class RelicRenderer {
         state: GameState,
         scale: number,
         screenWidth: number,
-        boardLeft: number,
-        boardRight: number,
         fontFamily: string,
     ) {
         const relics = useRelicStore.getState().relics;
@@ -88,32 +86,15 @@ export class RelicRenderer {
         if (displayStacks.length === 0) return;
 
         const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
-        const iconSize = 64 * scale;
         const gapX = 8 * scale;
-        const gapY = 8 * scale;
         const minimumSideMargin = 16 * scale;
+        const iconSize = (
+            screenWidth
+            - minimumSideMargin * 2
+            - gapX * (MAX_RELICS - 1)
+        ) / MAX_RELICS;
         const marginTop = 80 * scale + 8 * scale;
-        const boardSideGap = 16 * scale;
         const columnStep = iconSize + gapX;
-        const fullIconsPerRow = Math.max(
-            1,
-            Math.floor((screenWidth - minimumSideMargin * 2) / columnStep),
-        );
-        const fullRowWidth = (fullIconsPerRow - 1) * columnStep + iconSize;
-        const gridStartX = (screenWidth - fullRowWidth) / 2;
-        const rightStartColumn = Math.ceil((boardRight + boardSideGap - gridStartX) / columnStep);
-        const rightStartX = gridStartX + rightStartColumn * columnStep;
-        const leftIconsPerSplitRow = Math.min(
-            7,
-            Math.max(
-                1,
-                Math.floor((boardLeft - boardSideGap - gridStartX + gapX) / columnStep),
-            ),
-        );
-        const rightIconsPerRow = Math.max(
-            1,
-            Math.floor((screenWidth - gridStartX - rightStartX + gapX) / columnStep),
-        );
 
         const relicPanel = new PIXI.Container();
         relicPanel.x = 0;
@@ -124,12 +105,7 @@ export class RelicRenderer {
             displayStacks,
             iconSize,
             gapX,
-            gapY,
-            gridStartX,
-            rightStartX,
-            fullIconsPerRow,
-            leftIconsPerSplitRow,
-            rightIconsPerRow,
+            minimumSideMargin,
         );
         const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
 
@@ -167,41 +143,14 @@ export class RelicRenderer {
         stacks: RelicDisplayStack<RelicInstance>[],
         iconSize: number,
         gapX: number,
-        gapY: number,
-        leftStartX: number,
-        rightStartX: number,
-        fullIconsPerRow: number,
-        leftIconsPerSplitRow: number,
-        rightIconsPerRow: number,
+        startX: number,
     ) {
-        const layout: { stack: RelicDisplayStack<RelicInstance>; iconX: number; iconY: number }[] = [];
-        const fullRowRelicCount = Math.min(fullIconsPerRow * 2, stacks.length);
-        const rowStep = iconSize + gapY;
         const columnStep = iconSize + gapX;
-
-        for (let index = 0; index < fullRowRelicCount; index += 1) {
-            layout.push({
-                stack: stacks[index],
-                iconX: leftStartX + (index % fullIconsPerRow) * columnStep,
-                iconY: Math.floor(index / fullIconsPerRow) * rowStep,
-            });
-        }
-
-        const splitRowCapacity = leftIconsPerSplitRow + rightIconsPerRow;
-        for (let index = fullRowRelicCount; index < stacks.length; index += 1) {
-            const splitIndex = index - fullRowRelicCount;
-            const splitRow = Math.floor(splitIndex / splitRowCapacity);
-            const splitColumn = splitIndex % splitRowCapacity;
-            const isLeftOfBoard = splitColumn < leftIconsPerSplitRow;
-            layout.push({
-                stack: stacks[index],
-                iconX: isLeftOfBoard
-                    ? leftStartX + splitColumn * columnStep
-                    : rightStartX + (splitColumn - leftIconsPerSplitRow) * columnStep,
-                iconY: (2 + splitRow) * rowStep,
-            });
-        }
-        return layout;
+        return stacks.map((stack, index) => ({
+            stack,
+            iconX: startX + index * columnStep,
+            iconY: 0,
+        }));
     }
 
     private renderStackCount(
