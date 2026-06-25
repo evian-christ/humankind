@@ -13,7 +13,6 @@ import {
     MECHANICS_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
-    MINING_UPGRADE_ID,
     MASON_GUILD_UPGRADE_ID,
 } from './knowledgeUpgrades';
 
@@ -38,22 +37,12 @@ describe('unitUpgrades calculations', () => {
             expect(warrior.base_hp).toBe(12);   // 8 + 4
         });
 
-        it('applies shared melee stats when Mining is unlocked', () => {
-            const warrior = resolveUpgradedUnitDefinition(SYMBOLS[S.warrior]!, [MINING_UPGRADE_ID]);
-            expect(warrior.id).toBe(S.warrior);
-            expect(warrior.base_attack).toBe(4); // 3 + 1
-            expect(warrior.base_hp).toBe(10);   // 8 + 2
-        });
-
-        it('applies Mason Guild melee stats on top of Mining', () => {
-            const warrior = resolveUpgradedUnitDefinition(SYMBOLS[S.warrior]!, [
-                MINING_UPGRADE_ID,
-                MASON_GUILD_UPGRADE_ID,
-            ]);
+        it('does not apply melee stats from Mason Guild', () => {
+            const warrior = resolveUpgradedUnitDefinition(SYMBOLS[S.warrior]!, [MASON_GUILD_UPGRADE_ID]);
 
             expect(warrior.id).toBe(S.warrior);
-            expect(warrior.base_attack).toBe(5); // 3 + 1 + 1
-            expect(warrior.base_hp).toBe(12);   // 8 + 2 + 2
+            expect(warrior.base_attack).toBe(3);
+            expect(warrior.base_hp).toBe(8);
         });
 
         it('applies shared melee stats when Horsemanship and Military Science are unlocked', () => {

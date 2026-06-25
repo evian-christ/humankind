@@ -30,6 +30,11 @@ interface GameLifecycleDeps {
     ) => number | null;
 }
 
+const createTutorialBoard = () =>
+    Array(5)
+        .fill(null)
+        .map(() => Array(4).fill(null));
+
 const createCommonResetPatch = () => ({
     phase: 'idle' as const,
     symbolChoices: [],
@@ -195,7 +200,7 @@ export const createGameLifecycleActions = ({
         if (!corn) return;
         const cornA = createInstance(corn);
         const cornB = createInstance(corn);
-        const board = createEmptyBoard();
+        const board = createTutorialBoard();
         board[1][1] = cornA;
         board[3][1] = cornB;
         set({
@@ -211,7 +216,7 @@ export const createGameLifecycleActions = ({
         const state = get();
         const [cornA, cornB] = state.playerSymbols;
         if (!cornA || !cornB) return;
-        const board = createEmptyBoard();
+        const board = createTutorialBoard();
         board[1][0] = cornA;
         board[4][2] = cornB;
         set({
@@ -237,7 +242,7 @@ export const createGameLifecycleActions = ({
         const cornSymbols = state.playerSymbols.filter((symbol) => symbol.definition.id === S.corn);
         const monument = state.playerSymbols.find((symbol) => symbol.definition.id === S.monument);
         if (cornSymbols.length < 2 || !monument) return;
-        const board = createEmptyBoard();
+        const board = createTutorialBoard();
         board[1][0] = cornSymbols[0];
         board[4][2] = cornSymbols[1];
         board[2][1] = monument;
@@ -247,6 +252,70 @@ export const createGameLifecycleActions = ({
             turn: state.turn + 1,
             phase: 'spinning',
             tutorialSpinStep: 'monument_spin',
+            lastEffects: [],
+            counterDisplayOverrides: [],
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            activeSlot: null,
+            activeContributors: [],
+            pendingContributors: [],
+            effectPhase: null,
+            effectPhase3ReachedThisRun: false,
+            lootMergeFx: null,
+        });
+    },
+
+    setupTutorialAdjacencyStep: () => {
+        const state = get();
+        if (!state.isTutorialMode || state.tutorialSpinStep !== 'monument_done') return;
+        const seaDefinition = SYMBOLS[S.sea];
+        const pearlDefinition = SYMBOLS[S.pearl];
+        if (!seaDefinition || !pearlDefinition) return;
+
+        const sea = state.playerSymbols.find((symbol) => symbol.definition.id === S.sea)
+            ?? createInstance(seaDefinition);
+        const pearl = state.playerSymbols.find((symbol) => symbol.definition.id === S.pearl)
+            ?? createInstance(pearlDefinition);
+        const playerSymbols = [
+            ...state.playerSymbols.filter((symbol) => symbol.definition.id !== S.sea && symbol.definition.id !== S.pearl),
+            sea,
+            pearl,
+        ];
+        const cornSymbols = playerSymbols.filter((symbol) => symbol.definition.id === S.corn);
+        const monument = playerSymbols.find((symbol) => symbol.definition.id === S.monument);
+        const board = createTutorialBoard();
+        if (cornSymbols[0]) board[0][0] = cornSymbols[0];
+        if (cornSymbols[1]) board[4][3] = cornSymbols[1];
+        if (monument) board[2][2] = monument;
+        board[2][1] = sea;
+        board[3][1] = pearl;
+        set({
+            board,
+            prevBoard: board.map((col) => [...col]),
+            playerSymbols,
+            phase: 'idle',
+        });
+    },
+
+    spinTutorialAdjacencyStep: () => {
+        const state = get();
+        const cornSymbols = state.playerSymbols.filter((symbol) => symbol.definition.id === S.corn);
+        const monument = state.playerSymbols.find((symbol) => symbol.definition.id === S.monument);
+        const sea = state.playerSymbols.find((symbol) => symbol.definition.id === S.sea);
+        const pearl = state.playerSymbols.find((symbol) => symbol.definition.id === S.pearl);
+        if (cornSymbols.length < 2 || !monument || !sea || !pearl) return;
+
+        const board = createTutorialBoard();
+        board[2][1] = sea;
+        board[1][0] = cornSymbols[0];
+        board[2][0] = cornSymbols[1];
+        board[1][1] = monument;
+        board[3][2] = pearl;
+        set({
+            prevBoard: state.board.map((col) => [...col]),
+            board,
+            turn: state.turn + 1,
+            phase: 'spinning',
+            tutorialSpinStep: 'adjacency_spin',
             lastEffects: [],
             counterDisplayOverrides: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0 },

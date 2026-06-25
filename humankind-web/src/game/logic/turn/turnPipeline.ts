@@ -119,7 +119,7 @@ function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolE
         return {
             anchor: 'bottom-right',
             mode: 'direct-progress',
-            wrapThreshold: effectCtx?.upgrades.includes(PLANTATION_UPGRADE_ID) ? 7 : 10,
+            wrapThreshold: effectCtx?.upgrades.includes(PLANTATION_UPGRADE_ID) ? 5 : 10,
         };
     }
     if (def.type !== SymbolType.ENEMY && def.base_hp === undefined) {

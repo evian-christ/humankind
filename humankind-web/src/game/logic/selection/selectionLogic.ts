@@ -168,7 +168,6 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         const isReplacementTarget = Array.from(activeReplacements.values()).includes(sym.id);
 
         if (feudal && sym.type === SymbolType.ANCIENT) continue;
-        if (modernAge && sym.type === SymbolType.MEDIEVAL) continue;
         if (modernAge && sym.type === SymbolType.TERRAIN && !ctx.includeModernTerrain) continue;
 
         // 업그레이드로 해금되는 심볼들 예외 처리
@@ -242,7 +241,6 @@ export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnloc
         if (cat === SymbolType.RELIGION && !ctx.religionUnlocked) continue;
         if (cat === SymbolType.MEDIEVAL && !feudal) continue;
         if (cat === SymbolType.MODERN && !modernAge) continue;
-        if (modernAge && cat === SymbolType.MEDIEVAL) continue;
         if (modernAge && cat === SymbolType.TERRAIN && !ctx.includeModernTerrain) continue;
         flat.push(...syms);
     }

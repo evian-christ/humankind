@@ -7,7 +7,6 @@ import { RELICS } from '../../data/relicDefinitions';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
-    cloneBoardPreservingSlots,
     createBoardDestroyResourceEffects,
     createStoredFoodDestroyEffects,
     getBoardOnlyDestroyEffectTotals,
@@ -66,6 +65,22 @@ const destroyedSymbol = (symbol: { definition: { id: number }; instanceId: strin
     y,
 });
 
+const scheduleMarkedBoardRemoval = (
+    set: GameStoreSet,
+    removedIds: ReadonlySet<string>,
+    blinkStartedAtMs: number,
+) => {
+    scheduleGameLifecycleTimeout(() => {
+        set((current) => {
+            const isCurrentBlink = current.destroyRemovalBlinkStartedAtMs === blinkStartedAtMs;
+            return {
+                board: removeBoardSymbolsByInstanceIds(current.board, removedIds),
+                ...(isCurrentBlink ? { destroyRemovalBlinkStartedAtMs: null } : {}),
+            };
+        });
+    }, BOARD_DESTROY_BLINK_DURATION_MS);
+};
+
 export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: BoardInteractionDeps) => ({
     butcherPastureAnimalAt: (x: number, y: number) => {
         const prev = get();
@@ -88,25 +103,25 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const dGold = butcherGoldFlat + symAgg.gold + shBonus.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;
 
-        const instanceIds = [sym.instanceId];
-        const newBoard = cloneBoardPreservingSlots(prev.board);
-        newBoard[x][y] = null;
+        const instanceIds = new Set([sym.instanceId]);
+        const markedBoard = markBoardSymbolsForRemoval(prev.board, instanceIds);
+        const blinkStartedAtMs = getNowMs();
         if ((prev.unlockedKnowledgeUpgrades || []).includes(PASTURE_MANAGEMENT_UPGRADE_ID)) {
             adjacentPlains.forEach((p) => {
-                const plains = newBoard[p.x][p.y];
+                const plains = markedBoard[p.x][p.y];
                 if (plains?.definition.id === S.plains) {
                     plains.effect_counter = (plains.effect_counter || 0) + 1;
                 }
             });
         }
-        const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
+        const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.has(s.instanceId));
         const newSymbols = appendSymbolDefIdsToPlayer(
             baseFiltered,
             symAgg.addSymbolDefIds,
             prev.unlockedKnowledgeUpgrades || [],
         );
         set({
-            board: newBoard,
+            board: markedBoard,
             playerSymbols: newSymbols,
             food: prev.food + dFood,
             gold: prev.gold + dGold,
@@ -116,7 +131,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
             isRelicShopOpen: prev.isRelicShopOpen || symAgg.openRelicShop,
             lastEffects: [...prev.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
+            destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
         });
+        scheduleMarkedBoardRemoval(set, instanceIds, blinkStartedAtMs);
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: prev.turn,
@@ -173,12 +190,13 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         const { food, gold, knowledge } = getRewardAmounts(reward, prev.era);
 
-        const newBoard = cloneBoardPreservingSlots(prev.board);
-        newBoard[x][y] = null;
+        const removedIds = new Set([loot.instanceId]);
+        const markedBoard = markBoardSymbolsForRemoval(prev.board, removedIds);
+        const blinkStartedAtMs = getNowMs();
         const newPlayerSymbols = prev.playerSymbols.filter((s) => s.instanceId !== loot.instanceId);
 
         set({
-            board: newBoard,
+            board: markedBoard,
             playerSymbols: newPlayerSymbols,
             food: prev.food + food,
             gold: prev.gold + gold,
@@ -187,7 +205,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             phase: phaseAfterBoardAction(prev),
             lootRewardChoices: [],
             pendingLootSlot: null,
+            destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
         });
+        scheduleMarkedBoardRemoval(set, removedIds, blinkStartedAtMs);
 
         let grantedRelic = false;
 
@@ -195,16 +215,14 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             const relicPool = Object.values(RELICS);
             const relicDef = relicPool[Math.floor(Math.random() * relicPool.length)];
             if (relicDef) {
-                useRelicStore.getState().addRelic(relicDef);
-                grantedRelic = true;
+                grantedRelic = useRelicStore.getState().addRelic(relicDef) || grantedRelic;
             }
         }
 
         reward.grantedRelicIds?.forEach((relicId) => {
             const relicDef = RELICS[relicId];
             if (relicDef) {
-                useRelicStore.getState().addRelic(relicDef);
-                grantedRelic = true;
+                grantedRelic = useRelicStore.getState().addRelic(relicDef) || grantedRelic;
             }
         });
 
@@ -361,11 +379,12 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const dGold = symAgg.gold + shBonus.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge;
 
-        const instanceIds = [sym.instanceId];
-        const newBoard = cloneBoardPreservingSlots(prev.board);
-        newBoard[x][y] = null;
+        const instanceIds = new Set([sym.instanceId]);
+        const markedBoard = markBoardSymbolsForRemoval(prev.board, instanceIds);
+        const removedBoard = removeBoardSymbolsByInstanceIds(prev.board, instanceIds);
+        const blinkStartedAtMs = getNowMs();
 
-        const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
+        const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.has(s.instanceId));
         const newSymbols = appendSymbolDefIdsToPlayer(
             baseFiltered,
             symAgg.addSymbolDefIds,
@@ -382,7 +401,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             ownedSymbolDefIds: newSymbols.map((s) => s.definition.id),
             leaderId: prev.leaderId,
             leaderProgressLevel: prev.leaderProgressLevel,
-            choiceCount: getStandardSymbolChoiceCount(newBoard),
+            choiceCount: getStandardSymbolChoiceCount(removedBoard),
             forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices,
             forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices,
         };
@@ -397,7 +416,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (firstChoiceRes.consumedForceEvents) nextForceEvents = false;
 
         set({
-            board: newBoard,
+            board: markedBoard,
             playerSymbols: newSymbols,
             food: prev.food + dFood,
             gold: prev.gold + dGold,
@@ -415,7 +434,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             symbolSelectionRelicSourceId: null,
             symbolSelectionSymbolSourceId: S.tribal_village,
             isTurnSymbolSelection: false,
+            destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
         });
+        scheduleMarkedBoardRemoval(set, instanceIds, blinkStartedAtMs);
 
         if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
 

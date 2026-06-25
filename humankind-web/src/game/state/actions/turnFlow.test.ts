@@ -112,6 +112,8 @@ const makeState = (): GameState => {
         spinTutorialCornStep: () => {},
         setupTutorialSelectionStep: () => {},
         spinTutorialMonumentStep: () => {},
+        setupTutorialAdjacencyStep: () => {},
+        spinTutorialAdjacencyStep: () => {},
         devAddSymbol: () => {},
         devRemoveSymbol: () => {},
         devSetStat: () => {},
@@ -313,7 +315,8 @@ describe('turnFlow actions', () => {
             expect(harness.get().pendingFoodPayment).toBe(true);
             expect(harness.get().food).toBe(food);
             expect(harness.get().activeStatuses).toEqual([
-                { id: STATUS_ID.CLAN_FORMATION, remainingTurns: 4 },
+                { id: STATUS_ID.BARBARIAN_STIRRING, remainingTurns: 0 },
+                { id: STATUS_ID.DISASTER_OMEN, remainingTurns: 0 },
             ]);
         } finally {
             vi.clearAllTimers();
@@ -410,7 +413,7 @@ describe('turnFlow actions', () => {
         }
     });
 
-    it('decrements active statuses after processing and before selection', () => {
+    it('syncs active statuses for the next selection phase', () => {
         vi.useFakeTimers();
         try {
             const harness = createHarness({
@@ -426,8 +429,12 @@ describe('turnFlow actions', () => {
             expect(harness.get().phase).toBe('selection');
             expect(harness.get().activeStatuses).toEqual([
                 { id: STATUS_ID.CLAN_FORMATION, remainingTurns: 4 },
+                { id: STATUS_ID.DISASTER_OMEN, remainingTurns: 0 },
             ]);
-            expect(harness.get().activeStatusIds).toEqual([STATUS_ID.CLAN_FORMATION]);
+            expect(harness.get().activeStatusIds).toEqual([
+                STATUS_ID.CLAN_FORMATION,
+                STATUS_ID.DISASTER_OMEN,
+            ]);
         } finally {
             vi.clearAllTimers();
             vi.useRealTimers();

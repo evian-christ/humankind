@@ -7,7 +7,7 @@ import {
 import { RELICS } from '../../data/relicDefinitions';
 import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
 import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
-import { decrementActiveStatuses, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
+import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { useSettingsStore, type EffectSpeed } from '../settingsStore';
 import { useRelicStore } from '../relicStore';
 import { type ActiveRelicEffects } from '../../logic/symbolEffects';
@@ -215,7 +215,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             get().refreshRelicShop(true);
         }
 
-        const nextActiveStatuses = decrementActiveStatuses(state.activeStatuses ?? []);
+        const nextActiveStatuses = createActiveStatusesForTurn(state.turn);
         const statusPatch = {
             activeStatuses: nextActiveStatuses,
             activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
@@ -369,6 +369,9 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         const currentBoardHeight = Math.max(0, ...state.board.map((col) => col.length));
         if (state.isTutorialMode && state.tutorialSpinStep === 'monument_spin') {
             set({ tutorialSpinStep: 'monument_processing' });
+        }
+        if (state.isTutorialMode && state.tutorialSpinStep === 'adjacency_spin') {
+            set({ tutorialSpinStep: 'adjacency_processing' });
         }
         if (state.pendingNewThreatFloats?.length) {
             set({ phase: 'showing_new_threats' });
@@ -728,8 +731,23 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                             return;
                         }
 
+                        if (finalState.isTutorialMode && finalState.tutorialSpinStep === 'adjacency_processing') {
+                            set({
+                                phase: 'idle' as GamePhase,
+                                activeSlot: null,
+                                activeContributors: [],
+                                pendingContributors: [],
+                                effectPhase: null,
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                symbolChoices: [],
+                                symbolSelectionRelicSourceId: null,
+                                tutorialSpinStep: 'adjacency_done',
+                            });
+                            return;
+                        }
+
                         if (finalState.turn > 0 && finalState.turn % 10 === 0) {
-                            const nextActiveStatuses = decrementActiveStatuses(finalState.activeStatuses ?? []);
+                            const nextActiveStatuses = createActiveStatusesForTurn(finalState.turn);
                             const basePatch = {
                                 pendingFoodPayment: true,
                                 activeSlot: null,

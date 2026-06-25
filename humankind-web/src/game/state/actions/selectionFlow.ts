@@ -9,6 +9,10 @@ import {
     GREAT_MIGRATION_UPGRADE_ID,
     INQUISITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    LAND_ALLOTMENT_UPGRADE_ID,
+    MASON_GUILD_UPGRADE_ID,
+    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
+    MINING_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -98,8 +102,12 @@ const SINGLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
     CHIEFDOM_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     FEUDAL_CORN_UPGRADE_ID,
+    MINING_UPGRADE_ID,
     NATIONALISM_UPGRADE_ID,
     GREAT_MIGRATION_UPGRADE_ID,
+]);
+const DOUBLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
+    MASON_GUILD_UPGRADE_ID,
 ]);
 const MILITARY_LEVY_GRANT_UPGRADE_IDS = new Set<number>([
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -199,7 +207,7 @@ const triggerBananaEffectsOnce = (
     let foodGain = 0;
     const effects: BoardEffectDelta[] = [];
     const plantation = upgrades.map(Number).includes(PLANTATION_UPGRADE_ID);
-    const threshold = plantation ? 7 : 10;
+    const threshold = plantation ? 5 : 10;
 
     for (let x = 0; x < board.length; x += 1) {
         const col = board[x];
@@ -257,12 +265,6 @@ const pickRandomSymbols = (symbols: PlayerSymbolInstance[], count: number): Play
     }
     return picked;
 };
-
-const removeSymbolsFromBoard = (
-    board: GameState['board'],
-    removedIds: ReadonlySet<string>,
-): GameState['board'] =>
-    board.map((col) => col.map((cell) => (cell && removedIds.has(cell.instanceId) ? null : cell)));
 
 const findBoardSlotByInstanceId = (board: GameState['board'], instanceId: string) => {
     for (let x = 0; x < board.length; x++) {
@@ -388,6 +390,9 @@ export const createSelectionFlowActions = ({
         let knowledgeDelta = 0;
         let destroyedSymbols: ReturnType<typeof makeDestroyedSymbolSnapshots> = [];
         let addedSymbolIds: number[] = [];
+        let destroyedBoardIds: Set<string> | null = null;
+        let destroyBlinkStartedAtMs: number | null = null;
+        let boardForSelectionResolution: GameState['board'] | null = null;
 
         if (event.reward) {
             foodDelta += event.reward.food ?? 0;
@@ -480,6 +485,10 @@ export const createSelectionFlowActions = ({
         } else if (event.key === 'capital_relocation') {
             const removed = pickRandomSymbols(state.playerSymbols, CAPITAL_RELOCATION_DESTROY_COUNT);
             const removedIds = new Set(removed.map((symbol) => symbol.instanceId));
+            const markedBoard = markBoardSymbolsForRemoval(state.board, removedIds);
+            destroyedBoardIds = removedIds;
+            destroyBlinkStartedAtMs = getNowMs();
+            boardForSelectionResolution = removeBoardSymbolsByInstanceIds(state.board, removedIds);
             destroyedSymbols = makeDestroyedSymbolSnapshots(removed, state.board);
             const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
             addedSymbolIds = symAgg.addSymbolDefIds;
@@ -492,7 +501,8 @@ export const createSelectionFlowActions = ({
                 symAgg.addSymbolDefIds,
                 state.unlockedKnowledgeUpgrades || [],
             );
-            patch.board = removeSymbolsFromBoard(state.board, removedIds);
+            patch.board = markedBoard;
+            patch.destroyRemovalBlinkStartedAtMs = destroyBlinkStartedAtMs;
             foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
             goldDelta += symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
             knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
@@ -515,6 +525,7 @@ export const createSelectionFlowActions = ({
             ...resolveAfterSelection({
                 ...state,
                 ...patch,
+                ...(boardForSelectionResolution ? { board: boardForSelectionResolution } : {}),
             }, phaseAfterTurnFlowComplete),
         });
         get().appendEventLog({
@@ -531,6 +542,19 @@ export const createSelectionFlowActions = ({
                 addSymbolIds: addedSymbolIds,
             },
         });
+        if (destroyedBoardIds && destroyBlinkStartedAtMs != null) {
+            const removedIds = destroyedBoardIds;
+            const blinkStartedAtMs = destroyBlinkStartedAtMs;
+            scheduleGameLifecycleTimeout(() => {
+                set((current) => {
+                    const isCurrentBlink = current.destroyRemovalBlinkStartedAtMs === blinkStartedAtMs;
+                    return {
+                        board: removeBoardSymbolsByInstanceIds(current.board, removedIds),
+                        ...(isCurrentBlink ? { destroyRemovalBlinkStartedAtMs: null } : {}),
+                    };
+                });
+            }, BOARD_DESTROY_BLINK_DURATION_MS);
+        }
         saveGameState(get());
     },
 
@@ -690,6 +714,15 @@ export const createSelectionFlowActions = ({
             }
         }
 
+        if (DOUBLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS.has(uid)) {
+            const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
+            if (oblDef) {
+                const rs = useRelicStore.getState();
+                for (let i = 0; i < 2; i++) rs.addRelic(oblDef);
+                grantedRelicForAchievement = true;
+            }
+        }
+
         if (MILITARY_LEVY_GRANT_UPGRADE_IDS.has(uid)) {
             const militaryLevyDef = RELICS[RELIC_ID.MILITARY_LEVY];
             if (militaryLevyDef) {
@@ -700,11 +733,22 @@ export const createSelectionFlowActions = ({
             }
         }
 
-        if (uid === COLONIALISM_UPGRADE_ID || uid === GREAT_MIGRATION_UPGRADE_ID) {
+        if (
+            uid === COLONIALISM_UPGRADE_ID ||
+            uid === GREAT_MIGRATION_UPGRADE_ID ||
+            uid === LAND_ALLOTMENT_UPGRADE_ID ||
+            uid === MEGALITHIC_SETTLEMENTS_UPGRADE_ID ||
+            uid === MASON_GUILD_UPGRADE_ID
+        ) {
             const tribeJoinDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
             if (tribeJoinDef) {
                 const rs = useRelicStore.getState();
-                const count = uid === GREAT_MIGRATION_UPGRADE_ID ? 2 : 3;
+                const count =
+                    uid === MEGALITHIC_SETTLEMENTS_UPGRADE_ID
+                        ? 1
+                        : uid === GREAT_MIGRATION_UPGRADE_ID || uid === MASON_GUILD_UPGRADE_ID
+                          ? 2
+                          : 3;
                 for (let i = 0; i < count; i++) rs.addRelic(tribeJoinDef);
                 grantedRelicForAchievement = true;
             }
