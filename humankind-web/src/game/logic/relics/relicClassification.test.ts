@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    CONSUMABLE_RELIC_IDS,
     countNonConsumableRelics,
     groupRelicsForDisplay,
     isConsumableRelicId,
@@ -8,6 +9,16 @@ import {
 import { RELIC_ID } from './relicIds';
 
 describe('relicClassification', () => {
+    it('keeps the five consumable relic slots in a stable display order', () => {
+        expect(CONSUMABLE_RELIC_IDS).toEqual([
+            RELIC_ID.ANCIENT_RELIC_DEBRIS,
+            RELIC_ID.OBLIVION_FURNACE,
+            RELIC_ID.ANCIENT_TRIBE_JOIN,
+            RELIC_ID.MILITARY_LEVY,
+            RELIC_ID.PROPHECY_DIE,
+        ]);
+    });
+
     it('excludes consumable relics from relic-count scaling effects', () => {
         expect(isConsumableRelicId(RELIC_ID.ANCIENT_RELIC_DEBRIS)).toBe(true);
         expect(isConsumableRelicId(RELIC_ID.OBLIVION_FURNACE)).toBe(true);

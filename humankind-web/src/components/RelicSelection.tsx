@@ -9,6 +9,7 @@ import { EffectText } from './EffectText';
 import { audioManager } from '../audio/audioManager';
 import { GOLD_RESOURCE_ICON_URL } from '../uiAssetUrls';
 import { MAX_RELICS, useRelicStore } from '../game/state/relicStore';
+import { countNonConsumableRelics, isConsumableRelicId } from '../game/logic/relics/relicClassification';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -46,7 +47,7 @@ const RelicSelection = () => {
     const leaderId = useGameStore((s) => s.leaderId);
     const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
     const phase = useGameStore((s) => s.phase);
-    const relicCount = useRelicStore((s) => s.relics.length);
+    const relicCount = useRelicStore((s) => countNonConsumableRelics(s.relics));
     const language = useSettingsStore((s) => s.language);
     const [purchaseDeniedHint, setPurchaseDeniedHint] = useState<{ key: number; slotIndex: number } | null>(null);
     const [isClosing, setIsClosing] = useState(false);
@@ -124,7 +125,7 @@ const RelicSelection = () => {
             void audioManager.play('denied');
             return;
         }
-        if (relicCount >= MAX_RELICS) {
+        if (!isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS) {
             void audioManager.play('denied');
             return;
         }
@@ -239,7 +240,7 @@ const RelicSelection = () => {
                                         className="relic-card-buy-btn"
                                         data-audio-click="relic_buy"
                                         onClick={() => handleBuyRelic(relic, i)}
-                                        disabled={relicCount >= MAX_RELICS}
+                                        disabled={!isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS}
                                         aria-label={
                                             isGoldenTradeDiscount(relic)
                                                 ? t('game.relicShopBuyDiscountAria', language)

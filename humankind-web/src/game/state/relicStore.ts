@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { RelicDefinition } from '../data/relicDefinitions';
+import { countNonConsumableRelics, isConsumableRelicId } from '../logic/relics/relicClassification';
 
 export interface RelicInstance {
     instanceId: string;
@@ -33,7 +34,10 @@ export const useRelicStore = create<RelicState>((set) => ({
     addRelic: (def) => {
         let added = false;
         set((state) => {
-            if (state.relics.length >= MAX_RELICS) return state;
+            if (
+                !isConsumableRelicId(def.id)
+                && countNonConsumableRelics(state.relics) >= MAX_RELICS
+            ) return state;
             added = true;
             return {
                 relics: [...state.relics, {
@@ -48,7 +52,12 @@ export const useRelicStore = create<RelicState>((set) => ({
     },
 
     hydrateRelics: (relics) => {
-        const cappedRelics = relics.slice(0, MAX_RELICS);
+        let nonConsumableCount = 0;
+        const cappedRelics = relics.filter((relic) => {
+            if (isConsumableRelicId(relic.definition.id)) return true;
+            nonConsumableCount += 1;
+            return nonConsumableCount <= MAX_RELICS;
+        });
         const maxNumericId = cappedRelics.reduce((max, relic) => {
             const match = /^relic_(\d+)$/.exec(relic.instanceId);
             return match ? Math.max(max, Number(match[1])) : max;

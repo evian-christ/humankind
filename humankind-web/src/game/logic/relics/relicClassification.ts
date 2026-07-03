@@ -1,15 +1,17 @@
 import { RELIC_ID } from './relicIds';
 
-const CONSUMABLE_RELIC_IDS = new Set<number>([
+export const CONSUMABLE_RELIC_IDS = [
     RELIC_ID.ANCIENT_RELIC_DEBRIS,
     RELIC_ID.OBLIVION_FURNACE,
     RELIC_ID.ANCIENT_TRIBE_JOIN,
     RELIC_ID.MILITARY_LEVY,
     RELIC_ID.PROPHECY_DIE,
-]);
+] as const;
+
+const CONSUMABLE_RELIC_ID_SET = new Set<number>(CONSUMABLE_RELIC_IDS);
 
 export const isConsumableRelicId = (relicId: number): boolean =>
-    CONSUMABLE_RELIC_IDS.has(relicId);
+    CONSUMABLE_RELIC_ID_SET.has(relicId);
 
 export const isRelicAvailableForShop = (
     relicId: number,
