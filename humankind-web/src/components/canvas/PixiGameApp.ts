@@ -1595,7 +1595,7 @@ export class PixiGameApp {
             frame.height,
             fontFamily,
         );
-        this.relicRenderer.render(state, viewScale, w, fontFamily);
+        this.relicRenderer.render(state, viewScale, w, frame.height, fontFamily);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
 

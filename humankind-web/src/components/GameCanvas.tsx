@@ -5,8 +5,8 @@ import { useGameStore } from '../game/state/gameStore';
 import { getHudTurnStartPassiveTotals, getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
+import { getRelicRarityColorHex, type RelicRarity } from '../game/data/relicDefinitions';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
-import { isConsumableRelicId } from '../game/logic/relics/relicClassification';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { getNextBarbarianInvasionChance } from '../game/data/statusDefinitions';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
@@ -27,6 +27,14 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.UNIT]: 'era.unit',
     [SymbolType.ENEMY]: 'era.enemy',
     [SymbolType.DISASTER]: 'era.disaster',
+};
+
+const RELIC_RARITY_NAME_KEYS: Record<RelicRarity, string> = {
+    common: 'rarity.common',
+    uncommon: 'rarity.uncommon',
+    rare: 'rarity.rare',
+    epic: 'rarity.epic',
+    legendary: 'rarity.legendary',
 };
 
 interface GameCanvasProps {
@@ -296,8 +304,22 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     };
 
     /** 유물 툴팁: 기본은 아이콘 우측, 화면 경계를 넘으면 좌측에 표시 */
-    const getRelicTooltipStyle = (hoveredItem: { screenX: number; screenY: number } | null): React.CSSProperties => {
+    const getRelicTooltipStyle = (
+        hoveredItem: { screenX: number; screenY: number; placement?: 'side' | 'above' } | null,
+    ): React.CSSProperties => {
         if (!hoveredItem) return { display: 'none' };
+        if (hoveredItem.placement === 'above') {
+            let left = hoveredItem.screenX - TOOLTIP_W / 2;
+            if (left < TOOLTIP_MARGIN) left = TOOLTIP_MARGIN;
+            if (left + TOOLTIP_W > 1920 - TOOLTIP_MARGIN) {
+                left = 1920 - TOOLTIP_W - TOOLTIP_MARGIN;
+            }
+            return {
+                left: `${left}px`,
+                top: `${hoveredItem.screenY - TOOLTIP_MARGIN}px`,
+                transform: 'translateY(-100%)',
+            };
+        }
         let left = hoveredItem.screenX + TOOLTIP_MARGIN;
         if (left + TOOLTIP_W > 1920) left = hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN;
         let top = hoveredItem.screenY;
@@ -421,20 +443,21 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             {showBoardTooltips && hoveredRelic && (() => {
                 const info = hoveredRelic.relicInfo;
                 const counterMax = (info.definition.id === 3 || info.definition.id === 9) ? 5 : 0;
-                const isConsumable = isConsumableRelicId(info.definition.id);
+                const rarityColor = getRelicRarityColorHex(info.definition.rarity);
                 return (
                     <div className="symbol-tooltip" style={{ ...getRelicTooltipStyle(hoveredRelic), display: 'flex', flexDirection: 'column' }}>
                         <div className="symbol-tooltip-name" style={{ color: '#dcfce7' }}>{t(`relic.${info.definition.id}.name`, language)}</div>
                         <div style={{
                             alignSelf: 'flex-start',
                             padding: '2px 7px',
-                            border: `1px solid ${isConsumable ? '#f97316' : '#64748b'}`,
-                            color: isConsumable ? '#ffedd5' : '#cbd5e1',
-                            background: isConsumable ? 'rgba(194, 65, 12, 0.35)' : 'rgba(51, 65, 85, 0.4)',
+                            border: `1px solid ${rarityColor}`,
+                            color: rarityColor,
+                            background: 'rgba(15, 23, 42, 0.55)',
                             fontSize: '14px',
                             letterSpacing: '1px',
+                            textShadow: `0 0 8px ${rarityColor}88`,
                         }}>
-                            {t(isConsumable ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable', language)}
+                            {t(RELIC_RARITY_NAME_KEYS[info.definition.rarity], language)}
                         </div>
                         <div className="symbol-tooltip-desc">
                             {getDisplayedRelicDesc(

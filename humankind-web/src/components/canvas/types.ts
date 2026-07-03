@@ -13,6 +13,7 @@ export interface HoveredRelic {
     relicInfo: RelicInstance;
     screenX: number;
     screenY: number;
+    placement?: 'side' | 'above';
 }
 
 export interface HoveredStatus {
