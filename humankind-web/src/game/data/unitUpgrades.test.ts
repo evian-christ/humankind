@@ -13,7 +13,6 @@ import {
     MECHANICS_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
-    MASON_GUILD_UPGRADE_ID,
 } from './knowledgeUpgrades';
 
 describe('unitUpgrades calculations', () => {
@@ -35,14 +34,6 @@ describe('unitUpgrades calculations', () => {
             expect(warrior.id).toBe(S.warrior);
             expect(warrior.base_attack).toBe(5); // 3 + 2
             expect(warrior.base_hp).toBe(12);   // 8 + 4
-        });
-
-        it('does not apply melee stats from Mason Guild', () => {
-            const warrior = resolveUpgradedUnitDefinition(SYMBOLS[S.warrior]!, [MASON_GUILD_UPGRADE_ID]);
-
-            expect(warrior.id).toBe(S.warrior);
-            expect(warrior.base_attack).toBe(3);
-            expect(warrior.base_hp).toBe(8);
         });
 
         it('applies shared melee stats when Horsemanship and Military Science are unlocked', () => {

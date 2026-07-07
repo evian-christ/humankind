@@ -4,10 +4,7 @@ import {
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    ARCHITECTURE_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
-    CHIEFDOM_UPGRADE_ID,
-    MERCANTILISM_UPGRADE_ID,
     CURRENCY_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
@@ -16,8 +13,6 @@ import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
-    EXPLORATION_UPGRADE_ID,
-    FEUDAL_CORN_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
@@ -26,16 +21,12 @@ import {
     JUNGLE_EXPEDITION_UPGRADE_ID,
     LAND_ALLOTMENT_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
-    MASON_GUILD_UPGRADE_ID,
-    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
-    MINING_UPGRADE_ID,
-    NATIONALISM_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -60,7 +51,6 @@ import {
     PRINTING_PRESS_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
-    TERRACE_ENGINEERING_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
     TRIBAL_FEDERATION_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
@@ -345,14 +335,6 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('allows Mason Guild without Mining at level 12', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            MASON_GUILD_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID],
-            12,
-        )).toBe(true);
-    });
-
     it('keeps Medieval Age as the only upgrade that depends on Ancient Era', () => {
         expect(isUpgradeLegalForKnowledgePick(FEUDALISM_UPGRADE_ID, [], 10)).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
@@ -516,17 +498,6 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             9,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
-            NATIONALISM_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID],
-            19,
-        )).toBe(true);
-        expect(isUpgradeLegalForKnowledgePick(
-            NATIONALISM_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID],
-            20,
-            19,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
             ELECTRICITY_UPGRADE_ID,
             [MODERN_AGE_UPGRADE_ID],
             29,
@@ -679,7 +650,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
     it('requires Plantation for Jungle Expedition', () => {
         expect(isUpgradeLegalForKnowledgePick(
             JUNGLE_EXPEDITION_UPGRADE_ID,
-            [MINING_UPGRADE_ID],
+            [HUNTING_UPGRADE_ID],
             16,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
@@ -805,30 +776,6 @@ describe('getHudTurnStartPassiveTotals', () => {
         })).toEqual({ food: 1, gold: 2, knowledge: 2 });
     });
 
-    it('applies Chiefdom passive food production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [CHIEFDOM_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
-    });
-
-    it('applies Feudalism passive food production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [FEUDAL_CORN_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
-    });
-
-    it('applies Architecture passive knowledge production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [ARCHITECTURE_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 1, knowledge: 3 });
-    });
-
-    it('applies Nationalism passive knowledge production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [NATIONALISM_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 1, knowledge: 4 });
-    });
-
     it('applies Tribal Federation passive food production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [TRIBAL_FEDERATION_UPGRADE_ID],
@@ -841,41 +788,17 @@ describe('getHudTurnStartPassiveTotals', () => {
         })).toEqual({ food: 1, gold: 1, knowledge: 2 });
     });
 
-    it('applies Megalithic Settlements passive food production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [MEGALITHIC_SETTLEMENTS_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
-    });
-
-    it('applies Terrace Engineering passive food production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [TERRACE_ENGINEERING_UPGRADE_ID],
-        })).toEqual({ food: 3, gold: 1, knowledge: 2 });
-    });
-
     it('applies Mercenaries passive gold production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [MERCENARIES_UPGRADE_ID],
         })).toEqual({ food: 0, gold: 3, knowledge: 2 });
     });
 
-    it('applies Exploration passive gold production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [EXPLORATION_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 3, knowledge: 2 });
-    });
-
     it('doubles passive gold production during Qin Shi Huang Currency Standardization', () => {
         expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [EXPLORATION_UPGRADE_ID, MERCANTILISM_UPGRADE_ID],
+            unlockedKnowledgeUpgrades: [PRINTING_PRESS_UPGRADE_ID, MERCENARIES_UPGRADE_ID],
             qinCurrencyStandardTurnsRemaining: 5,
-        })).toEqual({ food: 0, gold: 10, knowledge: 2 });
-    });
-
-    it('applies Mercantilism passive gold production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [MERCANTILISM_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 3, knowledge: 2 });
+        })).toEqual({ food: 0, gold: 10, knowledge: 4 });
     });
 
     it('applies Urbanization passive food and gold production', () => {

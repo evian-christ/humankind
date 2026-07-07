@@ -629,13 +629,13 @@ describe('gameStore pasture butchering', () => {
     it('sets up the tutorial adjacency spin with four symbols around the sea', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
-        const cornA = createInstance(Sym.corn, 'tutorial-corn-a');
-        const cornB = createInstance(Sym.corn, 'tutorial-corn-b');
+        const cropA = createInstance(Sym.wheat, 'tutorial-wheat');
+        const cropB = createInstance(Sym.rice, 'tutorial-rice');
         const monument = createInstance(Sym.monument, 'tutorial-monument');
 
         useGameStore.setState({
             board: createEmptyBoard(),
-            playerSymbols: [cornA, cornB, monument],
+            playerSymbols: [cropA, cropB, monument],
             phase: 'idle',
             isTutorialMode: true,
             tutorialSpinStep: 'monument_done',
@@ -644,8 +644,8 @@ describe('gameStore pasture butchering', () => {
         useGameStore.getState().setupTutorialAdjacencyStep();
         const prepared = useGameStore.getState();
         expect(prepared.playerSymbols.map((symbol) => symbol.definition.id)).toEqual([
-            Sym.corn.id,
-            Sym.corn.id,
+            Sym.wheat.id,
+            Sym.rice.id,
             Sym.monument.id,
             Sym.sea.id,
             Sym.pearl.id,
@@ -664,8 +664,8 @@ describe('gameStore pasture butchering', () => {
             spun.board[1][1]?.definition.id,
             spun.board[3][2]?.definition.id,
         ]).toEqual([
-            Sym.corn.id,
-            Sym.corn.id,
+            Sym.wheat.id,
+            Sym.rice.id,
             Sym.monument.id,
             Sym.pearl.id,
         ]);

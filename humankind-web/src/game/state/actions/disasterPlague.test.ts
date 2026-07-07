@@ -323,7 +323,7 @@ describe('Disaster Plague (ID 78) Tests', () => {
                 board,
                 gold: 10,
                 phase: 'selection',
-                symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.stone]!],
+                symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.honey]!],
             });
 
             harness.actions.rerollSymbols();

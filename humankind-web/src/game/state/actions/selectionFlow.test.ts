@@ -10,11 +10,9 @@ import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    CHIEFDOM_UPGRADE_ID,
     COLONIALISM_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
     ELECTION_SYSTEM_UPGRADE_ID,
-    FEUDAL_CORN_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     GREAT_MIGRATION_UPGRADE_ID,
@@ -23,13 +21,9 @@ import {
     INQUISITION_UPGRADE_ID,
     IRON_WORKING_UPGRADE_ID,
     LAND_ALLOTMENT_UPGRADE_ID,
-    MASON_GUILD_UPGRADE_ID,
     MECHANICS_UPGRADE_ID,
-    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
-    MINING_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
-    NATIONALISM_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -59,7 +53,7 @@ const makeState = (): GameState => {
         board,
         playerSymbols: [oral],
         phase: 'selection',
-        symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.stone]!],
+        symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.honey]!],
         symbolSelectionRelicSourceId: null,
         relicChoices: [null, null, null],
         relicHalfPriceRelicId: null,
@@ -373,7 +367,7 @@ describe('selectionFlow actions', () => {
             createInstance(SYMBOLS[S.wild_seeds]!, []),
             createInstance(SYMBOLS[S.wheat]!, []),
             createInstance(SYMBOLS[S.rice]!, []),
-            createInstance(SYMBOLS[S.stone]!, []),
+            createInstance(SYMBOLS[S.honey]!, []),
         ];
         const board = createEmptyBoard();
         board[0][0] = symbols[0]!;
@@ -605,7 +599,7 @@ describe('selectionFlow actions', () => {
     });
 
     it('blocks rerolls for tribal village symbol selections', () => {
-        const originalChoices = [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.stone]!];
+        const originalChoices = [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.honey]!];
         const harness = createHarness({
             symbolSelectionSymbolSourceId: S.tribal_village,
             gold: 7,
@@ -634,23 +628,6 @@ describe('selectionFlow actions', () => {
         expect(
             useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
         ).toHaveLength(3);
-    });
-
-    it('grants 1 State Reorganization when Mining is researched', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 3,
-            era: 1,
-            unlockedKnowledgeUpgrades: [],
-        });
-
-        harness.actions.selectUpgrade(MINING_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MINING_UPGRADE_ID);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
-        ).toHaveLength(1);
     });
 
     it('grants 2 Pioneers and 1 State Reorganization when Great Migration is researched', () => {
@@ -690,43 +667,6 @@ describe('selectionFlow actions', () => {
         ).toHaveLength(3);
     });
 
-    it('grants 1 Pioneer when Megalithic Settlements is researched', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 7,
-            era: 1,
-            unlockedKnowledgeUpgrades: [],
-        });
-
-        harness.actions.selectUpgrade(MEGALITHIC_SETTLEMENTS_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MEGALITHIC_SETTLEMENTS_UPGRADE_ID);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
-        ).toHaveLength(1);
-    });
-
-    it('grants 2 Pioneers and 2 State Reorganizations when Mason Guild is researched', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 12,
-            era: 2,
-            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(MASON_GUILD_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MASON_GUILD_UPGRADE_ID);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
-        ).toHaveLength(2);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
-        ).toHaveLength(2);
-    });
-
     it.each([
         ['Tribal Federation', TRIBAL_FEDERATION_UPGRADE_ID, 4, [], 2],
         ['Mercenaries', MERCENARIES_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 2],
@@ -751,10 +691,7 @@ describe('selectionFlow actions', () => {
         ['Sacrificial Rite', SACRIFICIAL_RITE_UPGRADE_ID, 4, [], 3],
         ['Inquisition', INQUISITION_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 3],
         ['Restructuring', RESTRUCTURING_UPGRADE_ID, 23, [MODERN_AGE_UPGRADE_ID], 3],
-        ['Chiefdom', CHIEFDOM_UPGRADE_ID, 4, [], 1],
         ['State Labor', STATE_LABOR_UPGRADE_ID, 9, [], 1],
-        ['Feudalism', FEUDAL_CORN_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 1],
-        ['Nationalism', NATIONALISM_UPGRADE_ID, 19, [FEUDALISM_UPGRADE_ID], 1],
     ])('grants Furnaces of Oblivion when %s is researched', (_name, upgradeId, level, unlockedKnowledgeUpgrades, count) => {
         const harness = createHarness({
             phase: 'idle',

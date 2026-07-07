@@ -3,16 +3,11 @@ import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinit
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
-    ARCHITECTURE_UPGRADE_ID,
     CASTLE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
-    CHIEFDOM_UPGRADE_ID,
-    MERCANTILISM_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
-    EXPLORATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    FEUDAL_CORN_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
@@ -20,14 +15,9 @@ import {
     IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
-    MATERIALS_ENGINEERING_UPGRADE_ID,
-    MASON_GUILD_UPGRADE_ID,
-    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
-    MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
-    NATIONALISM_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -36,7 +26,6 @@ import {
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
-    TERRACE_ENGINEERING_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
     TRACKING_UPGRADE_ID,
     TROPICAL_AGRICULTURE_UPGRADE_ID,
@@ -550,7 +539,7 @@ describe('symbolEffectResolution', () => {
         board[1][1] = merchant;
         board[0][1] = createInstance(Sym.wheat, 'left');
         board[2][1] = createInstance(Sym.rice, 'right');
-        board[4][3] = createInstance(Sym.corn, 'distant');
+        board[4][3] = createInstance(Sym.honey, 'distant');
 
         const foodBySlotKey = buildFoodBySlotKey([
             { x: 0, y: 1, food: -2, gold: 0, knowledge: 0 },
@@ -581,7 +570,7 @@ describe('symbolEffectResolution', () => {
         board[1][1] = merchant;
         board[0][1] = createInstance(Sym.wheat, 'left');
         board[2][1] = createInstance(Sym.rice, 'right');
-        board[4][3] = createInstance(Sym.corn, 'distant');
+        board[4][3] = createInstance(Sym.honey, 'distant');
 
         const result = computeMerchantDeferredEffects({
             board,
@@ -599,77 +588,6 @@ describe('symbolEffectResolution', () => {
         expect(result.effects).toEqual([{ x: 1, y: 1, food: 0, gold: 11, knowledge: 0 }]);
         expect(result.goldDelta).toBe(11);
         expect(merchant.merchant_store_pending).toBe(false);
-    });
-
-    it('upgrades corn to produce 4 food with Feudalism', () => {
-        const board = createEmptyBoard();
-        const corn = createInstance(Sym.corn, 'corn');
-        board[0][0] = corn;
-
-        const baseResult = processSingleSymbolEffects(corn, board, 0, 0, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(corn, board, 0, 0, { upgrades: [FEUDAL_CORN_UPGRADE_ID] });
-
-        expect(baseResult.food).toBe(2);
-        expect(upgradedResult.food).toBe(4);
-    });
-
-    it('upgrades salt to produce 2 food per adjacent terrain with Architecture', () => {
-        const board = createEmptyBoard();
-        const salt = createInstance(Sym.salt, 'salt');
-        board[1][1] = salt;
-        board[0][0] = createInstance(Sym.grassland, 'grassland');
-        board[1][0] = createInstance(Sym.plains, 'plains');
-        board[2][2] = createInstance(Sym.forest, 'forest');
-
-        const baseResult = processSingleSymbolEffects(salt, board, 1, 1, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(salt, board, 1, 1, { upgrades: [ARCHITECTURE_UPGRADE_ID] });
-
-        expect(baseResult.food).toBe(3);
-        expect(upgradedResult.food).toBe(6);
-    });
-
-    it('upgrades monument to produce 10 knowledge with Nationalism', () => {
-        const board = createEmptyBoard();
-        const monument = createInstance(Sym.monument, 'monument');
-        board[0][0] = monument;
-
-        const baseResult = processSingleSymbolEffects(monument, board, 0, 0, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(monument, board, 0, 0, { upgrades: [NATIONALISM_UPGRADE_ID] });
-
-        expect(baseResult.knowledge).toBe(5);
-        expect(upgradedResult.knowledge).toBe(10);
-    });
-
-    it('upgrades honey to produce 10 food with Exploration when 5 of the same terrain exist', () => {
-        const board = createEmptyBoard();
-        const honey = createInstance(Sym.honey, 'honey');
-        board[0][0] = honey;
-        board[0][1] = createInstance(Sym.forest, 'forest_1');
-        board[1][0] = createInstance(Sym.forest, 'forest_2');
-        board[1][1] = createInstance(Sym.forest, 'forest_3');
-        board[2][0] = createInstance(Sym.forest, 'forest_4');
-        board[2][1] = createInstance(Sym.forest, 'forest_5');
-
-        const baseResult = processSingleSymbolEffects(honey, board, 0, 0, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(honey, board, 0, 0, { upgrades: [EXPLORATION_UPGRADE_ID] });
-
-        expect(baseResult.food).toBe(5);
-        expect(upgradedResult.food).toBe(10);
-    });
-
-    it('upgrades spices to produce 3 food per terrain type with Mercantilism', () => {
-        const board = createEmptyBoard();
-        const spices = createInstance(Sym.spices, 'spices');
-        board[0][0] = spices;
-        board[0][1] = createInstance(Sym.grassland, 'grassland');
-        board[1][0] = createInstance(Sym.plains, 'plains');
-        board[1][1] = createInstance(Sym.forest, 'forest');
-
-        const baseResult = processSingleSymbolEffects(spices, board, 0, 0, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(spices, board, 0, 0, { upgrades: [MERCANTILISM_UPGRADE_ID] });
-
-        expect(baseResult.food).toBe(3);
-        expect(upgradedResult.food).toBe(9);
     });
 
     it('upgrades horse with Military Science', () => {
@@ -979,11 +897,11 @@ describe('symbolEffectResolution', () => {
             { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(60);
+        expect(result.food).toBe(40);
         expect(result.gold).toBe(2);
         expect(wheat.is_marked_for_destruction).toBe(true);
         expect(papyrus.is_marked_for_destruction).toBe(true);
-        expect(library.is_marked_for_destruction).toBe(true);
+        expect(library.is_marked_for_destruction).toBe(false);
         expect(caravanserai.is_marked_for_destruction).toBe(false);
         expect(flood.is_marked_for_destruction).toBe(false);
     });
@@ -1011,11 +929,11 @@ describe('symbolEffectResolution', () => {
             { upgrades: [OASIS_RECOVERY_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(90);
+        expect(result.food).toBe(60);
         expect(result.gold).toBe(5);
         expect(wheat.is_marked_for_destruction).toBe(true);
         expect(papyrus.is_marked_for_destruction).toBe(true);
-        expect(library.is_marked_for_destruction).toBe(true);
+        expect(library.is_marked_for_destruction).toBe(false);
         expect(caravanserai.is_marked_for_destruction).toBe(false);
         expect(flood.is_marked_for_destruction).toBe(false);
     });
@@ -1040,7 +958,7 @@ describe('symbolEffectResolution', () => {
         board[1][1] = library;
         board[0][1] = createInstance(Sym.wheat, 'wheat');
         board[1][0] = createInstance(Sym.rice, 'rice');
-        board[2][2] = createInstance(Sym.stone, 'stone');
+        board[2][2] = createInstance(Sym.honey, 'honey');
 
         const baseResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [] });
         const educationResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [EDUCATION_UPGRADE_ID] });
@@ -1051,105 +969,13 @@ describe('symbolEffectResolution', () => {
         expect(educationResult.contributors).toEqual([{ x: 0, y: 1 }, { x: 1, y: 0 }, { x: 2, y: 2 }]);
     });
 
-    it('makes Stone produce 1 base Gold and Mining add 1 Gold without Mountain synergy', () => {
-        const board = createEmptyBoard();
-        const stone = createInstance(Sym.stone, 'stone');
-        board[2][0] = stone;
-        board[2][3] = createInstance(Sym.mountain, 'mountain');
-
-        const baseResult = processSingleSymbolEffects(stone, board, 2, 0, { upgrades: [] });
-        const miningResult = processSingleSymbolEffects(stone, board, 2, 0, { upgrades: [MINING_UPGRADE_ID] });
-
-        expect(baseResult.gold).toBe(1);
-        expect(baseResult.contributors).toBeUndefined();
-        expect(miningResult.gold).toBe(2);
-        expect(miningResult.contributors).toBeUndefined();
-    });
-
-    it('makes Mason Guild add 2 Gold to Stone without Mountain synergy', () => {
-        const board = createEmptyBoard();
-        const stone = createInstance(Sym.stone, 'stone');
-        board[0][0] = stone;
-        board[4][3] = createInstance(Sym.mountain, 'mountain');
-
-        const result = processSingleSymbolEffects(stone, board, 0, 0, { upgrades: [MASON_GUILD_UPGRADE_ID] });
-
-        expect(result.gold).toBe(3);
-        expect(result.contributors).toBeUndefined();
-    });
-
-    it('stacks Mining Gold with the Mason Guild Stone upgrade', () => {
-        const board = createEmptyBoard();
-        const stone = createInstance(Sym.stone, 'stone');
-        board[0][0] = stone;
-        board[4][3] = createInstance(Sym.mountain, 'mountain');
-
-        const result = processSingleSymbolEffects(stone, board, 0, 0, {
-            upgrades: [MINING_UPGRADE_ID, MASON_GUILD_UPGRADE_ID],
-        });
-
-        expect(result.gold).toBe(4);
-        expect(result.contributors).toBeUndefined();
-    });
-
-    it('adds 2 Knowledge to Stone and stacks with its Gold upgrades', () => {
-        const board = createEmptyBoard();
-        const stone = createInstance(Sym.stone, 'stone');
-        board[0][0] = stone;
-        board[4][3] = createInstance(Sym.mountain, 'mountain');
-
-        const result = processSingleSymbolEffects(stone, board, 0, 0, {
-            upgrades: [
-                MINING_UPGRADE_ID,
-                MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
-                MASON_GUILD_UPGRADE_ID,
-            ],
-        });
-
-        expect(result.gold).toBe(4);
-        expect(result.knowledge).toBe(2);
-        expect(result.contributors).toBeUndefined();
-    });
-
-    it('adds 3 Knowledge to Stone and stacks with Megalithic Settlements', () => {
-        const board = createEmptyBoard();
-        const stone = createInstance(Sym.stone, 'stone');
-        board[0][0] = stone;
-
-        const result = processSingleSymbolEffects(stone, board, 0, 0, {
-            upgrades: [MEGALITHIC_SETTLEMENTS_UPGRADE_ID, TERRACE_ENGINEERING_UPGRADE_ID],
-        });
-
-        expect(result.gold).toBe(1);
-        expect(result.knowledge).toBe(5);
-    });
-
-    it('adds 4 Gold and 4 Knowledge to Stone and stacks with all Stone upgrades', () => {
-        const board = createEmptyBoard();
-        const stone = createInstance(Sym.stone, 'stone');
-        board[0][0] = stone;
-
-        const result = processSingleSymbolEffects(stone, board, 0, 0, {
-            upgrades: [
-                MINING_UPGRADE_ID,
-                MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
-                MASON_GUILD_UPGRADE_ID,
-                TERRACE_ENGINEERING_UPGRADE_ID,
-                MATERIALS_ENGINEERING_UPGRADE_ID,
-            ],
-        });
-
-        expect(result.gold).toBe(8);
-        expect(result.knowledge).toBe(9);
-    });
-
     it('makes Library produce knowledge per board symbol with Scientific Theory', () => {
         const board = createEmptyBoard();
         const library = createInstance(Sym.library, 'library');
         board[1][1] = library;
         board[0][1] = createInstance(Sym.wheat, 'wheat');
         board[1][0] = createInstance(Sym.rice, 'rice');
-        board[2][2] = createInstance(Sym.stone, 'stone');
+        board[2][2] = createInstance(Sym.honey, 'honey');
         board[4][3] = createInstance(Sym.fish, 'fish');
 
         const result = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [EDUCATION_UPGRADE_ID, SCIENTIFIC_THEORY_UPGRADE_ID] });
@@ -1361,7 +1187,7 @@ describe('symbolEffectResolution', () => {
         board[2][1] = createInstance(Sym.sea, 'sea_2');
         board[0][1] = createInstance(Sym.wheat, 'wheat');
         board[1][1] = createInstance(Sym.rice, 'rice');
-        board[2][0] = createInstance(Sym.stone, 'stone');
+        board[2][0] = createInstance(Sym.honey, 'honey');
 
         const pearlResult = processSingleSymbolEffects(
             pearl,
@@ -1732,38 +1558,4 @@ describe('symbolEffectResolution', () => {
         expect(honey.is_marked_for_destruction).toBe(false);
     });
 
-    it('stacks Wild Berries base food with terrain adjacency bonuses', () => {
-        const isolatedBoard = createEmptyBoard();
-        const isolatedWildBerries = createInstance(Sym.wild_berries, 'isolated_wild_berries');
-        isolatedBoard[1][1] = isolatedWildBerries;
-
-        const board = createEmptyBoard();
-        const wildBerries = createInstance(Sym.wild_berries, 'wild_berries');
-        board[1][1] = wildBerries;
-        board[1][2] = createInstance(Sym.forest, 'forest');
-        board[2][1] = createInstance(Sym.mountain, 'mountain');
-
-        const isolatedResult = processSingleSymbolEffects(
-            isolatedWildBerries,
-            isolatedBoard,
-            1,
-            1,
-            { upgrades: [] },
-        );
-        const result = processSingleSymbolEffects(wildBerries, board, 1, 1, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(
-            wildBerries,
-            board,
-            1,
-            1,
-            { upgrades: [CHIEFDOM_UPGRADE_ID] },
-        );
-
-        expect(isolatedResult.food).toBe(1);
-        expect(isolatedResult.knowledge).toBe(0);
-        expect(result.food).toBe(3);
-        expect(result.knowledge).toBe(2);
-        expect(upgradedResult.food).toBe(5);
-        expect(upgradedResult.knowledge).toBe(5);
-    });
 });

@@ -45,7 +45,7 @@ describe('postEffectsHooks', () => {
         const board = createEmptyBoard();
         board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat-a');
         board[1][0] = createInstance(SYMBOLS[S.rice]!, 'rice-a');
-        board[2][0] = createInstance(SYMBOLS[S.stone]!, 'stone-a');
+        board[2][0] = createInstance(SYMBOLS[S.honey]!, 'honey-a');
         board[3][0] = createInstance(SYMBOLS[S.monument]!, 'monument-a');
 
         const baseArgs = {
@@ -73,7 +73,7 @@ describe('postEffectsHooks', () => {
         const board = createEmptyBoard();
         board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat-a');
         board[1][0] = createInstance(SYMBOLS[S.rice]!, 'rice-a');
-        board[2][0] = createInstance(SYMBOLS[S.stone]!, 'stone-a');
+        board[2][0] = createInstance(SYMBOLS[S.honey]!, 'honey-a');
         board[3][0] = createInstance(SYMBOLS[S.monument]!, 'monument-a');
         board[4][0] = createInstance(SYMBOLS[S.library]!, 'library-a');
         board[0][1] = createInstance(SYMBOLS[S.merchant]!, 'merchant-a');
