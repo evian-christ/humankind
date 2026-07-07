@@ -23,8 +23,6 @@ const createInstanceFactory = () => {
         instanceId: `test_${id++}`,
         effect_counter: 0,
         is_marked_for_destruction: false,
-        remaining_attacks: definition.base_attack ? 3 : 0,
-        enemy_hp: definition.base_hp,
     });
 };
 

@@ -229,7 +229,7 @@ export const GAME_EVENTS: Record<number, GameEventDefinition> = {
         id: 23,
         key: 'kadesh_battle_escape',
         category: 'leader',
-        description: 'Add a barbarian unit with 1 HP.',
+        description: 'Gain Food immediately.',
         availability: '-',
     },
     24: {

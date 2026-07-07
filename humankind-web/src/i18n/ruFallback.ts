@@ -38,7 +38,6 @@ const R = {
     withWord: '\u043d\u0430',
     attack: '\u0430\u0442\u0430\u043a\u0430',
     defense: '\u0437\u0430\u0449\u0438\u0442\u0430',
-    hp: '\u041e\u0417',
     clan: '\u0424\u043e\u0440\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 \u043a\u043b\u0430\u043d\u0430',
     clanDesc: '\u0428\u0430\u043d\u0441 \u0432\u0442\u043e\u0440\u0436\u0435\u043d\u0438\u044f \u0432\u0430\u0440\u0432\u0430\u0440\u043e\u0432 \u0437\u0430\u0444\u0438\u043a\u0441\u0438\u0440\u043e\u0432\u0430\u043d \u043d\u0430 0%.',
     barbarianStirring: '\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0432\u0430\u0440\u0432\u0430\u0440\u043e\u0432',
@@ -97,8 +96,6 @@ function translateResources(value: string): string {
         .replace(/Food/g, R.food)
         .replace(/Gold/g, R.gold)
         .replace(/Knowledge/g, R.knowledge)
-        .replace(/HP/g, R.hp)
-        .replace(/Attack/g, R.attack)
         .replace(/Defense/g, R.defense);
 }
 

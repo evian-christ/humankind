@@ -3,7 +3,6 @@ import { useGameStore } from '../../../game/state/gameStore';
 import { COMBAT_BOUNCE_DURATION, useSettingsStore } from '../../../game/state/settingsStore';
 import { getSymbolColor } from '../../../game/data/symbolDefinitions';
 import { t } from '../../../i18n';
-import { audioManager } from '../../../audio/audioManager';
 import type { CellLayout, CombatBounce } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
 import { getSymbolSpriteUrl } from '../../../game/data/symbolSpritePaths';
@@ -13,8 +12,6 @@ import {
     getBoardSymbolSpriteSize,
     getGameFontFamily,
 } from './rendererShared';
-
-const RANGED_ATTACKER_KEYS = new Set(['archer', 'crossbowman', 'cannon']);
 
 export class CombatRenderer {
     private container: PIXI.Container;
@@ -79,10 +76,6 @@ export class CombatRenderer {
         const moveToY = aCY + (tCY - aCY) * 0.55;
 
         const attackerDef = board[ax]?.[ay]?.definition;
-        if (attackerDef?.base_attack && attackerDef.base_attack > 0) {
-            const cueId = RANGED_ATTACKER_KEYS.has(attackerDef.key) ? 'attack_ranged' : 'attack_melee';
-            void audioManager.play(cueId);
-        }
         let bounceSprite: PIXI.Container;
 
         const attackerSpriteUrl = attackerDef ? getSymbolSpriteUrl(attackerDef) : null;

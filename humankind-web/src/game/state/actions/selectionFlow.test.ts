@@ -3,7 +3,6 @@ import { createSelectionFlowActions } from './selectionFlow';
 import type { GameState } from '../gameStore';
 import { useRelicStore } from '../relicStore';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
-import { getEnemyPoolForLevel } from '../../data/enemyPools';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
@@ -234,7 +233,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toHaveLength(3);
     });
 
-    it('grants resources and summons 2 random current-level enemies when selecting Barbarian Suppression event', () => {
+    it('grants resources without summoning enemies when selecting Barbarian Suppression event', () => {
         vi.spyOn(Math, 'random').mockReturnValue(0);
         const harness = createHarness({
             era: 3,
@@ -248,20 +247,17 @@ describe('selectionFlow actions', () => {
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().food).toBe(45);
         expect(harness.get().gold).toBe(47);
-        expect(harness.get().playerSymbols.filter((sym) => sym.definition.id === S.enemy_infantry)).toHaveLength(2);
-        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(false);
-        expect(getEnemyPoolForLevel(1)).toContain(S.enemy_warrior);
+        expect(harness.get().playerSymbols.some((sym) => sym.definition.type === SYMBOLS[S.enemy_warrior]?.type)).toBe(false);
     });
 
-    it('summons a 1 HP barbarian for Escape from Kadesh event', () => {
+    it('grants food for Escape from Kadesh event', () => {
         const harness = createHarness();
 
         harness.actions.selectEvent(23);
 
-        const enemy = harness.get().playerSymbols.find((sym) => sym.definition.id === S.enemy_warrior);
         expect(harness.get().phase).toBe('idle');
-        expect(enemy).toBeDefined();
-        expect(enemy?.enemy_hp).toBe(1);
+        expect(harness.get().food).toBeGreaterThan(0);
+        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(false);
     });
 
     it('activates Qin Shi Huang Currency Standardization for 5 turns', () => {
@@ -732,7 +728,7 @@ describe('selectionFlow actions', () => {
         expect(theologyHarness.get().religionUnlocked).toBe(true);
     });
 
-    it('does not improve already-owned warrior combat stats when Iron Working is researched', () => {
+    it('does not replace an already-owned Warrior when Iron Working is researched', () => {
         const warrior = createInstance(SYMBOLS[S.warrior]!, []);
         const board = createEmptyBoard();
         board[0][0] = warrior;
@@ -749,26 +745,7 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(IRON_WORKING_UPGRADE_ID);
         expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().playerSymbols[0]?.definition.base_attack).toBe(3);
-        expect(harness.get().playerSymbols[0]?.definition.base_hp).toBe(8);
-        expect(harness.get().playerSymbols[0]?.enemy_hp).toBe(8);
         expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().board[0]?.[0]?.definition.base_attack).toBe(3);
-    });
-
-    it('uses shared ranged combat stats for all ranged unit symbols', () => {
-        const archer = createInstance(SYMBOLS[S.archer]!, []);
-        const crossbowman = createInstance(SYMBOLS[S.crossbowman]!, []);
-        const cannon = createInstance(SYMBOLS[S.cannon]!, []);
-
-        expect([archer, crossbowman, cannon].map((symbol) => ({
-            attack: symbol.definition.base_attack,
-            hp: symbol.definition.base_hp,
-        }))).toEqual([
-            { attack: 2, hp: 4 },
-            { attack: 2, hp: 4 },
-            { attack: 2, hp: 4 },
-        ]);
     });
 
     it('does not replace already-owned units when Stirrups is researched', () => {
@@ -790,13 +767,6 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
         expect(harness.get().playerSymbols[1]?.definition.id).toBe(S.cavalry);
-        expect(harness.get().playerSymbols.map((symbol) => ({
-            attack: symbol.definition.base_attack,
-            hp: symbol.definition.base_hp,
-        }))).toEqual([
-            { attack: 5, hp: 12 },
-            { attack: 5, hp: 12 },
-        ]);
         expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
         expect(harness.get().board[1]?.[0]?.definition.id).toBe(S.cavalry);
     });
@@ -818,9 +788,6 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(MECHANICS_UPGRADE_ID);
         expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.archer);
-        expect(harness.get().playerSymbols[0]?.definition.base_attack).toBe(2);
-        expect(harness.get().playerSymbols[0]?.definition.base_hp).toBe(4);
-        expect(harness.get().playerSymbols[0]?.enemy_hp).toBe(4);
         expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.archer);
     });
 

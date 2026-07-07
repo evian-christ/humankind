@@ -13,6 +13,7 @@ export interface ResourceDelta {
     food: number;
     gold: number;
     knowledge: number;
+    military?: number;
 }
 
 export type BoardCounterFloatAnchor = 'bottom-right' | 'bottom-left';

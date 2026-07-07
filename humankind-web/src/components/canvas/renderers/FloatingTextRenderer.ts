@@ -8,6 +8,7 @@ import {
     FOOD_RESOURCE_ICON_URL,
     GOLD_RESOURCE_ICON_URL,
     KNOWLEDGE_RESOURCE_ICON_URL,
+    MILITARY_RESOURCE_ICON_URL,
 } from '../../../uiAssetUrls';
 import type { CellLayout, FloatingEffect } from '../types';
 import { getProductionHighlightScaleForDelta } from '../productionHighlightScale';
@@ -24,7 +25,7 @@ const RESOURCE_FLOAT_LOSS_COLOR = '#ef4444';
 const RESOURCE_FLOAT_ICON_VERTICAL_NUDGE = 0.08;
 const RESOURCE_FLOAT_FONT_SCALE = 0.8;
 
-type ResourceFloatKind = 'food' | 'gold' | 'knowledge';
+type ResourceFloatKind = 'food' | 'gold' | 'knowledge' | 'military';
 type FloatingItem = PIXI.Container & { _baseOffsetY?: number };
 
 const THREAT_FLOAT_DRIFT_MS = 220;
@@ -40,6 +41,7 @@ interface BoardFloatLayout extends CellLayout {
 function getResourceIconUrl(kind: ResourceFloatKind): string {
     if (kind === 'food') return FOOD_RESOURCE_ICON_URL;
     if (kind === 'gold') return GOLD_RESOURCE_ICON_URL;
+    if (kind === 'military') return MILITARY_RESOURCE_ICON_URL;
     return KNOWLEDGE_RESOURCE_ICON_URL;
 }
 
@@ -164,6 +166,7 @@ export class FloatingTextRenderer {
             if (effect.food !== 0) lines.push({ kind: 'food', value: effect.food });
             if (effect.gold !== 0) lines.push({ kind: 'gold', value: effect.gold });
             if (effect.knowledge !== 0) lines.push({ kind: 'knowledge', value: effect.knowledge });
+            if ((effect.military ?? 0) !== 0) lines.push({ kind: 'military', value: effect.military ?? 0 });
 
             if (lines.length > 0) {
                 const gapText = 6 * scale * resourceFloatScale;

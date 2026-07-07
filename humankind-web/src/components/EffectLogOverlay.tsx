@@ -8,13 +8,14 @@ import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
-import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 const C_FOOD = '#4ade80';
 const C_GOLD = '#fbbf24';
 const C_KNOW = '#60a5fa';
+const C_MILITARY = '#fb923c';
 const C_BAD = '#fb7185';
 
 type HistoryFilter = 'all' | 'resources' | 'choices' | 'symbol' | 'relic' | 'combat' | 'threat' | 'growth' | 'shop' | 'board';
@@ -519,12 +520,13 @@ const getEntryDetailLines = (entry: GameEventLogEntry, language: Language) => {
     return [...new Set(lines)];
 };
 
-const formatDeltaText = (delta?: { food: number; gold: number; knowledge: number }) => {
+const formatDeltaText = (delta?: { food: number; gold: number; knowledge: number; military?: number }) => {
     if (!delta) return '';
     const parts: string[] = [];
     if (delta.food) parts.push(`food ${delta.food > 0 ? '+' : ''}${delta.food}`);
     if (delta.gold) parts.push(`gold ${delta.gold > 0 ? '+' : ''}${delta.gold}`);
     if (delta.knowledge) parts.push(`knowledge ${delta.knowledge > 0 ? '+' : ''}${delta.knowledge}`);
+    if (delta.military) parts.push(`military ${delta.military > 0 ? '+' : ''}${delta.military}`);
     return parts.join(' ');
 };
 
@@ -545,19 +547,20 @@ const getSearchText = (entry: GameEventLogEntry, language: Language) => {
 };
 
 const addDelta = (
-    total: { food: number; gold: number; knowledge: number },
-    delta?: { food: number; gold: number; knowledge: number },
+    total: { food: number; gold: number; knowledge: number; military?: number },
+    delta?: { food: number; gold: number; knowledge: number; military?: number },
 ) => {
     if (!delta) return total;
     return {
         food: total.food + delta.food,
         gold: total.gold + delta.gold,
         knowledge: total.knowledge + delta.knowledge,
+        military: (total.military ?? 0) + (delta.military ?? 0),
     };
 };
 
-const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold: number; knowledge: number }; compact?: boolean }) => {
-    if (!delta || (delta.food === 0 && delta.gold === 0 && delta.knowledge === 0)) return null;
+const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold: number; knowledge: number; military?: number }; compact?: boolean }) => {
+    if (!delta || (delta.food === 0 && delta.gold === 0 && delta.knowledge === 0 && (delta.military ?? 0) === 0)) return null;
 
     const badge = (value: number, icon: string, color: string, label: string) => {
         if (value === 0) return null;
@@ -575,6 +578,7 @@ const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold:
             {badge(delta.food, FOOD_RESOURCE_ICON_URL, C_FOOD, 'Food')}
             {badge(delta.gold, GOLD_RESOURCE_ICON_URL, C_GOLD, 'Gold')}
             {badge(delta.knowledge, KNOWLEDGE_RESOURCE_ICON_URL, C_KNOW, 'Knowledge')}
+            {badge(delta.military ?? 0, MILITARY_RESOURCE_ICON_URL, C_MILITARY, 'Military')}
         </div>
     );
 };
@@ -582,7 +586,7 @@ const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold:
 type TurnGroup = {
     turn: number;
     entries: GameEventLogEntry[];
-    totals: { food: number; gold: number; knowledge: number };
+    totals: { food: number; gold: number; knowledge: number; military?: number };
 };
 
 const buildTurnGroups = (entries: GameEventLogEntry[], newestFirst: boolean): TurnGroup[] => {
@@ -592,7 +596,7 @@ const buildTurnGroups = (entries: GameEventLogEntry[], newestFirst: boolean): Tu
         const group = map.get(entry.turn) ?? {
             turn: entry.turn,
             entries: [],
-            totals: { food: 0, gold: 0, knowledge: 0 },
+            totals: { food: 0, gold: 0, knowledge: 0, military: 0 },
         };
         group.entries.push(entry);
         group.totals = addDelta(group.totals, entry.delta);

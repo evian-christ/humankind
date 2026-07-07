@@ -41,7 +41,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     1: {
         id: 1,
         name: "클로비스 투창촉",
-        description: "매 턴 무작위 적 유닛의 체력을 1 깎습니다.",
+        description: "현재 효과 없음.",
         cost: 18,
         rarity: "common",
         type: SymbolType.RESOURCE,

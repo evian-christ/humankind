@@ -129,14 +129,11 @@ describe('saveGameState', () => {
         vi.unstubAllGlobals();
     });
 
-    it('restores Iron Working warrior stats from unlocked upgrades', () => {
+    it('restores saved symbols without combat stats', () => {
         const localStorage = createLocalStorageMock();
         vi.stubGlobal('localStorage', localStorage);
 
-        const warrior = {
-            ...createSymbol(S.warrior, 'symbol_warrior'),
-            enemy_hp: 10,
-        };
+        const warrior = createSymbol(S.warrior, 'symbol_warrior');
         const state = createSerializableState();
         state.playerSymbols = [warrior];
         state.board = createEmptyBoard();
@@ -148,9 +145,7 @@ describe('saveGameState', () => {
 
         const patch = loadSavedGamePatch();
         expect(patch?.playerSymbols?.[0]?.definition.id).toBe(S.warrior);
-        expect(patch?.playerSymbols?.[0]?.definition.base_attack).toBe(5);
-        expect(patch?.playerSymbols?.[0]?.definition.base_hp).toBe(12);
-        expect(patch?.playerSymbols?.[0]?.enemy_hp).toBe(10);
+        expect(patch?.playerSymbols?.[0]?.instanceId).toBe('symbol_warrior');
 
         vi.unstubAllGlobals();
     });

@@ -15,6 +15,7 @@ export interface EffectResult {
     food: number;
     knowledge: number;
     gold: number;
+    military?: number;
     /** Board counter display delta for floating text, when this effect changes a visible counter. */
     counterDelta?: number;
     counterAnchor?: BoardCounterFloatAnchor;

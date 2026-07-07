@@ -18,14 +18,6 @@ import {
 import {
     generateChoices as generateChoicesSelection,
 } from '../../logic/selection/selectionLogic';
-import {
-    applyClovisPreDamage,
-    collectCombatDestroyedSymbols,
-    collectCombatEvents,
-    collectCombatKilledEnemies,
-    pickClovisPreDamageTarget,
-    resolveCombatStep,
-} from '../../logic/turn/combatResolution';
 import { runPostEffectsHooks } from '../../logic/turn/postEffectsHooks';
 import { resolveTurnEndPhase } from '../../logic/turn/phaseResolution';
 import { prepareTurn } from '../../logic/turn/turnPreparation';
@@ -91,20 +83,21 @@ const getNowMs = () =>
 
 const getRelicFloatDelta = (float: { text: string; color?: string }) => {
     const numbers = [...float.text.matchAll(/[+-]?\d+/g)].map((match) => Number(match[0])).filter(Number.isFinite);
-    if (numbers.length === 0) return { food: 0, gold: 0, knowledge: 0 };
+    if (numbers.length === 0) return { food: 0, gold: 0, knowledge: 0, military: 0 };
 
     if (numbers.length >= 3) {
         return {
             food: numbers[0] ?? 0,
             gold: numbers[1] ?? 0,
             knowledge: numbers[2] ?? 0,
+            military: 0,
         };
     }
 
     const value = numbers[0] ?? 0;
-    if (float.color === '#fbbf24') return { food: 0, gold: value, knowledge: 0 };
-    if (float.color === '#60a5fa') return { food: 0, gold: 0, knowledge: value };
-    return { food: value, gold: 0, knowledge: 0 };
+    if (float.color === '#fbbf24') return { food: 0, gold: value, knowledge: 0, military: 0 };
+    if (float.color === '#60a5fa') return { food: 0, gold: 0, knowledge: value, military: 0 };
+    return { food: value, gold: 0, knowledge: 0, military: 0 };
 };
 
 const collectMarkedSymbolSnapshots = (board: GameState['board']) => {
@@ -321,7 +314,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             phase: 'spinning',
             lastEffects: [],
             counterDisplayOverrides: [],
-            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
             activeSlot: null,
             activeContributors: [],
             pendingContributors: [],
@@ -385,6 +378,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         const startFood = baseTotals.food;
         const startGold = baseTotals.gold;
         const startKnowledge = baseTotals.knowledge;
+        const startMilitary = baseTotals.military ?? 0;
         recordDemoBaseGoldProductionProgress(state.leaderId, startGold);
 
         set({
@@ -393,13 +387,13 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             destroyRemovalBlinkStartedAtMs: null,
             earthquakeFx: null,
             lootMergeFx: null,
-            runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge },
+            runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge, military: startMilitary },
             qinCurrencyStandardTurnsRemaining: Math.max(0, (state.qinCurrencyStandardTurnsRemaining ?? 0) - 1),
         });
         get().appendEventLog({
             turn: state.turn,
             kind: 'processing_start',
-            meta: { base: { food: startFood, gold: startGold, knowledge: startKnowledge } },
+            meta: { base: { food: startFood, gold: startGold, knowledge: startKnowledge, military: startMilitary } },
         });
 
         const slotPipeline = createSlotEffectPipeline({
@@ -430,6 +424,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             tFood: number,
             tKnowledge: number,
             tGold: number,
+            tMilitary: number,
             toAdd: number[],
             toSpawn: number[],
             effects: GameState['lastEffects'],
@@ -438,7 +433,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             get().appendEventLog({
                 turn: stateAtFinish.turn,
                 kind: 'processing_end',
-                meta: { totals: { food: tFood, gold: tGold, knowledge: tKnowledge } },
+                meta: { totals: { food: tFood, gold: tGold, knowledge: tKnowledge, military: tMilitary } },
             });
             const currentBoard = get().board;
             const relics = useRelicStore.getState().relics;
@@ -481,6 +476,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     food: tFood + bonusFood,
                     gold: tGold + bonusGold,
                     knowledge: tKnowledge + bonusKnowledge,
+                    military: tMilitary,
                 },
             });
 
@@ -543,6 +539,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                         food: tFood + bonusFood,
                         gold: tGold + bonusGold,
                         knowledge: tKnowledge + bonusKnowledge,
+                        military: tMilitary,
                     };
                     const prog = applyKnowledgeAndLevelUps(
                         {
@@ -605,6 +602,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                         food: prev.food + finalRunningTotals.food,
                         gold: prev.gold + finalRunningTotals.gold,
                         knowledge: prog.newKnowledge,
+                        military: (prev.military ?? 0) + finalRunningTotals.military,
                         level: prog.newLevel,
                         runningTotals: finalRunningTotals,
                         counterDisplayOverrides: [],
@@ -708,7 +706,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
                                 tutorialSpinStep: 'corn_done',
                             });
                             return;
@@ -723,7 +721,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
                                 symbolChoices: [],
                                 symbolSelectionRelicSourceId: null,
                                 tutorialSpinStep: 'monument_done',
@@ -738,7 +736,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
                                 symbolChoices: [],
                                 symbolSelectionRelicSourceId: null,
                                 tutorialSpinStep: 'adjacency_done',
@@ -754,7 +752,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
                                 activeStatuses: nextActiveStatuses,
                                 activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
                             };
@@ -839,6 +837,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                         slotPipeline.totals.food,
                         slotPipeline.totals.knowledge,
                         slotPipeline.totals.gold,
+                        slotPipeline.totals.military ?? 0,
                         slotPipeline.symbolsToAdd,
                         slotPipeline.symbolsToSpawnOnBoard,
                         slotPipeline.accumulatedEffects,
@@ -951,6 +950,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     result.food !== 0 ||
                     result.gold !== 0 ||
                     result.knowledge !== 0 ||
+                    (result.military ?? 0) !== 0 ||
                     (result.addSymbolIds && result.addSymbolIds.length > 0) ||
                     (result.spawnOnBoard && result.spawnOnBoard.length > 0) ||
                     result.triggerRelicRefresh ||
@@ -966,7 +966,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                         kind: 'symbol_effect',
                         slot: { x, y },
                         symbolId: symbol.definition.id,
-                        delta: { food: result.food ?? 0, gold: result.gold ?? 0, knowledge: result.knowledge ?? 0 },
+                        delta: { food: result.food ?? 0, gold: result.gold ?? 0, knowledge: result.knowledge ?? 0, military: result.military ?? 0 },
                         contributors,
                         meta: {
                             addSymbolIds: result.addSymbolIds ?? [],
@@ -1009,182 +1009,14 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             }
         };
 
-        const combatBoard = get().board;
-        const hasClovis = useRelicStore.getState().relics.some((r) => r.definition.id === RELIC_ID.CLOVIS_SPEAR);
-        const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => {
-            return sym.definition.base_hp ?? 0;
-        };
-
-        const applyClovisDamage = (pos: { x: number; y: number }) => {
-            const result = applyClovisPreDamage({ board: combatBoard, target: pos, getEffectiveMaxHP });
-            set((s) => {
-                const next = [...(s.combatFloats ?? []), result.float];
-                return { combatFloats: next.length > 80 ? next.slice(next.length - 80) : next };
-            });
-        };
-
-        const combatEvents = collectCombatEvents(combatBoard, currentBoardWidth, currentBoardHeight);
-
-        const startEffectPhase = () => {
-            if (!turnRun.isActive()) return;
-            const combatDestroyedIds = new Set(collectCombatDestroyedSymbols(get().board, currentBoardWidth, currentBoardHeight));
-            const combatKilledEnemies = collectCombatKilledEnemies(get().board, currentBoardWidth, currentBoardHeight);
-            const combatLootCount = combatKilledEnemies.length;
-            if (combatKilledEnemies.length > 0) {
-                const relics = useRelicStore.getState().relics;
-                const killRewardRelics = [
-                    { relic: relics.find((r) => r.definition.id === RELIC_ID.GLADIUS), goldPerKill: 3 },
-                    { relic: relics.find((r) => r.definition.id === RELIC_ID.NINEVEH_LION_RELIEF), goldPerKill: 8 },
-                ].filter((entry): entry is { relic: NonNullable<typeof entry.relic>; goldPerKill: number } => !!entry.relic);
-                const killGold = killRewardRelics.reduce((sum, entry) => sum + entry.goldPerKill * combatKilledEnemies.length, 0);
-                if (killGold > 0) {
-                    set((s) => ({
-                        gold: s.gold + killGold,
-                        relicFloats: [
-                            ...(s.relicFloats ?? []),
-                            ...killRewardRelics.map((entry) => ({
-                                relicInstanceId: entry.relic.instanceId,
-                                text: `+${entry.goldPerKill * combatKilledEnemies.length}`,
-                                color: '#fbbf24',
-                            })),
-                        ],
-                    }));
-                }
-            }
-            const effectSpeed = useSettingsStore.getState().effectSpeed;
-            const combatPlan = buildCombatPresentationPlan(effectSpeed);
-
-            const doRemoveAndStart = () => {
-                if (!turnRun.isActive()) return;
-                if (combatDestroyedIds.size > 0) {
-                    set((prev) => {
-                        const lootDef = SYMBOLS[S.loot];
-                        const lootSymbols = lootDef
-                            ? Array.from({ length: combatLootCount }, () =>
-                                  createInstance(lootDef, prev.unlockedKnowledgeUpgrades || []),
-                              )
-                            : [];
-                        return {
-                            board: prev.board.map((col) => col.map((s) => (s?.is_marked_for_destruction ? null : s))),
-                            playerSymbols: [
-                                ...prev.playerSymbols.filter((s) => !combatDestroyedIds.has(s.instanceId)),
-                                ...lootSymbols,
-                            ],
-                            combatShaking: false,
-                        };
-                    });
-                }
-                set({
-                    activeSlot: null,
-                    activeContributors: [],
-                    pendingContributors: [],
-                    effectPhase: null,
-                    effectPhase3ReachedThisRun: false,
-                    destroyRemovalBlinkStartedAtMs: null,
-                    earthquakeFx: null,
-                    lootMergeFx: null,
-                    combatAnimation: null,
-                    combatShaking: false,
-                });
-
-                if (combatPlan.initialEffectDelayMs === 0) {
-                    processSlot(0);
-                } else {
-                    turnRun.schedule(combatPlan.initialEffectDelayMs, () => processSlot(0));
-                }
-            };
-
-            if (combatDestroyedIds.size > 0 && combatPlan.bounceDurationMs > 0) {
-                set({ combatAnimation: null, combatShaking: true });
-                turnRun.schedule(combatPlan.removalDelayMs, doRemoveAndStart);
-            } else {
-                doRemoveAndStart();
-            }
-        };
-
-        const processCombatEvent = (eventIdx: number) => {
-            if (!turnRun.isActive()) return;
-            if (eventIdx >= combatEvents.length) {
-                startEffectPhase();
-                return;
-            }
-
-            const { ax, ay } = combatEvents[eventIdx];
-            const board = get().board;
-            const result = resolveCombatStep({
-                board,
-                width: currentBoardWidth,
-                height: currentBoardHeight,
-                event: { ax, ay },
-                getAdjacentCoords,
-                getEffectiveMaxHP,
-            });
-            if (result.animation) {
-                const attacker = board[ax]?.[ay];
-                const target = board[result.animation.tx]?.[result.animation.ty];
-                const targetDestroyed = !!target?.is_marked_for_destruction;
-                get().appendEventLog({
-                    turn: get().turn,
-                    kind: 'combat',
-                    slot: { x: ax, y: ay },
-                    symbolId: attacker?.definition.id,
-                    delta: { food: 0, gold: 0, knowledge: 0 },
-                    meta: {
-                        action: 'attack',
-                        targetSlot: { x: result.animation.tx, y: result.animation.ty },
-                        targetSymbolId: target?.definition.id,
-                        damage: result.animation.atkDmg,
-                        targetDestroyed,
-                        destroyedSymbols: targetDestroyed && target
-                            ? [{
-                                  id: target.definition.id,
-                                  instanceId: target.instanceId,
-                                  x: result.animation.tx,
-                                  y: result.animation.ty,
-                              }]
-                            : [],
-                    },
-                });
-            }
-
-            const effectSpeed = useSettingsStore.getState().effectSpeed;
-            const combatPlan = buildCombatPresentationPlan(effectSpeed);
-            if (combatPlan.bounceDurationMs === 0) {
-                processCombatEvent(eventIdx + 1);
-                return;
-            }
-
-            if (result.animation) {
-                set({ combatAnimation: result.animation });
-                turnRun.schedule(combatPlan.stepDelayMs, () => processCombatEvent(eventIdx + 1));
-            } else {
-                processCombatEvent(eventIdx + 1);
-            }
-        };
-
-        if (hasClovis) {
-            const pos = pickClovisPreDamageTarget(combatBoard, currentBoardWidth, currentBoardHeight);
-            const effectSpeed = useSettingsStore.getState().effectSpeed;
-            const combatPlan = buildCombatPresentationPlan(effectSpeed);
-
-            if (!pos || combatPlan.bounceDurationMs === 0) {
-                if (pos) applyClovisDamage(pos);
-                set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: null });
-                processCombatEvent(0);
-            } else {
-                const SHAKE_MS = 360;
-                const AFTER_DAMAGE_PAUSE_MS = 180;
-                set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: RELIC_ID.CLOVIS_SPEAR });
-                turnRun.schedule(SHAKE_MS, () => {
-                    set({ preCombatShakeRelicDefId: null });
-                    if (pos) applyClovisDamage(pos);
-                    turnRun.schedule(AFTER_DAMAGE_PAUSE_MS, () => processCombatEvent(0));
-                });
-            }
-        } else {
-            set({ preCombatShakeTarget: null, preCombatShakeRelicDefId: null });
-            processCombatEvent(0);
-        }
+        set({
+            combatAnimation: null,
+            combatShaking: false,
+            preCombatShakeTarget: null,
+            preCombatShakeRelicDefId: null,
+            combatFloats: [],
+        });
+        processSlot(0);
     },
 
     continueProcessingAfterNewThreatFloats: () => {

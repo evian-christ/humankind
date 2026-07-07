@@ -47,7 +47,6 @@ const SymbolCard = ({
     const eraName = t(ERA_NAME_KEYS[symbol.type] ?? 'era.ancient', language);
     const symName = t(`symbol.${symbol.key}.name`, language);
     const symDesc = getBoardSymbolTooltipDesc(symbol.key, language, unlockedKnowledgeUpgrades);
-    const displayHp = symbol.base_hp;
     const spriteUrl = getSymbolSpriteUrl(symbol);
 
     return (
@@ -93,12 +92,6 @@ const SymbolCard = ({
 
                 {/* 이름 */}
                 <div className="selection-card-name">{symName}</div>
-                {(symbol.base_attack !== undefined || displayHp !== undefined) && (
-                    <div className="selection-card-stats">
-                        {symbol.base_attack !== undefined && <span>ATK {symbol.base_attack}</span>}
-                        {displayHp !== undefined && <span>HP {displayHp}</span>}
-                    </div>
-                )}
                 <div className="selection-card-desc">
                     {symDesc.split('\n').map((line, i) => (
                         <div key={i} className="selection-card-desc-line"><EffectText text={line} /></div>

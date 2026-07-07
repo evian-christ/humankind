@@ -21,8 +21,6 @@ interface SerializedSymbol {
     instanceId: string;
     effect_counter: number;
     is_marked_for_destruction: boolean;
-    remaining_attacks?: number;
-    enemy_hp?: number;
     banana_permanent_food_bonus?: number;
     stored_gold?: number;
     merchant_store_pending?: boolean;
@@ -46,6 +44,7 @@ interface SavedGame {
         leaderProgressLevel?: number;
         food: number;
         gold: number;
+        military?: number;
         knowledge: number;
         level: number;
         era: number;
@@ -101,8 +100,6 @@ const serializeSymbol = (symbol: PlayerSymbolInstance): SerializedSymbol => ({
     instanceId: symbol.instanceId,
     effect_counter: symbol.effect_counter,
     is_marked_for_destruction: symbol.is_marked_for_destruction,
-    remaining_attacks: symbol.remaining_attacks,
-    enemy_hp: symbol.enemy_hp,
     banana_permanent_food_bonus: symbol.banana_permanent_food_bonus,
     stored_gold: symbol.stored_gold,
     merchant_store_pending: symbol.merchant_store_pending,
@@ -123,8 +120,6 @@ const deserializeSymbol = (
         instanceId: saved.instanceId,
         effect_counter: saved.effect_counter ?? 0,
         is_marked_for_destruction: saved.is_marked_for_destruction ?? false,
-        remaining_attacks: saved.remaining_attacks ?? (definition.base_attack ? 3 : 0),
-        enemy_hp: saved.enemy_hp ?? definition.base_hp,
         banana_permanent_food_bonus: saved.banana_permanent_food_bonus,
         stored_gold: saved.stored_gold,
         merchant_store_pending: saved.merchant_store_pending,
@@ -231,6 +226,7 @@ export function saveGameState(state: GameState): void {
             leaderProgressLevel: state.leaderProgressLevel,
             food: state.food,
             gold: state.gold,
+            military: state.military ?? 0,
             knowledge: state.knowledge,
             level: state.level,
             era: state.era,
@@ -311,6 +307,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             isTutorialMode: false,
             food: save.state.food,
             gold: save.state.gold,
+            military: save.state.military ?? 0,
             knowledge: save.state.knowledge,
             level: save.state.level,
             era: save.state.era,
@@ -333,7 +330,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             relicHalfPriceRelicId: save.state.relicHalfPriceRelicId,
             lastEffects: [],
             counterDisplayOverrides: [],
-            runningTotals: { food: 0, gold: 0, knowledge: 0 },
+            runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
             activeSlot: null,
             activeContributors: [],
             pendingContributors: [],

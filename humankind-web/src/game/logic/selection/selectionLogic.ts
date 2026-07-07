@@ -101,8 +101,7 @@ function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefId
         }
 
         if (event.key === 'military_draft') {
-            const unitCount = ownedSymbolDefIds.filter((id) => SYMBOLS[id]?.type === SymbolType.UNIT).length;
-            return unitCount >= 3;
+            return false;
         }
 
         const req = TERRAIN_EVENT_REQUIREMENTS[event.key];
@@ -200,11 +199,11 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
 
         finalSym = resolveUpgradedUnitDefinition(finalSym, upgrades);
 
-        if (finalSym.type === SymbolType.ENEMY) continue;
+        if (finalSym.type === SymbolType.ENEMY || finalSym.type === SymbolType.UNIT) continue;
         let e = finalSym.type as number;
 
-        // ANCIENT, UNIT 은 확률 테이블 상 기본 자원 묶음으로 편입
-        if (e === SymbolType.ANCIENT || e === SymbolType.UNIT) {
+        // ANCIENT 는 확률 테이블 상 기본 자원 묶음으로 편입
+        if (e === SymbolType.ANCIENT) {
             e = SymbolType.RESOURCE;
         }
 
@@ -264,17 +263,8 @@ export function generateTerrainOnlyChoices(ctx: Pick<SelectionContext, 'era' | '
 
 /** 유닛 심볼만 3개 (군사 소집 유물용) */
 export function generateUnitOnlyChoices(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel'>): SymbolDefinition[] {
-    const pool = buildFlatPool(ctx).filter((s) => s.type === SymbolType.UNIT);
-    const choices: SymbolDefinition[] = [];
-    const defaultUnit = SYMBOLS[S.warrior] || Sym.warrior || pool[0];
-    for (let i = 0; i < 3; i++) {
-        if (pool.length > 0) {
-            choices.push(pool[Math.floor(Math.random() * pool.length)]!);
-        } else {
-            choices.push(defaultUnit);
-        }
-    }
-    return choices;
+    void ctx;
+    return [];
 }
 
 /** 현재 플레이어에게 가능한 이벤트만 3개 뽑습니다. */

@@ -1,9 +1,6 @@
-import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
-import { getEnemyDefinitionForLevel, getEnemyPoolForLevel } from '../../data/enemyPools';
+import { S, SYMBOLS } from '../../data/symbolDefinitions';
 import {
-    BARBARIAN_INVASION_GRACE_TURNS,
     NATURAL_DISASTER_CHANCE,
-    getNextBarbarianInvasionChance,
     getActiveStatusIdsForTurn,
 } from '../../data/statusDefinitions';
 import type { BoardGrid, BoardCoord, ThreatLabelKey, TurnPreparationInput, TurnPreparationOutput } from './turnTypes';
@@ -79,7 +76,6 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         board,
         playerSymbols,
         turn,
-        level,
         boardWidth,
         boardHeight,
         unlockedKnowledgeUpgrades,
@@ -90,38 +86,10 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         forcedNaturalDisasterId = null,
     } = input;
 
-    const { barbarianSymbolThreat } = threatState;
-
     const newPlayerSymbols = [...playerSymbols];
     const spinUpgrades = unlockedKnowledgeUpgrades || [];
     const newThreats: { instanceId: string; label: string; key: ThreatLabelKey }[] = [];
-    let nextBarbarianSymbolThreat = barbarianSymbolThreat;
-
-    if (turn > 0) {
-        if (turn < BARBARIAN_INVASION_GRACE_TURNS) {
-            nextBarbarianSymbolThreat = 0;
-        } else {
-            const currentBarbarianSymbolThreat = getNextBarbarianInvasionChance(barbarianSymbolThreat);
-            let spawnedBarbarianInvasion = false;
-            if (rng.next() * 100 < currentBarbarianSymbolThreat) {
-                const pool = getEnemyPoolForLevel(level);
-                const enemyId = rng.pick(pool);
-                const enemyDef = getEnemyDefinitionForLevel(enemyId, level);
-                if (enemyDef) {
-                    const inst = createSymbolInstance(enemyDef, spinUpgrades);
-                    inst.spawnedByBarbarianInvasion = true;
-                    inst.barbarianInvasionTurnsRemaining = 3;
-                    newPlayerSymbols.push(inst);
-                    const key = 'threat.barbarian_invasion';
-                    newThreats.push({ instanceId: inst.instanceId, label: getThreatLabel(key), key });
-                    spawnedBarbarianInvasion = true;
-                }
-            }
-            nextBarbarianSymbolThreat = spawnedBarbarianInvasion
-                ? 0
-                : currentBarbarianSymbolThreat;
-        }
-    }
+    const nextBarbarianSymbolThreat = 0;
 
     if (turn > 0 || forcedNaturalDisasterId !== null) {
         const shouldSpawnNaturalDisaster =
@@ -174,17 +142,14 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     }
 
     const newBoard = createEmptyBoardFromShape(board, boardWidth, boardHeight);
-    const combatAndEnemy = rng.shuffle(newPlayerSymbols
-        .filter((s) => s.definition.type === SymbolType.ENEMY || s.definition.type === SymbolType.UNIT));
-    const friendly = rng.shuffle(newPlayerSymbols
-        .filter((s) => s.definition.type !== SymbolType.ENEMY && s.definition.type !== SymbolType.UNIT));
+    const friendly = rng.shuffle(newPlayerSymbols);
     const positions: BoardCoord[] = [];
     for (let x = 0; x < newBoard.length; x++) {
         for (let y = 0; y < (newBoard[x]?.length ?? 0); y++) {
             if (Object.prototype.hasOwnProperty.call(newBoard[x], y)) positions.push({ x, y });
         }
     }
-    const shuffledSymbols = [...combatAndEnemy, ...friendly].slice(0, positions.length);
+    const shuffledSymbols = friendly.slice(0, positions.length);
 
     const shuffledPositions = rng.shuffle(positions);
 
@@ -218,7 +183,7 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     return {
         playerSymbols: anchoredSymbols,
         threatState: {
-            barbarianSymbolThreat: turn > 0 ? nextBarbarianSymbolThreat : barbarianSymbolThreat,
+            barbarianSymbolThreat: turn > 0 ? nextBarbarianSymbolThreat : threatState.barbarianSymbolThreat,
             barbarianCampThreat: 0,
             naturalDisasterThreat: NATURAL_DISASTER_CHANCE,
         },

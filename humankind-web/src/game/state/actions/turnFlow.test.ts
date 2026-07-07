@@ -349,37 +349,6 @@ describe('turnFlow actions', () => {
         expect(startProcessing).toHaveBeenCalledTimes(1);
     });
 
-    it('adds loot to owned symbols when combat defeats an enemy', () => {
-        vi.useFakeTimers();
-        try {
-            const board = createEmptyBoard();
-            const warrior = createInstance(SYMBOLS[S.warrior]!, []);
-            const enemy = createInstance(SYMBOLS[S.enemy_archer]!, []);
-            enemy.enemy_hp = 1;
-            board[0][0] = warrior;
-            board[1][0] = enemy;
-
-            const harness = createHarness(
-                {
-                    phase: 'spinning',
-                    board,
-                    playerSymbols: [warrior, enemy],
-                    turn: 1,
-                },
-                { getAdjacentCoords },
-            );
-
-            harness.actions.startProcessing();
-
-            expect(harness.get().board[1][0]).toBeNull();
-            expect(harness.get().playerSymbols.some((s) => s.instanceId === enemy.instanceId)).toBe(false);
-            expect(harness.get().playerSymbols.filter((s) => s.definition.id === S.loot)).toHaveLength(1);
-        } finally {
-            vi.clearAllTimers();
-            vi.useRealTimers();
-        }
-    });
-
     it('grants separate level 9 and level 10 research credits when jumping from level 8 to 10', () => {
         vi.useFakeTimers();
         try {

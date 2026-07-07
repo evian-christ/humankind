@@ -27,7 +27,7 @@ import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
 import { LEADERS, MAX_LEADER_LEVEL, getLeaderXpRequiredForLevel, leaderHasPortraitSprite, type LeaderId, type LeaderProgressAwardResult } from './game/data/leaders';
 import { calculateFoodCost, formatTimelineYear, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel, getTimelineYearForTurn } from './game/state/gameCalculations';
-import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, HISTORY_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, HISTORY_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 import { audioManager } from './audio/audioManager';
 import type { AudioPlaybackHandle } from './audio/audioManager';
 import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
@@ -1290,7 +1290,7 @@ function App() {
   const [showVictoryProgress, setShowVictoryProgress] = useState(false);
   const isInGame = preGameScreen === null;
   const [gameCanvasReady, setGameCanvasReady] = useState(false);
-  const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | null>(null);
+  const [hoveredStat, setHoveredStat] = useState<'knowledge' | 'food' | 'gold' | 'military' | null>(null);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const activeGameplayBgmPlaylistIdRef = useRef<string | null>(null);
   const gameplayBgmTransitionTimerRef = useRef<number | null>(null);
@@ -1923,6 +1923,7 @@ function App() {
   const knowledge = useGameStore((s) => s.knowledge);
   const food = useGameStore((s) => s.food);
   const gold = useGameStore((s) => s.gold);
+  const military = useGameStore((s) => s.military ?? 0);
   const era = useGameStore((s) => s.era);
   const runningTotals = useGameStore((s) => s.runningTotals);
   const isFoodPaymentPending = phase === 'food_payment';
@@ -1981,11 +1982,15 @@ function App() {
   const activeState = useGameStore.getState();
   const hudPassiveTotals = hoveredStat ? getHudTurnStartPassiveTotals(activeState) : null;
 
-  const renderTooltip = (kind: 'knowledge' | 'food' | 'gold') => {
+  const renderTooltip = (kind: 'knowledge' | 'food' | 'gold' | 'military') => {
     if (hoveredStat !== kind || !hudPassiveTotals) return null;
-    const n = hudPassiveTotals[kind];
+    const n = hudPassiveTotals[kind] ?? 0;
     const line = t('game.hudBaseProductionShort', language).replace('{n}', String(n));
-    const icon = kind === 'food' ? FOOD_RESOURCE_ICON_URL : kind === 'gold' ? GOLD_RESOURCE_ICON_URL : KNOWLEDGE_RESOURCE_ICON_URL;
+    const icon =
+      kind === 'food' ? FOOD_RESOURCE_ICON_URL :
+      kind === 'gold' ? GOLD_RESOURCE_ICON_URL :
+      kind === 'military' ? MILITARY_RESOURCE_ICON_URL :
+      KNOWLEDGE_RESOURCE_ICON_URL;
     return (
       <div className="hud-stat-tooltip" style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '12px' }}>
         <div className="hud-stat-tooltip-inner">
@@ -1996,15 +2001,16 @@ function App() {
     );
   };
 
-  const renderRunningTotal = (kind: 'knowledge' | 'food' | 'gold') => {
+  const renderRunningTotal = (kind: 'knowledge' | 'food' | 'gold' | 'military') => {
     if (phase !== 'processing' || !runningTotals) return null;
-    const value = runningTotals[kind];
+    const value = runningTotals[kind] ?? 0;
     if (value === 0) return null;
     
     let color = '#fff';
     if (kind === 'knowledge') color = value > 0 ? '#60a5fa' : '#ef4444';
     if (kind === 'food') color = value > 0 ? '#4ade80' : '#ef4444';
     if (kind === 'gold') color = value > 0 ? '#fbbf24' : '#ef4444';
+    if (kind === 'military') color = value > 0 ? '#fb923c' : '#ef4444';
 
     return (
       <div className="running-total-pop" style={{ color }}>
@@ -2118,6 +2124,14 @@ function App() {
               {renderRunningTotal('gold')}
             </span>
             {renderTooltip('gold')}
+          </div>
+          <div className="resource-group" onMouseEnter={() => setHoveredStat('military')} onMouseLeave={() => setHoveredStat(null)}>
+            <img src={MILITARY_RESOURCE_ICON_URL} alt="Military" className="resource-icon" />
+            <span className="resource-value">
+              {military}
+              {renderRunningTotal('military')}
+            </span>
+            {renderTooltip('military')}
           </div>
         </div>
 

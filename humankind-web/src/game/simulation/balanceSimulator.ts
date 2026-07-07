@@ -56,12 +56,6 @@ import {
     type BoardGrid,
     type ProcessSlotArgs,
 } from '../logic/turn/turnPipeline';
-import {
-    collectCombatDestroyedSymbols,
-    collectCombatEvents,
-    collectCombatKilledEnemies,
-    resolveCombatStep,
-} from '../logic/turn/combatResolution';
 import { runPostEffectsHooks } from '../logic/turn/postEffectsHooks';
 import { resolveTurnEndPhase } from '../logic/turn/phaseResolution';
 import { createStartingBoard, BOARD_HEIGHT, BOARD_WIDTH } from '../state/gameStoreHelpers';
@@ -193,7 +187,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     plains_axis: {
         primaryTerrainIds: [S.plains],
         coreSymbolIds: [S.cattle, S.sheep, S.horse],
-        bridgeSymbolIds: [S.salt, S.spices, S.warrior, S.archer],
+        bridgeSymbolIds: [S.salt, S.spices],
         upgradeIds: [
             PASTORALISM_UPGRADE_ID,
             NOMADIC_TRADITION_UPGRADE_ID,
@@ -314,8 +308,6 @@ const createSimulationInstance = (
         instanceId: `sim_symbol_${simulationInstanceCounter++}`,
         effect_counter: 0,
         is_marked_for_destruction: false,
-        remaining_attacks: resolvedDef.base_attack ? 3 : 0,
-        enemy_hp: resolvedDef.base_hp,
     };
 };
 
@@ -522,51 +514,14 @@ const applyUpgrade = (state: SimulationState, upgradeId: number) => {
     state.playerSymbols = state.playerSymbols.map((symbol) => {
         if (symbol.definition.type !== SymbolType.UNIT) return symbol;
         const nextDef = resolveUpgradedUnitDefinition(symbol.definition, nextUnlocked);
-        if (
-            nextDef.id === symbol.definition.id &&
-            nextDef.base_attack === symbol.definition.base_attack &&
-            nextDef.base_hp === symbol.definition.base_hp
-        ) {
+        if (nextDef.id === symbol.definition.id) {
             return symbol;
         }
-        const prevMax = symbol.definition.base_hp ?? 0;
-        const nextMax = nextDef.base_hp ?? 0;
-        const currentHp = symbol.enemy_hp ?? prevMax;
-        const damageTaken = Math.max(0, prevMax - currentHp);
         return {
             ...symbol,
             definition: nextDef,
-            remaining_attacks: nextDef.base_attack ? 3 : 0,
-            enemy_hp: Math.max(1, nextMax - damageTaken),
         };
     });
-};
-
-const resolveCombat = (state: SimulationState) => {
-    const getEffectiveMaxHP = (sym: PlayerSymbolInstance) => sym.definition.base_hp ?? 0;
-    const events = collectCombatEvents(state.board, BOARD_WIDTH, BOARD_HEIGHT);
-    for (const { ax, ay } of events) {
-        resolveCombatStep({
-            board: state.board,
-            width: BOARD_WIDTH,
-            height: BOARD_HEIGHT,
-            event: { ax, ay },
-            getAdjacentCoords,
-            getEffectiveMaxHP,
-        });
-    }
-
-    const destroyedIds = new Set(collectCombatDestroyedSymbols(state.board, BOARD_WIDTH, BOARD_HEIGHT));
-    const killedEnemyCount = collectCombatKilledEnemies(state.board, BOARD_WIDTH, BOARD_HEIGHT).length;
-    if (destroyedIds.size === 0) return;
-    state.board = state.board.map((col) => col.map((s) => (s?.is_marked_for_destruction ? null : s)));
-    state.playerSymbols = state.playerSymbols.filter((s) => !destroyedIds.has(s.instanceId));
-    const lootDef = SYMBOLS[S.loot];
-    if (lootDef) {
-        for (let i = 0; i < killedEnemyCount; i++) {
-            state.playerSymbols.push(createSimulationInstance(lootDef, state.unlockedKnowledgeUpgrades));
-        }
-    }
 };
 
 const simulateTurn = (
@@ -600,8 +555,6 @@ const simulateTurn = (
     state.barbarianSymbolThreat = prepared.threatState.barbarianSymbolThreat;
     state.barbarianCampThreat = prepared.threatState.barbarianCampThreat;
     state.naturalDisasterThreat = prepared.threatState.naturalDisasterThreat;
-
-    resolveCombat(state);
 
     const baseTotals = getHudTurnStartPassiveTotals(state);
     state.qinCurrencyStandardTurnsRemaining = Math.max(0, state.qinCurrencyStandardTurnsRemaining - 1);

@@ -95,7 +95,7 @@ export interface GameEventLogEntry {
     /** 주체 심볼 (있으면) */
     symbolId?: number;
     /** 수치 변화 (있으면) */
-    delta?: { food: number; gold: number; knowledge: number };
+    delta?: { food: number; gold: number; knowledge: number; military?: number };
     /** 기여자 스냅샷 (있으면) */
     contributors?: Array<{ x: number; y: number; symbolId?: number }>;
     /** 추가 정보 (디테일용) */
@@ -108,6 +108,7 @@ export interface GameState {
     lastLeaderProgressAward: LeaderProgressAwardResult | null;
     food: number;
     gold: number;
+    military?: number;
     knowledge: number; // 기존 knowledge
     level: number; // 0 ~ 30
     era: number; // derived from level
@@ -140,7 +141,7 @@ export interface GameState {
     lastEffects: BoardEffectDelta[];
     counterDisplayOverrides: Array<{ x: number; y: number; text: string | null }>;
     /** processing 중 누적 합산 (food, gold, knowledge) */
-    runningTotals: { food: number; gold: number; knowledge: number };
+    runningTotals: { food: number; gold: number; knowledge: number; military?: number };
     /** 현재 처리 중인 슬롯 좌표 (null이면 하이라이트 없음) */
     activeSlot: { x: number; y: number } | null;
     /** 현재 슬롯의 효과에 기여한 인접 심볼 좌표 */
@@ -263,7 +264,7 @@ export interface GameState {
     spinTutorialAdjacencyStep: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
+    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'level' | 'turn', value: number) => void;
     devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => void;
     devTriggerNaturalDisaster: (symbolId: number) => void;
     /** 망각의 화로: 보드 (x,y) 심볼 파괴 확정 */
@@ -390,6 +391,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     lastLeaderProgressAward: null,
     food: 0,
     gold: 0,
+    military: 0,
     knowledge: 0,
     level: 0,
     era: 0,
@@ -407,7 +409,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     relicHalfPriceRelicId: null,
     lastEffects: [],
     counterDisplayOverrides: [],
-    runningTotals: { food: 0, gold: 0, knowledge: 0 },
+    runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
     activeSlot: null,
     activeContributors: [],
     pendingContributors: [],
@@ -572,7 +574,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
     },
 
-    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => {
+    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'level' | 'turn', value: number) => {
         if (stat === 'level') {
             const L = Math.max(0, Math.min(30, Math.round(value)));
             set({ level: L, era: getEraFromLevel(L) });

@@ -12,7 +12,7 @@ type Props = {
 };
 
 /**
- * 메인 보드(PixiGameApp)와 동일 규칙의 카운터·공격·체력·야만 주둔지 턴 표시.
+ * 메인 보드(PixiGameApp)와 동일 규칙의 카운터·야만 주둔지 턴 표시.
  * 부모는 `position: 'relative'` 셀 안에 스프라이트와 함께 둡니다.
  */
 export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
@@ -35,11 +35,7 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const showCounter =
         def.id !== S.banana &&
         sym.effect_counter > 0 &&
-        def.type !== SymbolType.ENEMY &&
-        def.base_hp === undefined;
-    const showAtk = def.base_attack !== undefined && def.base_attack > 0;
-    const showHp = def.base_hp !== undefined && def.base_hp > 0;
-    const hpValue = sym.enemy_hp ?? def.base_hp;
+        def.type !== SymbolType.ENEMY;
     const font = { fontFamily: 'var(--game-font-family), sans-serif' as const, lineHeight: 1 as const };
     const statShadow =
         '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
@@ -97,77 +93,6 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
                 </div>
             )}
 
-            {showAtk && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        left: ux(4),
-                        bottom: uy(6),
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: ux(5),
-                        ...font,
-                    }}
-                >
-                    <span
-                        style={{
-                            fontSize: fsIcon,
-                            color: '#ff8c42',
-                            opacity: 0.55,
-                            textShadow: statShadow,
-                        }}
-                    >
-                        ⚔
-                    </span>
-                    <span
-                        style={{
-                            fontSize: fs,
-                            color: '#ffffff',
-                            fontWeight: 800,
-                            textShadow: statShadow,
-                        }}
-                    >
-                        {def.base_attack}
-                    </span>
-                </div>
-            )}
-
-            {showHp && (
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: ux(4),
-                        bottom: uy(6),
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: ux(5),
-                        ...font,
-                    }}
-                >
-                    <span
-                        style={{
-                            fontSize: fsIcon,
-                            color: '#4ade80',
-                            opacity: 0.55,
-                            textShadow: statShadow,
-                        }}
-                    >
-                        ♥
-                    </span>
-                    <span
-                        style={{
-                            fontSize: fs,
-                            color: '#ffffff',
-                            fontWeight: 800,
-                            textShadow: statShadow,
-                        }}
-                    >
-                        {hpValue}
-                    </span>
-                </div>
-            )}
         </>
     );
 }

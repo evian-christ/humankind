@@ -13,6 +13,7 @@ export interface EffectState {
     food: number;
     knowledge: number;
     gold: number;
+    military: number;
     addSymbolIds: number[];
     spawnOnBoard: number[];
     triggerRelicSelection: boolean;
@@ -42,6 +43,7 @@ export const createEffectState = (): EffectState => ({
     food: 0,
     knowledge: 0,
     gold: 0,
+    military: 0,
     addSymbolIds: [],
     spawnOnBoard: [],
     triggerRelicSelection: false,
@@ -59,6 +61,7 @@ export const buildEffectResult = (state: EffectState): EffectResult => {
         knowledge: state.knowledge,
         gold: state.gold,
     };
+    if (state.military !== 0) result.military = state.military;
     if (state.addSymbolIds.length > 0) result.addSymbolIds = state.addSymbolIds;
     if (state.spawnOnBoard.length > 0) result.spawnOnBoard = state.spawnOnBoard;
     if (state.triggerRelicSelection) result.triggerRelicSelection = true;

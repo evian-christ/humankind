@@ -174,7 +174,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: IRON_WORKING_UPGRADE_ID,
         name: 'Iron Working',
         type: SymbolType.ANCIENT,
-        description: 'Melee units gain +2 Attack and +4 HP.',
+        description: 'Legacy military upgrade. No current effect.',
         sprite: '022.png',
     },
     [IRRIGATION_UPGRADE_ID]: {
@@ -340,7 +340,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: MILITARY_SCIENCE_UPGRADE_ID,
         name: 'Military Science',
         type: SymbolType.MEDIEVAL,
-        description: 'Horse produces +3 Food and +4 Gold. Melee units gain +1 Attack and +1 HP.',
+        description: 'Horse produces +3 Food and +4 Gold.',
         sprite: '035.png',
         descSymbols: [
             { symbolKey: 'horse', relation: 'effect_modify' },
@@ -350,7 +350,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: MECHANICS_UPGRADE_ID,
         name: 'Mechanics',
         type: SymbolType.MEDIEVAL,
-        description: 'Removes Archer from the selection pool and adds Crossbowman. Ranged units gain +1 Attack and +2 HP.',
+        description: 'Removes Archer from the selection pool and adds Crossbowman.',
         sprite: '033.png',
         descSymbols: [
             { symbolKey: 'archer', relation: 'pool_remove' },
@@ -361,7 +361,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: GUNPOWDER_UPGRADE_ID,
         name: 'Stirrups',
         type: SymbolType.MEDIEVAL,
-        description: 'Removes Warrior from the selection pool and adds Knight. Melee units gain +2 Attack and +4 HP.',
+        description: 'Removes Warrior from the selection pool and adds Knight.',
         sprite: '048.png',
         descSymbols: [
             { symbolKey: 'warrior', relation: 'pool_remove' },
@@ -372,7 +372,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: BALLISTICS_UPGRADE_ID,
         name: 'Ballistics',
         type: SymbolType.MODERN,
-        description: 'Removes Crossbowman from the selection pool and adds Cannon. Ranged units gain +1 Attack and +2 HP.',
+        description: 'Removes Crossbowman from the selection pool and adds Cannon.',
         sprite: '055.png',
         descSymbols: [
             { symbolKey: 'crossbowman', relation: 'pool_remove' },
@@ -383,7 +383,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: INTERCHANGEABLE_PARTS_UPGRADE_ID,
         name: 'Interchangeable Parts',
         type: SymbolType.MODERN,
-        description: 'Removes Knight from the selection pool and adds Infantry. Melee units gain +2 Attack and +4 HP.',
+        description: 'Removes Knight from the selection pool and adds Infantry.',
         sprite: '062.png',
         descSymbols: [
             { symbolKey: 'cavalry', relation: 'pool_remove' },
@@ -407,7 +407,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: ARCHERY_UPGRADE_ID,
         name: 'Archery',
         type: SymbolType.ANCIENT,
-        description: 'Ranged units gain +1 Attack and +2 HP.',
+        description: 'Legacy military upgrade. No current effect.',
         sprite: '009.png',
     },
     [CURRENCY_UPGRADE_ID]: {
@@ -422,7 +422,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: HORSEMANSHIP_UPGRADE_ID,
         name: 'Horsemanship',
         type: SymbolType.ANCIENT,
-        description: 'Adds Horse to the selection pool. Melee units gain +1 Attack and +1 HP.',
+        description: 'Adds Horse to the selection pool.',
         sprite: '013.png',
         descSymbols: [
             { symbolKey: 'horse', relation: 'pool_add' },

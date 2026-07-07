@@ -43,6 +43,7 @@ export interface ResourceTotals {
     food: number;
     gold: number;
     knowledge: number;
+    military?: number;
 }
 
 export interface TurnStartBaseInput<TState> {
@@ -122,7 +123,7 @@ function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolE
             wrapThreshold: effectCtx?.upgrades.includes(PLANTATION_UPGRADE_ID) ? 5 : 10,
         };
     }
-    if (def.type !== SymbolType.ENEMY && def.base_hp === undefined) {
+    if (def.type !== SymbolType.ENEMY) {
         return { anchor: 'bottom-right', mode: 'direct-progress' };
     }
     return null;
@@ -285,6 +286,7 @@ function previewSlotDeltaWithoutSideEffects(args: ResolveSlotEffectArgs, slot: {
             food: result.food ?? 0,
             gold: result.gold ?? 0,
             knowledge: result.knowledge ?? 0,
+            ...(result.military ? { military: result.military } : {}),
         };
     } finally {
         Math.random = originalRandom;
@@ -295,13 +297,15 @@ function getAccumulatedSlotDelta(pipeline: SlotEffectPipeline, slot: { x: number
     let food = 0;
     let gold = 0;
     let knowledge = 0;
+    let military = 0;
     for (const effect of pipeline.accumulatedEffects) {
         if (effect.x !== slot.x || effect.y !== slot.y) continue;
         food += effect.food ?? 0;
         gold += effect.gold ?? 0;
         knowledge += effect.knowledge ?? 0;
+        military += effect.military ?? 0;
     }
-    return { food, gold, knowledge };
+    return military !== 0 ? { food, gold, knowledge, military } : { food, gold, knowledge };
 }
 
 function getSlotDeltaForThisTurn(args: ResolveSlotEffectArgs, slot: { x: number; y: number }): ResourceTotals {
@@ -565,6 +569,7 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         food: result.food,
         knowledge: result.knowledge,
         gold: result.gold,
+        ...(result.military ? { military: result.military } : {}),
     });
 
     if (result.addSymbolIds) pipeline.symbolsToAdd.push(...result.addSymbolIds);
@@ -581,7 +586,7 @@ export function applySlotEffectResult(
     slot: { x: number; y: number },
     result: EffectResult,
 ): void {
-    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || result.counterDelta) {
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.military ?? 0) !== 0 || result.counterDelta) {
         const effect: SlotEffect = {
             x: slot.x,
             y: slot.y,
@@ -589,6 +594,7 @@ export function applySlotEffectResult(
             gold: result.gold,
             knowledge: result.knowledge,
         };
+        if (result.military) effect.military = result.military;
         if (result.counterDelta) effect.counter = result.counterDelta;
         if (result.counterAnchor) effect.counterAnchor = result.counterAnchor;
         if (result.counterDisplayTextBefore !== undefined) {
@@ -599,16 +605,18 @@ export function applySlotEffectResult(
     if (result.extraEffects?.length) {
         pipeline.accumulatedEffects.push(...result.extraEffects);
     }
-    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.military ?? 0) !== 0) {
         pipeline.totals.food += result.food;
         pipeline.totals.knowledge += result.knowledge;
         pipeline.totals.gold += result.gold;
+        if (result.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + result.military;
     }
     if (result.extraEffects?.length) {
         for (const effect of result.extraEffects) {
             pipeline.totals.food += effect.food;
             pipeline.totals.gold += effect.gold;
             pipeline.totals.knowledge += effect.knowledge;
+            if (effect.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + effect.military;
         }
     }
 }
@@ -655,6 +663,7 @@ export function applyUnplacedHorseEffects(
     pipeline.totals.food += result.food;
     pipeline.totals.gold += result.gold;
     pipeline.totals.knowledge += result.knowledge;
+    if (result.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + result.military;
 }
 
 export function removeMarkedSymbolsFromBoard(board: BoardGrid): BoardGrid {

@@ -1467,8 +1467,7 @@ export class PixiGameApp {
                 // 우하단 카운터: 바나나는 열대우림 인접 카운터만 숫자로 표시
                 const genericCounterText =
                     symbol.effect_counter > 0 &&
-                    symDef.type !== SymbolType.ENEMY &&
-                    symDef.base_hp === undefined
+                    symDef.type !== SymbolType.ENEMY
                         ? String(symbol.effect_counter)
                         : '';
                 const boardCounterOverlay = counterOverride
@@ -1483,48 +1482,6 @@ export class PixiGameApp {
                     counterText.x = cellX + cellWidth - 21 * fs + activeOffsetX;
                     counterText.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
                     drawTarget.addChild(counterText);
-                }
-
-                if (symDef.base_attack !== undefined && symDef.base_attack > 0) {
-                    const atkBg = new PIXI.Text({
-                        text: '⚔',
-                        style: new PIXI.TextStyle({ fill: '#ff8c42', fontSize: 68 * fs, fontFamily }),
-                    });
-                    atkBg.anchor.set(0.5, 0.5);
-                    atkBg.x = cellX + 24 * fs + activeOffsetX;
-                    atkBg.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
-                    atkBg.alpha = 0.4;
-                    drawTarget.addChild(atkBg);
-
-                    const atkText = new PIXI.Text({
-                        text: String(symDef.base_attack),
-                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 36 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3.5 * fs } }),
-                    });
-                    atkText.anchor.set(0.5, 0.5);
-                    atkText.x = cellX + 25 * fs + activeOffsetX;
-                    atkText.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
-                    drawTarget.addChild(atkText);
-                }
-
-                if (symDef.base_hp !== undefined && symDef.base_hp > 0) {
-                    const hpBg = new PIXI.Text({
-                        text: '♥',
-                        style: new PIXI.TextStyle({ fill: '#4ade80', fontSize: 68 * fs, fontFamily }),
-                    });
-                    hpBg.anchor.set(0.5, 0.5);
-                    hpBg.x = cellX + cellWidth - 20 * fs + activeOffsetX;
-                    hpBg.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
-                    hpBg.alpha = 0.4;
-                    drawTarget.addChild(hpBg);
-
-                    const hpText = new PIXI.Text({
-                        text: String(symbol.enemy_hp ?? symDef.base_hp),
-                        style: new PIXI.TextStyle({ fill: '#ffffff', fontSize: 36 * fs, fontWeight: 'bold', fontFamily, stroke: { color: '#000000', width: 3.5 * fs } }),
-                    });
-                    hpText.anchor.set(0.5, 0.5);
-                    hpText.x = cellX + cellWidth - 21 * fs + activeOffsetX;
-                    hpText.y = cellY + cellHeight - 24 * fs + activeOffsetY + wobbleY;
-                    drawTarget.addChild(hpText);
                 }
 
             }

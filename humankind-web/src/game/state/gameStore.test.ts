@@ -6,7 +6,7 @@ import {
 import { RELICS } from '../data/relicDefinitions';
 import { isGameEventDefinition } from '../data/eventDefinitions';
 import { RELIC_ID } from '../logic/relics/relicIds';
-import { Sym, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
+import { Sym, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import { useRelicStore } from './relicStore';
 
@@ -21,8 +21,6 @@ const createInstance = (definition: SymbolDefinition, id: string): PlayerSymbolI
     instanceId: id,
     effect_counter: 0,
     is_marked_for_destruction: false,
-    remaining_attacks: definition.base_attack ? 3 : 0,
-    enemy_hp: definition.base_hp,
 });
 
 describe('gameStore pasture butchering', () => {
@@ -309,7 +307,7 @@ describe('gameStore pasture butchering', () => {
         }
     });
 
-    it('activates Military Levy into a unit-only symbol selection', async () => {
+    it('consumes Military Levy without opening combat symbol choices', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
 
@@ -329,10 +327,9 @@ describe('gameStore pasture butchering', () => {
         useGameStore.getState().activateClickableRelic(relicInstanceId);
 
         const next = useGameStore.getState();
-        expect(next.phase).toBe('selection');
-        expect(next.symbolSelectionRelicSourceId).toBe(RELIC_ID.MILITARY_LEVY);
-        expect(next.symbolChoices).toHaveLength(3);
-        expect(next.symbolChoices.every((choice) => 'type' in choice && choice.type === SymbolType.UNIT)).toBe(true);
+        expect(next.phase).toBe('idle');
+        expect(next.symbolSelectionRelicSourceId).toBeNull();
+        expect(next.symbolChoices).toHaveLength(0);
         expect(useRelicStore.getState().relics).toHaveLength(0);
     });
 
@@ -357,9 +354,10 @@ describe('gameStore pasture butchering', () => {
         useGameStore.getState().activateClickableRelic(relicInstanceId);
 
         const next = useGameStore.getState();
-        expect(next.phase).toBe('selection');
+        expect(next.phase).toBe('food_payment');
         expect(next.pendingFoodPayment).toBe(true);
-        expect(next.symbolSelectionRelicSourceId).toBe(RELIC_ID.MILITARY_LEVY);
+        expect(next.symbolSelectionRelicSourceId).toBeNull();
+        expect(next.symbolChoices).toHaveLength(0);
         expect(useRelicStore.getState().relics).toHaveLength(0);
         useGameStore.setState({ pendingFoodPayment: false });
     });

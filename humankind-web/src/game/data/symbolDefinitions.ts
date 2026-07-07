@@ -10,8 +10,6 @@ export interface SymbolDefinition {
     name: string;
     type: SymbolType;
     description: string;
-    base_attack?: number;
-    base_hp?: number;
     sprite: string;
 }
 
@@ -20,24 +18,6 @@ type DefBody = Omit<SymbolDefinition, 'id' | 'key'>;
 function def(key: SymbolKey, body: DefBody): SymbolDefinition {
     return { key, id: SYMBOL_NUMERIC_ID[key], ...body };
 }
-
-const UNIT_COMBAT_STATS = {
-    warrior: { base_attack: 3, base_hp: 8 },
-    cavalry: { base_attack: 4, base_hp: 15 },
-    infantry: { base_attack: 20, base_hp: 80 },
-    archer: { base_attack: 2, base_hp: 4 },
-    crossbowman: { base_attack: 4, base_hp: 8 },
-    cannon: { base_attack: 10, base_hp: 20 },
-} as const;
-
-const ENEMY_COMBAT_STATS = {
-    warrior: { base_attack: 3, base_hp: 8 },
-    cavalry: { base_attack: 7, base_hp: 16 },
-    infantry: { base_attack: 9, base_hp: 20 },
-    archer: { base_attack: 2, base_hp: 4 },
-    crossbowman: { base_attack: 4, base_hp: 8 },
-    cannon: { base_attack: 5, base_hp: 10 },
-} as const;
 
 /**
  * 심볼 메타데이터(이름·설명·타입·스프라이트)는 여기서 관리합니다.
@@ -223,20 +203,20 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If there are no duplicate symbols on the board: +1 Food per 2 symbols on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "058.png" }),
 
     // Unit
-    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Melee: attacks the first adjacent enemy symbol.", ...UNIT_COMBAT_STATS.warrior, sprite: "063.png" }),
-    def('cavalry', { name: "Knight", type: SymbolType.UNIT, description: "Melee: attacks the first adjacent enemy symbol.", ...UNIT_COMBAT_STATS.cavalry, sprite: "064.png" }),
-    def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Melee: attacks the first adjacent enemy symbol.", ...UNIT_COMBAT_STATS.infantry, sprite: "065.png" }),
-    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Ranged: attacks the first enemy symbol on the board.", ...UNIT_COMBAT_STATS.archer, sprite: "066.png" }),
-    def('crossbowman', { name: "Crossbowman", type: SymbolType.UNIT, description: "Ranged: attacks the first enemy symbol on the board.", ...UNIT_COMBAT_STATS.crossbowman, sprite: "067.png" }),
-    def('cannon', { name: "Cannon", type: SymbolType.UNIT, description: "Ranged: attacks the first enemy symbol on the board.", ...UNIT_COMBAT_STATS.cannon, sprite: "068.png" }),
+    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "063.png" }),
+    def('cavalry', { name: "Knight", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "064.png" }),
+    def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "065.png" }),
+    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "066.png" }),
+    def('crossbowman', { name: "Crossbowman", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "067.png" }),
+    def('cannon', { name: "Cannon", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "068.png" }),
 
     // Enemy
-    def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", ...ENEMY_COMBAT_STATS.warrior, sprite: "069.png" }),
-    def('enemy_cavalry', { name: "Knight", type: SymbolType.ENEMY, description: "-5 Food.", ...ENEMY_COMBAT_STATS.cavalry, sprite: "070.png" }),
-    def('enemy_infantry', { name: "Infantry", type: SymbolType.ENEMY, description: "-8 Food.", ...ENEMY_COMBAT_STATS.infantry, sprite: "071.png" }),
-    def('enemy_archer', { name: "Archer", type: SymbolType.ENEMY, description: "-3 Food.", ...ENEMY_COMBAT_STATS.archer, sprite: "072.png" }),
-    def('enemy_crossbowman', { name: "Crossbowman", type: SymbolType.ENEMY, description: "-5 Food.", ...ENEMY_COMBAT_STATS.crossbowman, sprite: "073.png" }),
-    def('enemy_cannon', { name: "Cannon", type: SymbolType.ENEMY, description: "-8 Food.", ...ENEMY_COMBAT_STATS.cannon, sprite: "074.png" }),
+    def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", sprite: "069.png" }),
+    def('enemy_cavalry', { name: "Knight", type: SymbolType.ENEMY, description: "-5 Food.", sprite: "070.png" }),
+    def('enemy_infantry', { name: "Infantry", type: SymbolType.ENEMY, description: "-8 Food.", sprite: "071.png" }),
+    def('enemy_archer', { name: "Archer", type: SymbolType.ENEMY, description: "-3 Food.", sprite: "072.png" }),
+    def('enemy_crossbowman', { name: "Crossbowman", type: SymbolType.ENEMY, description: "-5 Food.", sprite: "073.png" }),
+    def('enemy_cannon', { name: "Cannon", type: SymbolType.ENEMY, description: "-8 Food.", sprite: "074.png" }),
 
     // Disaster
     def('flood', { name: "Flood", type: SymbolType.DISASTER, description: "Disables production from adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "075.png" }),

@@ -134,9 +134,7 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.id === S.archer)).toBe(false);
-        const crossbowman = pool.find((sym) => sym.id === S.crossbowman);
-        expect(crossbowman?.base_attack).toBe(3);
-        expect(crossbowman?.base_hp).toBe(6);
+        expect(pool.some((sym) => sym.id === S.crossbowman)).toBe(false);
     });
 
     it('keeps medieval symbols while removing terrain symbols after modern age', () => {

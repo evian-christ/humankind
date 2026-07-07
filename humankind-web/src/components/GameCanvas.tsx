@@ -14,7 +14,7 @@ import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, Hovere
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
 import { useRelicStore } from '../game/state/relicStore';
-import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -378,7 +378,9 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 ? hudPassiveTotals.knowledge
                 : hoveredHudStat.kind === 'food'
                   ? hudPassiveTotals.food
-                  : hudPassiveTotals.gold;
+                  : hoveredHudStat.kind === 'gold'
+                    ? hudPassiveTotals.gold
+                    : hudPassiveTotals.military ?? 0;
         const line = t('game.hudBaseProductionShort', language).replace('{n}', String(n));
         return (
             <div className="hud-stat-tooltip" style={getHudStatTooltipStyle(hoveredHudStat)}>
@@ -394,6 +396,14 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                     ) : hoveredHudStat.kind === 'gold' ? (
                         <img
                             src={GOLD_RESOURCE_ICON_URL}
+                            alt=""
+                            width={40}
+                            height={40}
+                            style={{ imageRendering: 'pixelated', flexShrink: 0 }}
+                        />
+                    ) : hoveredHudStat.kind === 'military' ? (
+                        <img
+                            src={MILITARY_RESOURCE_ICON_URL}
                             alt=""
                             width={40}
                             height={40}

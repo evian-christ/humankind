@@ -28,7 +28,7 @@ export interface HoveredUpgrade {
     screenY: number;
 }
 
-export type HoveredHudStatKind = 'knowledge' | 'food' | 'gold';
+export type HoveredHudStatKind = 'knowledge' | 'food' | 'gold' | 'military';
 
 /** clientX/clientY: 브라우저 뷰포트 기준(고정 위치 툴팁용) */
 export interface HoveredHudStat {

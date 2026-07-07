@@ -20,7 +20,6 @@ import {
 } from '../../data/knowledgeUpgrades';
 import { RELICS } from '../../data/relicDefinitions';
 import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
-import { getEnemyPoolForEra } from '../../data/enemyPools';
 import {
     CAPITAL_RELOCATION_DESTROY_COUNT,
     CAPITAL_RELOCATION_FOOD_REWARD,
@@ -393,14 +392,6 @@ export const createSelectionFlowActions = ({
         } else if (event.key === 'border_raid') {
             foodDelta += BORDER_RAID_REWARD[eraIdx];
             goldDelta += BORDER_RAID_REWARD[eraIdx];
-            const enemyPool = getEnemyPoolForEra(state.era);
-            const enemySymbols = Array.from({ length: BORDER_RAID_ENEMY_COUNT }, () => {
-                const enemyId = enemyPool[Math.floor(Math.random() * enemyPool.length)]!;
-                const def = SYMBOLS[enemyId];
-                return def ? createInstance(def, state.unlockedKnowledgeUpgrades || []) : null;
-            }).filter((sym): sym is PlayerSymbolInstance => sym != null);
-            addedSymbolIds = enemySymbols.map((symbol) => symbol.definition.id);
-            patch.playerSymbols = [...state.playerSymbols, ...enemySymbols];
         } else if (event.key === 'grassland_festival') {
             foodDelta += GRASSLAND_FESTIVAL_FOOD[eraIdx];
         } else if (event.key === 'plains_pasture') {
@@ -443,25 +434,8 @@ export const createSelectionFlowActions = ({
             foodDelta += emptySlots * OASIS_BLESSING_PER_EMPTY[eraIdx];
         } else if (event.key === 'military_draft') {
             foodDelta += MILITARY_DRAFT_FOOD[eraIdx];
-            const def = SYMBOLS[S.enemy_warrior];
-            if (def) {
-                addedSymbolIds = [def.id];
-                patch.playerSymbols = [
-                    ...(patch.playerSymbols ?? state.playerSymbols),
-                    createInstance(def, state.unlockedKnowledgeUpgrades || []),
-                ];
-            }
         } else if (event.key === 'kadesh_battle_escape') {
-            const def = SYMBOLS[S.enemy_warrior];
-            if (def) {
-                const enemy = createInstance(def, state.unlockedKnowledgeUpgrades || []);
-                enemy.enemy_hp = 1;
-                addedSymbolIds = [def.id];
-                patch.playerSymbols = [
-                    ...(patch.playerSymbols ?? state.playerSymbols),
-                    enemy,
-                ];
-            }
+            foodDelta += MILITARY_DRAFT_FOOD[eraIdx];
         } else if (event.key === 'currency_standardization') {
             patch.qinCurrencyStandardTurnsRemaining = 5;
         } else if (event.key === 'every_terrain_bounty') {

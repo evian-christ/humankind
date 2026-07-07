@@ -104,7 +104,6 @@ export const RU_TRANSLATIONS: Record<string, string> = {
     'game.condition': 'Условие',
     'game.back': 'Назад',
     'knowledgeUpgrade.back': 'Назад',
-    'game.attack': 'Атака',
     'game.defense': 'Защита',
     'game.hudBaseProductionShort': 'Базовое производство +{n}',
 

@@ -3,7 +3,6 @@ import {
     generateChoices as generateChoicesSelection,
     generateEventOnlyChoices,
     generateTerrainOnlyChoices as generateTerrainOnlyChoicesSelection,
-    generateUnitOnlyChoices,
 } from '../../logic/selection/selectionLogic';
 import { useRelicStore } from '../relicStore';
 import type { GameState } from '../gameStore';
@@ -179,29 +178,17 @@ export const createRelicActivationActions = ({
 
         if (defId === RELIC_ID.MILITARY_LEVY) {
             useRelicStore.getState().removeRelic(instanceId);
-            const choices = generateUnitOnlyChoices({
-                era: state.era,
-                religionUnlocked: state.religionUnlocked,
-                upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
-                ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
-                leaderId: state.leaderId,
-                leaderProgressLevel: state.leaderProgressLevel,
-            });
             set({
-                phase: 'selection',
-                symbolChoices: choices,
-                symbolSelectionRelicSourceId: RELIC_ID.MILITARY_LEVY,
+                phase: state.phase,
+                symbolChoices: state.symbolChoices,
+                symbolSelectionRelicSourceId: state.symbolSelectionRelicSourceId,
                 symbolSelectionSymbolSourceId: null,
                 isTurnSymbolSelection: false,
-                freeSelectionRerolls: Math.max(
-                    state.freeSelectionRerolls ?? 0,
-                    getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
-                ),
             });
             get().appendEventLog({
                 turn: state.turn,
                 kind: 'relic',
-                meta: { relicId: defId, action: 'military_levy_unit_pick' },
+                meta: { relicId: defId, action: 'military_levy_no_current_effect' },
             });
             return;
         }

@@ -222,10 +222,6 @@ export const createInstance = (
     unlockedUpgrades: readonly number[] = [],
 ): PlayerSymbolInstance => {
     const resolvedDef = resolveUpgradedUnitDefinition(def, unlockedUpgrades);
-    const baseHp = resolvedDef.base_hp;
-    let enemy_hp: number | undefined;
-    if (baseHp === undefined) enemy_hp = undefined;
-    else enemy_hp = baseHp;
 
     let effect_counter = 0;
     if (resolvedDef.id === S.plague) {
@@ -239,8 +235,6 @@ export const createInstance = (
         instanceId: generateInstanceId(),
         effect_counter,
         is_marked_for_destruction: false,
-        remaining_attacks: resolvedDef.base_attack ? 3 : 0,
-        enemy_hp,
     };
 };
 

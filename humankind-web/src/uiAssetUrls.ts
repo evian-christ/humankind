@@ -4,6 +4,7 @@ const BASE = import.meta.env.BASE_URL;
 export const FOOD_RESOURCE_ICON_URL = `${BASE}assets/ui/food16x16.png`;
 export const GOLD_RESOURCE_ICON_URL = `${BASE}assets/ui/gold16x16.png`;
 export const KNOWLEDGE_RESOURCE_ICON_URL = `${BASE}assets/ui/knowledge16x16.png`;
+export const MILITARY_RESOURCE_ICON_URL = `${BASE}assets/symbols/063.png`;
 export const INVENTORY_ICON_URL = `${BASE}assets/ui/inventory15x15.png`;
 export const HISTORY_ICON_URL = `${BASE}assets/ui/history16x16.png`;
 /** 유물 패널 제목 줄 아이콘 (Pixi) */

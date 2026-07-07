@@ -19,7 +19,6 @@ import { useGameStore } from '../game/state/gameStore';
 import { getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
 import { isConsumableRelicId } from '../game/logic/relics/relicClassification';
-import { getDisplayUnitStats } from '../game/data/unitUpgrades';
 import { getEventDescription, getEventDescriptionAllEras, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
@@ -55,6 +54,8 @@ const RELIC_RARITY_ORDER: RelicRarity[] = ['common', 'uncommon', 'rare', 'epic',
 
 
 const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.RESOURCE, SymbolType.LUXURY, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION, SymbolType.SPECIAL];
+const SYMBOL_BROWSER_ERA_ORDER = ERA_ORDER.filter((type) => type !== SymbolType.UNIT && type !== SymbolType.ENEMY);
+const isCombatSymbolType = (type: SymbolType): boolean => type === SymbolType.UNIT || type === SymbolType.ENEMY;
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -158,7 +159,7 @@ const DataBrowser = () => {
 
     // 심볼 목록 (필터 + 검색 + 정렬)
     const filteredSymbols = useMemo(() => {
-        let list = Object.values(SYMBOLS);
+        let list = Object.values(SYMBOLS).filter((s) => !isCombatSymbolType(s.type));
 
         if (eraFilter !== 'all') {
             list = list.filter(s => s.type === eraFilter);
@@ -183,14 +184,6 @@ const DataBrowser = () => {
                     case 'era': va = ERA_ORDER.indexOf(a.type); vb = ERA_ORDER.indexOf(b.type); break;
                     case 'type': va = a.type; vb = b.type; break;
                     case 'desc': va = t(`symbol.${a.key}.desc`, language); vb = t(`symbol.${b.key}.desc`, language); break;
-                    case 'atk':
-                        va = getDisplayUnitStats(a, unlockedKnowledgeUpgrades).attack;
-                        vb = getDisplayUnitStats(b, unlockedKnowledgeUpgrades).attack;
-                        break;
-                    case 'hp':
-                        va = getDisplayUnitStats(a, unlockedKnowledgeUpgrades).hp;
-                        vb = getDisplayUnitStats(b, unlockedKnowledgeUpgrades).hp;
-                        break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
                     case 'basePool': va = isBasePool(a) ? 1 : 0; vb = isBasePool(b) ? 1 : 0; break;
                     default: va = a.id; vb = b.id;
@@ -202,7 +195,7 @@ const DataBrowser = () => {
         }
 
         return list;
-    }, [eraFilter, search, language, symbolSort, unlockedKnowledgeUpgrades]);
+    }, [eraFilter, search, language, symbolSort]);
 
     // 유물 목록
     const filteredRelics = useMemo(() => {
@@ -431,8 +424,8 @@ const DataBrowser = () => {
     // 시대별 카운트
     const eraCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        const all = Object.values(SYMBOLS);
-        for (const era of ERA_ORDER) {
+        const all = Object.values(SYMBOLS).filter((s) => !isCombatSymbolType(s.type));
+        for (const era of SYMBOL_BROWSER_ERA_ORDER) {
             counts[era] = all.filter(s => s.type === era).length;
         }
         return counts;
@@ -468,7 +461,7 @@ const DataBrowser = () => {
                     className={`databrowser-tab ${tab === 'symbols' ? 'databrowser-tab--active' : ''}`}
                     onClick={() => setTab('symbols')}
                 >
-                    {t('dataBrowser.symbols', language)} ({Object.keys(SYMBOLS).length})
+                    {t('dataBrowser.symbols', language)} ({Object.values(SYMBOLS).filter((s) => !isCombatSymbolType(s.type)).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'relics' ? 'databrowser-tab--active' : ''}`}
@@ -525,7 +518,7 @@ const DataBrowser = () => {
                             onChange={e => setEraFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
                         >
                             <option value="all">{t('dataBrowser.allEras', language)}</option>
-                            {ERA_ORDER.map(era => (
+                            {SYMBOL_BROWSER_ERA_ORDER.map(era => (
                                 <option key={era} value={era}>
                                     {t(`era.${ERA_KEYS[era]}`, language)} ({eraCounts[era] || 0})
                                 </option>
@@ -563,8 +556,6 @@ const DataBrowser = () => {
 
                                 <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--desc" />
                                 <SortTh column="basePool" label={t('dataBrowser.colBasePool', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--id" />
-                                <SortTh column="atk" label="ATK" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
-                                <SortTh column="hp" label="HP" sort={symbolSort} onSort={symSortHandler} className="databrowser-th--stat" />
                                 <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={symbolSort} onSort={symSortHandler} className="databrowser-th--sprite" />
                                 <th className="databrowser-th--action" style={{ width: '80px', textAlign: 'center' }}>Action</th>
                             </tr>
@@ -573,12 +564,10 @@ const DataBrowser = () => {
                             {isSymbolSlotMode
                                 ? Array.from({ length: SYMBOL_SLOT_MAX - SYMBOL_SLOT_MIN + 1 }, (_, i) => i + SYMBOL_SLOT_MIN).map(slotId => {
                                     const s = SYMBOLS[slotId];
-                                    if (!s) {
+                                    if (!s || isCombatSymbolType(s.type)) {
                                         return (
                                             <tr key={slotId} className="databrowser-row" style={{ opacity: 0.4 }}>
                                                 <td className="databrowser-cell--id">{slotId}</td>
-                                                <td></td>
-                                                <td></td>
                                                 <td></td>
                                                 <td></td>
                                                 <td></td>
@@ -608,12 +597,6 @@ const DataBrowser = () => {
 
                                             <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.key}.desc`, language)} /></td>
                                             <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
-                                            <td className="databrowser-cell--stat">
-                                                {s.base_attack !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).attack : '-'}
-                                            </td>
-                                            <td className="databrowser-cell--stat">
-                                                {s.base_hp !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).hp : '-'}
-                                            </td>
                                             <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                             <td style={{ textAlign: 'center' }}>
                                                 <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
@@ -641,12 +624,6 @@ const DataBrowser = () => {
 
                                         <td className="databrowser-cell--desc"><EffectText text={t(`symbol.${s.key}.desc`, language)} /></td>
                                         <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
-                                        <td className="databrowser-cell--stat">
-                                            {s.base_attack !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).attack : '-'}
-                                        </td>
-                                        <td className="databrowser-cell--stat">
-                                            {s.base_hp !== undefined ? getDisplayUnitStats(s, unlockedKnowledgeUpgrades).hp : '-'}
-                                        </td>
                                         <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                         <td style={{ textAlign: 'center' }}>
                                             <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>

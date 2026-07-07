@@ -422,6 +422,7 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
     food: number;
     gold: number;
     knowledge: number;
+    military?: number;
 } {
     const upgrades = state.unlockedKnowledgeUpgrades || [];
     const knowledge =
