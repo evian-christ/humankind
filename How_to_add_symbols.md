@@ -1,138 +1,203 @@
 # How to Add Symbols
 
-심볼을 추가할 때 반드시 지켜야 할 규칙들.
+심볼을 추가하거나 기존 심볼을 바꿀 때 확인해야 할 현재 코드 기준 체크리스트입니다.
 
 ---
 
-## 필수 규칙
+## 핵심 원칙
 
-### 1. 스프라이트 파일은 실제 존재 여부를 먼저 확인한다
+### 1. 숫자 ID와 key는 `symbolIdRegistry.ts`가 기준이다
 
-심볼에 `sprite` 필드를 채울 때, **해당 PNG 파일이 `public/assets/symbols/` 폴더에 실존하는지 반드시 확인**해야 한다.
+- 새 정식 심볼은 `humankind-web/src/game/data/symbolIdRegistry.ts`의 `SYMBOL_NUMERIC_ID`에 먼저 key와 숫자 ID를 추가합니다.
+- `symbolDefinitions.ts`에서는 `def('key', ...)` 형태로 정의합니다. 숫자 ID를 직접 중복 작성하지 않습니다.
+- 로직에서는 가능한 경우 `S.some_key` 또는 `definition.key`를 사용하고, 숫자 literal 비교를 새로 늘리지 않습니다.
+- 기존 숫자 ID를 바꾸는 작업은 저장 데이터, 테스트, 스프라이트 파일명, 밸런스 로그에 영향을 줄 수 있으므로 별도 작업으로 취급합니다.
 
-- 파일이 **존재한다면**: `sprite: "0XX.png"` 형태로 정확한 파일명을 채운다.
-- 파일이 **존재하지 않는다면**: `sprite: "-"` 로 채운다.
+현재 대략적인 ID 구간:
 
-> ❌ 잘못된 예: 해당 파일이 실제로 없는데 ID를 따서 `sprite: "024.png"` 라고 임의로 채우는 것
-> ✅ 올바른 예: 파일이 없으면 `sprite: "-"` 로 채우고, 나중에 유저가 스프라이트를 추가하면 그때 수정한다
+| 구간 | 용도 |
+|---|---|
+| 1-8 | 지형 |
+| 9-38 | 자원/사치품/특수 |
+| 39-46, 86-88 | 고대 및 리더 해금 고대 |
+| 47-54 | 중세 |
+| 55-58 | 종교 |
+| 59 | 현대 특수 |
+| 60-62 | 전리품 |
+| 63-68 | 유닛 |
+| 69-74 | 적 |
+| 75-79 | 재해 |
 
-**왜인가**: PixiJS는 존재하지 않는 파일을 로드하려 할 때 `InvalidStateError: The source image could not be decoded` 오류를 내며, 이로 인해 보드 전체가 렌더링되지 않는 심각한 버그가 발생한다.
+### 2. `SymbolDefinition`에 없는 필드는 추가하지 않는다
+
+현재 심볼 정의 타입은 아래 필드만 사용합니다.
+
+```ts
+interface SymbolDefinition {
+  id: number;
+  key: string;
+  name: string;
+  type: SymbolType;
+  description: string;
+  base_attack?: number;
+  base_hp?: number;
+  sprite: string;
+}
+```
+
+- 위 타입에 없는 임의 메타데이터를 심볼 정의에 추가하지 않습니다.
+- 새 메타데이터가 필요하면 타입, 데이터 브라우저 표시, 선택/필터 로직, i18n, 테스트까지 포함한 별도 변경으로 설계합니다.
+
+### 3. 스프라이트 파일은 실제 존재 여부를 확인한다
+
+심볼에 `sprite` 필드를 채울 때, 해당 PNG 파일이 `humankind-web/public/assets/symbols/`에 실존하는지 확인합니다.
+
+- 파일이 있으면 정확한 파일명: `sprite: "088.png"`
+- 파일이 없으면 명시적으로 비움: `sprite: "-"`
+
+잘못된 예:
+
+```ts
+sprite: "089.png" // 실제 파일 없음
+```
+
+올바른 예:
+
+```ts
+sprite: "-"
+```
+
+현재 `AssetLoader`는 일부 에셋 로드 실패를 허용하지만, 없는 경로는 콘솔 경고와 빈 스프라이트/플레이스홀더를 만들고 디버깅 비용을 키웁니다.
+
+### 4. 이름/설명은 i18n을 같이 갱신한다
+
+`symbolDefinitions.ts`의 `name`/`description`은 기본 데이터입니다. 실제 UI와 데이터 브라우저는 i18n 키와 동적 tooltip 함수를 함께 사용합니다.
+
+필수 확인 위치:
+
+- `humankind-web/src/i18n/index.ts`
+  - `symbol.<key>.name`
+  - `symbol.<key>.desc`
+- 업그레이드나 보드 상태에 따라 설명이 달라지는 심볼이면 `getBoardSymbolTooltipDesc(...)`도 확인합니다.
+- 영어와 한국어는 반드시 함께 추가합니다. 중국어/러시아어 파일은 별도 번역 정책에 따라 유지하되, fallback 동작을 깨지 않아야 합니다.
 
 ---
 
-### 1-1. 데이터 브라우저에 노출되는 이름/설명은 한국어/영어를 모두 추가한다
+## 효과 텍스트 규칙
 
-**데이터 브라우저에 표시될 이름과 설명은 반드시 한국어/영어 둘 다 준비**해야 한다.
+### 용어
 
-- `humankind-web/src/i18n/index.ts`의 `symbol.<key>.name`, `symbol.<key>.desc`
+| 개념 | 사용할 용어 | 피할 표현 |
+|---|---|---|
+| 보드를 한 번 돌리는 행위/주기 | 턴 | 스핀 |
+| 심볼이 보드/보유 목록에서 사라짐 | 파괴 | 소멸, 삭제, 제거 |
+| 식량/골드/지식 생산 | `식량 +N`, `골드 +N`, `지식 +N` 또는 생산 | 획득, 올리기, 추가 |
+| 상하좌우+대각선 8방향 이웃 | 인접 | 옆, 주변 |
+| 효과 발생 누적값 | 카운터 | 스택, 횟수 |
+| 현재 활성 보드 모양의 귀퉁이 | 구석 | 모서리, 코너 |
+| 배수 | `x2`, `x3` | 두 배, 2배, ×, * |
 
-> ❌ 잘못된 예: 정의 파일에 한글만 넣고 번역 키를 생략해서 영어 UI에서 fallback 문자열만 보이게 두는 것
-> ✅ 올바른 예: 정의 파일의 기본값과 별개로 `i18n/index.ts`에 한국어/영어 이름·설명을 모두 추가
+### 문장 형식
 
-**왜인가**: 데이터 브라우저와 언어 설정은 번역 키를 기준으로 동작한다. 한쪽 언어만 있으면 표시 품질이 떨어진다.
-
----
-
-### 2. 유저가 요청하지 않은 태그를 임의로 붙이지 않는다
-
-심볼 정의의 `tags` 필드는 **실제로 게임 로직/표시에 사용되는 경우에만** 추가한다. “그럴 듯해서” 붙이는 추측성 태그는 금지한다.
-
-- 태그가 없을 때는 `tags: []`로 비워둔다.
-- 새 태그를 추가해야 한다면, **반드시 번역 키도 함께 추가**해야 한다. (`humankind-web/src/i18n/index.ts`의 `tag.<tagName>` 항목)
-
-> ❌ 잘못된 예: “식량을 생산하니까” 같은 이유로 `tags: ["food"]`를 임의로 추가 (태그가 실제로 쓰이지 않거나 규칙이 불명확)
-> ✅ 올바른 예: UI 표시/필터/조건 체크 등 명확한 사용처가 있을 때만 태그 추가, 아니면 `tags: []`
-
-**왜인가**: 태그는 UI 표기 및(향후) 필터링/조건 체크에 영향을 줄 수 있다. 추측성 태그는 유지보수 비용과 예기치 못한 상호작용을 만든다.
+- 기본 생산량은 바로 씁니다: `식량 +2.`
+- 조건은 앞에 콜론을 둡니다: `초원 인접 시: 식량 +2.`
+- 서로 다른 조건은 세미콜론으로 나눕니다: `식량 +1; 파괴 시: 식량 +10.`
+- 같은 조건의 여러 결과는 쉼표로 묶습니다: `지식 +7, 골드 +7.`
+- 기본 전제가 매 턴 발동이므로 `매 턴:`은 쓰지 않습니다.
+- 업그레이드 가능성은 기본 description에 괄호로 암시하지 않습니다. 업그레이드 적용 후 현재 수치가 달라지는 구조라면 i18n 동적 tooltip에서 처리합니다.
 
 ---
 
-### 3. 효과 텍스트(description) 작성 규칙
+## 선택 풀 기준
 
-#### 3-1. 조건 표시 및 "매 턴:" 생략 원칙
+새 심볼이 정의됐다고 항상 선택지에 등장하는 것은 아닙니다. `selectionLogic.ts`와 `symbolDefinitions.ts`의 풀 규칙을 확인해야 합니다.
 
-조건은 **굵은 갈색 계열(`#8b7355`) 텍스트**처럼 보이도록 콜론(`:`)을 붙여 앞에 작성한다.
-단, 게임의 기본 전제가 '매 턴 발동'이므로 **"매 턴:"은 반드시 생략한다.**
-텍스트의 간결함을 위해 기본 생산량은 조건 선언 없이 바로 적는다.
+기본 흐름:
 
-```
-조건: 효과.
-```
+1. `EXCLUDED_FROM_BASE_POOL`에 없고 기본 타입 조건을 만족하면 기본 풀에 들어갑니다.
+2. 고대 타입은 `Ancient Era` 업그레이드 전에는 제외됩니다.
+3. 봉건제 이후 고대 심볼은 일반 풀에서 빠집니다.
+4. 봉건제 이후 중세 심볼이 열립니다.
+5. 현대 이후 일반 선택 풀에서 지형은 제외됩니다. 단, 지형 전용 선택은 `includeModernTerrain` 경로로 별도 동작할 수 있습니다.
+6. 종교 심볼은 `Theology`로 `religionUnlocked`가 켜져야 등장합니다.
+7. 적 심볼은 일반 선택 풀에서 제외되고, 위협/이벤트/전투 시스템을 통해 등장합니다.
 
-조건 예시:
-- `X턴 후 파괴:` — 카운터가 X에 도달하면
-- `인접 시:` — 특정 심볼에 인접해 있을 때 (단독 일괄 조건)
-- `[심볼명]에 인접 시:` — 특정 심볼 옆에 있을 때
-- `파괴 시:` — 이 심볼이 파괴되는 순간
-- `구석에 배치 시:` — 슬롯 보드의 4개의 구석(슬롯 1, 5, 16, 20)에 위치할 때
+업그레이드로 해금되는 심볼이면 다음도 갱신합니다.
 
-#### 3-2. 여러 효과 구분 — 쉼표(,) vs 세미콜론(;)
-
-**같은 조건**에 속하는 여러 효과는 **쉼표(,)**로 이어 쓴다.
-
-```
-식량 +20, 골드 +10.
-50% 확률로 식량 +40, 50% 확률로 식량 -15.
-```
-
-조건이 **달라지는 경우** (조건 구분선)에는 **세미콜론(;)**으로 분리한다.
-
-```
-식량 +20; 6턴 후 파괴.
-식량 +10; 바다에 인접 시: 식량 +30 추가 생산.
-```
-
-> ❌ 잘못된 예: `"매 턴: 식량 +20; 6턴 후 파괴."` — '매 턴:'이 불필요하게 들어감
-> ❌ 잘못된 예: `"식량 +20. 6턴 후 파괴."` — 점(.)으로 끊으면 6턴 후 파괴가 별개 조건임이 불명확해짐
-> ✅ 올바른 예: `"식량 +20; 6턴 후 파괴."` — 세미콜론으로 조건 경계를 명확히 구분 및 '매 턴:' 생략
-
-#### 3-3. 통일된 Terminology (용어 규칙)
-
-| 개념 | 사용할 용어 | ❌ 사용 금지 |
-|------|------------|------------|
-| 보드를 한 번 돌리는 행위/주기 | **턴** | 스핀 |
-| 심볼이 보드에서 제거됨 | **파괴** | 소멸, 삭제, 제거 |
-| 식량/골드/지식을 얻음 | **+숫자** (간결) 또는 **생산** (서술) | 획득, 올리기, 추가 |
-| 상하좌우+대각선 8방향 이웃 심볼 | **인접** | 옆, 주변 |
-| 배수 표기 | **x** (예: x2, x3) | 두 배, 2배, ×, * |
-| 효과 발생 횟수를 세는 숫자 | **카운터** | 스택, 횟수 |
-| 슬롯 보드 네 귀퉁이 슬롯 (1, 5, 16, 20) | **구석** | 모서리, 코너 |
-
-#### 3-4. 효과 텍스트에 업그레이드 가능성을 암시하지 않는다
-
-심볼의 description은 **현재 상태의 수치만** 표시한다. 업그레이드, 유물, 또는 다른 심볼에 의해 수치가 바뀔 수 있더라도, 그 가능성을 괄호나 부가 설명으로 노출하지 않는다.
-
-> ❌ 잘못된 예: `"식량 +20; 인접한 밀과 쌀 생산량 x2 (관개 업그레이드 시 x3)."`
-> ✅ 올바른 예: `"식량 +20; 인접한 밀과 쌀 생산량 x2."`
-
-**왜인가**: 효과 텍스트는 현재 상태를 전달하는 것이지, 미래 가능성을 안내하는 가이드가 아니다. 업그레이드 적용 후에는 게임이 해당 효과를 반영한 새로운 수치를 실시간으로 표시하면 된다.
+- `humankind-web/src/game/data/knowledgeUpgrades.ts`
+- `humankind-web/src/game/data/knowledgeUpgradeTiers.ts`
+- `humankind-web/src/game/logic/selection/selectionLogic.ts`
+- 관련 테스트: `knowledgeUpgrades.test.ts`, `selectionLogic.test.ts`, 필요 시 `gameCalculations.test.ts`
 
 ---
 
-## 심볼 추가 체크리스트
+## 효과 구현 위치
 
-1. [ ] `humankind-web/src/game/data/symbolDefinitions.ts`와 `symbolIdRegistry.ts`에 ID·키·이름·타입·설명·스프라이트 추가
-2. [ ] `sprite` 필드: `public/assets/symbols/`에서 파일 존재 확인 → 없으면 `"-"`
-3. [ ] `tags` 필드: 실제 사용처가 있을 때만 추가, 없으면 `[]` (새 태그면 `i18n/index.ts`의 `tag.<tag>`도 추가)
-4. [ ] `description` 필드: 위 3항 효과 텍스트 규칙 준수 (용어, 조건 콜론, 세미콜론 구분)
-5. [ ] `humankind-web/src/game/logic/symbolEffects/handlers/`의 적절한 handler 파일에 효과 계산 추가
-6. [ ] `i18n/index.ts`에 한국어/영어 이름 및 설명 번역 추가 (`symbol.<key>.*`; 번역도 동일 용어 규칙 적용)
-7. [ ] `AssetLoader.ts`는 `SYMBOLS`에서 동적으로 읽으므로 별도 수정 불필요
-8. [ ] 효과가 턴 후처리, 전투, 종교/상인 같은 지연 계산과 엮이면 `logic/turn/*`와 관련 테스트도 함께 갱신
-9. [ ] 새 효과가 별도 연출을 필요로 하면 계산 결과를 먼저 확정한 뒤 `components/canvas/renderers/*` 또는 React 오버레이에서 표시만 추가
+효과는 `humankind-web/src/game/logic/symbolEffects.ts`를 엔트리로 하며, 실제 처리는 성격별 handler에 둡니다.
+
+| 심볼 성격 | 우선 확인 파일 |
+|---|---|
+| 지형 | `logic/symbolEffects/handlers/terrainEffects.ts` |
+| 고대 | `logic/symbolEffects/handlers/ancientEffects.ts` |
+| 중세 | `logic/symbolEffects/handlers/medievalEffects.ts` |
+| 종교 | `logic/symbolEffects/handlers/religionEffects.ts` |
+| 적 | `logic/symbolEffects/handlers/enemyEffects.ts` |
+| 재해 | `logic/symbolEffects/handlers/disasterEffects.ts` |
+| 일반/자원/특수 | `logic/symbolEffects/handlers/normalEffects.ts` |
+
+여러 슬롯 결과를 모아서 나중에 처리해야 하는 효과는 handler만으로 끝내지 않습니다.
+
+- 턴 누적/생성/파괴: `logic/turn/turnPipeline.ts`
+- 여러 심볼 생산 결과 참조: `logic/turn/symbolEffectResolution.ts`
+- 턴 전체 후처리, 유물/리더/AGI 등: `logic/turn/postEffectsHooks.ts`
+- 턴 종료 페이즈, 식량 납부, 선택 페이즈: `logic/turn/phaseResolution.ts`, `state/actions/turnFlow.ts`
+
+전투/재해/전리품/이벤트와 연결되면 추가로 확인합니다.
+
+- 유닛/적 전투: `logic/combat/*`, `logic/turn/combatResolution.ts`, `data/unitUpgrades.ts`, `data/enemyPools.ts`
+- 상태/재해 확률: `data/statusDefinitions.ts`, `logic/turn/turnPreparation.ts`
+- 전리품 보상: `data/rewardDefinitions.ts`, `state/actions/boardInteraction.ts`
+- 이벤트 선택지: `data/eventDefinitions.ts`, `state/actions/selectionFlow.ts`
 
 ---
 
-## 현재 효과 처리 구조
+## 연출과 UI
 
-- `humankind-web/src/game/logic/symbolEffects.ts`는 심볼 효과 엔트리입니다.
-- 실제 효과는 `symbolEffects/handlers/` 아래에 성격별로 나뉩니다.
-  - `terrainEffects.ts`
-  - `ancientEffects.ts`
-  - `medievalEffects.ts`
-  - `religionEffects.ts`
-  - `enemyEffects.ts`
-  - `disasterEffects.ts`
-  - `normalEffects.ts`
-- 여러 슬롯의 결과를 모아서 나중에 계산해야 하는 효과는 `logic/turn/turnPipeline.ts`, `symbolEffectResolution.ts`, `postEffectsHooks.ts` 쪽을 확인합니다.
-- 연출 타이밍은 `state/actions/turnPresentationTimeline.ts`, run 취소는 `state/actions/turnRunScheduler.ts`가 담당합니다. 심볼 효과 handler에서 직접 타이머를 만들지 않습니다.
+- 심볼 효과 handler에서 `setTimeout`이나 Pixi 객체를 직접 다루지 않습니다.
+- 계산 결과를 먼저 확정하고, 연출은 `state/actions/turnPresentationTimeline.ts`, `turnRunScheduler.ts`, `components/canvas/renderers/*`, React 오버레이에서 표시합니다.
+- 새 hover/hit area나 보드 위 상호작용이 필요하면 `components/canvas/PixiGameApp.ts`와 `components/canvas/renderers/rendererShared.ts`의 판정 헬퍼를 확인합니다.
+- 새 보드 대상 선택 UI가 필요하면 기존 `OblivionFurnaceBoardOverlay.tsx`, `SymbolCellBoardOverlays.tsx`, `boardInteraction.ts` 패턴을 먼저 따릅니다.
+
+---
+
+## 테스트 기준
+
+변경 범위에 따라 최소한 아래 테스트 중 관련된 것을 추가/갱신합니다.
+
+| 변경 종류 | 우선 테스트 |
+|---|---|
+| 심볼 ID/정의/스프라이트 | `data/symbolDefinitions.test.ts` |
+| 선택 풀/해금/제외 | `logic/selection/selectionLogic.test.ts`, `data/knowledgeUpgrades.test.ts` |
+| 효과 계산 | `logic/turn/symbolEffectResolution.test.ts`, handler 관련 테스트 |
+| 턴 흐름/식량 납부/페이즈 | `state/actions/turnFlow.test.ts`, `logic/turn/phaseResolution.test.ts` |
+| 전투/유닛/적 | `logic/turn/combatResolution.test.ts`, `data/unitUpgrades.test.ts`, `data/enemyPools.test.ts` |
+| 재해 | `state/actions/disasterPlague.test.ts`, `logic/turn/turnPreparation.test.ts` |
+| 저장/복원 영향 | `state/saveGame.test.ts` |
+| 시뮬레이션 영향 | `simulation/balanceSimulator.test.ts` |
+
+---
+
+## 추가 체크리스트
+
+1. [ ] `symbolIdRegistry.ts`에 key/ID 추가
+2. [ ] `symbolDefinitions.ts`에 `def('key', ...)` 추가
+3. [ ] `SymbolType`이 현재 분류와 맞는지 확인
+4. [ ] 스프라이트 파일 존재 확인, 없으면 `sprite: "-"`
+5. [ ] `i18n/index.ts`에 영어/한국어 `symbol.<key>.name`, `symbol.<key>.desc` 추가
+6. [ ] 보드 상태/업그레이드에 따라 설명이 변하면 `getBoardSymbolTooltipDesc(...)` 갱신
+7. [ ] 효과 handler 또는 `logic/turn/*`에 실제 계산 추가
+8. [ ] 선택 풀 등장 조건이 필요하면 `EXCLUDED_FROM_BASE_POOL`, `selectionLogic.ts`, 업그레이드 데이터를 갱신
+9. [ ] 전투/재해/전리품/이벤트/리더와 엮이면 관련 데이터와 액션 파일을 같이 갱신
+10. [ ] 필요한 React/Pixi 표시, hover, 보드 상호작용을 추가
+11. [ ] 관련 테스트 추가/갱신
+12. [ ] `npm run test` 또는 범위 테스트로 검증
