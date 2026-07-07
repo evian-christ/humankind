@@ -1,5 +1,5 @@
 import type { PlayerSymbolInstance } from '../../types';
-import { S, SYMBOLS, EXCLUDED_FROM_BASE_POOL, SymbolType } from '../../data/symbolDefinitions';
+import { S, SYMBOLS, EXCLUDED_FROM_BASE_POOL, SymbolType, isBasicSymbolType } from '../../data/symbolDefinitions';
 import type {
     ActiveRelicEffects,
     BoardGrid,
@@ -178,13 +178,14 @@ export const isCorner = (x: number, y: number, width = 5, height = 4): boolean =
     (x === width - 1 && y === height - 1);
 
 export const randomBaseNormalSymbolId = (): number => {
-    const pool = Object.values(SYMBOLS).filter((s) => s.type === SymbolType.NORMAL && !EXCLUDED_FROM_BASE_POOL.has(s.id));
+    const pool = Object.values(SYMBOLS).filter((s) => isBasicSymbolType(s.type) && !EXCLUDED_FROM_BASE_POOL.has(s.id));
     const pick = pool.length > 0 ? pool : [SYMBOLS[S.wheat]!];
     return pick[Math.floor(Math.random() * pick.length)]!.id;
 };
 
 export const DESERT_DESTRUCTIBLE_TYPES = new Set<SymbolType>([
-    SymbolType.NORMAL,
+    SymbolType.RESOURCE,
+    SymbolType.LUXURY,
     SymbolType.ANCIENT,
     SymbolType.MEDIEVAL,
     SymbolType.MODERN,

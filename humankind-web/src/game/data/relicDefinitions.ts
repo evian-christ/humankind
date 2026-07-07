@@ -44,7 +44,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 무작위 적 유닛의 체력을 1 깎습니다.",
         cost: 18,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "001.png",
     },
     2: {
@@ -53,7 +53,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "리롤 비용이 50% 할인됩니다. 턴당 리롤은 최대 3회로 제한됩니다.",
         cost: 32,
         rarity: "rare",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "002.png",
     },
     3: {
@@ -62,7 +62,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "3턴 동안 매 턴 식량 생산량이 가장 낮은 심볼을 파괴하고, 파괴한 심볼 하나당 골드 10을 생산합니다.",
         cost: 22,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "003.png",
     },
     4: {
@@ -71,7 +71,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 식량 1을 저장합니다. 발동 시 저장된 식량의 2배만큼 식량을 생산한 뒤 파괴됩니다.",
         cost: 14,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "004.png",
     },
     5: {
@@ -80,7 +80,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "채석장이 인접한 빈 슬롯마다 골드 +1",
         cost: 22,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "005.png",
     },
     6: {
@@ -89,7 +89,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 식량 +1 생산. 보드 마지막 (6) 자리에 배치된 심볼의 생산량이 0 이하일 경우, 이 유물의 식량 생산량이 영구적으로 1 증가.",
         cost: 28,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "006.png",
     },
     7: {
@@ -98,7 +98,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "열대 과수원이 매 턴 인접한 바나나 당 식량 +2 생산.",
         cost: 12,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "007.png",
     },
     8: {
@@ -107,7 +107,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "'석판' 심볼을 심볼 풀에 추가합니다.",
         cost: 30,
         rarity: "rare",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "008.png",
     },
     9: {
@@ -116,7 +116,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "획득 후 3턴 동안 이번 턴 보드에서 생산된 식량만큼 식량을 추가로 생산한 뒤 파괴됩니다.",
         cost: 40,
         rarity: "epic",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "009.png",
     },
     10: {
@@ -125,7 +125,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "빈 슬롯 하나당 매 턴 식량 1을 생산합니다.",
         cost: 28,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "010.png",
     },
     11: {
@@ -134,7 +134,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드에 심볼이 15개 이상이면 매 턴 식량 5를 생산합니다.",
         cost: 30,
         rarity: "rare",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "011.png",
     },
     12: {
@@ -143,7 +143,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "이번 턴에 파괴된 심볼 하나당, 턴 종료 시 골드 3을 생산합니다.",
         cost: 22,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "012.png",
     },
     13: {
@@ -152,7 +152,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "심볼 선택을 1회 할 수 있습니다. 클릭하여 발동합니다.",
         cost: 10,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "013.png",
     },
     14: {
@@ -161,7 +161,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드에 종교 심볼이 없으면 매 턴 지식 +3.",
         cost: 28,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "014.png",
     },
     15: {
@@ -170,7 +170,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "소모하여 보드 위에 있는 심볼 1개 파괴.",
         cost: 12,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "015.png",
     },
     16: {
@@ -179,7 +179,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "자연재해 심볼이 식량 +2를 추가로 생산합니다.",
         cost: 10,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "016.png",
     },
     17: {
@@ -188,7 +188,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "심볼 선택을 건너뛰면 골드 +2.",
         cost: 15,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "017.png",
     },
     18: {
@@ -197,7 +197,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 식량 +2.",
         cost: 15,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "018.png",
     },
     19: {
@@ -206,7 +206,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "지형 선택을 1회 합니다. 클릭하여 사용.",
         cost: 15,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "019.png",
     },
     20: {
@@ -215,7 +215,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 5턴마다 식량/골드/지식 중 무작위 1종 +5.",
         cost: 12,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "020.png",
     },
     21: {
@@ -224,7 +224,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 10턴 식량 납부 직후 다음 턴 식량 +10.",
         cost: 14,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "021.png",
     },
     22: {
@@ -233,7 +233,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드에 숲이 있을 때 매 턴 골드 +1.",
         cost: 16,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "022.png",
     },
     23: {
@@ -242,7 +242,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "골드 50 이상일 때 매 턴 지식 +1.",
         cost: 16,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "023.png",
     },
     24: {
@@ -251,7 +251,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "1회용: 즉시 골드 +25.",
         cost: 16,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "024.png",
     },
     25: {
@@ -260,7 +260,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "적 처치 시 골드 +3.",
         cost: 18,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "025.png",
     },
     26: {
@@ -269,7 +269,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 소/양/말 하나당 골드 +1.",
         cost: 20,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "026.png",
     },
     27: {
@@ -278,7 +278,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드에 종교 심볼이 있을 때 매 턴 지식 +2.",
         cost: 22,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "027.png",
     },
     28: {
@@ -287,7 +287,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 보유 전투 심볼 수당 골드 +2.",
         cost: 24,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "028.png",
     },
     29: {
@@ -296,7 +296,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "구석 4칸 모두에 심볼 배치 시, 식량, 골드 및 지식 +1.",
         cost: 24,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "029.png",
     },
     30: {
@@ -305,7 +305,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "매 턴 빈 슬롯 3개당 골드 +1.",
         cost: 26,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "030.png",
     },
     31: {
@@ -314,7 +314,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "적 처치 시 골드 +8, 적이 보드에 있을 때 매 턴 지식 +2.",
         cost: 35,
         rarity: "rare",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "031.png",
     },
     32: {
@@ -323,7 +323,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "1번 슬롯에 배치된 심볼의 효과 두 번 발동.",
         cost: 60,
         rarity: "legendary",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "032.png",
     },
     33: {
@@ -332,7 +332,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "모든 심볼을 구석에 있는 것으로 취급합니다.",
         cost: 24,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "033.png",
     },
     34: {
@@ -341,7 +341,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드 위에 모든 유형의 지형을 보유 시 매 턴 식량 +10, 골드 +10, 지식 +10.",
         cost: 55,
         rarity: "legendary",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "034.png",
     },
     35: {
@@ -350,7 +350,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드에 배치된 시대 심볼 1개당 매 턴 식량 +1.",
         cost: 24,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "035.png",
     },
     36: {
@@ -359,7 +359,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "지식 업그레이드를 연구할 때마다 골드 +3.",
         cost: 16,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "036.png",
     },
     37: {
@@ -368,7 +368,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "1회용: 즉시 식량 +30.",
         cost: 14,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "037.png",
     },
     38: {
@@ -377,7 +377,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "보드 위에 같은 심볼이 하나도 없을 때 매 턴 식량 +5, 골드 +5.",
         cost: 26,
         rarity: "uncommon",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "038.png",
     },
     39: {
@@ -386,7 +386,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "소모하여 유닛 심볼 획득. 클릭하여 사용.",
         cost: 14,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "039.png",
     },
     40: {
@@ -395,7 +395,7 @@ export const RELICS: Record<number, RelicDefinition> = {
         description: "소모하여 이벤트 선택을 발동합니다.",
         cost: 14,
         rarity: "common",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         sprite: "040.png",
     },
 };

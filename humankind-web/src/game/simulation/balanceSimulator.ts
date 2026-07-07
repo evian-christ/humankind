@@ -4,14 +4,11 @@ import {
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     AGRICULTURE_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    ARCHITECTURE_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
-    CHIEFDOM_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     DRY_STORAGE_UPGRADE_ID,
-    FEUDAL_CORN_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
@@ -24,7 +21,6 @@ import {
     KNOWLEDGE_UPGRADES,
     LAW_CODE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
-    MINING_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     NOMADIC_TRADITION_UPGRADE_ID,
@@ -179,22 +175,19 @@ const COMMON_PROGRESS_UPGRADE_IDS: number[] = [
     FEUDALISM_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     LAW_CODE_UPGRADE_ID,
-    CHIEFDOM_UPGRADE_ID,
-    ARCHITECTURE_UPGRADE_ID,
 ];
 
 const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     grassland_axis: {
         primaryTerrainIds: [S.grassland],
-        coreSymbolIds: [S.wheat, S.rice, S.corn],
-        bridgeSymbolIds: [S.honey, S.spices, S.salt, S.wild_berries],
+        coreSymbolIds: [S.wheat, S.rice],
+        bridgeSymbolIds: [S.honey, S.spices, S.salt],
         upgradeIds: [
             AGRICULTURE_UPGRADE_ID,
             IRRIGATION_UPGRADE_ID,
             THREE_FIELD_SYSTEM_UPGRADE_ID,
             AGRICULTURAL_SURPLUS_UPGRADE_ID,
             MODERN_AGRICULTURE_UPGRADE_ID,
-            FEUDAL_CORN_UPGRADE_ID,
         ],
     },
     plains_axis: {
@@ -226,7 +219,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     forest_axis: {
         primaryTerrainIds: [S.forest],
         coreSymbolIds: [S.deer, S.fur],
-        bridgeSymbolIds: [S.wild_berries, S.honey, S.salt, S.spices],
+        bridgeSymbolIds: [S.honey, S.salt, S.spices],
         upgradeIds: [
             HUNTING_UPGRADE_ID,
             TRACKING_UPGRADE_ID,
@@ -238,7 +231,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     rainforest_axis: {
         primaryTerrainIds: [S.rainforest],
         coreSymbolIds: [S.banana, S.expedition],
-        bridgeSymbolIds: [S.wild_berries, S.spices, S.salt, S.stone],
+        bridgeSymbolIds: [S.spices, S.salt, S.honey],
         upgradeIds: [
             TROPICAL_AGRICULTURE_UPGRADE_ID,
             PLANTATION_UPGRADE_ID,
@@ -260,9 +253,9 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     },
     mountain_axis: {
         primaryTerrainIds: [S.mountain],
-        coreSymbolIds: [S.stone],
-        bridgeSymbolIds: [S.wild_berries, S.salt, S.spices, S.monument],
-        upgradeIds: [MINING_UPGRADE_ID, CHIEFDOM_UPGRADE_ID, ARCHITECTURE_UPGRADE_ID],
+        coreSymbolIds: [S.monument],
+        bridgeSymbolIds: [S.salt, S.spices, S.honey],
+        upgradeIds: [],
     },
 };
 

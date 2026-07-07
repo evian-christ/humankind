@@ -50,87 +50,82 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "+1 Gold per 4 adjacent symbols.", sprite: "003.png" }),
     def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +1 Gold; if Forest is the only terrain on the board: +1 Food.", sprite: "004.png" }),
     def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "005.png" }),
-    def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Normal or era symbol. When Desert destroys a symbol: +5 Food.", sprite: "006.png" }),
+    def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Resource, Luxury, or era symbol. When Desert destroys a symbol: +5 Food.", sprite: "006.png" }),
     def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+2 Food per 2 adjacent empty slots. (Post-Arid Preservation: +4, Post-Oasis Reclamation: +6)", sprite: "007.png" }),
     def('mountain', { name: "Mountain", type: SymbolType.TERRAIN, description: "+2 Food, +2 Knowledge.", sprite: "008.png" }),
 
-    // Normal: grassland deck
-    def('wheat', { name: "Wheat", type: SymbolType.NORMAL, description: "Wheat: every 10 turns: 10 Food. Adjacent to Grassland: +1/turn.", sprite: "009.png" }),
-    def('rice', { name: "Rice", type: SymbolType.NORMAL, description: "Rice: every 20 turns: 25 Food. Adjacent to Grassland: +1/turn.", sprite: "010.png" }),
-    def('corn', { name: "Corn", type: SymbolType.NORMAL, description: "+2 Food.", sprite: "011.png" }),
+    // Resource: grassland deck
+    def('wheat', { name: "Wheat", type: SymbolType.RESOURCE, description: "Wheat: every 10 turns: 10 Food. Adjacent to Grassland: +1/turn.", sprite: "009.png" }),
+    def('rice', { name: "Rice", type: SymbolType.RESOURCE, description: "Rice: every 20 turns: 25 Food. Adjacent to Grassland: +1/turn.", sprite: "010.png" }),
 
-    // Normal: plains deck
+    // Resource: plains deck
     def('cattle', {
         name: "Cattle",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         description:
             "+1 Food; when adjacent to Plains, can butcher; on butcher: +10 Food. With Pastoralism: 10% chance per turn to produce Cattle.",
         sprite: "012.png",
     }),
     def('sheep', {
         name: "Sheep",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         description:
             "+1 Food; when adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold. With Pastoralism: 10% chance per turn to produce Sheep.",
         sprite: "013.png",
     }),
-    def('horse', { name: "Horse", type: SymbolType.NORMAL, description: "+2 Food, +2 Gold. Triggers even when not placed on the board.", sprite: "015.png" }),
+    def('horse', { name: "Horse", type: SymbolType.RESOURCE, description: "+2 Food, +2 Gold. Triggers even when not placed on the board.", sprite: "015.png" }),
 
-    // Normal: sea deck
-    def('fish', { name: "Fish", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +1 Food; 2+ Seas: +1 Food; 3+ Seas: +2 Food.", sprite: "016.png" }),
-    def('crab', { name: "Crab", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +1 Food, +1 Gold; 2+ Seas: +1 Food, +1 Gold.", sprite: "017.png" }),
-    def('pearl', { name: "Pearl", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +1 Gold; 2+ Seas: +1 Gold; 3+ Seas: +1 Gold.", sprite: "018.png" }),
-    def('compass', { name: "Compass", type: SymbolType.NORMAL, description: "With 1+ Sea on the board: +5 Knowledge; 2+ Seas: +5 Knowledge; 3+ Seas: +5 Knowledge.", sprite: "019.png" }),
+    // Resource: sea deck
+    def('fish', { name: "Fish", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +1 Food; 2+ Seas: +1 Food; 3+ Seas: +2 Food.", sprite: "016.png" }),
+    def('crab', { name: "Crab", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +1 Food, +1 Gold; 2+ Seas: +1 Food, +1 Gold.", sprite: "017.png" }),
+    def('pearl', { name: "Pearl", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +1 Gold; 2+ Seas: +1 Gold; 3+ Seas: +1 Gold.", sprite: "018.png" }),
+    def('compass', { name: "Compass", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +5 Knowledge; 2+ Seas: +5 Knowledge; 3+ Seas: +5 Knowledge.", sprite: "019.png" }),
 
-    // Normal: forest deck
-    def('deer', { name: "Deer", type: SymbolType.NORMAL, description: "+1 Food per adjacent Forest.", sprite: "020.png" }),
-    def('fur', { name: "Fur", type: SymbolType.NORMAL, description: "+2 Gold per 2 Forests placed on the board.", sprite: "022.png" }),
+    // Resource: forest deck
+    def('deer', { name: "Deer", type: SymbolType.RESOURCE, description: "+1 Food per adjacent Forest.", sprite: "020.png" }),
+    def('fur', { name: "Fur", type: SymbolType.RESOURCE, description: "+2 Gold per 2 Forests placed on the board.", sprite: "022.png" }),
 
-    // Normal: rainforest deck
-    def('banana', { name: "Banana", type: SymbolType.NORMAL, description: "+1 Food; every 10 turns adjacent to Rainforest: +1 Food production.", sprite: "023.png" }),
+    // Resource: rainforest deck
+    def('banana', { name: "Banana", type: SymbolType.RESOURCE, description: "+1 Food; every 10 turns adjacent to Rainforest: +1 Food production.", sprite: "023.png" }),
     def('expedition', {
         name: "Expedition",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         description: "When adjacent to Rainforest: produces 10 Gold or Knowledge.",
         sprite: "024.png",
     }),
 
-    // Normal: desert deck
-    def('date', { name: "Date", type: SymbolType.NORMAL, description: "+1 Food; on destroy: +10 Food.", sprite: "025.png" }),
+    // Resource: desert deck
+    def('date', { name: "Date", type: SymbolType.RESOURCE, description: "+1 Food; on destroy: +10 Food.", sprite: "025.png" }),
     def('dye', {
         name: "Dye",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         description: "+1 Gold; on destroy: +10 Gold.",
         sprite: "026.png",
     }),
     def('papyrus', {
         name: "Papyrus",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         description: "+1 Knowledge; on destroy: +10 Knowledge.",
         sprite: "027.png",
     }),
     def('caravanserai', {
         name: "Caravanserai",
-        type: SymbolType.NORMAL,
+        type: SymbolType.RESOURCE,
         description: "+10 per symbol destroyed this turn; matches the destroyed symbol's production type. Not destroyed by Desert.",
         sprite: "028.png",
     }),
 
-    // Normal: mountain / special position
-    def('stone', { name: "Stone", type: SymbolType.NORMAL, description: "+1 Gold.", sprite: "029.png" }),
+    // Luxury: bridge and hybrid
+    def('honey', { name: "Honey", type: SymbolType.LUXURY, description: "If 5 or more of the same terrain are placed on the board: +5 Food.", sprite: "031.png" }),
+    def('spices', { name: "Spices", type: SymbolType.LUXURY, description: "+1 Food per different terrain type placed.", sprite: "032.png" }),
+    def('salt', { name: "Salt", type: SymbolType.LUXURY, description: "+1 Food per adjacent terrain symbol.", sprite: "033.png" }),
 
-    // Normal: bridge / hybrid
-    def('wild_berries', { name: "Wild Berries", type: SymbolType.NORMAL, description: "+1 Food; when adjacent to Forest or Rainforest: +2 Food; when adjacent to Mountain: +2 Knowledge.", sprite: "030.png" }),
-    def('honey', { name: "Honey", type: SymbolType.NORMAL, description: "If 5 or more of the same terrain are placed on the board: +5 Food.", sprite: "031.png" }),
-    def('spices', { name: "Spices", type: SymbolType.NORMAL, description: "+1 Food per different terrain type placed.", sprite: "032.png" }),
-    def('salt', { name: "Salt", type: SymbolType.NORMAL, description: "+1 Food per adjacent terrain symbol.", sprite: "033.png" }),
-
-    // Normal: common operations
-    def('merchant', { name: "Merchant", type: SymbolType.NORMAL, description: "Produces Gold equal to the highest Food produced by an adjacent symbol.", sprite: "034.png" }),
-    def('monument', { name: "Monument", type: SymbolType.NORMAL, description: "+5 Knowledge.", sprite: "035.png" }),
-    def('library', { name: "Library", type: SymbolType.NORMAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
-    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.NORMAL, description: "+2 Knowledge per non-consumable relic owned.", sprite: "037.png" }),
-    def('relic_caravan', { name: "Relic Caravan", type: SymbolType.NORMAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
+    // Special: common operations
+    def('merchant', { name: "Merchant", type: SymbolType.SPECIAL, description: "Produces Gold equal to the highest Food produced by an adjacent symbol.", sprite: "034.png" }),
+    def('monument', { name: "Monument", type: SymbolType.SPECIAL, description: "+5 Knowledge.", sprite: "035.png" }),
+    def('library', { name: "Library", type: SymbolType.SPECIAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
+    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.SPECIAL, description: "+2 Knowledge per non-consumable relic owned.", sprite: "037.png" }),
+    def('relic_caravan', { name: "Relic Caravan", type: SymbolType.SPECIAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
 
     // Ancient
     def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.", sprite: "039.png" }),
@@ -291,16 +286,19 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
 export const EXCLUDED_FROM_BASE_POOL = new Set<number>(EXCLUDED_POOL_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
+export const isBasicSymbolType = (type: SymbolType): boolean =>
+    type === SymbolType.RESOURCE || type === SymbolType.LUXURY;
+
 /** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */
 export const isBasePool = (s: SymbolDefinition) => {
-    return (s.type === SymbolType.NORMAL || s.type === SymbolType.TERRAIN || s.type === SymbolType.UNIT) &&
+    return (isBasicSymbolType(s.type) || s.type === SymbolType.TERRAIN || s.type === SymbolType.UNIT) &&
         !EXCLUDED_FROM_BASE_POOL.has(s.id) &&
         !RELIGION_DOCTRINE_IDS.has(s.id);
 };
 
 const FOOD_PRODUCING_KEYS: SymbolKey[] = [
     'wheat', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
-    'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey', 'corn', 'wild_berries',
+    'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey',
     'sheep', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition', 'heqet', 'foxtail_millet',
 ];
 
@@ -316,7 +314,7 @@ const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
 export const KNOWLEDGE_PRODUCING_IDS = new Set<number>(KNOWLEDGE_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
 const GOLD_PRODUCING_KEYS: SymbolKey[] = [
-    'sea', 'stone', 'mountain', 'merchant', 'fur', 'dye', 'bronze_tribute_chest',
+    'sea', 'mountain', 'merchant', 'fur', 'dye', 'bronze_tribute_chest',
 ];
 
 /** Gold를 생산하는 심볼 ID 목록 */
@@ -327,7 +325,8 @@ export { SYMBOL_NUMERIC_ID, type SymbolKey, S } from './symbolIdRegistry';
 export const getSymbolColor = (type: SymbolType): number => {
     switch (type) {
         case SymbolType.RELIGION: return 16777215; // 백색
-        case SymbolType.NORMAL: return 0xffffff; // 일반 흰색
+        case SymbolType.RESOURCE: return 0xfacc15; // 자원
+        case SymbolType.LUXURY: return 0xec4899; // 사치품
         case SymbolType.ANCIENT: return 0x8b4513; // 고대 갈색 (9127187)
         case SymbolType.MEDIEVAL: return 16347926; // 오렌지/중세
         case SymbolType.MODERN: return 3900150; // 파랑/현대
@@ -342,7 +341,8 @@ export const getSymbolColor = (type: SymbolType): number => {
 export const getSymbolColorHex = (type: SymbolType): string => {
     switch (type) {
         case SymbolType.RELIGION: return '#ffffff';
-        case SymbolType.NORMAL: return '#ffffff';
+        case SymbolType.RESOURCE: return '#facc15';
+        case SymbolType.LUXURY: return '#ec4899';
         case SymbolType.ANCIENT: return '#8b4513';
         case SymbolType.MEDIEVAL: return '#f97316';
         case SymbolType.MODERN: return '#3b82f6';

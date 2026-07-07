@@ -23,13 +23,14 @@ const RELATION_BADGE: Record<KnowledgeUpgradeSymbolRelation, string> = {
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
-    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.RESOURCE]: 'era.resource',
+    [SymbolType.LUXURY]: 'era.luxury',
     [SymbolType.MEDIEVAL]: 'era.medieval',
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.ANCIENT]: 'era.ancient',
-    [SymbolType.UNIT]: 'era.normal',
-    [SymbolType.ENEMY]: 'era.normal',
+    [SymbolType.UNIT]: 'era.unit',
+    [SymbolType.ENEMY]: 'era.enemy',
     [SymbolType.DISASTER]: 'era.disaster',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
@@ -63,9 +64,9 @@ function upgradeCompareUnlocks(upgradeId: number, includeUpgrade: boolean): numb
 const DESC_ONLY_SYMBOL_VISUAL: Partial<
     Record<KnowledgeUpgradeDescSymbolKey, Pick<SymbolDefinition, 'key' | 'sprite' | 'type'> & { spriteUrl?: string }>
 > = {
-    aqueduct: { key: 'aqueduct', sprite: '-', type: SymbolType.NORMAL },
-    rye: { key: 'rye', sprite: '-', type: SymbolType.NORMAL },
-    hay: { key: 'hay', sprite: '-', type: SymbolType.NORMAL },
+    aqueduct: { key: 'aqueduct', sprite: '-', type: SymbolType.LUXURY },
+    rye: { key: 'rye', sprite: '-', type: SymbolType.RESOURCE },
+    hay: { key: 'hay', sprite: '-', type: SymbolType.RESOURCE },
 };
 
 function resolveUpgradeDescSymbolVisual(

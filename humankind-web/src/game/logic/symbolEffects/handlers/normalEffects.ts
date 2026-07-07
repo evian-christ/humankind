@@ -2,23 +2,13 @@ import { S, SymbolType } from '../../../data/symbolDefinitions';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
-    ARCHITECTURE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
-    CHIEFDOM_UPGRADE_ID,
-    MERCANTILISM_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
-    EXPLORATION_UPGRADE_ID,
-    FEUDAL_CORN_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
-    MINING_UPGRADE_ID,
-    MASON_GUILD_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
-    MATERIALS_ENGINEERING_UPGRADE_ID,
-    MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
-    NATIONALISM_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     PLANTATION_UPGRADE_ID,
@@ -27,7 +17,6 @@ import {
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
-    TERRACE_ENGINEERING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
@@ -155,18 +144,8 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
         }
 
-        case S.stone:
-            state.gold += 1;
-            if (upgrades.includes(MINING_UPGRADE_ID)) state.gold += 1;
-            if (upgrades.includes(MASON_GUILD_UPGRADE_ID)) state.gold += 2;
-            if (upgrades.includes(MATERIALS_ENGINEERING_UPGRADE_ID)) state.gold += 4;
-            if (upgrades.includes(MEGALITHIC_SETTLEMENTS_UPGRADE_ID)) state.knowledge += 2;
-            if (upgrades.includes(TERRACE_ENGINEERING_UPGRADE_ID)) state.knowledge += 3;
-            if (upgrades.includes(MATERIALS_ENGINEERING_UPGRADE_ID)) state.knowledge += 4;
-            return true;
-
         case S.monument:
-            state.knowledge += upgrades.includes(NATIONALISM_UPGRADE_ID) ? 10 : 5;
+            state.knowledge += 5;
             return true;
 
         case S.stone_tablet:
@@ -357,7 +336,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                     state.contributors.push(pos);
                 }
             });
-            state.food += adjacentTerrain * (upgrades.includes(ARCHITECTURE_UPGRADE_ID) ? 2 : 1);
+            state.food += adjacentTerrain;
             return true;
         }
 
@@ -371,28 +350,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                 }
             }
             if ([...terrainCounts.values()].some((count) => count >= 5)) {
-                state.food += upgrades.includes(EXPLORATION_UPGRADE_ID) ? 10 : 5;
-            }
-            return true;
-        }
-
-        case S.corn:
-            state.food += upgrades.includes(FEUDAL_CORN_UPGRADE_ID) ? 4 : 2;
-            return true;
-
-        case S.wild_berries: {
-            const hasForestOrRain = adj.some((pos) => {
-                const id = boardGrid[pos.x][pos.y]?.definition.id;
-                return id === S.forest || id === S.rainforest;
-            });
-            state.food += 1;
-            if (hasForestOrRain) {
-                state.food += upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 4 : 2;
-            }
-            const mountainAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.mountain);
-            if (mountainAdj.length > 0) {
-                state.knowledge += upgrades.includes(CHIEFDOM_UPGRADE_ID) ? 5 : 2;
-                mountainAdj.forEach((p) => state.contributors.push(p));
+                state.food += 5;
             }
             return true;
         }
@@ -405,7 +363,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
                     if (s?.definition.type === SymbolType.TERRAIN) terrainTypes.add(s.definition.id);
                 }
             }
-            state.food += terrainTypes.size * (upgrades.includes(MERCANTILISM_UPGRADE_ID) ? 3 : 1);
+            state.food += terrainTypes.size;
             return true;
         }
 

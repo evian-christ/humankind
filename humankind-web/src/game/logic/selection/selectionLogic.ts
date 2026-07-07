@@ -203,9 +203,9 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (finalSym.type === SymbolType.ENEMY) continue;
         let e = finalSym.type as number;
 
-        // ANCIENT, UNIT 은 확률 테이블 상 NORMAL로 편입
+        // ANCIENT, UNIT 은 확률 테이블 상 기본 자원 묶음으로 편입
         if (e === SymbolType.ANCIENT || e === SymbolType.UNIT) {
-            e = SymbolType.NORMAL;
+            e = SymbolType.RESOURCE;
         }
 
         // 종교 심볼은 해금되었을 때만 결과 풀에 넣음

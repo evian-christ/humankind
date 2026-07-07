@@ -15,7 +15,8 @@ import { getActionForKeyCode } from '../game/input/keyBindings';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
-    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.RESOURCE]: 'era.resource',
+    [SymbolType.LUXURY]: 'era.luxury',
     [SymbolType.ANCIENT]: 'era.ancient',
     [SymbolType.MEDIEVAL]: 'era.medieval',
     [SymbolType.MODERN]: 'era.modern',

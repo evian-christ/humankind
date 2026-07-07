@@ -23,7 +23,8 @@ const TOOLTIP_MARGIN = 12;
 
 const SYMBOL_TYPE_ORDER = [
     SymbolType.TERRAIN,
-    SymbolType.NORMAL,
+    SymbolType.RESOURCE,
+    SymbolType.LUXURY,
     SymbolType.ANCIENT,
     SymbolType.UNIT,
     SymbolType.MEDIEVAL,
@@ -36,7 +37,8 @@ const SYMBOL_TYPE_ORDER = [
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
-    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.RESOURCE]: 'era.resource',
+    [SymbolType.LUXURY]: 'era.luxury',
     [SymbolType.ANCIENT]: 'era.ancient',
     [SymbolType.MEDIEVAL]: 'era.medieval',
     [SymbolType.MODERN]: 'era.modern',

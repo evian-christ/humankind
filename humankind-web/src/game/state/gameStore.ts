@@ -227,7 +227,7 @@ export interface GameState {
     bonusSelectionQueue: Array<'terrain' | 'any'>;
     /** 개척자(68): 다음 generateChoices에서 지형 1칸 이상 강제 */
     forceTerrainInNextSymbolChoices: boolean;
-    /** 왕도 개척(54): 다음 일반 심볼 선택은 이벤트만 표시 */
+    /** 왕도 개척(54): 다음 일반 선택은 이벤트만 표시 */
     forceEventsInNextSymbolChoices: boolean;
     /** 사절단(70): 심볼 선택 단계 첫 리롤(들) 무료 */
     freeSelectionRerolls: number;

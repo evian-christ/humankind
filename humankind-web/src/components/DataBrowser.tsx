@@ -30,7 +30,8 @@ interface SortState { column: string; dir: SortDir; }
 
 const ERA_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'special',
-    [SymbolType.NORMAL]: 'normal',
+    [SymbolType.RESOURCE]: 'resource',
+    [SymbolType.LUXURY]: 'luxury',
     [SymbolType.ANCIENT]: 'ancient',
     [SymbolType.MEDIEVAL]: 'medieval',
     [SymbolType.MODERN]: 'modern',
@@ -53,7 +54,7 @@ const RELIC_RARITY_ORDER: RelicRarity[] = ['common', 'uncommon', 'rare', 'epic',
 
 
 
-const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.NORMAL, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION, SymbolType.SPECIAL];
+const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.RESOURCE, SymbolType.LUXURY, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION, SymbolType.SPECIAL];
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 

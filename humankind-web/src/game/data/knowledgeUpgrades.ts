@@ -74,9 +74,7 @@ export const HUNTING_UPGRADE_ID = 2;
 export const PASTORALISM_UPGRADE_ID = 3;
 export const FISHERIES_UPGRADE_ID = 4;
 export const AGRICULTURE_UPGRADE_ID = 5;
-export const MINING_UPGRADE_ID = 6;
 export const FOREIGN_TRADE_UPGRADE_ID = 7;
-export const CHIEFDOM_UPGRADE_ID = 8;
 export const ARCHERY_UPGRADE_ID = 9;
 export const LAW_CODE_UPGRADE_ID = 10;
 export const CURRENCY_UPGRADE_ID = 11;
@@ -88,7 +86,6 @@ export const SEAFARING_UPGRADE_ID = 14;
 export const CELESTIAL_NAVIGATION_UPGRADE_ID = 15;
 export const IRRIGATION_UPGRADE_ID = 16;
 export const WRITING_SYSTEM_UPGRADE_ID = 17;
-export const ARCHITECTURE_UPGRADE_ID = 18;
 export const DRY_STORAGE_UPGRADE_ID = 19;
 export const TRACKING_UPGRADE_ID = 20;
 export const THEOLOGY_UPGRADE_ID = 21;
@@ -106,9 +103,7 @@ export const DESERT_STORAGE_UPGRADE_ID = 32;
 export const MECHANICS_UPGRADE_ID = 33;
 export const MARITIME_TRADE_UPGRADE_ID = 34;
 export const MILITARY_SCIENCE_UPGRADE_ID = 35;
-export const FEUDAL_CORN_UPGRADE_ID = 36;
 export const GUILD_UPGRADE_ID = 37;
-export const EXPLORATION_UPGRADE_ID = 38;
 export const SHIPBUILDING_UPGRADE_ID = 39;
 export const EDUCATION_UPGRADE_ID = 40;
 export const THEOCRACY_UPGRADE_ID = 41;
@@ -119,8 +114,6 @@ export const CARAVANSERAI_UPGRADE_ID = 45;
 export const FORESTRY_UPGRADE_ID = 46;
 export const PASTURE_MANAGEMENT_UPGRADE_ID = 47;
 export const GUNPOWDER_UPGRADE_ID = 48;
-export const NATIONALISM_UPGRADE_ID = 49;
-export const MERCANTILISM_UPGRADE_ID = 50;
 export const MODERN_AGE_UPGRADE_ID = 51;
 export const OCEANIC_ROUTES_UPGRADE_ID = 52;
 export const STEAM_POWER_UPGRADE_ID = 53;
@@ -145,12 +138,8 @@ export const TRIBAL_FEDERATION_UPGRADE_ID = 73;
 export const MERCENARIES_UPGRADE_ID = 74;
 export const TOTAL_MOBILIZATION_UPGRADE_ID = 75;
 export const TROPICAL_AGRICULTURE_UPGRADE_ID = 76;
-export const MASON_GUILD_UPGRADE_ID = 77;
 export const GREAT_MIGRATION_UPGRADE_ID = 78;
 export const LAND_ALLOTMENT_UPGRADE_ID = 79;
-export const MEGALITHIC_SETTLEMENTS_UPGRADE_ID = 80;
-export const TERRACE_ENGINEERING_UPGRADE_ID = 81;
-export const MATERIALS_ENGINEERING_UPGRADE_ID = 82;
 export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     // ── Ancient Upgrades ──
     [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID]: {
@@ -240,52 +229,6 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Upgrades Rainforest.',
         sprite: '076.png',
         descSymbols: [{ symbolKey: 'rainforest', relation: 'effect_modify' }],
-    },
-    [MINING_UPGRADE_ID]: {
-        id: MINING_UPGRADE_ID,
-        name: 'Mining',
-        type: SymbolType.ANCIENT,
-        description: 'Upgrades Stone. Gain 1 State Reorganization.',
-        sprite: '006.png',
-        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
-        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
-    },
-    [MEGALITHIC_SETTLEMENTS_UPGRADE_ID]: {
-        id: MEGALITHIC_SETTLEMENTS_UPGRADE_ID,
-        name: 'Megalithic Settlements',
-        type: SymbolType.ANCIENT,
-        description: 'Upgrades Stone. Base Food production +1. Gain 1 Pioneer.',
-        sprite: '006.png',
-        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
-        descRelics: [{ relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 1 }],
-    },
-    [MASON_GUILD_UPGRADE_ID]: {
-        id: MASON_GUILD_UPGRADE_ID,
-        name: 'Mason Guild',
-        type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Stone. Gain 2 Pioneers and 2 State Reorganizations.',
-        sprite: '006.png',
-        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
-        descRelics: [
-            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 2 },
-            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 2 },
-        ],
-    },
-    [TERRACE_ENGINEERING_UPGRADE_ID]: {
-        id: TERRACE_ENGINEERING_UPGRADE_ID,
-        name: 'Terrace Engineering',
-        type: SymbolType.MEDIEVAL,
-        description: 'Upgrades Stone. Base Food production +3.',
-        sprite: '006.png',
-        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
-    },
-    [MATERIALS_ENGINEERING_UPGRADE_ID]: {
-        id: MATERIALS_ENGINEERING_UPGRADE_ID,
-        name: 'Materials Engineering',
-        type: SymbolType.MODERN,
-        description: 'Upgrades Stone.',
-        sprite: '006.png',
-        descSymbols: [{ symbolKey: 'stone', relation: 'effect_modify' }],
     },
     [HUNTING_UPGRADE_ID]: {
         id: HUNTING_UPGRADE_ID,
@@ -392,48 +335,6 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
             { symbolKey: 'desert', relation: 'effect_modify' },
             { symbolKey: 'oasis', relation: 'effect_modify' },
         ],
-    },
-    [CHIEFDOM_UPGRADE_ID]: {
-        id: CHIEFDOM_UPGRADE_ID,
-        name: 'Chiefdom',
-        type: SymbolType.ANCIENT,
-        description: 'Base Food production +1. Gain 1 State Reorganization. Upgrades Wild Berries.',
-        sprite: '008.png',
-        descSymbols: [{ symbolKey: 'wild_berries', relation: 'effect_modify' }],
-        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
-    },
-    [ARCHITECTURE_UPGRADE_ID]: {
-        id: ARCHITECTURE_UPGRADE_ID,
-        name: 'Architecture',
-        type: SymbolType.ANCIENT,
-        description: 'Base Knowledge production +1. Upgrades Salt.',
-        sprite: '018.png',
-        descSymbols: [{ symbolKey: 'salt', relation: 'effect_modify' }],
-    },
-    [NATIONALISM_UPGRADE_ID]: {
-        id: NATIONALISM_UPGRADE_ID,
-        name: 'Nationalism',
-        type: SymbolType.MEDIEVAL,
-        description: 'Base Knowledge production +2. Gain 1 State Reorganization. Upgrades Monument.',
-        sprite: '049.png',
-        descSymbols: [{ symbolKey: 'monument', relation: 'effect_modify' }],
-        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
-    },
-    [EXPLORATION_UPGRADE_ID]: {
-        id: EXPLORATION_UPGRADE_ID,
-        name: 'Exploration',
-        type: SymbolType.MEDIEVAL,
-        description: 'Base Gold production +2. Upgrades Honey.',
-        sprite: '038.png',
-        descSymbols: [{ symbolKey: 'honey', relation: 'effect_modify' }],
-    },
-    [MERCANTILISM_UPGRADE_ID]: {
-        id: MERCANTILISM_UPGRADE_ID,
-        name: 'Mercantilism',
-        type: SymbolType.MEDIEVAL,
-        description: 'Base Gold production +2. Upgrades Spices.',
-        sprite: '050.png',
-        descSymbols: [{ symbolKey: 'spices', relation: 'effect_modify' }],
     },
     [MILITARY_SCIENCE_UPGRADE_ID]: {
         id: MILITARY_SCIENCE_UPGRADE_ID,
@@ -651,15 +552,6 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         type: SymbolType.MODERN,
         description: 'Base Food production +3. Base Gold production +3. Base Knowledge production +3.',
         sprite: '061.png',
-    },
-    [FEUDAL_CORN_UPGRADE_ID]: {
-        id: FEUDAL_CORN_UPGRADE_ID,
-        name: 'Feudalism',
-        type: SymbolType.MEDIEVAL,
-        description: 'Base Food production +1. Gain 1 State Reorganization. Upgrades Corn.',
-        sprite: '036.png',
-        descSymbols: [{ symbolKey: 'corn', relation: 'effect_modify' }],
-        descRelics: [{ relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 }],
     },
     [FISHERIES_UPGRADE_ID]: {
         id: FISHERIES_UPGRADE_ID,

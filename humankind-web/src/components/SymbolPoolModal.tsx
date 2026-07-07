@@ -7,7 +7,8 @@ import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBl
 
 const TYPE_META: Record<number, { labelKey: string; color: string }> = {
     [SymbolType.RELIGION]: { labelKey: 'era.special', color: '#c084fc' },
-    [SymbolType.NORMAL]: { labelKey: 'era.normal', color: '#e5e7eb' },
+    [SymbolType.RESOURCE]: { labelKey: 'era.resource', color: '#facc15' },
+    [SymbolType.LUXURY]: { labelKey: 'era.luxury', color: '#ec4899' },
     [SymbolType.MEDIEVAL]: { labelKey: 'era.medieval', color: '#fb923c' },
     [SymbolType.MODERN]: { labelKey: 'era.modern', color: '#60a5fa' },
     [SymbolType.TERRAIN]: { labelKey: 'era.terrain', color: '#4ade80' },
@@ -20,7 +21,8 @@ const TYPE_META: Record<number, { labelKey: string; color: string }> = {
 
 const typeOrder = [
     SymbolType.RELIGION,
-    SymbolType.NORMAL,
+    SymbolType.RESOURCE,
+    SymbolType.LUXURY,
     SymbolType.ANCIENT,
     SymbolType.UNIT,
     SymbolType.SPECIAL,

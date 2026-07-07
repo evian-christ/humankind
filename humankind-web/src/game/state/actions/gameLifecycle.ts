@@ -35,6 +35,9 @@ const createTutorialBoard = () =>
         .fill(null)
         .map(() => Array(4).fill(null));
 
+const isTutorialCrop = (symbol: ReturnType<typeof import('../gameStoreHelpers').createInstance>) =>
+    symbol.definition.id === S.wheat || symbol.definition.id === S.rice;
+
 const createCommonResetPatch = () => ({
     phase: 'idle' as const,
     symbolChoices: [],
@@ -196,17 +199,18 @@ export const createGameLifecycleActions = ({
     },
 
     setupTutorialCornStep: () => {
-        const corn = SYMBOLS[S.corn];
-        if (!corn) return;
-        const cornA = createInstance(corn);
-        const cornB = createInstance(corn);
+        const wheat = SYMBOLS[S.wheat];
+        const rice = SYMBOLS[S.rice];
+        if (!wheat || !rice) return;
+        const cropA = createInstance(wheat);
+        const cropB = createInstance(rice);
         const board = createTutorialBoard();
-        board[1][1] = cornA;
-        board[3][1] = cornB;
+        board[1][1] = cropA;
+        board[3][1] = cropB;
         set({
             board,
             prevBoard: cloneBoardPreservingSlots(board),
-            playerSymbols: [cornA, cornB],
+            playerSymbols: [cropA, cropB],
             tutorialSpinStep: null,
             phase: 'idle',
         });
@@ -214,11 +218,11 @@ export const createGameLifecycleActions = ({
 
     spinTutorialCornStep: () => {
         const state = get();
-        const [cornA, cornB] = state.playerSymbols;
-        if (!cornA || !cornB) return;
+        const [cropA, cropB] = state.playerSymbols;
+        if (!cropA || !cropB) return;
         const board = createTutorialBoard();
-        board[1][0] = cornA;
-        board[4][2] = cornB;
+        board[1][0] = cropA;
+        board[4][2] = cropB;
         set({
             prevBoard: cloneBoardPreservingSlots(state.board),
             board,
@@ -239,12 +243,12 @@ export const createGameLifecycleActions = ({
 
     spinTutorialMonumentStep: () => {
         const state = get();
-        const cornSymbols = state.playerSymbols.filter((symbol) => symbol.definition.id === S.corn);
+        const cropSymbols = state.playerSymbols.filter(isTutorialCrop);
         const monument = state.playerSymbols.find((symbol) => symbol.definition.id === S.monument);
-        if (cornSymbols.length < 2 || !monument) return;
+        if (cropSymbols.length < 2 || !monument) return;
         const board = createTutorialBoard();
-        board[1][0] = cornSymbols[0];
-        board[4][2] = cornSymbols[1];
+        board[1][0] = cropSymbols[0];
+        board[4][2] = cropSymbols[1];
         board[2][1] = monument;
         set({
             prevBoard: cloneBoardPreservingSlots(state.board),
@@ -280,11 +284,11 @@ export const createGameLifecycleActions = ({
             sea,
             pearl,
         ];
-        const cornSymbols = playerSymbols.filter((symbol) => symbol.definition.id === S.corn);
+        const cropSymbols = playerSymbols.filter(isTutorialCrop);
         const monument = playerSymbols.find((symbol) => symbol.definition.id === S.monument);
         const board = createTutorialBoard();
-        if (cornSymbols[0]) board[0][0] = cornSymbols[0];
-        if (cornSymbols[1]) board[4][3] = cornSymbols[1];
+        if (cropSymbols[0]) board[0][0] = cropSymbols[0];
+        if (cropSymbols[1]) board[4][3] = cropSymbols[1];
         if (monument) board[2][2] = monument;
         board[2][1] = sea;
         board[3][1] = pearl;
@@ -298,16 +302,16 @@ export const createGameLifecycleActions = ({
 
     spinTutorialAdjacencyStep: () => {
         const state = get();
-        const cornSymbols = state.playerSymbols.filter((symbol) => symbol.definition.id === S.corn);
+        const cropSymbols = state.playerSymbols.filter(isTutorialCrop);
         const monument = state.playerSymbols.find((symbol) => symbol.definition.id === S.monument);
         const sea = state.playerSymbols.find((symbol) => symbol.definition.id === S.sea);
         const pearl = state.playerSymbols.find((symbol) => symbol.definition.id === S.pearl);
-        if (cornSymbols.length < 2 || !monument || !sea || !pearl) return;
+        if (cropSymbols.length < 2 || !monument || !sea || !pearl) return;
 
         const board = createTutorialBoard();
         board[2][1] = sea;
-        board[1][0] = cornSymbols[0];
-        board[2][0] = cornSymbols[1];
+        board[1][0] = cropSymbols[0];
+        board[2][0] = cropSymbols[1];
         board[1][1] = monument;
         board[3][2] = pearl;
         set({
@@ -332,12 +336,12 @@ export const createGameLifecycleActions = ({
         const state = get();
         if (!state.isTutorialMode || state.tutorialSpinStep !== 'corn_done' || state.phase !== 'idle') return;
         const monument = SYMBOLS[S.monument];
-        const corn = SYMBOLS[S.corn];
+        const rice = SYMBOLS[S.rice];
         const mountain = SYMBOLS[S.mountain];
-        if (!monument || !corn || !mountain) return;
+        if (!monument || !rice || !mountain) return;
         set({
             phase: 'selection',
-            symbolChoices: [monument, corn, mountain],
+            symbolChoices: [monument, rice, mountain],
             symbolSelectionRelicSourceId: null,
             rerollsThisTurn: 0,
         });

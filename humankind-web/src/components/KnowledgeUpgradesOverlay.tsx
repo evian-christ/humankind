@@ -39,13 +39,14 @@ import { audioManager } from '../audio/audioManager';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
-    [SymbolType.NORMAL]: 'era.normal',
+    [SymbolType.RESOURCE]: 'era.resource',
+    [SymbolType.LUXURY]: 'era.luxury',
     [SymbolType.MEDIEVAL]: 'era.medieval',
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.ANCIENT]: 'era.ancient',
-    [SymbolType.UNIT]: 'era.normal',
-    [SymbolType.ENEMY]: 'era.normal',
+    [SymbolType.UNIT]: 'era.unit',
+    [SymbolType.ENEMY]: 'era.enemy',
     [SymbolType.DISASTER]: 'era.disaster',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
 };
