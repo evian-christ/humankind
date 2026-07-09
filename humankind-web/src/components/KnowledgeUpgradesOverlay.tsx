@@ -19,9 +19,20 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    CELESTIAL_NAVIGATION_UPGRADE_ID,
+    COMPASS_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
+    FISHERY_GUILD_UPGRADE_ID,
+    HORSEMANSHIP_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
+    MARITIME_TRADE_UPGRADE_ID,
+    MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    NOMADIC_TRADITION_UPGRADE_ID,
+    OCEANIC_ROUTES_UPGRADE_ID,
+    PASTURE_MANAGEMENT_UPGRADE_ID,
+    SEAFARING_UPGRADE_ID,
+    SHIPBUILDING_UPGRADE_ID,
     buildAncientSymbolsUnlockDescSymbols,
     getKnowledgeUpgradeDirectDependents,
     getKnowledgeUpgradeDirectPrerequisites,
@@ -67,6 +78,7 @@ type KnowledgeConnectorLine = {
     x2: number;
     y2: number;
     prerequisiteCount: number;
+    laneColor: string;
 };
 type KnowledgeConnectorRenderLine = KnowledgeConnectorLine & { active: boolean; dimmed: boolean };
 type KnowledgeUpgradeTooltipPosition = {
@@ -75,125 +87,122 @@ type KnowledgeUpgradeTooltipPosition = {
     placement: 'left' | 'right';
 };
 
-/** Chip columns: expanded to 13 columns for development. */
+/** Tree columns are visual sub-lanes. Wide thematic lanes span multiple sub-lanes for forks. */
 const KNOWLEDGE_TREE_GRID_COLS = 13;
-const KNOWLEDGE_TREE_MIN_BRANCH_GAP = 2;
-const KNOWLEDGE_TREE_CENTER_COL = Math.floor(KNOWLEDGE_TREE_GRID_COLS / 2);
+const KNOWLEDGE_TREE_CENTER_COL = 6;
 const KNOWLEDGE_TREE_ERA_SPINE_IDS = new Set([
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    AGI_PROJECT_UPGRADE_ID,
 ]);
+const KNOWLEDGE_TREE_LANE_HEADER_H = 62;
+const KNOWLEDGE_TREE_DEFAULT_LANE_COLOR = '#64748b';
+const KNOWLEDGE_TREE_LANES: readonly {
+    startCol: number;
+    span: number;
+    labelKo: string;
+    labelEn: string;
+    color: string;
+}[] = [
+    { startCol: 0, span: 1, labelKo: '수렵', labelEn: 'Hunt', color: '#84cc16' },
+    { startCol: 1, span: 2, labelKo: '목축', labelEn: 'Herd', color: '#f59e0b' },
+    { startCol: 3, span: 1, labelKo: '농업', labelEn: 'Farm', color: '#22c55e' },
+    { startCol: 4, span: 4, labelKo: '해양', labelEn: 'Sea', color: '#38bdf8' },
+    { startCol: 8, span: 1, labelKo: '사막/교역', labelEn: 'Trade', color: '#facc15' },
+    { startCol: 9, span: 1, labelKo: '학문', labelEn: 'Study', color: '#60a5fa' },
+    { startCol: 10, span: 1, labelKo: '종교', labelEn: 'Faith', color: '#c084fc' },
+    { startCol: 11, span: 2, labelKo: '열대', labelEn: 'Tropic', color: '#f472b6' },
+];
+const KNOWLEDGE_STANDALONE_COLS = 3;
+const KNOWLEDGE_STANDALONE_SECTION_GAP = 44;
+const KNOWLEDGE_STANDALONE_SECTION_LABEL_KO = '내정/정책';
+const KNOWLEDGE_STANDALONE_SECTION_LABEL_EN = 'Policy';
 
-function getEvenTierColumn(idx: number, count: number): number {
-    if (count <= 1) return KNOWLEDGE_TREE_CENTER_COL;
-    return Math.round(((idx + 1) * (KNOWLEDGE_TREE_GRID_COLS - 1)) / (count + 1));
+function getKnowledgeTreeLaneColor(col: number): string {
+    return KNOWLEDGE_TREE_LANES.find((lane) => col >= lane.startCol && col < lane.startCol + lane.span)?.color ??
+        KNOWLEDGE_TREE_DEFAULT_LANE_COLOR;
 }
 
-function getDependentBranchOffset(prereqId: number, upgradeId: number): number {
-    const siblings = getKnowledgeUpgradeDirectDependents(prereqId);
-    if (siblings.length <= 1) return 0;
-
-    const siblingIdx = siblings.indexOf(upgradeId);
-    if (siblingIdx < 0) return 0;
-
-    return Math.round((siblingIdx - (siblings.length - 1) / 2) * 2);
+function getKnowledgeTreeLaneLabel(lane: (typeof KNOWLEDGE_TREE_LANES)[number], language: string): string {
+    return language === 'ko' ? lane.labelKo : lane.labelEn;
 }
 
-function getNearestOpenTierColumn(
-    preferredCol: number,
-    occupiedCols: readonly number[],
-    minGap: number,
-    blockedCols: readonly number[] = [],
-): number | null {
-    const countSideOccupancy = (side: 'left' | 'right') =>
-        occupiedCols.filter((col) => side === 'left' ? col < KNOWLEDGE_TREE_CENTER_COL : col > KNOWLEDGE_TREE_CENTER_COL).length;
-    const candidateCols = Array.from({ length: KNOWLEDGE_TREE_GRID_COLS }, (_, col) => col)
-        .sort((a, b) => {
-            const distanceDelta = Math.abs(a - preferredCol) - Math.abs(b - preferredCol);
-            if (distanceDelta !== 0) return distanceDelta;
+function getStandaloneSectionLabel(language: string): string {
+    return language === 'ko' ? KNOWLEDGE_STANDALONE_SECTION_LABEL_KO : KNOWLEDGE_STANDALONE_SECTION_LABEL_EN;
+}
 
-            const aSideLoad = a === KNOWLEDGE_TREE_CENTER_COL
-                ? 0
-                : countSideOccupancy(a < KNOWLEDGE_TREE_CENTER_COL ? 'left' : 'right');
-            const bSideLoad = b === KNOWLEDGE_TREE_CENTER_COL
-                ? 0
-                : countSideOccupancy(b < KNOWLEDGE_TREE_CENTER_COL ? 'left' : 'right');
-            if (aSideLoad !== bSideLoad) return aSideLoad - bSideLoad;
+function isStandaloneKnowledgeUpgrade(upgradeId: number): boolean {
+    return (
+        getKnowledgeUpgradeDirectPrerequisites(upgradeId).length === 0 &&
+        getKnowledgeUpgradeDirectDependents(upgradeId).length === 0 &&
+        !KNOWLEDGE_TREE_ERA_SPINE_IDS.has(upgradeId)
+    );
+}
 
-            const centerDelta = Math.abs(b - KNOWLEDGE_TREE_CENTER_COL) - Math.abs(a - KNOWLEDGE_TREE_CENTER_COL);
-            return centerDelta !== 0 ? centerDelta : a - b;
-        });
+function getKnowledgeTreeVisualColumn(upgradeId: number): number {
+    if (KNOWLEDGE_TREE_ERA_SPINE_IDS.has(upgradeId)) return KNOWLEDGE_TREE_CENTER_COL;
 
-    return candidateCols.find((col) =>
-        !blockedCols.includes(col) &&
-        occupiedCols.every((occupiedCol) => Math.abs(occupiedCol - col) >= minGap),
-    ) ?? null;
+    switch (upgradeId) {
+        // 목축: 기마술/군사학과 유목 전통 사슬을 밴드 안에서 분리한다.
+        case HORSEMANSHIP_UPGRADE_ID:
+        case MILITARY_SCIENCE_UPGRADE_ID:
+            return 1;
+        case NOMADIC_TRADITION_UPGRADE_ID:
+        case PASTURE_MANAGEMENT_UPGRADE_ID:
+            return 2;
+        // 해양: 갈래를 밴드 안 서브컬럼에 고정한다.
+        case SEAFARING_UPGRADE_ID:
+        case FISHERY_GUILD_UPGRADE_ID:
+            return 4;
+        case CELESTIAL_NAVIGATION_UPGRADE_ID:
+        case MARITIME_TRADE_UPGRADE_ID:
+        case OCEANIC_ROUTES_UPGRADE_ID:
+            return 5;
+        case COMPASS_UPGRADE_ID:
+            return 6;
+        case SHIPBUILDING_UPGRADE_ID:
+            return 7;
+        default:
+            break;
+    }
+
+    const preferredCol = KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[upgradeId] ?? KNOWLEDGE_TREE_CENTER_COL;
+    if (preferredCol === 2) return 1;
+    if (preferredCol === 4) return 3;
+    if (preferredCol === 6) return 5;
+    if (preferredCol === 10) return 9;
+    if (preferredCol === 12) return 11;
+    return Math.min(Math.max(preferredCol, 0), KNOWLEDGE_TREE_GRID_COLS - 1);
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function buildBranchTierRows(): { level: number; ids: (number | null)[] }[] {
-    const knownCols = new Map<number, number>();
-    let previousTierCols: number[] = [];
-
     return KNOWLEDGE_UPGRADE_TIER_ROWS.filter((tier) => tier.level >= 0).map((tier) => {
         const row = Array<number | null>(KNOWLEDGE_TREE_GRID_COLS).fill(null);
-        const preferredCols = tier.ids.map((upgradeId, order) => {
-            const affinityCol = KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[upgradeId];
-            const prereqCols = getKnowledgeUpgradeDirectPrerequisites(upgradeId)
-                .map((prereqId) => {
-                    const prereqCol = knownCols.get(prereqId);
-                    return prereqCol == null
-                        ? null
-                        : prereqCol + getDependentBranchOffset(prereqId, upgradeId);
-                })
-                .filter((col): col is number => col != null);
-            return {
-                upgradeId,
-                order,
-                hasAffinityCol: affinityCol != null,
-                hasPrereq: prereqCols.length > 0,
-                col: KNOWLEDGE_TREE_ERA_SPINE_IDS.has(upgradeId)
-                    ? KNOWLEDGE_TREE_CENTER_COL
-                    : prereqCols.length > 0
-                    ? Math.round(prereqCols.reduce((sum, col) => sum + col, 0) / prereqCols.length)
-                    : affinityCol != null
-                    ? affinityCol
-                    : getEvenTierColumn(order, tier.ids.length),
-            };
-        });
-        const occupiedCols: number[] = [];
-
-        preferredCols
-            .sort((a, b) => {
-                if (a.hasPrereq !== b.hasPrereq) return a.hasPrereq ? -1 : 1;
-                if (a.hasAffinityCol !== b.hasAffinityCol) return a.hasAffinityCol ? -1 : 1;
-                return a.col !== b.col ? a.col - b.col : a.order - b.order;
-            })
-            .forEach((item) => {
-                const blockedCols = item.hasPrereq || item.hasAffinityCol ? [] : previousTierCols;
-                const col = KNOWLEDGE_TREE_ERA_SPINE_IDS.has(item.upgradeId)
-                    ? getNearestOpenTierColumn(KNOWLEDGE_TREE_CENTER_COL, occupiedCols, 1)
-                    :
-                    getNearestOpenTierColumn(item.col, occupiedCols, KNOWLEDGE_TREE_MIN_BRANCH_GAP, blockedCols) ??
-                    getNearestOpenTierColumn(item.col, occupiedCols, 1, blockedCols) ??
-                    getNearestOpenTierColumn(item.col, occupiedCols, KNOWLEDGE_TREE_MIN_BRANCH_GAP) ??
-                    getNearestOpenTierColumn(item.col, occupiedCols, 1);
-                if (col == null) return;
-                row[col] = item.upgradeId;
-                knownCols.set(item.upgradeId, col);
-                occupiedCols.push(col);
+        tier.ids
+            .filter((upgradeId) => !isStandaloneKnowledgeUpgrade(upgradeId))
+            .forEach((upgradeId) => {
+                row[getKnowledgeTreeVisualColumn(upgradeId)] = upgradeId;
             });
-
-        previousTierCols = occupiedCols;
         return { level: tier.level, ids: row };
     });
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function buildStandaloneTierRows(): { level: number; ids: readonly number[] }[] {
+    return KNOWLEDGE_UPGRADE_TIER_ROWS.filter((tier) => tier.level >= 0).map((tier) => ({
+        level: tier.level,
+        ids: tier.ids.filter(isStandaloneKnowledgeUpgrade),
+    }));
+}
+
 const TIERS: { level: number; ids: (number | null)[] }[] = buildBranchTierRows();
+const STANDALONE_TIERS: { level: number; ids: readonly number[] }[] = buildStandaloneTierRows();
 
 const KNOWLEDGE_TREE_CHIP = 110;
 const KNOWLEDGE_TREE_GAP = 16;
+const KNOWLEDGE_STANDALONE_GAP = 12;
 const TIER_ROW_PAD_X = 48;
 const TIER_LABEL_W = 72;
 /** Reserve one label band so Lv labels do not overlap the grid. */
@@ -203,7 +212,6 @@ const TIER_ROW_MIN_H = 130;
 const TIER_STACK_GAP = 28;
 const KNOWLEDGE_CONNECTOR_COLOR = '#4b4e55';
 const KNOWLEDGE_CONNECTOR_DIM_COLOR = '#202228';
-const KNOWLEDGE_CONNECTOR_ACTIVE_COLOR = '#6b7280';
 const ARCHERY_BRONZE_LINE_WIDTH = 3;
 const KNOWLEDGE_CONNECTOR_PORT_W = 28;
 const KNOWLEDGE_CONNECTOR_PORT_H = 4;
@@ -222,6 +230,7 @@ const KNOWLEDGE_ERA_RESEARCH_SUMMARIES = {
     20: { eraKey: 'era.modern', minLevel: 20, maxLevel: 29 },
 } as const;
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getKnowledgeEraResearchAvailability(
     unlockedUpgradeIds: readonly number[],
     minLevel: number,
@@ -259,6 +268,17 @@ function knowledgeTreeGridWidthPx(): number {
     );
 }
 
+function knowledgeStandaloneGridWidthPx(): number {
+    return (
+        KNOWLEDGE_STANDALONE_COLS * KNOWLEDGE_TREE_CHIP +
+        (KNOWLEDGE_STANDALONE_COLS - 1) * KNOWLEDGE_STANDALONE_GAP
+    );
+}
+
+function knowledgeTreeAndStandaloneWidthPx(): number {
+    return knowledgeTreeGridWidthPx() + KNOWLEDGE_STANDALONE_SECTION_GAP + knowledgeStandaloneGridWidthPx();
+}
+
 function findTierGridSlot(upgradeId: number): { rowIdx: number; colIdx: number } | null {
     for (let rowIdx = 0; rowIdx < TIERS.length; rowIdx += 1) {
         const colIdx = TIERS[rowIdx]!.ids.indexOf(upgradeId);
@@ -269,7 +289,11 @@ function findTierGridSlot(upgradeId: number): { rowIdx: number; colIdx: number }
 
 function getTierLevelForUpgrade(upgradeId: number | null): number {
     if (upgradeId == null) return 1;
-    return TIERS.find((tier) => tier.ids.includes(upgradeId))?.level ?? 1;
+    return (
+        TIERS.find((tier) => tier.ids.includes(upgradeId))?.level ??
+        STANDALONE_TIERS.find((tier) => tier.ids.includes(upgradeId))?.level ??
+        1
+    );
 }
 
 function getTierRowHeightPx(_rowIdx: number): number {
@@ -277,7 +301,7 @@ function getTierRowHeightPx(_rowIdx: number): number {
 }
 
 function getTierRowTopPx(rowIdx: number): number {
-    let top = 0;
+    let top = KNOWLEDGE_TREE_LANE_HEADER_H;
     for (let i = 0; i < rowIdx; i += 1) {
         top += getTierRowHeightPx(i) + TIER_STACK_GAP;
     }
@@ -318,25 +342,30 @@ function collectConnectedUpgradeIds(upgradeId: number | null): Set<number> {
 
 function KnowledgeConnectorSegment({ seg }: { seg: KnowledgeConnectorRenderLine }) {
     const connectorColor = seg.active
-        ? KNOWLEDGE_CONNECTOR_ACTIVE_COLOR
+        ? seg.laneColor
         : seg.dimmed
             ? KNOWLEDGE_CONNECTOR_DIM_COLOR
-            : KNOWLEDGE_CONNECTOR_COLOR;
+            : seg.laneColor || KNOWLEDGE_CONNECTOR_COLOR;
     const connectorOpacity = seg.active
         ? KNOWLEDGE_CONNECTOR_ACTIVE_OPACITY
         : seg.dimmed
             ? KNOWLEDGE_CONNECTOR_DIMMED_OPACITY
             : KNOWLEDGE_CONNECTOR_IDLE_OPACITY;
+    const startY = seg.y1 + KNOWLEDGE_CONNECTOR_PORT_H;
+    const endY = seg.y2;
+    const midY = Math.round((startY + endY) / 2);
+    const pathD = seg.x1 === seg.x2
+        ? `M ${seg.x1} ${startY} L ${seg.x2} ${endY}`
+        : `M ${seg.x1} ${startY} L ${seg.x1} ${midY} L ${seg.x2} ${midY} L ${seg.x2} ${endY}`;
 
     return (
         <g opacity={connectorOpacity}>
-            <line
-                x1={seg.x1}
-                y1={seg.y1 + KNOWLEDGE_CONNECTOR_PORT_H}
-                x2={seg.x2}
-                y2={seg.y2}
+            <path
+                d={pathD}
+                fill="none"
                 stroke={connectorColor}
                 strokeWidth={ARCHERY_BRONZE_LINE_WIDTH}
+                strokeLinejoin="round"
                 strokeLinecap="round"
             />
             <rect
@@ -475,10 +504,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             setConnectorLines([]);
             return;
         }
-        const gridWidth = knowledgeTreeGridWidthPx();
+        const totalWidth = knowledgeTreeAndStandaloneWidthPx();
         const centeredGridStartX =
             KNOWLEDGE_TREE_LABEL_BAND_PX +
-            Math.max(0, (contentEl.clientWidth - KNOWLEDGE_TREE_LABEL_BAND_PX - gridWidth) / 2);
+            Math.max(0, (contentEl.clientWidth - KNOWLEDGE_TREE_LABEL_BAND_PX - totalWidth) / 2);
         const xForCol = (colIdx: number) =>
             centeredGridStartX + colIdx * (KNOWLEDGE_TREE_CHIP + KNOWLEDGE_TREE_GAP) + KNOWLEDGE_TREE_CHIP / 2;
         const bottomAnchorY = (rowIdx: number, pressed: boolean) =>
@@ -507,6 +536,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                     x2: xForCol(targetPos.colIdx),
                     y2: topAnchorY(targetPos.rowIdx, activeFocusId === upgradeId || isVisuallyLocked(upgradeId)),
                     prerequisiteCount: prerequisites.length,
+                    laneColor: getKnowledgeTreeLaneColor(targetPos.colIdx),
                 });
             }
         }
@@ -839,6 +869,89 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         setHoveredId(null);
     };
 
+    const renderKnowledgeUpgradeChip = (id: number) => {
+        const upgrade = KNOWLEDGE_UPGRADES[id];
+        if (!upgrade) return null;
+        const unlocked = unlockedUpgrades.includes(id);
+        const visuallyLocked = isVisuallyLocked(id);
+        const isDenied = deniedChipId === id;
+        const canResearch = canConfirmResearch(id);
+        const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
+        const isSelectionRelated =
+            activeFocusId == null ||
+            activeConnectionIds.has(id);
+        const chipFilter = activeFocusId != null && !isSelectionRelated
+            ? 'brightness(0.28) saturate(0.8)'
+            : 'none';
+        const chipFrameColor = knowledgeTreeChipFrameColor(unlocked, visuallyLocked, isDenied);
+        const upgradeSpriteUrl = resolveUpgradeSprite(upgrade.sprite);
+
+        return (
+            <button
+                key={id}
+                type="button"
+                className={[
+                    'knowledge-upgrade-chip',
+                    !unlocked && canResearch ? 'knowledge-upgrade-chip--available' : '',
+                    unlocked ? 'knowledge-upgrade-chip--unlocked' : '',
+                    visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
+                    isDenied ? 'knowledge-upgrade-chip--denied' : '',
+                    id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
+                    id === AGI_PROJECT_UPGRADE_ID ? 'knowledge-upgrade-chip--agi-project' : '',
+                ].filter(Boolean).join(' ')}
+                data-knowledge-upgrade-id={id}
+                aria-disabled={visuallyLocked && !unlocked}
+                onClick={(e) => handleChipClick(id, e)}
+                onMouseEnter={() => handleChipMouseEnter(id)}
+                onMouseLeave={() => handleChipMouseLeave(id)}
+                style={{
+                    width: `${KNOWLEDGE_TREE_CHIP}px`,
+                    height: `${KNOWLEDGE_TREE_CHIP}px`,
+                    padding: 0,
+                    display: 'block',
+                    position: 'relative',
+                    overflow: unlocked || canResearch ? 'visible' : 'hidden',
+                    filter: chipFilter,
+                    color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
+                    cursor: visuallyLocked && !unlocked ? 'not-allowed' : 'pointer',
+                    transition:
+                        'background 140ms ease, border-color 140ms ease, filter 0.15s ease, box-shadow 140ms ease, transform 140ms ease',
+                }}
+            >
+                {upgradeSpriteUrl && (
+                    <img
+                        src={upgradeSpriteUrl}
+                        alt={name}
+                        draggable={false}
+                        style={{
+                            position: 'absolute',
+                            inset: '12px',
+                            width: 'calc(100% - 24px)',
+                            height: 'calc(100% - 24px)',
+                            objectFit: 'contain',
+                            imageRendering: 'pixelated',
+                            filter: visuallyLocked
+                                ? 'grayscale(1) saturate(0) brightness(0.65)'
+                                : undefined,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                )}
+                <div
+                    aria-hidden
+                    style={{
+                        position: 'absolute',
+                        inset: `${KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET}px`,
+                        border: `2px solid ${chipFrameColor}`,
+                        borderRadius: 0,
+                        boxSizing: 'border-box',
+                        pointerEvents: 'none',
+                    }}
+                />
+            </button>
+        );
+    };
+
     return (
         <div
             ref={overlayRef}
@@ -969,6 +1082,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                             display: 'flex',
                             flexDirection: 'column',
                             gap: TIER_STACK_GAP,
+                            paddingTop: KNOWLEDGE_TREE_LANE_HEADER_H,
                         }}
                     >
                         {availableBackgroundHeightPx > 0 && (
@@ -987,6 +1101,157 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                 }}
                             />
                         )}
+                        <div
+                            aria-hidden
+                            style={{
+                                position: 'absolute',
+                                left: KNOWLEDGE_TREE_LABEL_BAND_PX,
+                                right: 0,
+                                top: 0,
+                                height: KNOWLEDGE_TREE_LANE_HEADER_H,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                pointerEvents: 'none',
+                                zIndex: 6,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: knowledgeTreeAndStandaloneWidthPx(),
+                                    display: 'grid',
+                                    gridTemplateColumns: `${knowledgeTreeGridWidthPx()}px ${KNOWLEDGE_STANDALONE_SECTION_GAP}px ${knowledgeStandaloneGridWidthPx()}px`,
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
+                                        gap: `${KNOWLEDGE_TREE_GAP}px`,
+                                    }}
+                                >
+                                    {KNOWLEDGE_TREE_LANES.map((lane) => (
+                                        <div
+                                            key={`lane-header-${lane.startCol}`}
+                                            style={{
+                                                gridColumn: `${lane.startCol + 1} / span ${lane.span}`,
+                                                alignSelf: 'end',
+                                                marginBottom: 10,
+                                                height: 28,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: lane.color,
+                                                border: `1px solid ${lane.color}66`,
+                                                background: `${lane.color}14`,
+                                                fontFamily: 'var(--game-font-family), sans-serif',
+                                                fontSize: 13,
+                                                fontWeight: 'bold',
+                                                letterSpacing: '0.08em',
+                                                textShadow: '0 2px 4px rgba(0,0,0,0.85)',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
+                                            {getKnowledgeTreeLaneLabel(lane, language)}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div />
+                                <div
+                                    style={{
+                                        alignSelf: 'end',
+                                        marginBottom: 10,
+                                        height: 28,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#cbd5e1',
+                                        border: '1px solid rgba(148,163,184,0.38)',
+                                        background: 'rgba(30,41,59,0.42)',
+                                        fontFamily: 'var(--game-font-family), sans-serif',
+                                        fontSize: 13,
+                                        fontWeight: 'bold',
+                                        letterSpacing: '0.08em',
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.85)',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {getStandaloneSectionLabel(language)}
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            aria-hidden
+                            style={{
+                                position: 'absolute',
+                                left: KNOWLEDGE_TREE_LABEL_BAND_PX,
+                                right: 0,
+                                top: KNOWLEDGE_TREE_LANE_HEADER_H,
+                                bottom: 0,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                pointerEvents: 'none',
+                                zIndex: 1,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: knowledgeTreeAndStandaloneWidthPx(),
+                                    display: 'grid',
+                                    gridTemplateColumns: `${knowledgeTreeGridWidthPx()}px ${KNOWLEDGE_STANDALONE_SECTION_GAP}px ${knowledgeStandaloneGridWidthPx()}px`,
+                                    flexShrink: 0,
+                                    height: '100%',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
+                                        gap: `${KNOWLEDGE_TREE_GAP}px`,
+                                        height: '100%',
+                                    }}
+                                >
+                                    {KNOWLEDGE_TREE_LANES.map((lane) => (
+                                        <div
+                                            key={`lane-rail-${lane.startCol}`}
+                                            style={{
+                                                gridColumn: `${lane.startCol + 1} / span ${lane.span}`,
+                                                position: 'relative',
+                                                height: '100%',
+                                                background: `${lane.color}08`,
+                                                borderLeft: `1px solid ${lane.color}18`,
+                                                borderRight: `1px solid ${lane.color}18`,
+                                            }}
+                                        >
+                                            {Array.from({ length: lane.span }, (_, idx) => (
+                                                <div
+                                                    key={`lane-subrail-${lane.startCol}-${idx}`}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        left: `${idx * (KNOWLEDGE_TREE_CHIP + KNOWLEDGE_TREE_GAP) + KNOWLEDGE_TREE_CHIP / 2}px`,
+                                                        top: 0,
+                                                        bottom: 0,
+                                                        width: 3,
+                                                        transform: 'translateX(-50%)',
+                                                        background: `linear-gradient(to bottom, ${lane.color}55, ${lane.color}1a)`,
+                                                        boxShadow: `0 0 12px ${lane.color}44`,
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div />
+                                <div
+                                    style={{
+                                        height: '100%',
+                                        background: 'rgba(15,23,42,0.45)',
+                                        borderLeft: '1px solid rgba(148,163,184,0.24)',
+                                        borderRight: '1px solid rgba(148,163,184,0.24)',
+                                    }}
+                                />
+                            </div>
+                        </div>
                         {TIERS.map((tier) => {
                             const tierRowHeight = getTierRowHeightPx(TIERS.indexOf(tier));
                             const tierUnlockable = currentLevel >= tier.level;
@@ -1116,104 +1381,60 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                     >
                                         <div
                                             style={{
+                                                width: knowledgeTreeAndStandaloneWidthPx(),
                                                 display: 'grid',
-                                                gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
-                                                gap: `${KNOWLEDGE_TREE_GAP}px`,
+                                                gridTemplateColumns: `${knowledgeTreeGridWidthPx()}px ${KNOWLEDGE_STANDALONE_SECTION_GAP}px ${knowledgeStandaloneGridWidthPx()}px`,
                                                 flexShrink: 0,
                                             }}
                                             >
-                                            {tier.ids.map((id, slotIdx) => {
-                                                if (id === null) {
-                                                    return (
-                                                        <div
-                                                            key={`empty-${tier.level}-${slotIdx}`}
-                                                            style={{
-                                                                width: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                                height: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                            }}
-                                                        />
-                                                    );
-                                                }
-                                                const upgrade = KNOWLEDGE_UPGRADES[id];
-                                                if (!upgrade) return null;
-                                                const unlocked = unlockedUpgrades.includes(id);
-                                                const visuallyLocked = isVisuallyLocked(id);
-                                                const isDenied = deniedChipId === id;
-                                                const canResearch = canConfirmResearch(id);
-                                                const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
-                                                const isSelectionRelated =
-                                                    activeFocusId == null ||
-                                                    activeConnectionIds.has(id);
-                                                const chipFilter = activeFocusId != null && !isSelectionRelated
-                                                    ? 'brightness(0.28) saturate(0.8)'
-                                                    : 'none';
-                                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked, visuallyLocked, isDenied);
-                                                const upgradeSpriteUrl = resolveUpgradeSprite(upgrade.sprite);
-                                                return (
-                                                    <button
-                                                        key={id}
-                                                        type="button"
-                                                        className={[
-                                                            'knowledge-upgrade-chip',
-                                                            !unlocked && canResearch ? 'knowledge-upgrade-chip--available' : '',
-                                                            unlocked ? 'knowledge-upgrade-chip--unlocked' : '',
-                                                            visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
-                                                            isDenied ? 'knowledge-upgrade-chip--denied' : '',
-                                                            id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
-                                                            id === AGI_PROJECT_UPGRADE_ID ? 'knowledge-upgrade-chip--agi-project' : '',
-                                                        ].filter(Boolean).join(' ')}
-                                                        data-knowledge-upgrade-id={id}
-                                                        aria-disabled={visuallyLocked && !unlocked}
-                                                        onClick={(e) => handleChipClick(id, e)}
-                                                        onMouseEnter={() => handleChipMouseEnter(id)}
-                                                        onMouseLeave={() => handleChipMouseLeave(id)}
-                                                        style={{
-                                                            width: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                            height: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                            padding: 0,
-                                                            display: 'block',
-                                                            position: 'relative',
-                                                            overflow: unlocked || canResearch ? 'visible' : 'hidden',
-                                                            filter: chipFilter,
-                                                            color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
-                                                            cursor: visuallyLocked && !unlocked ? 'not-allowed' : 'pointer',
-                                                            transition:
-                                                                'background 140ms ease, border-color 140ms ease, filter 0.15s ease, box-shadow 140ms ease, transform 140ms ease',
-                                                        }}
-                                                    >
-                                                        {upgradeSpriteUrl && (
-                                                            <img
-                                                                src={upgradeSpriteUrl}
-                                                                alt={name}
-                                                                draggable={false}
+                                            <div
+                                                style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
+                                                    gap: `${KNOWLEDGE_TREE_GAP}px`,
+                                                }}
+                                            >
+                                                {tier.ids.map((id, slotIdx) => {
+                                                    if (id === null) {
+                                                        return (
+                                                            <div
+                                                                key={`empty-${tier.level}-${slotIdx}`}
                                                                 style={{
-                                                                    position: 'absolute',
-                                                                    inset: '12px',
-                                                                    width: 'calc(100% - 24px)',
-                                                                    height: 'calc(100% - 24px)',
-                                                                    objectFit: 'contain',
-                                                                    imageRendering: 'pixelated',
-                                                                    filter: visuallyLocked
-                                                                        ? 'grayscale(1) saturate(0) brightness(0.65)'
-                                                                        : undefined,
-                                                                    pointerEvents: 'none',
+                                                                    width: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                                    height: `${KNOWLEDGE_TREE_CHIP}px`,
                                                                 }}
                                                             />
-                                                        )}
-                                                        <div
-                                                            aria-hidden
-                                                            style={{
-                                                                position: 'absolute',
-                                                                inset: `${KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET}px`,
-                                                                border: `2px solid ${chipFrameColor}`,
-                                                                borderRadius: 0,
-                                                                boxSizing: 'border-box',
-                                                                pointerEvents: 'none',
-                                                            }}
-                                                        />
-                                                    </button>
-                                                );
-                                            })}
+                                                        );
+                                                    }
+                                                    return renderKnowledgeUpgradeChip(id);
+                                                })}
+                                            </div>
+                                            <div />
+                                            <div
+                                                style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: `repeat(${KNOWLEDGE_STANDALONE_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
+                                                    gap: `${KNOWLEDGE_STANDALONE_GAP}px`,
+                                                    alignItems: 'center',
+                                                    justifyItems: 'center',
+                                                }}
+                                            >
+                                                {Array.from({ length: KNOWLEDGE_STANDALONE_COLS }, (_, slotIdx) => {
+                                                    const id = STANDALONE_TIERS[TIERS.indexOf(tier)]?.ids[slotIdx] ?? null;
+                                                    if (id == null) {
+                                                        return (
+                                                            <div
+                                                                key={`standalone-empty-${tier.level}-${slotIdx}`}
+                                                                style={{
+                                                                    width: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                                    height: `${KNOWLEDGE_TREE_CHIP}px`,
+                                                                }}
+                                                            />
+                                                        );
+                                                    }
+                                                    return renderKnowledgeUpgradeChip(id);
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
