@@ -203,12 +203,11 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If there are no duplicate symbols on the board: +1 Food per 2 symbols on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "058.png" }),
 
     // Unit
-    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "063.png" }),
-    def('cavalry', { name: "Knight", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "064.png" }),
-    def('infantry', { name: "Infantry", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "065.png" }),
-    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "066.png" }),
-    def('crossbowman', { name: "Crossbowman", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "067.png" }),
-    def('cannon', { name: "Cannon", type: SymbolType.UNIT, description: "Legacy military symbol.", sprite: "068.png" }),
+    def('militia', { name: "Militia", type: SymbolType.UNIT, description: "+3 Military. Destroyed after 5 turns.", sprite: "063.png" }),
+    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "+2 Military.", sprite: "064.png" }),
+    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "+1 Military; adjacent to Forest or Mountain: +3 Military.", sprite: "065.png" }),
+    def('horseman', { name: "Horseman", type: SymbolType.UNIT, description: "+1 Military; if there is an Enemy symbol on the board: +5 Military.", sprite: "066.png" }),
+    def('mercenary', { name: "Mercenary", type: SymbolType.UNIT, description: "+4 Military; -2 Gold.", sprite: "067.png" }),
 
     // Enemy
     def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", sprite: "069.png" }),
@@ -257,7 +256,7 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'agi_core',
     'loot', 'greater_loot', 'radiant_loot',
     'christianity', 'islam', 'buddhism', 'hinduism',
-    'cavalry', 'crossbowman', 'cannon', 'infantry', 'stone_tablet', 'enemy_warrior',
+    'warrior', 'archer', 'horseman', 'mercenary', 'stone_tablet', 'enemy_warrior',
     'flood', 'earthquake', 'drought', 'plague', 'heatwave',
     'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
     'heqet', 'foxtail_millet',

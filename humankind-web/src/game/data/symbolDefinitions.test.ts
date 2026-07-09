@@ -16,6 +16,15 @@ const disasterSpritePairs = [
 ] as const;
 
 describe('symbolDefinitions', () => {
+    it('uses the requested IDs for the first new unit symbols', () => {
+        expect(SYMBOLS[63]?.key).toBe('militia');
+        expect(SYMBOLS[64]?.key).toBe('warrior');
+        expect(SYMBOLS[65]?.key).toBe('archer');
+        expect(SYMBOLS[66]?.key).toBe('horseman');
+        expect(SYMBOLS[67]?.key).toBe('mercenary');
+        expect(SYMBOLS[68]).toBeUndefined();
+    });
+
     it('includes the newly added plague symbol at ID 78', () => {
         expect(SYMBOLS[78]).toBeDefined();
         expect(SYMBOLS[78]?.key).toBe('plague');

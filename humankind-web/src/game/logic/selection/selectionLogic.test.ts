@@ -125,7 +125,7 @@ describe('selectionLogic', () => {
         expect(pool.some((sym) => sym.id === S.caravanserai)).toBe(true);
     });
 
-    it('applies unit upgrades only to the generated symbol pool', () => {
+    it('keeps legacy military upgrade chains out of the generated symbol pool', () => {
         const pool = buildFlatPool({
             era: 2,
             religionUnlocked: false,
@@ -134,7 +134,22 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.id === S.archer)).toBe(false);
-        expect(pool.some((sym) => sym.id === S.crossbowman)).toBe(false);
+        expect(pool.some((sym) => sym.id === 68)).toBe(false);
+    });
+
+    it('includes Militia in the base pool while keeping other player units excluded', () => {
+        const pool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.militia)).toBe(true);
+        expect(pool.some((sym) => sym.id === S.warrior)).toBe(false);
+        expect(pool.some((sym) => sym.id === S.archer)).toBe(false);
+        expect(pool.some((sym) => sym.id === S.horseman)).toBe(false);
+        expect(pool.some((sym) => sym.id === S.mercenary)).toBe(false);
     });
 
     it('keeps medieval symbols while removing terrain symbols after modern age', () => {

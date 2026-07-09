@@ -3,7 +3,7 @@
  * ID를 바꿀 때는 이 파일의 값만 수정하면 되며,
  * 게임 로직에서는 `SYMBOL_NUMERIC_ID`(숫자 비교) 또는 `definition.key`(문자 식별)를 사용합니다.
  *
- * 배치 규칙: 지형(1–8) → 자원/사치품/특수(9–38) → 고대(39–46) → 중세(47–54) → 종교(55–58) → 현대 특수(59) → 특수 보상(60–62) → 전투 전용(63–72) → 적(74, 78–86) → 재해(75–77)
+ * 배치 규칙: 지형(1–8) → 자원/사치품/특수(9–38) → 고대(39–46) → 중세(47–54) → 종교(55–58) → 현대 특수(59) → 특수 보상(60–62) → 유닛(63–67) → 적(69–74) → 재해(75–79)
  */
 export const SYMBOL_NUMERIC_ID = {
     // ── Terrain (1–8): 초원→평원→바다→숲→열대우림→사막→오아시스→산 ──
@@ -97,14 +97,12 @@ export const SYMBOL_NUMERIC_ID = {
     greater_loot: 61,
     radiant_loot: 62,
 
-    // ── Combat-only dev range (63–72) ──
-    // melee by era -> ranged by era
-    warrior: 63,
-    cavalry: 64,
-    infantry: 65,
-    archer: 66,
-    crossbowman: 67,
-    cannon: 68,
+    // ── Unit (63–67) ──
+    militia: 63,
+    warrior: 64,
+    archer: 65,
+    horseman: 66,
+    mercenary: 67,
 
     // ── Enemy (74, 78–86) ──
     enemy_warrior: 69,

@@ -388,6 +388,45 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             state.triggerRelicRefresh = true;
             return true;
 
+        case S.militia:
+            state.military += 3;
+            symbolInstance.effect_counter++;
+            if (symbolInstance.effect_counter >= 5) {
+                symbolInstance.effect_counter = 5;
+                symbolInstance.is_marked_for_destruction = true;
+            }
+            return true;
+
+        case S.warrior:
+            state.military += 2;
+            return true;
+
+        case S.archer: {
+            const terrainAdj = adj.filter((pos) => {
+                const id = boardGrid[pos.x][pos.y]?.definition.id;
+                return id === S.forest || id === S.mountain;
+            });
+            state.military += terrainAdj.length > 0 ? 3 : 1;
+            terrainAdj.forEach((pos) => state.contributors.push(pos));
+            return true;
+        }
+
+        case S.horseman: {
+            const enemyCoords = boardGrid.flatMap((column, bx) =>
+                column.flatMap((symbol, by) =>
+                    symbol?.definition.type === SymbolType.ENEMY ? [{ x: bx, y: by }] : [],
+                ),
+            );
+            state.military += enemyCoords.length > 0 ? 5 : 1;
+            state.contributors.push(...enemyCoords);
+            return true;
+        }
+
+        case S.mercenary:
+            state.military += 4;
+            state.gold -= 2;
+            return true;
+
         case S.horse: {
             const hasMilitaryScience = upgrades.includes(MILITARY_SCIENCE_UPGRADE_ID);
             state.food += hasMilitaryScience ? 3 : 2;

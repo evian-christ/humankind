@@ -750,15 +750,15 @@ describe('selectionFlow actions', () => {
 
     it('does not replace already-owned units when Stirrups is researched', () => {
         const warrior = createInstance(SYMBOLS[S.warrior]!, [IRON_WORKING_UPGRADE_ID]);
-        const cavalry = createInstance(SYMBOLS[S.cavalry]!, [IRON_WORKING_UPGRADE_ID]);
+        const horseman = createInstance(SYMBOLS[S.horseman]!, [IRON_WORKING_UPGRADE_ID]);
         const board = createEmptyBoard();
         board[0][0] = warrior;
-        board[1][0] = cavalry;
+        board[1][0] = horseman;
         const harness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
             level: 13,
-            playerSymbols: [warrior, cavalry],
+            playerSymbols: [warrior, horseman],
             board,
             unlockedKnowledgeUpgrades: [IRON_WORKING_UPGRADE_ID, FEUDALISM_UPGRADE_ID],
         });
@@ -766,9 +766,9 @@ describe('selectionFlow actions', () => {
         harness.actions.selectUpgrade(GUNPOWDER_UPGRADE_ID);
 
         expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().playerSymbols[1]?.definition.id).toBe(S.cavalry);
+        expect(harness.get().playerSymbols[1]?.definition.id).toBe(S.horseman);
         expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().board[1]?.[0]?.definition.id).toBe(S.cavalry);
+        expect(harness.get().board[1]?.[0]?.definition.id).toBe(S.horseman);
     });
 
     it('does not replace or restat an already-owned Archer when Mechanics is researched', () => {

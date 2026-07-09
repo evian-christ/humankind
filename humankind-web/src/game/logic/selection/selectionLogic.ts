@@ -199,7 +199,7 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
 
         finalSym = resolveUpgradedUnitDefinition(finalSym, upgrades);
 
-        if (finalSym.type === SymbolType.ENEMY || finalSym.type === SymbolType.UNIT) continue;
+        if (finalSym.type === SymbolType.ENEMY) continue;
         let e = finalSym.type as number;
 
         // ANCIENT 는 확률 테이블 상 기본 자원 묶음으로 편입

@@ -150,6 +150,82 @@ describe('symbolEffectResolution', () => {
         expect(chest.is_marked_for_destruction).toBe(true);
     });
 
+    it('lets Militia produce military and expire after five turns', () => {
+        const board = createEmptyBoard();
+        const militia = createInstance(Sym.militia, 'militia');
+        board[1][1] = militia;
+
+        for (let i = 1; i <= 4; i++) {
+            const result = processSingleSymbolEffects(militia, board, 1, 1, { upgrades: [] });
+            expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 0, military: 3 });
+            expect(militia.effect_counter).toBe(i);
+            expect(militia.is_marked_for_destruction).toBe(false);
+        }
+
+        const fifth = processSingleSymbolEffects(militia, board, 1, 1, { upgrades: [] });
+        expect(fifth).toMatchObject({ food: 0, gold: 0, knowledge: 0, military: 3 });
+        expect(militia.effect_counter).toBe(5);
+        expect(militia.is_marked_for_destruction).toBe(true);
+    });
+
+    it('lets Warrior and Archer produce military with Archer terrain adjacency bonus', () => {
+        const board = createEmptyBoard();
+        const warrior = createInstance(Sym.warrior, 'warrior');
+        const archer = createInstance(Sym.archer, 'archer');
+        board[1][1] = warrior;
+        board[3][1] = archer;
+
+        expect(processSingleSymbolEffects(warrior, board, 1, 1, { upgrades: [] })).toMatchObject({
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            military: 2,
+        });
+        expect(processSingleSymbolEffects(archer, board, 3, 1, { upgrades: [] })).toMatchObject({
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            military: 1,
+        });
+
+        board[2][1] = createInstance(Sym.forest, 'forest');
+        expect(processSingleSymbolEffects(archer, board, 3, 1, { upgrades: [] })).toMatchObject({
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            military: 3,
+        });
+    });
+
+    it('lets Horseman and Mercenary produce military with their costs and board enemy bonus', () => {
+        const board = createEmptyBoard();
+        const horseman = createInstance(Sym.horseman, 'horseman');
+        const mercenary = createInstance(Sym.mercenary, 'mercenary');
+        board[1][1] = horseman;
+        board[3][1] = mercenary;
+
+        expect(processSingleSymbolEffects(horseman, board, 1, 1, { upgrades: [] })).toMatchObject({
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            military: 1,
+        });
+        expect(processSingleSymbolEffects(mercenary, board, 3, 1, { upgrades: [] })).toMatchObject({
+            food: 0,
+            gold: -2,
+            knowledge: 0,
+            military: 4,
+        });
+
+        board[0][0] = createInstance(Sym.enemy_warrior, 'enemy');
+        expect(processSingleSymbolEffects(horseman, board, 1, 1, { upgrades: [] })).toMatchObject({
+            food: 0,
+            gold: 0,
+            knowledge: 0,
+            military: 5,
+        });
+    });
+
     it('upgrades Mountain production in the Medieval and Modern Ages', () => {
         const board = createEmptyBoard();
         const mountain = createInstance(Sym.mountain, 'mountain');

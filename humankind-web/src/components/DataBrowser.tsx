@@ -54,8 +54,8 @@ const RELIC_RARITY_ORDER: RelicRarity[] = ['common', 'uncommon', 'rare', 'epic',
 
 
 const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.RESOURCE, SymbolType.LUXURY, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION, SymbolType.SPECIAL];
-const SYMBOL_BROWSER_ERA_ORDER = ERA_ORDER.filter((type) => type !== SymbolType.UNIT && type !== SymbolType.ENEMY);
-const isCombatSymbolType = (type: SymbolType): boolean => type === SymbolType.UNIT || type === SymbolType.ENEMY;
+const SYMBOL_BROWSER_ERA_ORDER = ERA_ORDER.filter((type) => type !== SymbolType.ENEMY);
+const isHiddenSymbolType = (type: SymbolType): boolean => type === SymbolType.ENEMY;
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -159,7 +159,7 @@ const DataBrowser = () => {
 
     // 심볼 목록 (필터 + 검색 + 정렬)
     const filteredSymbols = useMemo(() => {
-        let list = Object.values(SYMBOLS).filter((s) => !isCombatSymbolType(s.type));
+        let list = Object.values(SYMBOLS).filter((s) => !isHiddenSymbolType(s.type));
 
         if (eraFilter !== 'all') {
             list = list.filter(s => s.type === eraFilter);
@@ -424,7 +424,7 @@ const DataBrowser = () => {
     // 시대별 카운트
     const eraCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        const all = Object.values(SYMBOLS).filter((s) => !isCombatSymbolType(s.type));
+        const all = Object.values(SYMBOLS).filter((s) => !isHiddenSymbolType(s.type));
         for (const era of SYMBOL_BROWSER_ERA_ORDER) {
             counts[era] = all.filter(s => s.type === era).length;
         }
@@ -461,7 +461,7 @@ const DataBrowser = () => {
                     className={`databrowser-tab ${tab === 'symbols' ? 'databrowser-tab--active' : ''}`}
                     onClick={() => setTab('symbols')}
                 >
-                    {t('dataBrowser.symbols', language)} ({Object.values(SYMBOLS).filter((s) => !isCombatSymbolType(s.type)).length})
+                    {t('dataBrowser.symbols', language)} ({Object.values(SYMBOLS).filter((s) => !isHiddenSymbolType(s.type)).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'relics' ? 'databrowser-tab--active' : ''}`}
@@ -564,7 +564,7 @@ const DataBrowser = () => {
                             {isSymbolSlotMode
                                 ? Array.from({ length: SYMBOL_SLOT_MAX - SYMBOL_SLOT_MIN + 1 }, (_, i) => i + SYMBOL_SLOT_MIN).map(slotId => {
                                     const s = SYMBOLS[slotId];
-                                    if (!s || isCombatSymbolType(s.type)) {
+                                    if (!s || isHiddenSymbolType(s.type)) {
                                         return (
                                             <tr key={slotId} className="databrowser-row" style={{ opacity: 0.4 }}>
                                                 <td className="databrowser-cell--id">{slotId}</td>
