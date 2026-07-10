@@ -1,16 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
-    AGI_PROJECT_UPGRADE_ID,
-    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    FEUDALISM_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
-    MODERN_AGE_UPGRADE_ID,
     getKnowledgeUpgradeDirectDependents,
     getKnowledgeUpgradeDirectPrerequisites,
 } from '../game/data/knowledgeUpgrades';
 
 let buildBranchTierRows: typeof import('./KnowledgeUpgradesOverlay').buildBranchTierRows;
-let buildStandaloneTierRows: typeof import('./KnowledgeUpgradesOverlay').buildStandaloneTierRows;
 let getKnowledgeEraResearchAvailability:
     typeof import('./KnowledgeUpgradesOverlay').getKnowledgeEraResearchAvailability;
 
@@ -31,7 +26,6 @@ beforeAll(async () => {
     });
     ({
         buildBranchTierRows,
-        buildStandaloneTierRows,
         getKnowledgeEraResearchAvailability,
     } = await import('./KnowledgeUpgradesOverlay'));
 });
@@ -45,37 +39,43 @@ function getColumnByUpgradeId(): Map<number, number> {
 }
 
 describe('knowledge upgrade tree layout', () => {
-    it('moves upgrades with no prerequisites or dependents out of the connected tree', () => {
-        const treeIds = new Set(buildBranchTierRows().flatMap((tier) => tier.ids.filter((id): id is number => id != null)));
-        const standaloneIds = new Set(buildStandaloneTierRows().flatMap((tier) => tier.ids));
-
-        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
-            const hasPrereq = getKnowledgeUpgradeDirectPrerequisites(upgrade.id).length > 0;
-            const hasDependent = getKnowledgeUpgradeDirectDependents(upgrade.id).length > 0;
-            const isEraSpine = [
-                ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-                FEUDALISM_UPGRADE_ID,
-                MODERN_AGE_UPGRADE_ID,
-                AGI_PROJECT_UPGRADE_ID,
-            ].includes(upgrade.id);
-
-            if (!hasPrereq && !hasDependent && !isEraSpine) {
-                expect(treeIds.has(upgrade.id), upgrade.name).toBe(false);
-                expect(standaloneIds.has(upgrade.id), upgrade.name).toBe(true);
-            } else {
-                expect(treeIds.has(upgrade.id), upgrade.name).toBe(true);
-                expect(standaloneIds.has(upgrade.id), upgrade.name).toBe(false);
+    it('keeps upgrades on the same level separated by at least one empty column', () => {
+        for (const tier of buildBranchTierRows()) {
+            const occupiedCols = tier.ids.flatMap((upgradeId, col) => upgradeId == null ? [] : [col]);
+            for (let idx = 1; idx < occupiedCols.length; idx += 1) {
+                expect(occupiedCols[idx]! - occupiedCols[idx - 1]!, `level ${tier.level}`).toBeGreaterThanOrEqual(2);
             }
         }
     });
 
-    it('keeps era spine upgrades in the center sub-lane', () => {
+    it('keeps unbranched prerequisite chains in the same or a neighboring column', () => {
         const columns = getColumnByUpgradeId();
 
-        expect(columns.get(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)).toBe(6);
-        expect(columns.get(FEUDALISM_UPGRADE_ID)).toBe(6);
-        expect(columns.get(MODERN_AGE_UPGRADE_ID)).toBe(6);
-        expect(columns.get(AGI_PROJECT_UPGRADE_ID)).toBe(6);
+        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
+            const prereqs = getKnowledgeUpgradeDirectPrerequisites(upgrade.id);
+            if (prereqs.length !== 1) continue;
+
+            const prereqId = prereqs[0]!;
+            if (getKnowledgeUpgradeDirectDependents(prereqId).length !== 1) continue;
+
+            const upgradeCol = columns.get(upgrade.id);
+            const prereqCol = columns.get(prereqId);
+            expect(upgradeCol, upgrade.name).toBeDefined();
+            expect(prereqCol, upgrade.name).toBeDefined();
+            expect(Math.abs(upgradeCol! - prereqCol!), upgrade.name).toBeLessThanOrEqual(1);
+        }
+    });
+
+    it('places upgrades from the same branching prerequisite in different columns', () => {
+        const columns = getColumnByUpgradeId();
+
+        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
+            const dependents = getKnowledgeUpgradeDirectDependents(upgrade.id);
+            if (dependents.length <= 1) continue;
+
+            const dependentCols = dependents.map((dependentId) => columns.get(dependentId));
+            expect(new Set(dependentCols).size, upgrade.name).toBe(dependentCols.length);
+        }
     });
 });
 
