@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
+    "tauri:dev:stable": "tauri dev --no-watch",
     "tauri:build": "tauri build",
     "steam:macos:package": "tauri build --bundles app && node scripts/packageSteamMacos.cjs"
   },
