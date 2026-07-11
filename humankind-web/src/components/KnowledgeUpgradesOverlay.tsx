@@ -198,19 +198,23 @@ const KNOWLEDGE_CONNECTOR_ACTIVE_COLOR = '#a48660';
 const ARCHERY_BRONZE_LINE_WIDTH = 3;
 const KNOWLEDGE_CONNECTOR_PORT_W = 4;
 const KNOWLEDGE_CONNECTOR_PORT_H = 24;
-const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#070707';
-const KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED = '#061008';
-const KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED = '#050505';
+const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#120804';
+const KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED = '#160a06';
+const KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED = '#0d0604';
 const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
 const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#120303';
 const KNOWLEDGE_HORIZONTAL_ROWS = 9;
-const KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH = 142;
-const KNOWLEDGE_HORIZONTAL_ROW_HEIGHT = 64;
-const KNOWLEDGE_HORIZONTAL_NODE_WIDTH = 134.2;
-const KNOWLEDGE_HORIZONTAL_NODE_HEIGHT = 57.2;
+const KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH = 184;
+const KNOWLEDGE_HORIZONTAL_ROW_HEIGHT = 88;
+const KNOWLEDGE_HORIZONTAL_NODE_WIDTH = 154.33;
+const KNOWLEDGE_HORIZONTAL_NODE_HEIGHT = 65.78;
 const KNOWLEDGE_HORIZONTAL_PAD_X = 58;
 const KNOWLEDGE_HORIZONTAL_PAD_TOP = 60;
 const KNOWLEDGE_HORIZONTAL_PAD_BOTTOM = 26;
+
+// UI 세션 동안만 지식 트리의 마지막 가로 스크롤 위치를 보존한다.
+// 게임 저장 데이터에는 포함하지 않는다.
+let knowledgeTreeScrollLeft = 0;
 
 export function getKnowledgeEraResearchAvailability(
     unlockedUpgradeIds: readonly number[],
@@ -504,16 +508,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 scrollEl.scrollLeft = 0;
                 return;
             }
-            const currentColumn = Math.max(0, currentLevel - 1);
-            scrollEl.scrollLeft = Math.max(
-                0,
-                KNOWLEDGE_HORIZONTAL_PAD_X +
-                    currentColumn * KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH -
-                    scrollEl.clientWidth * 0.38,
-            );
+            scrollEl.scrollLeft = knowledgeTreeScrollLeft;
         });
         return () => cancelAnimationFrame(raf);
-    }, [currentLevel, isOpen, tutorialStep]);
+    }, [isOpen, tutorialStep]);
 
     const closeWithSlide = useCallback(() => {
         if (isClosing) return;
@@ -778,6 +776,9 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                         ref={treeScrollRef}
                         className="knowledge-upgrades-era-scroll"
                         onScroll={(event) => {
+                            if (tutorialStep !== 30) {
+                                knowledgeTreeScrollLeft = event.currentTarget.scrollLeft;
+                            }
                             if (
                                 tutorialStep === 30 &&
                                 event.currentTarget.scrollLeft + event.currentTarget.clientWidth >=
