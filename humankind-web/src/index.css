@@ -8760,17 +8760,8 @@ button.knowledge-upgrade-chip--locked {
 }
 
 button.knowledge-upgrade-chip--unlocked {
-  border-top-color: #35523b;
-  border-right-color: #0c1a10;
-  border-bottom-color: #071009;
-  border-left-color: #203526;
-  background: #132018;
-  color: #ecfdf5;
-  box-shadow:
-    inset 0 2px 0 rgba(187, 247, 208, 0.12),
-    inset -3px 0 0 rgba(4, 18, 9, 0.3),
-    inset 3px 0 0 rgba(187, 247, 208, 0.04),
-    inset 0 -2px 0 rgba(4, 18, 9, 0.26);
+  outline: 1px solid #86efac;
+  outline-offset: 2px;
 }
 
 button.knowledge-upgrade-chip--unlocked::before {
@@ -8783,34 +8774,6 @@ button.knowledge-upgrade-chip--unlocked::before {
   box-shadow: inset 0 0 10px rgba(134, 239, 172, 0.72);
   opacity: 0.82;
   pointer-events: none;
-}
-
-button.knowledge-upgrade-chip--unlocked:hover:not([aria-disabled="true"]):not(:active) {
-  border-top-color: #426646;
-  border-right-color: #102415;
-  border-bottom-color: #09160c;
-  border-left-color: #294231;
-  background: #18291d;
-  box-shadow:
-    inset 0 2px 0 rgba(187, 247, 208, 0.16),
-    inset -3px 0 0 rgba(4, 18, 9, 0.34),
-    inset 3px 0 0 rgba(187, 247, 208, 0.06),
-    inset 0 -2px 0 rgba(4, 18, 9, 0.3);
-}
-
-button.knowledge-upgrade-chip--unlocked:hover:not([aria-disabled="true"]):not(:active)::before {
-  opacity: 0.96;
-}
-
-button.knowledge-upgrade-chip--unlocked:active:not([aria-disabled="true"]) {
-  border-top-color: #071009;
-  border-right-color: #294231;
-  border-bottom-color: #35523b;
-  border-left-color: #0c1a10;
-  background: #101a13;
-  box-shadow:
-    inset 0 3px 0 rgba(4, 18, 9, 0.34),
-    inset 0 -1px 0 rgba(187, 247, 208, 0.08);
 }
 
 @keyframes knowledge-upgrade-chip-denied {
@@ -8983,6 +8946,11 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unrelated {
   opacity: 0.58;
 }
 
+button.knowledge-upgrade-chip--unlocked.knowledge-upgrade-chip--unrelated {
+  filter: none;
+  opacity: 1;
+}
+
 .knowledge-upgrade-chip-image {
   position: absolute;
   left: 8px;
@@ -9036,6 +9004,9 @@ button.knowledge-upgrade-chip--available .knowledge-upgrade-chip-name {
   z-index: 0;
   border: 2px solid;
   box-sizing: border-box;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.76),
+    0 1px 0 rgba(112, 68, 38, 0.2);
   pointer-events: none;
 }
 
@@ -10114,11 +10085,12 @@ button.endgame-btn:active {
 }
 
 button.knowledge-upgrade-chip--selected {
-  background: #0d0d0d;
-  border-top-color: #080504;
-  border-right-color: #39281e;
-  border-bottom-color: #4a3528;
-  border-left-color: #0f0a07;
+  background-color: #2a180e;
+  background-image: repeating-linear-gradient(2deg, rgba(255, 239, 211, 0.035) 0 1px, transparent 1px 5px, rgba(0, 0, 0, 0.09) 5px 7px);
+  border-top-color: #4a3528;
+  border-right-color: #130c08;
+  border-bottom-color: #0a0604;
+  border-left-color: #38271d;
   box-shadow:
     inset 0 3px 0 rgba(0, 0, 0, 0.28),
     inset 0 -1px 0 rgba(255, 255, 255, 0.08);
@@ -10129,9 +10101,7 @@ button.knowledge-upgrade-chip--unavailable {
 }
 
 button.knowledge-upgrade-chip--unlocked::before {
-  background: rgba(187, 247, 208, 0.2);
-  box-shadow: none;
-  opacity: 1;
+  display: none;
 }
 
 .main-menu-button,
@@ -10141,8 +10111,9 @@ button.spin-btn,
 button.relic-shop-btn,
 button.pause-btn-top,
 button.endgame-btn,
-button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked):not(.knowledge-upgrade-chip--unlocked) {
-  background: #2a180e;
+button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked) {
+  background-color: #2a180e;
+  background-image: repeating-linear-gradient(2deg, rgba(255, 239, 211, 0.035) 0 1px, transparent 1px 5px, rgba(0, 0, 0, 0.09) 5px 7px);
 }
 
 .main-menu-button:hover,
@@ -10155,8 +10126,9 @@ button.spin-btn:hover:not(:disabled):not(:active),
 button.relic-shop-btn:hover:not(:active),
 button.pause-btn-top:hover:not(:active),
 button.endgame-btn:hover:not(:active),
-button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked):not(.knowledge-upgrade-chip--unlocked):hover:not([aria-disabled="true"]):not(:active) {
-  background: #382116;
+button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked):hover:not([aria-disabled="true"]):not(:active) {
+  background-color: #382116;
+  background-image: repeating-linear-gradient(2deg, rgba(255, 239, 211, 0.035) 0 1px, transparent 1px 5px, rgba(0, 0, 0, 0.09) 5px 7px);
 }
 
 .main-menu-button:active,
@@ -10167,8 +10139,9 @@ button.relic-shop-btn:active,
 button.pause-btn-top:active,
 button.endgame-btn:active,
 button.knowledge-upgrade-chip:active:not([aria-disabled="true"]),
-button.knowledge-upgrade-chip--selected {
-  background: #160b06;
+button.knowledge-upgrade-chip--selected:active:not([aria-disabled="true"]) {
+  background-color: #160b06;
+  background-image: repeating-linear-gradient(2deg, rgba(255, 239, 211, 0.035) 0 1px, transparent 1px 5px, rgba(0, 0, 0, 0.09) 5px 7px);
 }
 
 .main-menu-button:disabled,
