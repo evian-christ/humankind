@@ -468,7 +468,7 @@ const TUTORIAL_DIALOG_STEPS_KO = [
     '지식 업그레이드 창을 열어보세요.',
   ],
   [
-    '지식 업그레이드의 가장 아래까지 스크롤해보세요.',
+    '지식 업그레이드 화면을 가로로 끝까지 이동해보세요.',
   ],
   [
     '레벨 30이 되면 AGI 프로젝트를 연구할 수 있습니다.',
@@ -582,7 +582,7 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'Open the Knowledge Upgrade window.',
   ],
   [
-    'Scroll to the bottom of the Knowledge Upgrade tree.',
+    'Scroll horizontally to the end of the Knowledge Upgrade tree.',
   ],
   [
     'At level 30, you can research the AGI Project.',
@@ -737,7 +737,7 @@ const TUTORIAL_DIALOG_STEPS_RU: string[][] = [
     'Откройте окно улучшений знаний.',
   ],
   [
-    'Прокрутите дерево улучшений знаний до самого низа.',
+    'Прокрутите дерево улучшений знаний по горизонтали до конца.',
   ],
   [
     'На уровне 30 можно изучить проект AGI.',
@@ -786,7 +786,7 @@ const TUTORIAL_DIALOG_STEPS_ZH: string[][] = [
   ['遗物拥有多种强力效果，可以帮助你走向繁荣。'],
   ['遗物需要用金币购买，所以尽量多收集金币。'],
   ['最后来看看如何赢得游戏。', '打开知识升级窗口。'],
-  ['将知识升级树滚动到最下方。'],
+  ['将知识升级树水平滚动到最右侧。'],
   ['达到等级 30 后可以研究 AGI 项目。', '研究后，AGI 核心就会出现。'],
   ['当 AGI 核心吸收 500 知识时，你就会获胜。'],
   ['现在返回上一个画面。'],

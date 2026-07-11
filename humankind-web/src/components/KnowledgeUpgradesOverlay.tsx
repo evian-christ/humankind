@@ -69,10 +69,10 @@ type KnowledgeConnectorLine = {
     prerequisiteCount: number;
 };
 type KnowledgeConnectorRenderLine = KnowledgeConnectorLine & { active: boolean; dimmed: boolean };
-type KnowledgeUpgradeTooltipPosition = {
-    left: number;
-    top: number;
-    placement: 'left' | 'right';
+type KnowledgeHorizontalNode = {
+    id: number;
+    level: number;
+    row: number;
 };
 
 /** Chip columns: expanded to 13 columns for development. */
@@ -192,35 +192,25 @@ export function buildBranchTierRows(): { level: number; ids: (number | null)[] }
 
 const TIERS: { level: number; ids: (number | null)[] }[] = buildBranchTierRows();
 
-const KNOWLEDGE_TREE_CHIP = 110;
-const KNOWLEDGE_TREE_GAP = 16;
-const TIER_ROW_PAD_X = 48;
-const TIER_LABEL_W = 72;
-/** Reserve one label band so Lv labels do not overlap the grid. */
-const KNOWLEDGE_TREE_LABEL_BAND_PX = TIER_ROW_PAD_X + TIER_LABEL_W + 14;
-const KNOWLEDGE_TREE_BODY_PAD_TOP = 0;
-const TIER_ROW_MIN_H = 130;
-const TIER_STACK_GAP = 28;
-const KNOWLEDGE_CONNECTOR_COLOR = '#4b4e55';
-const KNOWLEDGE_CONNECTOR_DIM_COLOR = '#202228';
-const KNOWLEDGE_CONNECTOR_ACTIVE_COLOR = '#6b7280';
+const KNOWLEDGE_CONNECTOR_COLOR = '#5f5143';
+const KNOWLEDGE_CONNECTOR_DIM_COLOR = '#231d18';
+const KNOWLEDGE_CONNECTOR_ACTIVE_COLOR = '#a48660';
 const ARCHERY_BRONZE_LINE_WIDTH = 3;
-const KNOWLEDGE_CONNECTOR_PORT_W = 28;
-const KNOWLEDGE_CONNECTOR_PORT_H = 4;
-const KNOWLEDGE_CONNECTOR_PORT_SHADOW = '#24262b';
+const KNOWLEDGE_CONNECTOR_PORT_W = 4;
+const KNOWLEDGE_CONNECTOR_PORT_H = 24;
 const KNOWLEDGE_TREE_CHIP_FRAME_INSET_DEFAULT = '#070707';
 const KNOWLEDGE_TREE_CHIP_FRAME_INSET_RESEARCHED = '#061008';
 const KNOWLEDGE_TREE_CHIP_FRAME_INSET_LOCKED = '#050505';
-const KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y = 5;
 const KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET = 8;
 const KNOWLEDGE_TREE_CHIP_DENIED_FRAME = '#120303';
-const KNOWLEDGE_TOOLTIP_PIN_DELAY_MS = 1000;
-const KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS = 180;
-const KNOWLEDGE_ERA_RESEARCH_SUMMARIES = {
-    1: { eraKey: 'era.ancient', minLevel: 1, maxLevel: 9 },
-    10: { eraKey: 'era.medieval', minLevel: 10, maxLevel: 19 },
-    20: { eraKey: 'era.modern', minLevel: 20, maxLevel: 29 },
-} as const;
+const KNOWLEDGE_HORIZONTAL_ROWS = 9;
+const KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH = 142;
+const KNOWLEDGE_HORIZONTAL_ROW_HEIGHT = 64;
+const KNOWLEDGE_HORIZONTAL_NODE_WIDTH = 134.2;
+const KNOWLEDGE_HORIZONTAL_NODE_HEIGHT = 57.2;
+const KNOWLEDGE_HORIZONTAL_PAD_X = 58;
+const KNOWLEDGE_HORIZONTAL_PAD_TOP = 60;
+const KNOWLEDGE_HORIZONTAL_PAD_BOTTOM = 26;
 
 export function getKnowledgeEraResearchAvailability(
     unlockedUpgradeIds: readonly number[],
@@ -249,49 +239,38 @@ function knowledgeTreeChipFrameColor(researched: boolean, locked: boolean, denie
 const KNOWLEDGE_CONNECTOR_IDLE_OPACITY = 0.16;
 const KNOWLEDGE_CONNECTOR_DIMMED_OPACITY = 0.08;
 const KNOWLEDGE_CONNECTOR_ACTIVE_OPACITY = 0.95;
-const KNOWLEDGE_TIER_AVAILABLE_BG = 'rgba(96,165,250,0.08)';
-
-/** Grid width: chip columns plus gaps. */
-function knowledgeTreeGridWidthPx(): number {
-    return (
-        KNOWLEDGE_TREE_GRID_COLS * KNOWLEDGE_TREE_CHIP +
-        (KNOWLEDGE_TREE_GRID_COLS - 1) * KNOWLEDGE_TREE_GAP
-    );
-}
-
-function findTierGridSlot(upgradeId: number): { rowIdx: number; colIdx: number } | null {
-    for (let rowIdx = 0; rowIdx < TIERS.length; rowIdx += 1) {
-        const colIdx = TIERS[rowIdx]!.ids.indexOf(upgradeId);
-        if (colIdx >= 0) return { rowIdx, colIdx };
-    }
-    return null;
-}
 
 function getTierLevelForUpgrade(upgradeId: number | null): number {
     if (upgradeId == null) return 1;
     return TIERS.find((tier) => tier.ids.includes(upgradeId))?.level ?? 1;
 }
 
-function getTierRowHeightPx(_rowIdx: number): number {
-    return TIER_ROW_MIN_H;
+function getNearestOpenHorizontalRow(preferredRow: number, occupiedRows: ReadonlySet<number>): number {
+    return Array.from({ length: KNOWLEDGE_HORIZONTAL_ROWS }, (_, row) => row)
+        .sort((a, b) => {
+            const distanceDelta = Math.abs(a - preferredRow) - Math.abs(b - preferredRow);
+            return distanceDelta !== 0 ? distanceDelta : a - b;
+        })
+        .find((row) => !occupiedRows.has(row)) ?? preferredRow;
 }
 
-function getTierRowTopPx(rowIdx: number): number {
-    let top = 0;
-    for (let i = 0; i < rowIdx; i += 1) {
-        top += getTierRowHeightPx(i) + TIER_STACK_GAP;
-    }
-    return top;
-}
-
-function getKnowledgeAvailableBackgroundHeightPx(currentLevel: number): number {
-    for (let tierIdx = TIERS.length - 1; tierIdx >= 0; tierIdx -= 1) {
-        if (TIERS[tierIdx]!.level <= currentLevel) {
-            return getTierRowTopPx(tierIdx) + getTierRowHeightPx(tierIdx) / 2;
-        }
-    }
-
-    return 0;
+// eslint-disable-next-line react-refresh/only-export-components
+export function buildHorizontalEraNodes(minLevel: number, maxLevel: number): KnowledgeHorizontalNode[] {
+    return TIERS
+        .filter((tier) => tier.level >= minLevel && tier.level <= maxLevel)
+        .flatMap((tier) => {
+            const occupiedRows = new Set<number>();
+            return tier.ids.flatMap((upgradeId, originalCol) => {
+                if (upgradeId == null) return [];
+                const preferredRow = Math.round(
+                    (originalCol / Math.max(1, KNOWLEDGE_TREE_GRID_COLS - 1)) *
+                    (KNOWLEDGE_HORIZONTAL_ROWS - 1),
+                );
+                const row = getNearestOpenHorizontalRow(preferredRow, occupiedRows);
+                occupiedRows.add(row);
+                return [{ id: upgradeId, level: tier.level, row }];
+            });
+        });
 }
 
 function collectConnectedUpgradeIds(upgradeId: number | null): Set<number> {
@@ -308,6 +287,7 @@ function collectConnectedUpgradeIds(upgradeId: number | null): Set<number> {
         for (const prereqId of getKnowledgeUpgradeDirectPrerequisites(current)) {
             if (!visited.has(prereqId)) stack.push(prereqId);
         }
+
         for (const dependentId of getKnowledgeUpgradeDirectDependents(current)) {
             if (!visited.has(dependentId)) stack.push(dependentId);
         }
@@ -327,45 +307,33 @@ function KnowledgeConnectorSegment({ seg }: { seg: KnowledgeConnectorRenderLine 
         : seg.dimmed
             ? KNOWLEDGE_CONNECTOR_DIMMED_OPACITY
             : KNOWLEDGE_CONNECTOR_IDLE_OPACITY;
+    const direction = seg.x2 >= seg.x1 ? 1 : -1;
+    const middleX = seg.x1 + (seg.x2 - seg.x1) / 2;
+    const path = `M ${seg.x1} ${seg.y1} H ${middleX} V ${seg.y2} H ${seg.x2}`;
 
     return (
         <g opacity={connectorOpacity}>
-            <line
-                x1={seg.x1}
-                y1={seg.y1 + KNOWLEDGE_CONNECTOR_PORT_H}
-                x2={seg.x2}
-                y2={seg.y2}
+            <path
+                d={path}
+                fill="none"
                 stroke={connectorColor}
                 strokeWidth={ARCHERY_BRONZE_LINE_WIDTH}
+                strokeLinejoin="round"
                 strokeLinecap="round"
             />
             <rect
-                x={seg.x1 - KNOWLEDGE_CONNECTOR_PORT_W / 2}
-                y={seg.y1}
+                x={seg.x1 - (direction < 0 ? 0 : KNOWLEDGE_CONNECTOR_PORT_W)}
+                y={seg.y1 - KNOWLEDGE_CONNECTOR_PORT_H / 2}
                 width={KNOWLEDGE_CONNECTOR_PORT_W}
                 height={KNOWLEDGE_CONNECTOR_PORT_H}
                 fill={connectorColor}
             />
             <rect
-                x={seg.x1 - KNOWLEDGE_CONNECTOR_PORT_W / 2}
-                y={seg.y1 + KNOWLEDGE_CONNECTOR_PORT_H}
-                width={KNOWLEDGE_CONNECTOR_PORT_W}
-                height={2}
-                fill={KNOWLEDGE_CONNECTOR_PORT_SHADOW}
-            />
-            <rect
-                x={seg.x2 - KNOWLEDGE_CONNECTOR_PORT_W / 2}
-                y={seg.y2 - KNOWLEDGE_CONNECTOR_PORT_H}
+                x={seg.x2 - (direction > 0 ? 0 : KNOWLEDGE_CONNECTOR_PORT_W)}
+                y={seg.y2 - KNOWLEDGE_CONNECTOR_PORT_H / 2}
                 width={KNOWLEDGE_CONNECTOR_PORT_W}
                 height={KNOWLEDGE_CONNECTOR_PORT_H}
                 fill={connectorColor}
-            />
-            <rect
-                x={seg.x2 - KNOWLEDGE_CONNECTOR_PORT_W / 2}
-                y={seg.y2 - KNOWLEDGE_CONNECTOR_PORT_H - 2}
-                width={KNOWLEDGE_CONNECTOR_PORT_W}
-                height={2}
-                fill={KNOWLEDGE_CONNECTOR_PORT_SHADOW}
             />
         </g>
     );
@@ -392,15 +360,10 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const [isClosing, setIsClosing] = useState(false);
     const researchHintIdRef = useRef(0);
     const deniedChipTimeoutRef = useRef<number | null>(null);
-    const tooltipPinTimeoutRef = useRef<number | null>(null);
-    const tooltipReleaseTimeoutRef = useRef<number | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
-    const tooltipRef = useRef<HTMLDivElement>(null);
     const treeScrollRef = useRef<HTMLDivElement>(null);
     const treeContentRef = useRef<HTMLDivElement>(null);
-    const savedTreeScrollTopRef = useRef(0);
     const [connectorLines, setConnectorLines] = useState<KnowledgeConnectorLine[]>([]);
-    const [tooltipPosition, setTooltipPosition] = useState<KnowledgeUpgradeTooltipPosition | null>(null);
 
     const tutorialRestrictsHover = tutorialStep != null && tutorialStep >= 14 && tutorialStep <= 16;
     const activeFocusId = pinnedTooltipId ?? hoveredId ?? (tutorialRestrictsHover ? tutorialFocusId : null);
@@ -411,12 +374,15 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     const activeConnectionIds = collectConnectedUpgradeIds(activeFocusId);
     const detailDirectPrereqs = detailId != null ? [...getKnowledgeUpgradeDirectPrerequisites(detailId)] : [];
     const detailDirectDependents = detailId != null ? [...getKnowledgeUpgradeDirectDependents(detailId)] : [];
+    const horizontalNodes = useMemo(
+        () => buildHorizontalEraNodes(1, 30),
+        [],
+    );
     const hasResearchPoints = levelUpResearchPoints > 0;
     const researchCredits = useMemo(
         () => normalizeKnowledgeResearchCredits(currentLevel, levelUpResearchPoints, knowledgeResearchCredits),
         [currentLevel, knowledgeResearchCredits, levelUpResearchPoints],
     );
-    const availableBackgroundHeightPx = getKnowledgeAvailableBackgroundHeightPx(currentLevel);
     const isPermanentlyLocked = useCallback((id: number): boolean => {
         const check = (currentId: number, memo: Map<number, boolean>): boolean => {
             if (memo.has(currentId)) return memo.get(currentId)!;
@@ -475,166 +441,79 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             setConnectorLines([]);
             return;
         }
-        const gridWidth = knowledgeTreeGridWidthPx();
-        const centeredGridStartX =
-            KNOWLEDGE_TREE_LABEL_BAND_PX +
-            Math.max(0, (contentEl.clientWidth - KNOWLEDGE_TREE_LABEL_BAND_PX - gridWidth) / 2);
-        const xForCol = (colIdx: number) =>
-            centeredGridStartX + colIdx * (KNOWLEDGE_TREE_CHIP + KNOWLEDGE_TREE_GAP) + KNOWLEDGE_TREE_CHIP / 2;
-        const bottomAnchorY = (rowIdx: number, pressed: boolean) =>
-            getTierRowTopPx(rowIdx) +
-            (getTierRowHeightPx(rowIdx) + KNOWLEDGE_TREE_CHIP) / 2 +
-            (pressed ? KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y : 0);
-        const topAnchorY = (rowIdx: number, pressed: boolean) =>
-            getTierRowTopPx(rowIdx) +
-            (getTierRowHeightPx(rowIdx) - KNOWLEDGE_TREE_CHIP) / 2 +
-            (pressed ? KNOWLEDGE_TREE_CHIP_PRESSED_TRANSLATE_Y : 0);
+        const contentRect = contentEl.getBoundingClientRect();
+        const scaleX = contentEl.offsetWidth > 0 ? contentRect.width / contentEl.offsetWidth : 1;
+        const scaleY = contentEl.offsetHeight > 0 ? contentRect.height / contentEl.offsetHeight : 1;
+        const nodeById = new Map<number, HTMLElement>();
+        contentEl.querySelectorAll<HTMLElement>('[data-knowledge-upgrade-id]').forEach((node) => {
+            const id = Number(node.dataset.knowledgeUpgradeId);
+            if (Number.isFinite(id)) nodeById.set(id, node);
+        });
 
         const next: KnowledgeConnectorLine[] = [];
         for (const [upgradeIdRaw] of Object.entries(KNOWLEDGE_UPGRADES)) {
             const upgradeId = Number(upgradeIdRaw);
-            const targetPos = findTierGridSlot(upgradeId);
-            if (!targetPos) continue;
+            const targetNode = nodeById.get(upgradeId);
+            if (!targetNode) continue;
+            const targetRect = targetNode.getBoundingClientRect();
             const prerequisites = getKnowledgeUpgradeDirectPrerequisites(upgradeId);
             for (const prereqId of prerequisites) {
-                const sourcePos = findTierGridSlot(prereqId);
-                if (!sourcePos) continue;
+                const sourceNode = nodeById.get(prereqId);
+                if (!sourceNode) continue;
+                const sourceRect = sourceNode.getBoundingClientRect();
                 next.push({
                     from: prereqId,
                     to: upgradeId,
-                    x1: xForCol(sourcePos.colIdx),
-                    y1: bottomAnchorY(sourcePos.rowIdx, activeFocusId === prereqId || isVisuallyLocked(prereqId)),
-                    x2: xForCol(targetPos.colIdx),
-                    y2: topAnchorY(targetPos.rowIdx, activeFocusId === upgradeId || isVisuallyLocked(upgradeId)),
+                    x1: (sourceRect.right - contentRect.left) / scaleX,
+                    y1: (sourceRect.top + sourceRect.height / 2 - contentRect.top) / scaleY,
+                    x2: (targetRect.left - contentRect.left) / scaleX,
+                    y2: (targetRect.top + targetRect.height / 2 - contentRect.top) / scaleY,
                     prerequisiteCount: prerequisites.length,
                 });
             }
         }
 
         setConnectorLines(next);
-    }, [activeFocusId, isVisuallyLocked]);
-
-    const updateDetailTooltipPosition = useCallback(() => {
-        if (detailId == null) {
-            setTooltipPosition(null);
-            return;
-        }
-
-        const overlayEl = overlayRef.current;
-        if (!overlayEl) return;
-
-        const anchorEl = overlayEl.querySelector<HTMLElement>(
-            `[data-knowledge-upgrade-id="${detailId}"]`,
-        );
-        if (!anchorEl) {
-            setTooltipPosition(null);
-            return;
-        }
-
-        const rootEl = document.getElementById('root');
-        if (!rootEl) return;
-
-        const anchorRect = anchorEl.getBoundingClientRect();
-        const rootRect = rootEl.getBoundingClientRect();
-        const scaleX = rootRect.width / rootEl.clientWidth;
-        const scaleY = rootRect.height / rootEl.clientHeight;
-        const anchorLeft = (anchorRect.left - rootRect.left) / scaleX;
-        const anchorRight = (anchorRect.right - rootRect.left) / scaleX;
-        const anchorTop = (anchorRect.top - rootRect.top) / scaleY;
-        const anchorBottom = (anchorRect.bottom - rootRect.top) / scaleY;
-        const tooltipEl = tooltipRef.current;
-        const tooltipWidth = tooltipEl?.offsetWidth ?? 520;
-        const tooltipHeight = tooltipEl?.offsetHeight ?? 640;
-        const margin = 12;
-        const minInset = 20;
-        const viewportWidth = rootEl.clientWidth;
-        const viewportHeight = rootEl.clientHeight;
-        const preferredLeft = anchorRight + margin;
-        const canPlaceRight = preferredLeft + tooltipWidth <= viewportWidth - minInset;
-        const placement: 'left' | 'right' = canPlaceRight ? 'right' : 'left';
-        const unclampedLeft = placement === 'right'
-            ? preferredLeft
-            : anchorLeft - tooltipWidth - margin;
-        const left = Math.min(
-            Math.max(minInset, unclampedLeft),
-            Math.max(minInset, viewportWidth - tooltipWidth - minInset),
-        );
-        const anchorCenterY = (anchorTop + anchorBottom) / 2;
-        const alignTopToAnchor = anchorCenterY <= viewportHeight / 2;
-        const preferredTop = alignTopToAnchor
-            ? anchorTop
-            : anchorBottom - tooltipHeight;
-        const top = Math.min(
-            Math.max(minInset, preferredTop),
-            Math.max(minInset, viewportHeight - tooltipHeight - minInset),
-        );
-
-        setTooltipPosition((prev) => {
-            if (
-                prev != null &&
-                prev.left === left &&
-                prev.top === top &&
-                prev.placement === placement
-            ) {
-                return prev;
-            }
-            return { left, top, placement };
-        });
-    }, [detailId]);
-
-    useLayoutEffect(() => {
-        if (!isOpen || detailId == null || tooltipPosition == null || tooltipRef.current == null) return;
-
-        const raf = requestAnimationFrame(() => {
-            updateDetailTooltipPosition();
-        });
-
-        return () => cancelAnimationFrame(raf);
-    }, [detailId, isOpen, tooltipPosition, updateDetailTooltipPosition]);
+    }, []);
 
     useLayoutEffect(() => {
         if (!isOpen) return;
         const raf = requestAnimationFrame(() => {
-            if (scrollEl) scrollEl.scrollTop = savedTreeScrollTopRef.current;
             updateKnowledgeTreeConnectors();
-            updateDetailTooltipPosition();
         });
         const contentEl = treeContentRef.current;
-        const tooltipEl = tooltipRef.current;
-        const scrollEl = treeScrollRef.current;
         if (!contentEl) return () => cancelAnimationFrame(raf);
         const ro = typeof ResizeObserver !== 'undefined'
-            ? new ResizeObserver(() => {
-                updateKnowledgeTreeConnectors();
-                updateDetailTooltipPosition();
-            })
+            ? new ResizeObserver(updateKnowledgeTreeConnectors)
             : null;
         ro?.observe(contentEl);
-        if (tooltipEl) ro?.observe(tooltipEl);
-        scrollEl?.addEventListener('scroll', updateKnowledgeTreeConnectors, { passive: true });
-        scrollEl?.addEventListener('scroll', updateDetailTooltipPosition, { passive: true });
         window.addEventListener('resize', updateKnowledgeTreeConnectors);
-        window.addEventListener('resize', updateDetailTooltipPosition);
         return () => {
             cancelAnimationFrame(raf);
             ro?.disconnect();
-            scrollEl?.removeEventListener('scroll', updateKnowledgeTreeConnectors);
-            scrollEl?.removeEventListener('scroll', updateDetailTooltipPosition);
             window.removeEventListener('resize', updateKnowledgeTreeConnectors);
-            window.removeEventListener('resize', updateDetailTooltipPosition);
         };
-    }, [isOpen, updateKnowledgeTreeConnectors, updateDetailTooltipPosition, language, detailId]);
+    }, [activeFocusId, horizontalNodes, isOpen, language, updateKnowledgeTreeConnectors]);
 
     useLayoutEffect(() => {
-        if (!isOpen || tutorialStep !== 30) return;
+        if (!isOpen) return;
         const scrollEl = treeScrollRef.current;
         if (!scrollEl) return;
         const raf = requestAnimationFrame(() => {
-            scrollEl.scrollTop = 0;
-            savedTreeScrollTopRef.current = scrollEl.scrollTop;
+            if (tutorialStep === 30) {
+                scrollEl.scrollLeft = 0;
+                return;
+            }
+            const currentColumn = Math.max(0, currentLevel - 1);
+            scrollEl.scrollLeft = Math.max(
+                0,
+                KNOWLEDGE_HORIZONTAL_PAD_X +
+                    currentColumn * KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH -
+                    scrollEl.clientWidth * 0.38,
+            );
         });
         return () => cancelAnimationFrame(raf);
-    }, [isOpen, tutorialStep]);
+    }, [currentLevel, isOpen, tutorialStep]);
 
     const closeWithSlide = useCallback(() => {
         if (isClosing) return;
@@ -669,21 +548,12 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     // Reset transient selection state when the panel closes.
     useEffect(() => {
         if (!isOpen) {
-            if (tooltipPinTimeoutRef.current != null) {
-                window.clearTimeout(tooltipPinTimeoutRef.current);
-                tooltipPinTimeoutRef.current = null;
-            }
-            if (tooltipReleaseTimeoutRef.current != null) {
-                window.clearTimeout(tooltipReleaseTimeoutRef.current);
-                tooltipReleaseTimeoutRef.current = null;
-            }
             queueMicrotask(() => {
                 setPendingResearchId(null);
                 setTutorialFocusId(null);
                 setHoveredId(null);
                 setPinnedTooltipId(null);
                 setDeniedChipId(null);
-                setTooltipPosition(null);
                 setResearchPointsMouseHints([]);
             });
         }
@@ -692,12 +562,6 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
     useEffect(() => () => {
         if (deniedChipTimeoutRef.current != null) {
             window.clearTimeout(deniedChipTimeoutRef.current);
-        }
-        if (tooltipPinTimeoutRef.current != null) {
-            window.clearTimeout(tooltipPinTimeoutRef.current);
-        }
-        if (tooltipReleaseTimeoutRef.current != null) {
-            window.clearTimeout(tooltipReleaseTimeoutRef.current);
         }
     }, []);
 
@@ -773,7 +637,7 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         setPendingResearchId(null);
     };
 
-    const handleChipClick = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
+    const requestResearch = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
         if (!canConfirmResearch(id)) {
             showDeniedChipFeedback(id, e);
             return;
@@ -781,18 +645,23 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
         setPendingResearchId(id);
     };
 
-    const clearTooltipPinTimer = () => {
-        if (tooltipPinTimeoutRef.current != null) {
-            window.clearTimeout(tooltipPinTimeoutRef.current);
-            tooltipPinTimeoutRef.current = null;
+    const handleChipClick = (id: number, e: ReactMouseEvent<HTMLButtonElement>) => {
+        if (pinnedTooltipId === id) {
+            setPinnedTooltipId(null);
+            setHoveredId(id);
+            return;
+        }
+        setPinnedTooltipId(id);
+        setHoveredId(null);
+        if (tutorialStep === 15 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID) {
+            requestResearch(id, e);
         }
     };
 
-    const clearTooltipReleaseTimer = () => {
-        if (tooltipReleaseTimeoutRef.current != null) {
-            window.clearTimeout(tooltipReleaseTimeoutRef.current);
-            tooltipReleaseTimeoutRef.current = null;
-        }
+    const handleTreeBackgroundClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+        if (event.target !== event.currentTarget) return;
+        setPinnedTooltipId(null);
+        setHoveredId(null);
     };
 
     const handleChipMouseEnter = (id: number) => {
@@ -800,43 +669,22 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
             tutorialStep === 15 && id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID;
         if (tutorialStep === 15 && !tutorialAllowsAncientResearchHover) return;
         if (tutorialRestrictsHover && !tutorialAllowsAncientResearchHover) return;
-        if (pinnedTooltipId === id) {
-            clearTooltipReleaseTimer();
-            setHoveredId(id);
-            return;
-        }
         if (pinnedTooltipId != null) return;
-        clearTooltipPinTimer();
-        clearTooltipReleaseTimer();
         setHoveredId(id);
-        tooltipPinTimeoutRef.current = window.setTimeout(() => {
-            setPinnedTooltipId(id);
-            tooltipPinTimeoutRef.current = null;
-        }, KNOWLEDGE_TOOLTIP_PIN_DELAY_MS);
     };
 
     const handleChipMouseLeave = (id: number) => {
         setHoveredId((prev) => (prev === id ? null : prev));
-        if (pinnedTooltipId === id) {
-            clearTooltipReleaseTimer();
-            tooltipReleaseTimeoutRef.current = window.setTimeout(() => {
-                setPinnedTooltipId((prev) => (prev === id ? null : prev));
-                tooltipReleaseTimeoutRef.current = null;
-            }, KNOWLEDGE_TOOLTIP_ENTER_GRACE_MS);
-        } else {
-            clearTooltipPinTimer();
-        }
     };
 
-    const handleTooltipMouseEnter = () => {
-        clearTooltipReleaseTimer();
-    };
-
-    const handleTooltipMouseLeave = () => {
-        clearTooltipPinTimer();
-        clearTooltipReleaseTimer();
-        setPinnedTooltipId(null);
+    const navigateToUpgrade = (upgradeId: number) => {
         setHoveredId(null);
+        setPinnedTooltipId(upgradeId);
+        window.requestAnimationFrame(() => {
+            overlayRef.current
+                ?.querySelector<HTMLElement>(`[data-knowledge-upgrade-id="${upgradeId}"]`)
+                ?.scrollIntoView({ block: 'center', inline: 'center' });
+        });
     };
 
     return (
@@ -924,414 +772,191 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                 </div>
             </div>
 
-            {/* Tree body */}
-            <div
-                style={{
-                    flex: 1,
-                    minHeight: 0,
-                    padding: `${KNOWLEDGE_TREE_BODY_PAD_TOP}px 0 28px`,
-                    boxSizing: 'border-box',
-                    position: 'relative',
-                    zIndex: 1,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
-            >
-                <div
-                    ref={treeScrollRef}
-                    className="knowledge-upgrades-tree-scroll"
-                    onScroll={(e) => {
-                        savedTreeScrollTopRef.current = e.currentTarget.scrollTop;
-                        if (
-                            tutorialStep === 30 &&
-                            e.currentTarget.scrollTop + e.currentTarget.clientHeight >=
-                                e.currentTarget.scrollHeight - 24
-                        ) {
-                            onTutorialStepChange?.(31);
-                        }
-                    }}
-                    style={{
-                        flex: 1,
-                        width: '100%',
-                        minHeight: 0,
-                        boxSizing: 'border-box',
-                        overflowY: 'auto',
-                        paddingBottom: 8,
-                        position: 'relative',
-                        zIndex: 1,
-                    }}
-                >
+            <div className="knowledge-upgrades-page">
+                <div className="knowledge-upgrades-workspace">
                     <div
-                        ref={treeContentRef}
-                        style={{
-                            position: 'relative',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: TIER_STACK_GAP,
+                        ref={treeScrollRef}
+                        className="knowledge-upgrades-era-scroll"
+                        onScroll={(event) => {
+                            if (
+                                tutorialStep === 30 &&
+                                event.currentTarget.scrollLeft + event.currentTarget.clientWidth >=
+                                    event.currentTarget.scrollWidth - 24
+                            ) {
+                                onTutorialStepChange?.(31);
+                            }
+                        }}
+                        onWheel={(event) => {
+                            if (event.deltaY === 0) return;
+                            event.currentTarget.scrollLeft += event.deltaY;
+                            event.preventDefault();
                         }}
                     >
-                        {availableBackgroundHeightPx > 0 && (
-                            <div
-                                aria-hidden
-                                data-knowledge-available-background
-                                style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    right: 0,
-                                    top: 0,
-                                    height: `${availableBackgroundHeightPx}px`,
-                                    background: KNOWLEDGE_TIER_AVAILABLE_BG,
-                                    pointerEvents: 'none',
-                                    zIndex: 0,
-                                }}
-                            />
-                        )}
-                        {TIERS.map((tier) => {
-                            const tierRowHeight = getTierRowHeightPx(TIERS.indexOf(tier));
-                            const tierUnlockable = currentLevel >= tier.level;
-                            const dashColor = tierUnlockable ? '#fbbf2428' : '#1e1e1e';
-                            const labelColor = tierUnlockable ? '#fbbf24cc' : '#3a3a3a';
-                            const eraResearchSummary =
-                                KNOWLEDGE_ERA_RESEARCH_SUMMARIES[
-                                    tier.level as keyof typeof KNOWLEDGE_ERA_RESEARCH_SUMMARIES
-                                ];
-                            const eraResearchAvailability = eraResearchSummary
-                                ? getKnowledgeEraResearchAvailability(
-                                    unlockedUpgrades,
-                                    eraResearchSummary.minLevel,
-                                    eraResearchSummary.maxLevel,
-                                )
-                                : null;
-
-                            return (
+                        <div
+                            ref={treeContentRef}
+                            className="knowledge-upgrades-horizontal-tree"
+                            onClick={handleTreeBackgroundClick}
+                            style={{
+                                width:
+                                    KNOWLEDGE_HORIZONTAL_PAD_X * 2 +
+                                    30 * KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH,
+                                height:
+                                    KNOWLEDGE_HORIZONTAL_PAD_TOP +
+                                    KNOWLEDGE_HORIZONTAL_ROWS * KNOWLEDGE_HORIZONTAL_ROW_HEIGHT +
+                                    KNOWLEDGE_HORIZONTAL_PAD_BOTTOM,
+                            }}
+                        >
+                            {Array.from({ length: 30 }, (_, index) => index + 1).map((level, index) => (
                                 <div
-                                    key={tier.level}
+                                    key={`level-${level}`}
+                                    className={[
+                                        'knowledge-horizontal-level-column',
+                                        level === currentLevel ? 'knowledge-horizontal-level-column--current' : '',
+                                        level > currentLevel ? 'knowledge-horizontal-level-column--future' : '',
+                                    ].filter(Boolean).join(' ')}
                                     style={{
-                                        position: 'relative',
-                                        flex: '0 0 auto',
-                                        minHeight: `${tierRowHeight}px`,
+                                        left: KNOWLEDGE_HORIZONTAL_PAD_X + index * KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH,
+                                        width: KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH,
                                     }}
                                 >
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            left: 0,
-                                            right: 0,
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            borderTop: `2px dashed ${dashColor}`,
-                                            pointerEvents: 'none',
-                                            zIndex: 0,
-                                        }}
-                                    />
-
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            left: `${TIER_ROW_PAD_X}px`,
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            zIndex: 2,
-                                            width: `${TIER_LABEL_W}px`,
-                                            fontFamily: 'var(--game-font-family), sans-serif',
-                                            fontSize: '20px',
-                                            letterSpacing: '0.12em',
-                                            color: labelColor,
-                                            fontWeight: 'bold',
-                                            paddingRight: '14px',
-                                            textShadow: '0 2px 4px rgba(0,0,0,0.9)',
-                                        }}
-                                    >
-                                        Lv.{tier.level}
-                                    </div>
-
-                                    {eraResearchSummary && eraResearchAvailability && (
-                                        <div
-                                            style={{
-                                                position: 'absolute',
-                                                left: `${KNOWLEDGE_TREE_LABEL_BAND_PX + 88}px`,
-                                                right: `${TIER_ROW_PAD_X + 32}px`,
-                                                bottom: 'calc(50% + 10px)',
-                                                zIndex: 6,
-                                                display: 'flex',
-                                                alignItems: 'flex-end',
-                                                justifyContent: 'space-between',
-                                                color: labelColor,
-                                                fontFamily: 'var(--game-font-family), sans-serif',
-                                                lineHeight: 0.8,
-                                                fontWeight: 'bold',
-                                                textShadow: '0 2px 4px rgba(0,0,0,0.9)',
-                                                whiteSpace: 'nowrap',
-                                                pointerEvents: 'none',
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontSize: '40px',
-                                                    letterSpacing: '0.04em',
-                                                }}
-                                            >
-                                                {t('knowledgeUpgrade.eraLabel', language)
-                                                    .replace('{era}', t(eraResearchSummary.eraKey, language))}
-                                            </span>
-                                            <span
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'baseline',
-                                                    gap: '12px',
-                                                    fontSize: '26px',
-                                                    letterSpacing: '0.04em',
-                                                }}
-                                            >
-                                                <span>
-                                                    {t('knowledgeUpgrade.eraResearchAvailability', language)
-                                                        .replace('{era}', t(eraResearchSummary.eraKey, language))
-                                                        .replace('{available}/{total}', '')}
-                                                </span>
-                                                <span
-                                                    style={{
-                                                        fontSize: '42px',
-                                                        letterSpacing: '0.02em',
-                                                    }}
-                                                >
-                                                    {eraResearchAvailability.available}/{eraResearchAvailability.total}
-                                                </span>
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    <div
-                                        style={{
-                                            position: 'relative',
-                                            zIndex: 4,
-                                            width: '100%',
-                                            boxSizing: 'border-box',
-                                            paddingLeft: KNOWLEDGE_TREE_LABEL_BAND_PX,
-                                            display: 'flex',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            minHeight: `${TIER_ROW_MIN_H}px`,
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: `repeat(${KNOWLEDGE_TREE_GRID_COLS}, ${KNOWLEDGE_TREE_CHIP}px)`,
-                                                gap: `${KNOWLEDGE_TREE_GAP}px`,
-                                                flexShrink: 0,
-                                            }}
-                                            >
-                                            {tier.ids.map((id, slotIdx) => {
-                                                if (id === null) {
-                                                    return (
-                                                        <div
-                                                            key={`empty-${tier.level}-${slotIdx}`}
-                                                            style={{
-                                                                width: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                                height: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                            }}
-                                                        />
-                                                    );
-                                                }
-                                                const upgrade = KNOWLEDGE_UPGRADES[id];
-                                                if (!upgrade) return null;
-                                                const unlocked = unlockedUpgrades.includes(id);
-                                                const visuallyLocked = isVisuallyLocked(id);
-                                                const isDenied = deniedChipId === id;
-                                                const canResearch = canConfirmResearch(id);
-                                                const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
-                                                const isSelectionRelated =
-                                                    activeFocusId == null ||
-                                                    activeConnectionIds.has(id);
-                                                const chipFilter = activeFocusId != null && !isSelectionRelated
-                                                    ? 'brightness(0.28) saturate(0.8)'
-                                                    : 'none';
-                                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked, visuallyLocked, isDenied);
-                                                const upgradeSpriteUrl = resolveUpgradeSprite(upgrade.sprite);
-                                                return (
-                                                    <button
-                                                        key={id}
-                                                        type="button"
-                                                        className={[
-                                                            'knowledge-upgrade-chip',
-                                                            !unlocked && canResearch ? 'knowledge-upgrade-chip--available' : '',
-                                                            unlocked ? 'knowledge-upgrade-chip--unlocked' : '',
-                                                            visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
-                                                            isDenied ? 'knowledge-upgrade-chip--denied' : '',
-                                                            id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
-                                                            id === AGI_PROJECT_UPGRADE_ID ? 'knowledge-upgrade-chip--agi-project' : '',
-                                                        ].filter(Boolean).join(' ')}
-                                                        data-knowledge-upgrade-id={id}
-                                                        aria-disabled={visuallyLocked && !unlocked}
-                                                        onClick={(e) => handleChipClick(id, e)}
-                                                        onMouseEnter={() => handleChipMouseEnter(id)}
-                                                        onMouseLeave={() => handleChipMouseLeave(id)}
-                                                        style={{
-                                                            width: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                            height: `${KNOWLEDGE_TREE_CHIP}px`,
-                                                            padding: 0,
-                                                            display: 'block',
-                                                            position: 'relative',
-                                                            overflow: unlocked || canResearch ? 'visible' : 'hidden',
-                                                            filter: chipFilter,
-                                                            color: unlocked ? '#fff' : 'rgba(220,220,220,0.85)',
-                                                            cursor: visuallyLocked && !unlocked ? 'not-allowed' : 'pointer',
-                                                            transition:
-                                                                'background 140ms ease, border-color 140ms ease, filter 0.15s ease, box-shadow 140ms ease, transform 140ms ease',
-                                                        }}
-                                                    >
-                                                        {upgradeSpriteUrl && (
-                                                            <img
-                                                                src={upgradeSpriteUrl}
-                                                                alt={name}
-                                                                draggable={false}
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    inset: '12px',
-                                                                    width: 'calc(100% - 24px)',
-                                                                    height: 'calc(100% - 24px)',
-                                                                    objectFit: 'contain',
-                                                                    imageRendering: 'pixelated',
-                                                                    filter: visuallyLocked
-                                                                        ? 'grayscale(1) saturate(0) brightness(0.65)'
-                                                                        : undefined,
-                                                                    pointerEvents: 'none',
-                                                                }}
-                                                            />
-                                                        )}
-                                                        <div
-                                                            aria-hidden
-                                                            style={{
-                                                                position: 'absolute',
-                                                                inset: `${KNOWLEDGE_TREE_CHIP_INNER_FRAME_INSET}px`,
-                                                                border: `2px solid ${chipFrameColor}`,
-                                                                borderRadius: 0,
-                                                                boxSizing: 'border-box',
-                                                                pointerEvents: 'none',
-                                                            }}
-                                                        />
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                                    <span>Lv.{level}</span>
                                 </div>
-                            );
-                        })}
-                        {connectorLines.length > 0 && (
-                            <>
-                                <svg
+                            ))}
+
+                            {Array.from({ length: Math.ceil(KNOWLEDGE_HORIZONTAL_ROWS / 2) }, (_, band) => (
+                                <div
+                                    key={`soft-band-${band}`}
                                     aria-hidden
+                                    className={`knowledge-horizontal-soft-band knowledge-horizontal-soft-band--${band % 3}`}
                                     style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        overflow: 'visible',
-                                        pointerEvents: 'none',
-                                        zIndex: 3,
+                                        top: KNOWLEDGE_HORIZONTAL_PAD_TOP + band * KNOWLEDGE_HORIZONTAL_ROW_HEIGHT * 2 - 8,
+                                        height: Math.min(
+                                            KNOWLEDGE_HORIZONTAL_ROW_HEIGHT * 2,
+                                            (KNOWLEDGE_HORIZONTAL_ROWS - band * 2) * KNOWLEDGE_HORIZONTAL_ROW_HEIGHT,
+                                        ),
                                     }}
-                                >
+                                />
+                            ))}
+
+                            {connectorLines.length > 0 && (
+                                <svg aria-hidden className="knowledge-horizontal-connectors">
                                     {connectorRenderLines
                                         .filter((seg) => !seg.active && (activeFocusId != null || seg.prerequisiteCount <= 1))
-                                        .map((seg, i) => (
-                                            <KnowledgeConnectorSegment key={`inactive-${i}`} seg={seg} />
+                                        .map((seg, index) => (
+                                            <KnowledgeConnectorSegment key={`inactive-${index}`} seg={seg} />
                                         ))}
-                                    {hoveredId == null && connectorRenderLines
+                                    {connectorRenderLines
                                         .filter((seg) => seg.active)
-                                        .map((seg, i) => (
-                                            <KnowledgeConnectorSegment key={`focused-${i}`} seg={seg} />
+                                        .map((seg, index) => (
+                                            <KnowledgeConnectorSegment key={`active-${index}`} seg={seg} />
                                         ))}
                                 </svg>
-                                {hoveredId != null && (
-                                    <svg
-                                        aria-hidden
+                            )}
+
+                            {horizontalNodes.map(({ id, level, row }) => {
+                                const upgrade = KNOWLEDGE_UPGRADES[id];
+                                if (!upgrade) return null;
+                                const unlocked = unlockedUpgrades.includes(id);
+                                const visuallyLocked = isVisuallyLocked(id);
+                                const isDenied = deniedChipId === id;
+                                const canResearch = canConfirmResearch(id);
+                                const name = t(`knowledgeUpgrade.${id}.name`, language) || upgrade.name;
+                                const isSelectionRelated = activeFocusId == null || activeConnectionIds.has(id);
+                                const chipFrameColor = knowledgeTreeChipFrameColor(unlocked, visuallyLocked, isDenied);
+                                const upgradeSpriteUrl = resolveUpgradeSprite(upgrade.sprite);
+                                return (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        className={[
+                                            'knowledge-upgrade-chip',
+                                            'knowledge-upgrade-chip--horizontal',
+                                            !unlocked && canResearch ? 'knowledge-upgrade-chip--available' : '',
+                                            !unlocked && !canResearch ? 'knowledge-upgrade-chip--unavailable' : '',
+                                            unlocked ? 'knowledge-upgrade-chip--unlocked' : '',
+                                            visuallyLocked ? 'knowledge-upgrade-chip--locked' : '',
+                                            isDenied ? 'knowledge-upgrade-chip--denied' : '',
+                                            pinnedTooltipId === id ? 'knowledge-upgrade-chip--selected' : '',
+                                            !isSelectionRelated ? 'knowledge-upgrade-chip--unrelated' : '',
+                                            id === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-chip--ancient-era' : '',
+                                            id === AGI_PROJECT_UPGRADE_ID ? 'knowledge-upgrade-chip--agi-project' : '',
+                                        ].filter(Boolean).join(' ')}
+                                        data-knowledge-upgrade-id={id}
+                                        aria-label={name}
+                                        aria-disabled={visuallyLocked && !unlocked}
+                                        onClick={(event) => handleChipClick(id, event)}
+                                        onMouseEnter={() => handleChipMouseEnter(id)}
+                                        onMouseLeave={() => handleChipMouseLeave(id)}
                                         style={{
-                                            position: 'absolute',
-                                            left: 0,
-                                            top: 0,
-                                            width: '100%',
-                                            height: '100%',
-                                            overflow: 'visible',
-                                            pointerEvents: 'none',
-                                            zIndex: 5,
+                                            left:
+                                                KNOWLEDGE_HORIZONTAL_PAD_X +
+                                                (level - 1) * KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH +
+                                                (KNOWLEDGE_HORIZONTAL_LEVEL_WIDTH - KNOWLEDGE_HORIZONTAL_NODE_WIDTH) / 2,
+                                            top: KNOWLEDGE_HORIZONTAL_PAD_TOP + row * KNOWLEDGE_HORIZONTAL_ROW_HEIGHT,
+                                            width: KNOWLEDGE_HORIZONTAL_NODE_WIDTH,
+                                            height: KNOWLEDGE_HORIZONTAL_NODE_HEIGHT,
                                         }}
                                     >
-                                        {connectorRenderLines
-                                            .filter((seg) => seg.active)
-                                            .map((seg, i) => (
-                                                <KnowledgeConnectorSegment key={`active-${i}`} seg={seg} />
-                                            ))}
-                                    </svg>
-                                )}
-                            </>
-                        )}
+                                        {upgradeSpriteUrl && (
+                                            <img
+                                                src={upgradeSpriteUrl}
+                                                alt=""
+                                                draggable={false}
+                                                className="knowledge-upgrade-chip-image"
+                                                style={{
+                                                    filter: visuallyLocked
+                                                        ? 'grayscale(1) saturate(0) brightness(0.65)'
+                                                        : undefined,
+                                                }}
+                                            />
+                                        )}
+                                        <span className="knowledge-upgrade-chip-name">{name}</span>
+                                        <div
+                                            aria-hidden
+                                            className="knowledge-upgrade-chip-inner-frame"
+                                            style={{ borderColor: chipFrameColor }}
+                                        />
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
 
-                {detailUpgrade && tooltipPosition && (
-                    <div
-                        ref={tooltipRef}
+                    <aside
                         className={[
                             'knowledge-upgrade-tooltip',
+                            'knowledge-upgrade-tooltip--docked',
                             pinnedTooltipId === detailId ? 'knowledge-upgrade-tooltip--pinned' : '',
-                            `knowledge-upgrade-tooltip--${tooltipPosition.placement}`,
                             detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ? 'knowledge-upgrade-tooltip--ancient-era' : '',
                         ].filter(Boolean).join(' ')}
-                        style={{
-                            left: tooltipPosition.left,
-                            top: tooltipPosition.top,
-                        }}
-                        onMouseEnter={pinnedTooltipId === detailId ? handleTooltipMouseEnter : undefined}
-                        onMouseLeave={pinnedTooltipId === detailId ? handleTooltipMouseLeave : undefined}
                     >
-                        {(hoveredId === detailId || pinnedTooltipId === detailId) && (
-                            <div
-                                key={`pin-progress-${detailId}`}
-                                aria-hidden
-                                className={[
-                                    'knowledge-upgrade-tooltip-pin-progress',
-                                    pinnedTooltipId === detailId ? 'knowledge-upgrade-tooltip-pin-progress--full' : '',
-                                ].filter(Boolean).join(' ')}
-                            />
-                        )}
-                        <div className="knowledge-upgrade-tooltip-scroll">
-                            <div className="symbol-tooltip-name">
-                                {detailUnlocked && (
-                                    <span style={{ marginRight: 6, color: '#86efac' }} aria-hidden>
-                                        ✓
-                                    </span>
-                                )}
-                                {t(`knowledgeUpgrade.${detailId}.name`, language) || detailUpgrade.name}
-                            </div>
-                            <div
-                                className="symbol-tooltip-rarity"
-                                style={{
-                                    color: detailEraColor,
-                                    fontWeight: 'bold',
-                                    letterSpacing: '2px',
-                                    textShadow: `0 0 10px ${detailEraColor}80`,
-                                    marginTop: '4px',
-                                }}
-                            >
-                                {t(ERA_NAME_KEYS[detailUpgrade.type], language)}
-                            </div>
-                            <div className="knowledge-upgrade-detail-tier">
-                                {t('knowledgeUpgrade.detail.unlockLevel', language).replace('{level}', String(detailTierLevel))}
-                            </div>
-                            {(detailDirectPrereqs.length > 0 || detailDirectDependents.length > 0) && (
-                                <div
-                                    style={{
-                                        marginTop: '10px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '6px',
-                                    }}
-                                >
-                                    {detailDirectPrereqs.length > 0 && (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {detailUpgrade && detailId != null ? (
+                            <>
+                                <div className="knowledge-upgrade-tooltip-scroll">
+                                    <div className="symbol-tooltip-name">
+                                        {detailUnlocked && (
+                                            <span style={{ marginRight: 6, color: '#86efac' }} aria-hidden>✓</span>
+                                        )}
+                                        {t(`knowledgeUpgrade.${detailId}.name`, language) || detailUpgrade.name}
+                                    </div>
+                                    <div
+                                        className="symbol-tooltip-rarity"
+                                        style={{
+                                            color: detailEraColor,
+                                            fontWeight: 'bold',
+                                            letterSpacing: '2px',
+                                            textShadow: `0 0 10px ${detailEraColor}80`,
+                                            marginTop: '4px',
+                                        }}
+                                    >
+                                        {t(ERA_NAME_KEYS[detailUpgrade.type], language)}
+                                    </div>
+                                    <div className="knowledge-upgrade-detail-tier">
+                                        {t('knowledgeUpgrade.detail.unlockLevel', language)
+                                            .replace('{level}', String(detailTierLevel))}
+                                    </div>
+                                    {(detailDirectPrereqs.length > 0 || detailDirectDependents.length > 0) && (
+                                        <div className="knowledge-upgrade-relations">
                                             {detailDirectPrereqs.map((prereqId) => {
                                                 const prereqName =
                                                     t(`knowledgeUpgrade.${prereqId}.name`, language) ||
@@ -1339,88 +964,91 @@ const KnowledgeUpgradesOverlay = ({ isOpen, onClose, tutorialStep, onTutorialSte
                                                     `#${prereqId}`;
                                                 const unlocked = unlockedUpgrades.includes(prereqId);
                                                 return (
-                                                    <span
+                                                    <button
                                                         key={`prereq-${prereqId}`}
-                                                        style={{
-                                                            padding: '4px 8px',
-                                                            background: unlocked ? 'rgba(22,101,52,0.55)' : 'rgba(127,29,29,0.6)',
-                                                            color: unlocked ? '#bbf7d0' : '#fecaca',
-                                                            fontFamily: 'var(--game-font-family), sans-serif',
-                                                            fontSize: '12px',
-                                                        }}
+                                                        type="button"
+                                                        className={[
+                                                            'knowledge-upgrade-relation-chip',
+                                                            unlocked
+                                                                ? 'knowledge-upgrade-relation-chip--complete'
+                                                                : 'knowledge-upgrade-relation-chip--required',
+                                                        ].join(' ')}
+                                                        onClick={() => navigateToUpgrade(prereqId)}
                                                     >
                                                         {unlocked
                                                             ? t('knowledgeUpgrade.detail.prereqComplete', language)
                                                             : t('knowledgeUpgrade.detail.prereqRequired', language)}: {prereqName}
-                                                    </span>
+                                                    </button>
                                                 );
                                             })}
-                                        </div>
-                                    )}
-                                    {detailDirectDependents.length > 0 && (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                             {detailDirectDependents.map((dependentId) => (
-                                                <span
+                                                <button
                                                     key={`dependent-${dependentId}`}
-                                                    style={{
-                                                        padding: '4px 8px',
-                                                        background: 'rgba(30,41,59,0.7)',
-                                                        color: '#cbd5e1',
-                                                        fontFamily: 'var(--game-font-family), sans-serif',
-                                                        fontSize: '12px',
-                                                    }}
+                                                    type="button"
+                                                    className="knowledge-upgrade-relation-chip knowledge-upgrade-relation-chip--dependent"
+                                                    onClick={() => navigateToUpgrade(dependentId)}
                                                 >
-                                                    {t('knowledgeUpgrade.detail.dependent', language)}: {t(`knowledgeUpgrade.${dependentId}.name`, language) || KNOWLEDGE_UPGRADES[dependentId]?.name || `#${dependentId}`}
-                                                </span>
+                                                    {t('knowledgeUpgrade.detail.dependent', language)}:{' '}
+                                                    {t(`knowledgeUpgrade.${dependentId}.name`, language) ||
+                                                        KNOWLEDGE_UPGRADES[dependentId]?.name ||
+                                                        `#${dependentId}`}
+                                                </button>
                                             ))}
                                         </div>
                                     )}
-                                </div>
-                            )}
-                            <div className="symbol-tooltip-desc" style={{ marginTop: '8px' }}>
-                                {(t(`knowledgeUpgrade.${detailId}.desc`, language) || detailUpgrade.description)
-                                    .split('\n')
-                                    .map((line, i) => (
-                                        <div key={i} className="symbol-tooltip-desc-line">
-                                            <EffectText text={line} />
+                                    <div className="symbol-tooltip-desc" style={{ marginTop: '8px' }}>
+                                        {(t(`knowledgeUpgrade.${detailId}.desc`, language) || detailUpgrade.description)
+                                            .split('\n')
+                                            .map((line, index) => (
+                                                <div key={index} className="symbol-tooltip-desc-line">
+                                                    <EffectText text={line} />
+                                                </div>
+                                            ))}
+                                    </div>
+                                    {((detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0) ||
+                                        (detailUpgrade.descRelics && detailUpgrade.descRelics.length > 0)) && (
+                                        <div className="knowledge-upgrade-desc-symbols-area">
+                                            {detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0 && (
+                                                <UpgradeCardDescSymbols
+                                                    upgradeId={detailId}
+                                                    entries={
+                                                        detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID
+                                                            ? buildAncientSymbolsUnlockDescSymbols(leaderId, leaderProgressLevel)
+                                                            : detailUpgrade.descSymbols
+                                                    }
+                                                    layoutSize="panel"
+                                                />
+                                            )}
+                                            {detailUpgrade.descRelics && detailUpgrade.descRelics.length > 0 && (
+                                                <div style={{ marginTop: detailUpgrade.descSymbols?.length ? '12px' : 0 }}>
+                                                    <UpgradeCardDescRelics
+                                                        entries={detailUpgrade.descRelics}
+                                                        layoutSize="panel"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
+                                    )}
+                                </div>
+                                {!detailUnlocked && (
+                                    <button
+                                        type="button"
+                                        className="knowledge-upgrade-docked-research-btn"
+                                        disabled={!canConfirmResearch(detailId)}
+                                        onClick={(event) => requestResearch(detailId, event)}
+                                    >
+                                        {t('knowledgeUpgrade.researchConfirm', language)}
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            <div className="knowledge-upgrade-detail-empty" aria-hidden>
+                                <span>◇</span>
+                                <span>{t('game.knowledgeUpgradeTreeTitle', language)}</span>
                             </div>
-                            {((detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0) ||
-                                (detailUpgrade.descRelics && detailUpgrade.descRelics.length > 0)) && (
-                                <div
-                                    className="knowledge-upgrade-desc-symbols-area"
-                                    style={{
-                                        marginTop: '6px',
-                                        paddingTop: '6px',
-                                        borderTop: '1px solid #444',
-                                    }}
-                                >
-                                    {detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0 && (
-                                        <UpgradeCardDescSymbols
-                                            upgradeId={detailId!}
-                                            entries={
-                                                detailId === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID
-                                                    ? buildAncientSymbolsUnlockDescSymbols(leaderId, leaderProgressLevel)
-                                                    : detailUpgrade.descSymbols
-                                            }
-                                            layoutSize="panel"
-                                        />
-                                    )}
-                                    {detailUpgrade.descRelics && detailUpgrade.descRelics.length > 0 && (
-                                        <div style={{ marginTop: detailUpgrade.descSymbols && detailUpgrade.descSymbols.length > 0 ? '12px' : 0 }}>
-                                            <UpgradeCardDescRelics
-                                                entries={detailUpgrade.descRelics}
-                                                layoutSize="panel"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                    </div>
-                )}
+                        )}
+                    </aside>
+                </div>
             </div>
 
             {typeof document !== 'undefined' &&

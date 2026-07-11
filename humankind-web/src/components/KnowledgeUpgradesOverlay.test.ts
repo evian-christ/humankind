@@ -6,6 +6,7 @@ import {
 } from '../game/data/knowledgeUpgrades';
 
 let buildBranchTierRows: typeof import('./KnowledgeUpgradesOverlay').buildBranchTierRows;
+let buildHorizontalEraNodes: typeof import('./KnowledgeUpgradesOverlay').buildHorizontalEraNodes;
 let getKnowledgeEraResearchAvailability:
     typeof import('./KnowledgeUpgradesOverlay').getKnowledgeEraResearchAvailability;
 
@@ -26,6 +27,7 @@ beforeAll(async () => {
     });
     ({
         buildBranchTierRows,
+        buildHorizontalEraNodes,
         getKnowledgeEraResearchAvailability,
     } = await import('./KnowledgeUpgradesOverlay'));
 });
@@ -76,6 +78,26 @@ describe('knowledge upgrade tree layout', () => {
             const dependentCols = dependents.map((dependentId) => columns.get(dependentId));
             expect(new Set(dependentCols).size, upgrade.name).toBe(dependentCols.length);
         }
+    });
+
+    it('places era-page upgrades in unique level and soft-row slots', () => {
+        for (const [minLevel, maxLevel] of [[0, 9], [10, 19], [20, 30]] as const) {
+            const nodes = buildHorizontalEraNodes(minLevel, maxLevel);
+            const slots = nodes.map((node) => `${node.level}:${node.row}`);
+            expect(new Set(slots).size).toBe(slots.length);
+            expect(nodes.every((node) => node.level >= minLevel && node.level <= maxLevel)).toBe(true);
+            expect(nodes.every((node) => node.row >= 0 && node.row < 9)).toBe(true);
+        }
+    });
+
+    it('keeps every upgrade represented across the three era pages', () => {
+        const horizontalIds = [
+            ...buildHorizontalEraNodes(0, 9),
+            ...buildHorizontalEraNodes(10, 19),
+            ...buildHorizontalEraNodes(20, 30),
+        ].map((node) => node.id);
+
+        expect(new Set(horizontalIds)).toEqual(new Set(Object.keys(KNOWLEDGE_UPGRADES).map(Number)));
     });
 });
 
