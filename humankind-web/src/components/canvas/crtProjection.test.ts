@@ -12,11 +12,11 @@ describe('CRT projection', () => {
         });
     });
 
-    it('visibly curves positions away from the center', () => {
-        const projected = mapCrtSourceToOutput(400, 250, WIDTH, HEIGHT);
-
-        expect(projected.x).toBeLessThan(400);
-        expect(projected.y).toBeLessThan(250);
+    it('keeps positions flat when the CRT effect is enabled', () => {
+        expect(mapCrtSourceToOutput(400, 250, WIDTH, HEIGHT)).toEqual({
+            x: 400,
+            y: 250,
+        });
     });
 
     it('round-trips projected coordinates for pointer hit testing', () => {

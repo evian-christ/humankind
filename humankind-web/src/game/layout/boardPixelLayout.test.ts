@@ -6,16 +6,28 @@ import {
 } from './boardPixelLayout';
 
 describe('board pixel layout', () => {
-    it('renders the centered board at 80 percent of its base size', () => {
+    const statusReservedHeight = 84;
+    const extraUpwardOffset = 18;
+
+    it('renders the centered board at BOARD_DISPLAY_SCALE of its base size', () => {
         const layout = computeBoardPixelLayout(1920, 1080);
 
-        expect(BOARD_DISPLAY_SCALE).toBe(0.8);
         expect(layout.viewScale).toBe(1);
-        expect(layout.scale).toBe(0.8);
-        expect(layout.boardW).toBeCloseTo(912 * 0.8);
-        expect(layout.boardH).toBeCloseTo(664 * 0.8);
+        expect(layout.scale).toBeCloseTo(BOARD_DISPLAY_SCALE);
+        expect(layout.boardW).toBeCloseTo(912 * BOARD_DISPLAY_SCALE);
+        expect(layout.boardH).toBeCloseTo(664 * BOARD_DISPLAY_SCALE);
         expect(layout.startX).toBeCloseTo((1920 - layout.boardW) / 2);
-        expect(layout.startY).toBeCloseTo((1080 - layout.boardH) / 2);
+        expect(layout.startY).toBeCloseTo(
+            (1080 - (layout.boardH + statusReservedHeight)) / 2 - extraUpwardOffset,
+        );
+    });
+
+    it('centers the board together with the status strip below it', () => {
+        const layout = computeBoardPixelLayout(1920, 1080);
+
+        expect(layout.startY + (layout.boardH + statusReservedHeight) / 2).toBeCloseTo(
+            1080 / 2 - extraUpwardOffset,
+        );
     });
 
     it('keeps cell rectangles inside the scaled board coordinate system', () => {
@@ -23,8 +35,8 @@ describe('board pixel layout', () => {
         const first = boardCellLocalRect(layout, 0, 0);
         const last = boardCellLocalRect(layout, 2, 1);
 
-        expect(first.width).toBeCloseTo(170.4 * 0.8);
-        expect(first.height).toBeCloseTo(163.2 * 0.8);
+        expect(first.width).toBeCloseTo(170.4 * BOARD_DISPLAY_SCALE);
+        expect(first.height).toBeCloseTo(163.2 * BOARD_DISPLAY_SCALE);
         expect(last.left + last.width).toBeLessThanOrEqual(layout.startX + layout.boardW);
         expect(last.top + last.height).toBeLessThanOrEqual(layout.startY + layout.boardH);
     });
@@ -32,8 +44,8 @@ describe('board pixel layout', () => {
     it('applies the user zoom multiplier around the centered board', () => {
         const layout = computeBoardPixelLayout(1920, 1080, 3, 2, 1.5);
 
-        expect(layout.scale).toBeCloseTo(1.2);
-        expect(layout.boardW).toBeCloseTo(912 * 1.2);
+        expect(layout.scale).toBeCloseTo(BOARD_DISPLAY_SCALE * 1.5);
+        expect(layout.boardW).toBeCloseTo(912 * BOARD_DISPLAY_SCALE * 1.5);
         expect(layout.startX).toBeCloseTo((1920 - layout.boardW) / 2);
     });
 });

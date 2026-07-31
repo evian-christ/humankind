@@ -1,17 +1,16 @@
 import { create } from 'zustand';
 
-export const MIN_BOARD_ZOOM = 0.65;
-export const MAX_BOARD_ZOOM = 1.6;
-
-const clampBoardZoom = (zoom: number) =>
-    Math.min(MAX_BOARD_ZOOM, Math.max(MIN_BOARD_ZOOM, zoom));
+/**
+ * 보드 고정 배율.
+ * 1920x1080 기준에서 32px 심볼 스프라이트가 정확히 2배(64px) 정수 스케일로
+ * 그려지는 값이라 nearest 필터에서 픽셀이 깨지지 않는다.
+ */
+export const BOARD_FIXED_ZOOM = 2 / 3;
 
 type BoardViewState = {
     zoom: number;
-    setZoom: (zoom: number) => void;
 };
 
-export const useBoardViewStore = create<BoardViewState>((set) => ({
-    zoom: 1,
-    setZoom: (zoom) => set({ zoom: clampBoardZoom(zoom) }),
+export const useBoardViewStore = create<BoardViewState>(() => ({
+    zoom: BOARD_FIXED_ZOOM,
 }));

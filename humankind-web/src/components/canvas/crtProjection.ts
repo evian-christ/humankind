@@ -1,4 +1,4 @@
-export const CRT_CURVATURE = 0.09;
+export const CRT_CURVATURE = 0;
 
 type Point = {
     x: number;
@@ -26,6 +26,8 @@ export function mapCrtOutputToSource(
     height: number,
     curvature = CRT_CURVATURE,
 ): Point {
+    if (curvature === 0) return { x, y };
+
     const point = normalizePoint(x, y, width, height);
     const baseScale = 1 - curvature;
     return denormalizePoint(
@@ -47,6 +49,8 @@ export function mapCrtSourceToOutput(
     height: number,
     curvature = CRT_CURVATURE,
 ): Point {
+    if (curvature === 0) return { x, y };
+
     const source = normalizePoint(x, y, width, height);
     const baseScale = 1 - curvature;
     let outputX = source.x / Math.max(0.001, baseScale);
