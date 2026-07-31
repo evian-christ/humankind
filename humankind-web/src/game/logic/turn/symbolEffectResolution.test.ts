@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
-import { CONSUMABLE_RELIC_IDS } from '../relics/relicClassification';
+import { SEAL_RELIC_IDS } from '../relics/relicClassification';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
@@ -306,7 +306,7 @@ describe('symbolEffectResolution', () => {
         vi.mocked(Math.random).mockRestore();
     });
 
-    it('grants Food when base Desert destroys a random adjacent symbol', () => {
+    it('destroys a random adjacent symbol without producing anything for base Desert', () => {
         const board = createEmptyBoard();
         const desert = createInstance(Sym.desert, 'desert');
         const wheat = createInstance(Sym.wheat, 'wheat');
@@ -316,7 +316,7 @@ describe('symbolEffectResolution', () => {
         vi.spyOn(Math, 'random').mockReturnValue(0);
         const result = processSingleSymbolEffects(desert, board, 1, 1, { upgrades: [] });
 
-        expect(result).toMatchObject({ food: 5, gold: 0, knowledge: 0 });
+        expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 0 });
         expect(wheat.is_marked_for_destruction).toBe(true);
         vi.mocked(Math.random).mockRestore();
     });
@@ -870,7 +870,7 @@ describe('symbolEffectResolution', () => {
         expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 8 });
     });
 
-    it('produces food per two adjacent empty slots by default for Oasis', () => {
+    it('produces food per adjacent empty slot by default for Oasis', () => {
         const board = createEmptyBoard();
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
@@ -888,7 +888,27 @@ describe('symbolEffectResolution', () => {
         expect(result.food).toBe(6);
     });
 
-    it('upgrades Oasis to produce food per two adjacent empty slots with Dry Storage', () => {
+    it('counts an odd number of adjacent empty slots for Oasis', () => {
+        const board = createEmptyBoard();
+        const oasis = createInstance(Sym.oasis, 'oasis');
+        board[1][1] = oasis;
+        board[0][1] = createInstance(Sym.wheat, 'occupied_1');
+        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+        board[2][1] = createInstance(Sym.wheat, 'occupied_3');
+
+        const result = processSingleSymbolEffects(
+            oasis,
+            board,
+            1,
+            1,
+            { upgrades: [] },
+        );
+
+        // 인접 8칸 중 3칸이 차 있어 빈칸 5개 → 식량 5 (2개 단위 반올림 없음).
+        expect(result.food).toBe(5);
+    });
+
+    it('upgrades Oasis to produce food per adjacent empty slot with Dry Storage', () => {
         const board = createEmptyBoard();
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
@@ -906,7 +926,7 @@ describe('symbolEffectResolution', () => {
         expect(result.food).toBe(12);
     });
 
-    it('upgrades Oasis to produce food per two adjacent empty slots with Oasis Recovery Network', () => {
+    it('upgrades Oasis to produce food per adjacent empty slot with Oasis Recovery Network', () => {
         const board = createEmptyBoard();
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
@@ -1456,7 +1476,7 @@ describe('symbolEffectResolution', () => {
         expect(rainforestResult.knowledge).toBe(0);
     });
 
-    it('gives Forest a flat +1 Food when adjacent to another Forest', () => {
+    it('gives Forest +1 Food per adjacent Forest on top of its base Food', () => {
         const board = createEmptyBoard();
         const forest = createInstance(Sym.forest, 'forest_1');
         board[0][0] = forest;
@@ -1466,12 +1486,12 @@ describe('symbolEffectResolution', () => {
 
         const result = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
 
-        // 인접한 숲이 3개여도 정액 +1.
-        expect(result.food).toBe(1);
+        // 기본 +1 + 인접한 숲 3개 = +4.
+        expect(result.food).toBe(4);
         expect(result.gold).toBe(0);
     });
 
-    it('gives Forest nothing without an adjacent Forest', () => {
+    it('gives Forest only its base Food without an adjacent Forest', () => {
         const board = createEmptyBoard();
         const forest = createInstance(Sym.forest, 'forest_1');
         board[0][0] = forest;
@@ -1479,7 +1499,7 @@ describe('symbolEffectResolution', () => {
 
         const result = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
 
-        expect(result.food).toBe(0);
+        expect(result.food).toBe(1);
     });
 
     it('produces a random Seal every 10 turns', () => {
@@ -1496,7 +1516,7 @@ describe('symbolEffectResolution', () => {
         const tenth = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
 
         expect(tenth.grantRelicIds).toHaveLength(1);
-        expect(CONSUMABLE_RELIC_IDS).toContain(tenth.grantRelicIds![0]);
+        expect(SEAL_RELIC_IDS).toContain(tenth.grantRelicIds![0]);
         // 카운터가 리셋되어 다음 주기가 다시 시작된다.
         expect(forest.effect_counter).toBe(0);
     });
@@ -1553,7 +1573,7 @@ describe('symbolEffectResolution', () => {
         expect(result.food).toBe(0);
     });
 
-    it('keeps Forest food flat even with Tracking unlocked', () => {
+    it('keeps the Forest adjacency rule unchanged with Tracking unlocked', () => {
         const board = createEmptyBoard();
         const forest = createInstance(Sym.forest, 'forest_1');
         board[0][0] = forest;
@@ -1570,7 +1590,8 @@ describe('symbolEffectResolution', () => {
             { upgrades: [TRACKING_UPGRADE_ID] },
         );
 
-        expect(forestResult.food).toBe(1);
+        // 기본 +1 + 인접한 숲 2개(0,1 / 1,1) = +3.
+        expect(forestResult.food).toBe(3);
         expect(forestResult.gold).toBe(0);
     });
 
@@ -1593,7 +1614,7 @@ describe('symbolEffectResolution', () => {
         expect(furResult.gold).toBe(3);
     });
 
-    it('keeps Forest food flat even with Forestry unlocked', () => {
+    it('keeps the Forest adjacency rule unchanged with Forestry unlocked', () => {
         const board = createEmptyBoard();
         const forest = createInstance(Sym.forest, 'forest_1');
         board[0][0] = forest;
@@ -1612,7 +1633,8 @@ describe('symbolEffectResolution', () => {
             { upgrades: [FORESTRY_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(1);
+        // 기본 +1 + 인접한 숲 3개 = +4.
+        expect(result.food).toBe(4);
         expect(result.gold).toBe(0);
         expect(result.knowledge).toBe(0);
     });

@@ -37,7 +37,12 @@ import {
     commitLootMerge,
     type ProcessSlotArgs,
 } from '../../logic/turn/turnPipeline';
-import { getBoardExpansionCandidates, getStandardSymbolChoiceCount } from '../gameStoreHelpers';
+import {
+    getBoardExpansionCandidates,
+    getRemainingBoardExpansionCapacity,
+    getStandardSymbolChoiceCount,
+    hasDesertOnlyTerrainSymbols,
+} from '../gameStoreHelpers';
 import type { PlayerSymbolInstance } from '../../types';
 import { RELIC_ID } from '../../logic/relics/relicIds';
 import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
@@ -279,9 +284,16 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             return;
         }
 
+        // 사막 효과: 지형이 사막/오아시스뿐이면 식량 지불 확장을 1회 더 받는다.
+        const desertBonusExpansions = hasDesertOnlyTerrainSymbols(state.playerSymbols) ? 1 : 0;
+        const grantedExpansions = Math.min(
+            1 + desertBonusExpansions,
+            getRemainingBoardExpansionCapacity(state.board),
+        );
+
         set({
             phase: 'board_expansion_placement' as GamePhase,
-            pendingBoardExpansions: state.pendingBoardExpansions + 1,
+            pendingBoardExpansions: state.pendingBoardExpansions + grantedExpansions,
         });
         saveGameState(get());
     },

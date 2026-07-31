@@ -305,9 +305,9 @@ export const randomBaseNormalSymbolId = (): number => {
     return pick[Math.floor(Math.random() * pick.length)]!.id;
 };
 
+// 사치품은 사막 파괴 대상에서 제외한다.
 export const DESERT_DESTRUCTIBLE_TYPES = new Set<SymbolType>([
     SymbolType.RESOURCE,
-    SymbolType.LUXURY,
     SymbolType.ANCIENT,
     SymbolType.MEDIEVAL,
     SymbolType.MODERN,

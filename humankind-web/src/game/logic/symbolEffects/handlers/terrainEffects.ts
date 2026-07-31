@@ -30,14 +30,14 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.oasis: {
+            // 인접한 빈칸 하나당 식량 +1 (업그레이드는 칸당 배율을 올린다).
             const emptyAdjCount = adj.filter(pos => !boardGrid[pos.x][pos.y]).length;
-            const pairs = Math.floor(emptyAdjCount / 2);
-            const foodMultiplier = upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)
-                ? 6
+            const foodPerEmptySlot = upgrades.includes(OASIS_RECOVERY_UPGRADE_ID)
+                ? 3
                 : upgrades.includes(DESERT_STORAGE_UPGRADE_ID)
-                ? 4
-                : 2;
-            state.food += pairs * foodMultiplier;
+                ? 2
+                : 1;
+            state.food += emptyAdjCount * foodPerEmptySlot;
             return true;
         }
 
@@ -129,21 +129,23 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 return true;
             }
 
-            const destructionFood = upgrades.includes(FOREIGN_TRADE_UPGRADE_ID) ? 10 : 5;
+            // 기본 사막은 산출 없이 무작위 인접 자원/시대 심볼 1개를 파괴만 한다.
             if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.gold += 1;
             if (adjacentValidTargets.length > 0) {
                 const randomTarget = adjacentValidTargets[Math.floor(Math.random() * adjacentValidTargets.length)];
-                state.food += destroyTargets([randomTarget]) * destructionFood;
+                const destroyed = destroyTargets([randomTarget]);
+                if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.food += destroyed * 10;
             }
             return true;
         }
 
         case S.forest:
             {
-                // 다른 숲에 인접 시 식량 +1 (인접한 숲 개수와 무관한 정액).
+                // 기본 식량 +1, 인접한 숲 하나당 식량 +1.
+                state.food += 1;
                 const forestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.forest);
                 if (forestAdj.length > 0) {
-                    state.food += 1;
+                    state.food += forestAdj.length;
                     forestAdj.forEach((pos) => state.contributors.push(pos));
                 }
 

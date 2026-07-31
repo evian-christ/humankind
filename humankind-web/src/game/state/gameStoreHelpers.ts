@@ -1,4 +1,4 @@
-import { SYMBOLS, S, type SymbolDefinition } from '../data/symbolDefinitions';
+import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID } from '../data/knowledgeUpgrades';
 import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
@@ -151,6 +151,18 @@ export const getActiveBoardCoords = (
         }
     }
     return coords;
+};
+
+/**
+ * 사막 보유 상태에서 지형이 사막/오아시스로만 이루어졌는지 판정한다.
+ * 식량 지불 시 보드 확장을 1회 더 주는 사막 효과의 조건이다.
+ */
+export const hasDesertOnlyTerrainSymbols = (playerSymbols: PlayerSymbolInstance[]): boolean => {
+    const terrains = playerSymbols.filter((symbol) => symbol.definition.type === SymbolType.TERRAIN);
+    if (!terrains.some((symbol) => symbol.definition.id === S.desert)) return false;
+    return terrains.every(
+        (symbol) => symbol.definition.id === S.desert || symbol.definition.id === S.oasis,
+    );
 };
 
 export const getRemainingBoardExpansionCapacity = (

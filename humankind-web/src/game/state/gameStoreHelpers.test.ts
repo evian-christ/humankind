@@ -7,6 +7,7 @@ import {
     getActiveBoardCoords,
     getBoardExpansionCandidates,
     getRemainingBoardExpansionCapacity,
+    hasDesertOnlyTerrainSymbols,
     ensureStartingWildSeedsOwned,
     createInstance,
     placeOralTraditionAtBoardCenter,
@@ -114,6 +115,21 @@ describe('gameStoreHelpers starting layout', () => {
         const effects = createStoredFoodDestroyEffects([oral], board);
 
         expect(effects).toEqual([{ x: 2, y: 1, food: 0, gold: 0, knowledge: 0, culture: 20 }]);
+    });
+
+    it('detects a desert-only terrain collection for the extra board expansion', () => {
+        const desert = createInstance(SYMBOLS[S.desert]!, []);
+        const oasis = createInstance(SYMBOLS[S.oasis]!, []);
+        const wheat = createInstance(SYMBOLS[S.wheat]!, []);
+        const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
+
+        expect(hasDesertOnlyTerrainSymbols([desert, oasis, wheat, oral])).toBe(true);
+        // 사막이 없으면 조건을 만족하지 않는다.
+        expect(hasDesertOnlyTerrainSymbols([oasis, wheat])).toBe(false);
+        // 다른 지형을 하나라도 보유하면 조건이 깨진다.
+        expect(
+            hasDesertOnlyTerrainSymbols([desert, createInstance(SYMBOLS[S.grassland]!, [])]),
+        ).toBe(false);
     });
 
     it('forces event choices when royal colony is destroyed from collection', () => {
