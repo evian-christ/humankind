@@ -15,6 +15,7 @@ export interface EffectResult {
     food: number;
     knowledge: number;
     gold: number;
+    culture?: number;
     military?: number;
     /** Board counter display delta for floating text, when this effect changes a visible counter. */
     counterDelta?: number;
@@ -28,6 +29,8 @@ export interface EffectResult {
     addSymbolIds?: number[];
     /** 이번 턴에서 보드에 추가할 심볼 ID 목록 (빈 슬롯에 배치) */
     spawnOnBoard?: number[];
+    /** 이번 턴에서 지급할 유물(인장) ID 목록 */
+    grantRelicIds?: number[];
     /** 강제로 유물 선택 상점을 열어야 하는지 여부 */
     triggerRelicSelection?: boolean;
     /** 유물 상점을 강제로 새로고침해야 하는지 여부 */

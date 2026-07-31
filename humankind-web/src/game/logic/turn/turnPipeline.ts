@@ -43,6 +43,7 @@ export interface ResourceTotals {
     food: number;
     gold: number;
     knowledge: number;
+    culture?: number;
     military?: number;
 }
 
@@ -286,6 +287,7 @@ function previewSlotDeltaWithoutSideEffects(args: ResolveSlotEffectArgs, slot: {
             food: result.food ?? 0,
             gold: result.gold ?? 0,
             knowledge: result.knowledge ?? 0,
+            ...(result.culture ? { culture: result.culture } : {}),
             ...(result.military ? { military: result.military } : {}),
         };
     } finally {
@@ -297,15 +299,20 @@ function getAccumulatedSlotDelta(pipeline: SlotEffectPipeline, slot: { x: number
     let food = 0;
     let gold = 0;
     let knowledge = 0;
+    let culture = 0;
     let military = 0;
     for (const effect of pipeline.accumulatedEffects) {
         if (effect.x !== slot.x || effect.y !== slot.y) continue;
         food += effect.food ?? 0;
         gold += effect.gold ?? 0;
         knowledge += effect.knowledge ?? 0;
+        culture += effect.culture ?? 0;
         military += effect.military ?? 0;
     }
-    return military !== 0 ? { food, gold, knowledge, military } : { food, gold, knowledge };
+    const totals: ResourceTotals = { food, gold, knowledge };
+    if (culture !== 0) totals.culture = culture;
+    if (military !== 0) totals.military = military;
+    return totals;
 }
 
 function getSlotDeltaForThisTurn(args: ResolveSlotEffectArgs, slot: { x: number; y: number }): ResourceTotals {
@@ -370,8 +377,8 @@ function collectNewDestroyEffects(
                     knowledge: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
                 });
             } else if (symbol.definition.id === S.oral_tradition) {
-                const knowledge = getAdjacentCoords(bx, by).filter((pos) => board[pos.x]?.[pos.y] != null).length * 10;
-                if (knowledge > 0) effects.push({ x: bx, y: by, food: 0, gold: 0, knowledge });
+                const culture = getAdjacentCoords(bx, by).filter((pos) => board[pos.x]?.[pos.y] != null).length * 10;
+                if (culture > 0) effects.push({ x: bx, y: by, food: 0, gold: 0, knowledge: 0, culture });
             }
         }
     }
@@ -569,6 +576,7 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         food: result.food,
         knowledge: result.knowledge,
         gold: result.gold,
+        ...(result.culture ? { culture: result.culture } : {}),
         ...(result.military ? { military: result.military } : {}),
     });
 
@@ -586,7 +594,7 @@ export function applySlotEffectResult(
     slot: { x: number; y: number },
     result: EffectResult,
 ): void {
-    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.military ?? 0) !== 0 || result.counterDelta) {
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.culture ?? 0) !== 0 || (result.military ?? 0) !== 0 || result.counterDelta) {
         const effect: SlotEffect = {
             x: slot.x,
             y: slot.y,
@@ -594,6 +602,7 @@ export function applySlotEffectResult(
             gold: result.gold,
             knowledge: result.knowledge,
         };
+        if (result.culture) effect.culture = result.culture;
         if (result.military) effect.military = result.military;
         if (result.counterDelta) effect.counter = result.counterDelta;
         if (result.counterAnchor) effect.counterAnchor = result.counterAnchor;
@@ -605,10 +614,11 @@ export function applySlotEffectResult(
     if (result.extraEffects?.length) {
         pipeline.accumulatedEffects.push(...result.extraEffects);
     }
-    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.military ?? 0) !== 0) {
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.culture ?? 0) !== 0 || (result.military ?? 0) !== 0) {
         pipeline.totals.food += result.food;
         pipeline.totals.knowledge += result.knowledge;
         pipeline.totals.gold += result.gold;
+        if (result.culture) pipeline.totals.culture = (pipeline.totals.culture ?? 0) + result.culture;
         if (result.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + result.military;
     }
     if (result.extraEffects?.length) {
@@ -616,6 +626,7 @@ export function applySlotEffectResult(
             pipeline.totals.food += effect.food;
             pipeline.totals.gold += effect.gold;
             pipeline.totals.knowledge += effect.knowledge;
+            pipeline.totals.culture = (pipeline.totals.culture ?? 0) + (effect.culture ?? 0);
             if (effect.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + effect.military;
         }
     }

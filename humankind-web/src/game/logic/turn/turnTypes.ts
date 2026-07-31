@@ -13,6 +13,7 @@ export interface ResourceDelta {
     food: number;
     gold: number;
     knowledge: number;
+    culture?: number;
     military?: number;
 }
 

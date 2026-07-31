@@ -565,11 +565,11 @@ describe('turnPipeline', () => {
 
         expect(result.extraEffects).toEqual([
             { x: 0, y: 0, food: 20, gold: 0, knowledge: 0 },
-            { x: 0, y: 1, food: 0, gold: 0, knowledge: 30 },
+            { x: 0, y: 1, food: 0, gold: 0, knowledge: 0, culture: 30 },
             { x: 1, y: 0, food: 0, gold: 20, knowledge: 0 },
             { x: 2, y: 0, food: 0, gold: 0, knowledge: 20 },
         ]);
-        expect(pipeline.totals).toEqual({ food: 20, gold: 20, knowledge: 50 });
+        expect(pipeline.totals).toEqual({ food: 20, gold: 20, knowledge: 20, culture: 30 });
     });
 
     it('refreshes the relic shop immediately when Relic Caravan is destroyed', () => {
