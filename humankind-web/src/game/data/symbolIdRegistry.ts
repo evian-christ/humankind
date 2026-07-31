@@ -37,6 +37,7 @@ export const SYMBOL_NUMERIC_ID = {
     fur: 22,
 
     // 열대우림축
+    cassava: 21,
     banana: 23,
     expedition: 24,
 

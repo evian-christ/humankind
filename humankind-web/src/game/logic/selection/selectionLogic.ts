@@ -11,6 +11,7 @@ import {
 import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
 import {
     AGI_PROJECT_UPGRADE_ID,
+    AGRICULTURE_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CARAVANSERAI_UPGRADE_ID,
     COMPASS_UPGRADE_ID,
@@ -23,7 +24,9 @@ import {
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
+    TROPICAL_AGRICULTURE_UPGRADE_ID,
     WRITING_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
@@ -177,15 +180,18 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.library && upgrades.includes(WRITING_SYSTEM_UPGRADE_ID)) isUnlocked = true; // Writing -> Library
         if (sym.id === S.merchant && upgrades.includes(CURRENCY_UPGRADE_ID)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
-        if ((sym.id === S.crab || sym.id === S.pearl) && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Crab, Pearl
+        if (sym.id === S.rice && upgrades.includes(AGRICULTURE_UPGRADE_ID)) isUnlocked = true; // Agriculture -> Rice
+        if (sym.id === S.sheep && upgrades.includes(PASTORALISM_UPGRADE_ID)) isUnlocked = true; // Pastoralism -> Sheep
+        if (sym.id === S.pearl && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Pearl
         if (sym.id === S.compass && upgrades.includes(COMPASS_UPGRADE_ID)) isUnlocked = true; // Compass -> Compass
         if (sym.id === S.expedition && upgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID)) isUnlocked = true; // Jungle Expedition -> Expedition
+        if (sym.id === S.cassava && upgrades.includes(TROPICAL_AGRICULTURE_UPGRADE_ID)) isUnlocked = true; // Tropical Agriculture -> Cassava
         if ((sym.id === S.dye || sym.id === S.papyrus) && upgrades.includes(DRY_STORAGE_UPGRADE_ID)) isUnlocked = true; // Dry Storage -> Dye, Papyrus
         if (sym.id === S.caravanserai && upgrades.includes(CARAVANSERAI_UPGRADE_ID)) isUnlocked = true; // Caravanserai -> Caravanserai
         if (sym.id === S.agi_core && upgrades.includes(AGI_PROJECT_UPGRADE_ID)) isUnlocked = true; // AGI Project -> AGI Core
         if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
         if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
-        if (sym.id === S.fur && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true;
+        if (sym.id === S.deer && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true; // Hunting -> Deer
         if (sym.id === S.heqet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'heqet')) isUnlocked = true;
         if (sym.id === S.foxtail_millet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'foxtail_millet')) isUnlocked = true;
 

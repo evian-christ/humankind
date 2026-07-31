@@ -27,46 +27,45 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     // Terrain
     def('grassland', { name: "Grassland", type: SymbolType.TERRAIN, description: "+2 Food.", sprite: "001.png" }),
     def('plains', { name: "Plains", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "002.png" }),
-    def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "+1 Gold per 4 adjacent symbols.", sprite: "003.png" }),
-    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "If 3 or more Forests are placed on the board: +2 Food; if 5 or more: +1 Gold; if Forest is the only terrain on the board: +1 Food.", sprite: "004.png" }),
-    def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "005.png" }),
+    def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "On an edge slot: becomes Coast. Otherwise: becomes Ocean.", sprite: "003.png" }),
+    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "Every 10 turns: produces a random Seal. When adjacent to Forest: +1 Food.", sprite: "004.png" }),
+    def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food. When Growth reaches 10, consumes 10 Growth to permanently increase production by 1. The growth kind of the symbol that filled it decides which resource increases.", sprite: "005.png" }),
     def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Resource, Luxury, or era symbol. When Desert destroys a symbol: +5 Food.", sprite: "006.png" }),
     def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+2 Food per 2 adjacent empty slots. (Post-Arid Preservation: +4, Post-Oasis Reclamation: +6)", sprite: "007.png" }),
     def('mountain', { name: "Mountain", type: SymbolType.TERRAIN, description: "+2 Food, +2 Knowledge.", sprite: "008.png" }),
 
     // Resource: grassland deck
-    def('wheat', { name: "Wheat", type: SymbolType.RESOURCE, description: "Wheat: every 10 turns: 10 Food. Adjacent to Grassland: +1/turn.", sprite: "009.png" }),
-    def('rice', { name: "Rice", type: SymbolType.RESOURCE, description: "Rice: every 20 turns: 25 Food. Adjacent to Grassland: +1/turn.", sprite: "010.png" }),
+    def('wheat', { name: "Wheat", type: SymbolType.RESOURCE, description: "Wheat: every 10 turns: 10 Food. In the same row as Grassland: +1/turn.", sprite: "009.png" }),
+    def('rice', { name: "Rice", type: SymbolType.RESOURCE, description: "Rice: every 20 turns: 25 Food. In the same row as Grassland: +1/turn.", sprite: "010.png" }),
 
     // Resource: plains deck
     def('cattle', {
         name: "Cattle",
         type: SymbolType.RESOURCE,
-        description:
-            "+1 Food; when adjacent to Plains, can butcher; on butcher: +10 Food. With Pastoralism: 10% chance per turn to produce Cattle.",
+        description: "+1 Food; in the same column as Plains: +1 Food.",
         sprite: "012.png",
     }),
     def('sheep', {
         name: "Sheep",
         type: SymbolType.RESOURCE,
-        description:
-            "+1 Food; when adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold. With Pastoralism: 10% chance per turn to produce Sheep.",
+        description: "+1 Food; in the same column as Plains: +1 Gold.",
         sprite: "013.png",
     }),
     def('horse', { name: "Horse", type: SymbolType.RESOURCE, description: "+2 Food, +2 Gold. Triggers even when not placed on the board.", sprite: "015.png" }),
 
     // Resource: sea deck
-    def('fish', { name: "Fish", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +1 Food; 2+ Seas: +1 Food; 3+ Seas: +2 Food.", sprite: "016.png" }),
+    def('fish', { name: "Fish", type: SymbolType.RESOURCE, description: "+2 Food per adjacent Coast.", sprite: "016.png" }),
     def('crab', { name: "Crab", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +1 Food, +1 Gold; 2+ Seas: +1 Food, +1 Gold.", sprite: "017.png" }),
     def('pearl', { name: "Pearl", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +1 Gold; 2+ Seas: +1 Gold; 3+ Seas: +1 Gold.", sprite: "018.png" }),
     def('compass', { name: "Compass", type: SymbolType.RESOURCE, description: "With 1+ Sea on the board: +5 Knowledge; 2+ Seas: +5 Knowledge; 3+ Seas: +5 Knowledge.", sprite: "019.png" }),
 
     // Resource: forest deck
-    def('deer', { name: "Deer", type: SymbolType.RESOURCE, description: "+1 Food per adjacent Forest.", sprite: "020.png" }),
+    def('deer', { name: "Deer", type: SymbolType.RESOURCE, description: "When adjacent to Forest: +2 Food.", sprite: "020.png" }),
     def('fur', { name: "Fur", type: SymbolType.RESOURCE, description: "+2 Gold per 2 Forests placed on the board.", sprite: "022.png" }),
 
     // Resource: rainforest deck
-    def('banana', { name: "Banana", type: SymbolType.RESOURCE, description: "+1 Food; every 10 turns adjacent to Rainforest: +1 Food production.", sprite: "023.png" }),
+    def('cassava', { name: "Cassava", type: SymbolType.RESOURCE, description: "Adds 2 Growth to an adjacent Rainforest, then is destroyed. Growth kind: Food.", sprite: "021.png" }),
+    def('banana', { name: "Banana", type: SymbolType.RESOURCE, description: "+1 Food; when adjacent to Rainforest: +1 Food.", sprite: "023.png" }),
     def('expedition', {
         name: "Expedition",
         type: SymbolType.RESOURCE,
@@ -108,7 +107,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.SPECIAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
 
     // Ancient
-    def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.", sprite: "039.png" }),
+    def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Culture per adjacent symbol.", sprite: "039.png" }),
     def('totem', { name: "Totem", type: SymbolType.ANCIENT, description: "In a corner: +12 Knowledge.", sprite: "040.png" }),
     def('omen', { name: "Omen", type: SymbolType.ANCIENT, description: "50% chance for +3 Food.", sprite: "041.png" }),
     def('campfire', { name: "Campfire", type: SymbolType.ANCIENT, description: "Gain Food equal to the Food produced this turn by the highest-producing adjacent symbol. Destroyed.", sprite: "042.png" }),
@@ -203,11 +202,11 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If there are no duplicate symbols on the board: +1 Food per 2 symbols on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "058.png" }),
 
     // Unit
-    def('militia', { name: "Militia", type: SymbolType.UNIT, description: "+3 Military. Destroyed after 5 turns.", sprite: "063.png" }),
-    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "+2 Military.", sprite: "064.png" }),
-    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "+1 Military; adjacent to Forest or Mountain: +3 Military.", sprite: "065.png" }),
-    def('horseman', { name: "Horseman", type: SymbolType.UNIT, description: "+1 Military; if there is an Enemy symbol on the board: +5 Military.", sprite: "066.png" }),
-    def('mercenary', { name: "Mercenary", type: SymbolType.UNIT, description: "+4 Military; -2 Gold.", sprite: "067.png" }),
+    def('militia', { name: "Militia", type: SymbolType.UNIT, description: "+3 Military Power. Destroyed after 5 turns.", sprite: "063.png" }),
+    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "+2 Military Power.", sprite: "064.png" }),
+    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "+1 Military Power; adjacent to Forest or Mountain: +3 Military Power.", sprite: "065.png" }),
+    def('horseman', { name: "Horseman", type: SymbolType.UNIT, description: "+1 Military Power; if there is an Enemy symbol on the board: +5 Military Power.", sprite: "066.png" }),
+    def('mercenary', { name: "Mercenary", type: SymbolType.UNIT, description: "+4 Military Power; -2 Gold.", sprite: "067.png" }),
 
     // Enemy
     def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", sprite: "069.png" }),
@@ -251,19 +250,38 @@ export const RELIGION_SYMBOL_IDS = new Set<number>(RELIGION_DOCTRINE_KEYS.map((k
 export const RELIGION_DOCTRINE_IDS = RELIGION_SYMBOL_IDS;
 
 const EXCLUDED_POOL_KEYS: SymbolKey[] = [
-    'merchant', 'horse', 'crab', 'library', 'pearl',
-    'compass',
+    'merchant', 'library',
     'agi_core',
     'loot', 'greater_loot', 'radiant_loot',
     'christianity', 'islam', 'buddhism', 'hinduism',
     'warrior', 'archer', 'horseman', 'mercenary', 'stone_tablet', 'enemy_warrior',
     'flood', 'earthquake', 'drought', 'plague', 'heatwave',
-    'fur', 'expedition', 'dye', 'papyrus', 'caravanserai',
     'heqet', 'foxtail_millet',
 ];
 
+/**
+ * 자원 심볼은 기본 풀에 넣지 않는다 — 별도 해금 경로를 통해서만 등장한다.
+ * 타입으로 거르므로 새 자원 심볼을 추가해도 자동으로 제외된다.
+ */
+const EXCLUDED_POOL_TYPES: readonly SymbolType[] = [SymbolType.RESOURCE];
+
+/**
+ * 타입 제외(EXCLUDED_POOL_TYPES)를 무시하고 기본 풀에 남기는 자원 심볼.
+ * 각 지형축(초원/평원/바다/열대우림)의 기초 자원이라 해금 없이도 등장해야 한다.
+ */
+const BASE_POOL_RESOURCE_KEYS: readonly SymbolKey[] = ['wheat', 'cattle', 'fish', 'banana'];
+
+const BASE_POOL_RESOURCE_IDS = new Set<number>(
+    BASE_POOL_RESOURCE_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]),
+);
+
 /** 기본적으로 상점 풀에 등장할 수 없는 심볼 ID 목록 */
-export const EXCLUDED_FROM_BASE_POOL = new Set<number>(EXCLUDED_POOL_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
+export const EXCLUDED_FROM_BASE_POOL = new Set<number>([
+    ...EXCLUDED_POOL_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]),
+    ...SYMBOL_LIST.filter(
+        (s) => EXCLUDED_POOL_TYPES.includes(s.type) && !BASE_POOL_RESOURCE_IDS.has(s.id),
+    ).map((s) => s.id),
+]);
 
 export const isBasicSymbolType = (type: SymbolType): boolean =>
     type === SymbolType.RESOURCE || type === SymbolType.LUXURY;

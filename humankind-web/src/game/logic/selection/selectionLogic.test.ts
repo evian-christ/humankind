@@ -12,6 +12,7 @@ import {
     MECHANICS_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
+    TROPICAL_AGRICULTURE_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
 import { buildFlatPool, generateChoices, generateEventOnlyChoices, generateTerrainOnlyChoices } from './selectionLogic';
@@ -89,6 +90,39 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.id === S.compass)).toBe(true);
+    });
+
+    it('does not include Cassava in the pool before Tropical Agriculture is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.cassava)).toBe(false);
+    });
+
+    it('includes Cassava in the pool once Tropical Agriculture is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [TROPICAL_AGRICULTURE_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.cassava)).toBe(true);
+    });
+
+    it('includes Banana in the base pool without any upgrade', () => {
+        const pool = buildFlatPool({
+            era: 2,
+            religionUnlocked: false,
+            upgrades: [],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.banana)).toBe(true);
     });
 
     it('includes Expedition in the pool once Jungle Expedition is unlocked', () => {

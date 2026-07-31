@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { CONSUMABLE_RELIC_IDS } from '../relics/relicClassification';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
@@ -20,7 +21,6 @@ import {
     MODERN_AGE_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
     PRESERVATION_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
@@ -67,7 +67,7 @@ const getAdjacentCoords = (x: number, y: number) => {
 };
 
 describe('symbolEffectResolution', () => {
-    it('scales sea gold by research tier without increasing gold per group', () => {
+    it('produces nothing on its own since sea is a reference-only terrain', () => {
         const board = createEmptyBoard();
         const sea = createInstance(Sym.sea, 'sea');
         board[2][2] = sea;
@@ -75,34 +75,10 @@ describe('symbolEffectResolution', () => {
             board[x][y] = createInstance(Sym.wheat, `adjacent_${index}`);
         });
 
-        expect(processSingleSymbolEffects(sea, board, 2, 2, { upgrades: [] }).gold).toBe(1);
-        expect(processSingleSymbolEffects(
-            sea,
-            board,
-            2,
-            2,
-            { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID] },
-        ).gold).toBe(2);
-        expect(processSingleSymbolEffects(
-            sea,
-            board,
-            2,
-            2,
-            { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID] },
-        ).gold).toBe(3);
-        expect(processSingleSymbolEffects(
-            sea,
-            board,
-            2,
-            2,
-            {
-                upgrades: [
-                    CELESTIAL_NAVIGATION_UPGRADE_ID,
-                    MARITIME_TRADE_UPGRADE_ID,
-                    OCEANIC_ROUTES_UPGRADE_ID,
-                ],
-            },
-        ).gold).toBe(6);
+        const result = processSingleSymbolEffects(sea, board, 2, 2, { upgrades: [] });
+        expect(result.gold).toBe(0);
+        expect(result.food).toBe(0);
+        expect(result.knowledge).toBe(0);
     });
 
     it('prevents barbarian invasion enemies from plundering food with Castle', () => {
@@ -814,14 +790,14 @@ describe('symbolEffectResolution', () => {
         expect(rice.effect_counter).toBe(0);
     });
 
-    it('doubles adjacent grassland counter gain with Agricultural Surplus', () => {
+    it('doubles same-row grassland counter gain with Agricultural Surplus', () => {
         const board = createEmptyBoard();
         const wheat = createInstance(Sym.wheat, 'wheat');
         const rice = createInstance(Sym.rice, 'rice');
         board[0][0] = wheat;
         board[1][0] = createInstance(Sym.grassland, 'grassland_wheat');
         board[4][3] = rice;
-        board[3][3] = createInstance(Sym.grassland, 'grassland_rice');
+        board[0][3] = createInstance(Sym.grassland, 'grassland_rice');
 
         processSingleSymbolEffects(wheat, board, 0, 0, { upgrades: [AGRICULTURAL_SURPLUS_UPGRADE_ID] });
         processSingleSymbolEffects(rice, board, 4, 3, { upgrades: [AGRICULTURAL_SURPLUS_UPGRADE_ID] });
@@ -1064,30 +1040,50 @@ describe('symbolEffectResolution', () => {
         ]);
     });
 
-    it('applies tiered fish and pearl effects from board-wide sea counts', () => {
+    it('applies tiered pearl effects from board-wide sea counts', () => {
         const board = createEmptyBoard();
-        const fish = createInstance(Sym.fish, 'fish');
         const pearl = createInstance(Sym.pearl, 'pearl');
-        board[0][0] = fish;
         board[4][3] = pearl;
         board[2][1] = createInstance(Sym.sea, 'sea');
 
-        const fishResult = processSingleSymbolEffects(fish, board, 0, 0, { upgrades: [] });
         const pearlResult = processSingleSymbolEffects(pearl, board, 4, 3, { upgrades: [] });
 
-        expect(fishResult.food).toBe(1);
-        expect(fishResult.contributors).toEqual([{ x: 2, y: 1 }]);
         expect(pearlResult.gold).toBe(1);
         expect(pearlResult.contributors).toEqual([{ x: 2, y: 1 }]);
 
         board[1][2] = createInstance(Sym.sea, 'sea_2');
         board[3][1] = createInstance(Sym.sea, 'sea_3');
 
-        const fishThreeSeas = processSingleSymbolEffects(fish, board, 0, 0, { upgrades: [] });
         const pearlThreeSeas = processSingleSymbolEffects(pearl, board, 4, 3, { upgrades: [] });
 
-        expect(fishThreeSeas.food).toBe(4);
         expect(pearlThreeSeas.gold).toBe(3);
+    });
+
+    it('gives fish +2 food per adjacent Coast and ignores Ocean', () => {
+        const board = createEmptyBoard();
+        const fish = createInstance(Sym.fish, 'fish');
+        // 5x4 보드에서 안쪽(해양)은 x=1..3, y=1..2. 그 외는 가장자리(해안).
+        board[1][0] = fish;
+        board[0][0] = createInstance(Sym.sea, 'coast_1'); // 가장자리 -> 해안
+        board[2][0] = createInstance(Sym.sea, 'coast_2'); // 가장자리 -> 해안
+        board[1][1] = createInstance(Sym.sea, 'ocean_1'); // 안쪽 -> 해양
+
+        const result = processSingleSymbolEffects(fish, board, 1, 0, { upgrades: [] });
+
+        // 인접 해안 2개 x 2 = 4. 인접한 해양은 세지 않음.
+        expect(result.food).toBe(4);
+        expect(result.contributors).toEqual([{ x: 0, y: 0 }, { x: 2, y: 0 }]);
+    });
+
+    it('gives fish nothing when only Ocean is adjacent', () => {
+        const board = createEmptyBoard();
+        const fish = createInstance(Sym.fish, 'fish');
+        board[2][2] = fish;
+        board[2][1] = createInstance(Sym.sea, 'ocean_1'); // 안쪽 -> 해양
+
+        const result = processSingleSymbolEffects(fish, board, 2, 2, { upgrades: [] });
+
+        expect(result.food).toBe(0);
     });
 
     it('applies tiered crab rewards and keeps seafaring as a food upgrade', () => {
@@ -1187,21 +1183,12 @@ describe('symbolEffectResolution', () => {
 
     it('treats each sea as two placed seas when Shipbuilding is unlocked', () => {
         const board = createEmptyBoard();
-        const fish = createInstance(Sym.fish, 'fish');
         const pearl = createInstance(Sym.pearl, 'pearl');
         const compass = createInstance(Sym.compass, 'compass');
-        board[0][0] = fish;
         board[1][0] = pearl;
         board[2][0] = compass;
         board[4][3] = createInstance(Sym.sea, 'sea');
 
-        const fishResult = processSingleSymbolEffects(
-            fish,
-            board,
-            0,
-            0,
-            { upgrades: [SHIPBUILDING_UPGRADE_ID] },
-        );
         const pearlResult = processSingleSymbolEffects(
             pearl,
             board,
@@ -1217,28 +1204,18 @@ describe('symbolEffectResolution', () => {
             { upgrades: [SHIPBUILDING_UPGRADE_ID] },
         );
 
-        expect(fishResult.food).toBe(2);
         expect(pearlResult.gold).toBe(2);
         expect(compassResult.knowledge).toBe(10);
     });
 
-    it('overrides fish and crab with Fishery Guild values', () => {
+    it('overrides crab with Fishery Guild values', () => {
         const board = createEmptyBoard();
-        const fish = createInstance(Sym.fish, 'fish');
         const crab = createInstance(Sym.crab, 'crab');
-        board[0][0] = fish;
         board[1][0] = crab;
         board[2][1] = createInstance(Sym.sea, 'sea_1');
         board[3][1] = createInstance(Sym.sea, 'sea_2');
         board[4][1] = createInstance(Sym.sea, 'sea_3');
 
-        const fishResult = processSingleSymbolEffects(
-            fish,
-            board,
-            0,
-            0,
-            { upgrades: [SEAFARING_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID] },
-        );
         const crabResult = processSingleSymbolEffects(
             crab,
             board,
@@ -1247,17 +1224,15 @@ describe('symbolEffectResolution', () => {
             { upgrades: [SEAFARING_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID] },
         );
 
-        expect(fishResult.food).toBe(10);
         expect(crabResult.food).toBe(5);
         expect(crabResult.gold).toBe(5);
     });
 
-    it('upgrades pearl and sea further with Maritime Trade', () => {
+    it('upgrades pearl further with Maritime Trade', () => {
         const board = createEmptyBoard();
         const pearl = createInstance(Sym.pearl, 'pearl');
-        const sea = createInstance(Sym.sea, 'sea');
         board[0][0] = pearl;
-        board[1][0] = sea;
+        board[1][0] = createInstance(Sym.sea, 'sea');
         board[2][1] = createInstance(Sym.sea, 'sea_2');
         board[0][1] = createInstance(Sym.wheat, 'wheat');
         board[1][1] = createInstance(Sym.rice, 'rice');
@@ -1270,16 +1245,8 @@ describe('symbolEffectResolution', () => {
             0,
             { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID] },
         );
-        const seaResult = processSingleSymbolEffects(
-            sea,
-            board,
-            1,
-            0,
-            { upgrades: [CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID] },
-        );
 
         expect(pearlResult.gold).toBe(4);
-        expect(seaResult.gold).toBe(2);
     });
 
     it.each([
@@ -1304,35 +1271,28 @@ describe('symbolEffectResolution', () => {
         },
     );
 
-    it('applies Oceanic Routes as the highest tier for fish crab pearl and sea', () => {
+    it('applies Oceanic Routes as the highest tier for crab and pearl', () => {
         const board = createEmptyBoard();
-        const fish = createInstance(Sym.fish, 'fish');
         const crab = createInstance(Sym.crab, 'crab');
         const pearl = createInstance(Sym.pearl, 'pearl');
-        const sea = createInstance(Sym.sea, 'sea');
-        board[0][0] = fish;
         board[1][0] = crab;
         board[2][0] = pearl;
-        board[3][0] = sea;
+        board[3][0] = createInstance(Sym.sea, 'sea');
         board[4][3] = createInstance(Sym.sea, 'sea_2');
         board[4][2] = createInstance(Sym.sea, 'sea_3');
         board[2][1] = createInstance(Sym.wheat, 'wheat');
         board[3][1] = createInstance(Sym.rice, 'rice');
 
         const upgrades = [SEAFARING_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID, OCEANIC_ROUTES_UPGRADE_ID];
-        const fishResult = processSingleSymbolEffects(fish, board, 0, 0, { upgrades });
         const crabResult = processSingleSymbolEffects(crab, board, 1, 0, { upgrades });
         const pearlResult = processSingleSymbolEffects(pearl, board, 2, 0, { upgrades });
-        const seaResult = processSingleSymbolEffects(sea, board, 3, 0, { upgrades });
 
-        expect(fishResult.food).toBe(15);
         expect(crabResult.food).toBe(8);
         expect(crabResult.gold).toBe(5);
         expect(pearlResult.gold).toBe(10);
-        expect(seaResult.gold).toBe(3);
     });
 
-    it('upgrades rainforest yields with Tropical Agriculture', () => {
+    it('keeps Rainforest at its base yield even with Tropical Agriculture', () => {
         const board = createEmptyBoard();
         board[1][2] = createInstance(Sym.rainforest, 'rainforest');
 
@@ -1344,28 +1304,94 @@ describe('symbolEffectResolution', () => {
             { upgrades: [TROPICAL_AGRICULTURE_UPGRADE_ID] },
         );
 
-        expect(rainforestResult.food).toBe(3);
+        // 성장 보너스가 없으면 기본 식량 +1만 나온다.
+        expect(rainforestResult.food).toBe(1);
         expect(rainforestResult.gold).toBe(0);
     });
 
-    it('upgrades banana cadence with Plantation', () => {
+    it('adds the Rainforest growth bonus on top of its base Food', () => {
+        const board = createEmptyBoard();
+        const rainforest = createInstance(Sym.rainforest, 'rainforest');
+        rainforest.rainforest_growth_bonus = { food: 2, gold: 1, knowledge: 3 };
+        board[1][2] = rainforest;
+
+        const result = processSingleSymbolEffects(rainforest, board, 1, 2, { upgrades: [] });
+
+        expect(result.food).toBe(3);
+        expect(result.gold).toBe(1);
+        expect(result.knowledge).toBe(3);
+    });
+
+    it('lets Cassava add 2 Growth to an adjacent Rainforest and destroys itself', () => {
+        const board = createEmptyBoard();
+        const rainforest = createInstance(Sym.rainforest, 'rainforest');
+        const cassava = createInstance(Sym.cassava, 'cassava');
+        board[1][2] = rainforest;
+        board[1][1] = cassava;
+
+        processSingleSymbolEffects(cassava, board, 1, 1, { upgrades: [] });
+
+        expect(rainforest.effect_counter).toBe(2);
+        expect(rainforest.rainforest_growth_bonus).toBeUndefined();
+        expect(cassava.is_marked_for_destruction).toBe(true);
+    });
+
+    it('converts 10 Growth into a permanent Food bonus for Cassava growth', () => {
+        const board = createEmptyBoard();
+        const rainforest = createInstance(Sym.rainforest, 'rainforest');
+        board[1][2] = rainforest;
+        board[1][1] = createInstance(Sym.cassava, 'cassava');
+
+        // 카사바 5번이면 성장치 10에 도달해 식량 생산이 영구히 +1.
+        for (let i = 0; i < 5; i += 1) {
+            const cassava = createInstance(Sym.cassava, `cassava_${i}`);
+            board[1][1] = cassava;
+            processSingleSymbolEffects(cassava, board, 1, 1, { upgrades: [] });
+        }
+
+        expect(rainforest.effect_counter).toBe(0);
+        expect(rainforest.rainforest_growth_bonus).toEqual({ food: 1, gold: 0, knowledge: 0 });
+
+        const result = processSingleSymbolEffects(rainforest, board, 1, 2, { upgrades: [] });
+        expect(result.food).toBe(2);
+    });
+
+    it('does nothing for Cassava without an adjacent Rainforest', () => {
+        const board = createEmptyBoard();
+        const cassava = createInstance(Sym.cassava, 'cassava');
+        board[1][1] = cassava;
+        board[4][3] = createInstance(Sym.rainforest, 'distant_rainforest');
+
+        processSingleSymbolEffects(cassava, board, 1, 1, { upgrades: [] });
+
+        expect(cassava.is_marked_for_destruction).toBe(false);
+    });
+
+    it('gives Banana +1 Food, doubled when adjacent to Rainforest', () => {
         const board = createEmptyBoard();
         const banana = createInstance(Sym.banana, 'banana');
-        banana.effect_counter = 4;
         board[1][1] = banana;
+
+        // 열대우림이 없으면 기본 식량 +1.
+        expect(processSingleSymbolEffects(banana, board, 1, 1, { upgrades: [] }).food).toBe(1);
+
         board[1][2] = createInstance(Sym.rainforest, 'rainforest');
 
-        const bananaResult = processSingleSymbolEffects(
-            banana,
-            board,
-            1,
-            1,
-            { upgrades: [PLANTATION_UPGRADE_ID] },
-        );
+        // 열대우림에 인접하면 식량 +1이 더해져 총 2.
+        const adjacentResult = processSingleSymbolEffects(banana, board, 1, 1, { upgrades: [] });
+        expect(adjacentResult.food).toBe(2);
+        expect(adjacentResult.contributors).toEqual([{ x: 1, y: 2 }]);
+    });
 
-        expect(bananaResult.food).toBe(1);
-        expect(banana.banana_permanent_food_bonus).toBe(1);
-        expect(banana.effect_counter).toBe(0);
+    it('keeps Banana Food flat regardless of how many Rainforests are adjacent', () => {
+        const board = createEmptyBoard();
+        const banana = createInstance(Sym.banana, 'banana');
+        board[1][1] = banana;
+        board[1][2] = createInstance(Sym.rainforest, 'rainforest_1');
+        board[0][1] = createInstance(Sym.rainforest, 'rainforest_2');
+        board[2][1] = createInstance(Sym.rainforest, 'rainforest_3');
+
+        expect(processSingleSymbolEffects(banana, board, 1, 1, { upgrades: [] }).food).toBe(2);
     });
 
     it.each([
@@ -1399,7 +1425,7 @@ describe('symbolEffectResolution', () => {
         randomSpy.mockRestore();
     });
 
-    it('upgrades Rainforest and Expedition with Tropical Development', () => {
+    it('upgrades Expedition with Tropical Development', () => {
         const board = createEmptyBoard();
         const expedition = createInstance(Sym.expedition, 'expedition');
         const rainforest = createInstance(Sym.rainforest, 'rainforest');
@@ -1424,24 +1450,55 @@ describe('symbolEffectResolution', () => {
         expect(expeditionResult.food).toBe(0);
         expect(expeditionResult.gold).toBe(15);
         expect(expeditionResult.knowledge).toBe(15);
-        expect(rainforestResult.food).toBe(5);
-        expect(rainforestResult.gold).toBe(5);
-        expect(rainforestResult.knowledge).toBe(5);
+        // 열대우림은 성장 기반이라 업그레이드 영향을 받지 않고 기본 식량 +1만 낸다.
+        expect(rainforestResult.food).toBe(1);
+        expect(rainforestResult.gold).toBe(0);
+        expect(rainforestResult.knowledge).toBe(0);
     });
 
-    it('applies the new Forest thresholds and unique-terrain bonus', () => {
+    it('gives Forest a flat +1 Food when adjacent to another Forest', () => {
         const board = createEmptyBoard();
         const forest = createInstance(Sym.forest, 'forest_1');
         board[0][0] = forest;
         board[1][0] = createInstance(Sym.forest, 'forest_2');
-        board[2][0] = createInstance(Sym.forest, 'forest_3');
-        board[3][0] = createInstance(Sym.forest, 'forest_4');
-        board[4][0] = createInstance(Sym.forest, 'forest_5');
+        board[1][1] = createInstance(Sym.forest, 'forest_3');
+        board[0][1] = createInstance(Sym.forest, 'forest_4');
 
         const result = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
 
-        expect(result.food).toBe(3);
-        expect(result.gold).toBe(1);
+        // 인접한 숲이 3개여도 정액 +1.
+        expect(result.food).toBe(1);
+        expect(result.gold).toBe(0);
+    });
+
+    it('gives Forest nothing without an adjacent Forest', () => {
+        const board = createEmptyBoard();
+        const forest = createInstance(Sym.forest, 'forest_1');
+        board[0][0] = forest;
+        board[3][3] = createInstance(Sym.forest, 'distant_forest');
+
+        const result = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
+
+        expect(result.food).toBe(0);
+    });
+
+    it('produces a random Seal every 10 turns', () => {
+        const board = createEmptyBoard();
+        const forest = createInstance(Sym.forest, 'forest_1');
+        board[0][0] = forest;
+
+        // 9턴째까지는 인장이 나오지 않는다.
+        for (let turn = 0; turn < 9; turn += 1) {
+            const result = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
+            expect(result.grantRelicIds).toBeUndefined();
+        }
+
+        const tenth = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
+
+        expect(tenth.grantRelicIds).toHaveLength(1);
+        expect(CONSUMABLE_RELIC_IDS).toContain(tenth.grantRelicIds![0]);
+        // 카운터가 리셋되어 다음 주기가 다시 시작된다.
+        expect(forest.effect_counter).toBe(0);
     });
 
     it('applies the new Deer and Fur forest-adjacency rules', () => {
@@ -1456,7 +1513,7 @@ describe('symbolEffectResolution', () => {
         board[3][3] = createInstance(Sym.forest, 'forest_2');
         const furResult = processSingleSymbolEffects(fur, board, 0, 0, { upgrades: [] });
 
-        expect(deerResult.food).toBe(1);
+        expect(deerResult.food).toBe(2);
         expect(deerResult.gold).toBe(0);
         expect(deer.is_marked_for_destruction).toBe(false);
         expect(furResult.gold).toBe(2);
@@ -1471,7 +1528,32 @@ describe('symbolEffectResolution', () => {
         expect(isolatedDeer.is_marked_for_destruction).toBe(false);
     });
 
-    it('upgrades Forest with Tracking', () => {
+    it('keeps Deer food flat regardless of how many Forests are adjacent', () => {
+        const board = createEmptyBoard();
+        const deer = createInstance(Sym.deer, 'deer');
+        board[1][1] = deer;
+        board[0][0] = createInstance(Sym.forest, 'forest_1');
+        board[1][0] = createInstance(Sym.forest, 'forest_2');
+        board[2][1] = createInstance(Sym.forest, 'forest_3');
+
+        const result = processSingleSymbolEffects(deer, board, 1, 1, { upgrades: [] });
+
+        // 인접한 숲이 3개여도 정액 +2.
+        expect(result.food).toBe(2);
+    });
+
+    it('gives Deer nothing without an adjacent Forest', () => {
+        const board = createEmptyBoard();
+        const deer = createInstance(Sym.deer, 'deer');
+        board[1][1] = deer;
+        board[3][3] = createInstance(Sym.forest, 'distant_forest');
+
+        const result = processSingleSymbolEffects(deer, board, 1, 1, { upgrades: [] });
+
+        expect(result.food).toBe(0);
+    });
+
+    it('keeps Forest food flat even with Tracking unlocked', () => {
         const board = createEmptyBoard();
         const forest = createInstance(Sym.forest, 'forest_1');
         board[0][0] = forest;
@@ -1488,27 +1570,18 @@ describe('symbolEffectResolution', () => {
             { upgrades: [TRACKING_UPGRADE_ID] },
         );
 
-        expect(forestResult.food).toBe(4);
-        expect(forestResult.gold).toBe(2);
+        expect(forestResult.food).toBe(1);
+        expect(forestResult.gold).toBe(0);
     });
 
-    it('upgrades Fur and Deer with Tanning', () => {
+    it('upgrades Fur with Tanning', () => {
         const board = createEmptyBoard();
-        const deer = createInstance(Sym.deer, 'deer');
         const fur = createInstance(Sym.fur, 'fur');
-        board[1][1] = deer;
         board[0][0] = fur;
         board[1][2] = createInstance(Sym.forest, 'forest_1');
         board[2][1] = createInstance(Sym.forest, 'forest_2');
         board[3][3] = createInstance(Sym.forest, 'forest_3');
 
-        const deerResult = processSingleSymbolEffects(
-            deer,
-            board,
-            1,
-            1,
-            { upgrades: [TANNING_UPGRADE_ID] },
-        );
         const furResult = processSingleSymbolEffects(
             fur,
             board,
@@ -1517,11 +1590,10 @@ describe('symbolEffectResolution', () => {
             { upgrades: [TANNING_UPGRADE_ID] },
         );
 
-        expect(deerResult.food).toBe(4);
         expect(furResult.gold).toBe(3);
     });
 
-    it('upgrades Forest further with Forestry and adds its unique-terrain bonus', () => {
+    it('keeps Forest food flat even with Forestry unlocked', () => {
         const board = createEmptyBoard();
         const forest = createInstance(Sym.forest, 'forest_1');
         board[0][0] = forest;
@@ -1540,12 +1612,12 @@ describe('symbolEffectResolution', () => {
             { upgrades: [FORESTRY_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(6);
-        expect(result.gold).toBe(3);
+        expect(result.food).toBe(1);
+        expect(result.gold).toBe(0);
         expect(result.knowledge).toBe(0);
     });
 
-    it('upgrades Deer further with Preservation', () => {
+    it('keeps Deer food flat even with Preservation unlocked', () => {
         const board = createEmptyBoard();
         const deer = createInstance(Sym.deer, 'deer');
         board[1][1] = deer;
@@ -1560,7 +1632,7 @@ describe('symbolEffectResolution', () => {
             { upgrades: [PRESERVATION_UPGRADE_ID] },
         );
 
-        expect(deerResult.food).toBe(6);
+        expect(deerResult.food).toBe(2);
     });
 
     it('upgrades Loot into Greater Loot when adjacent to another Loot', () => {

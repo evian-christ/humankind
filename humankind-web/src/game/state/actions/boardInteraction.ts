@@ -1,4 +1,3 @@
-import { NOMADIC_TRADITION_UPGRADE_ID, PASTURE_MANAGEMENT_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
 import { S, SymbolType } from '../../data/symbolDefinitions';
 import { generateChoices as generateChoicesSelection } from '../../logic/selection/selectionLogic';
@@ -24,6 +23,7 @@ import {
 } from '../../data/rewardDefinitions';
 import { resolveKnowledgeProgression } from '../gameCalculations';
 import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
+import { getCultureLevel } from '../../data/cultureProgression';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -82,73 +82,6 @@ const scheduleMarkedBoardRemoval = (
 };
 
 export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: BoardInteractionDeps) => ({
-    butcherPastureAnimalAt: (x: number, y: number) => {
-        const prev = get();
-        if (!isBoardActionPhase(prev.phase)) return;
-        const sym = prev.board[x]?.[y];
-        const sid = sym?.definition.id;
-        if (!sym || sym.is_marked_for_destruction || (sid !== S.cattle && sid !== S.sheep)) return;
-        const adjacentPlains = getAdjacentCoords(x, y).filter(
-            (p) => prev.board[p.x][p.y]?.definition.id === S.plains,
-        );
-        if (adjacentPlains.length === 0) return;
-
-        const removed = [sym];
-        const symAgg = aggregateCollectionDestroyEffects(removed, false, prev.unlockedKnowledgeUpgrades || []);
-        const shBonus = scarabBonusForOwnedRemoves(prev.board, removed.length);
-        const hasNomadicTradition = (prev.unlockedKnowledgeUpgrades || []).includes(NOMADIC_TRADITION_UPGRADE_ID);
-        const butcherFood = sid === S.cattle ? (hasNomadicTradition ? 20 : 10) : (hasNomadicTradition ? 10 : 5);
-        const butcherGoldFlat = sid === S.sheep ? (hasNomadicTradition ? 10 : 5) : 0;
-        const dFood = butcherFood + symAgg.food + shBonus.food;
-        const dGold = butcherGoldFlat + symAgg.gold + shBonus.gold;
-        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
-
-        const instanceIds = new Set([sym.instanceId]);
-        const markedBoard = markBoardSymbolsForRemoval(prev.board, instanceIds);
-        const blinkStartedAtMs = getNowMs();
-        if ((prev.unlockedKnowledgeUpgrades || []).includes(PASTURE_MANAGEMENT_UPGRADE_ID)) {
-            adjacentPlains.forEach((p) => {
-                const plains = markedBoard[p.x][p.y];
-                if (plains?.definition.id === S.plains) {
-                    plains.effect_counter = (plains.effect_counter || 0) + 1;
-                }
-            });
-        }
-        const baseFiltered = prev.playerSymbols.filter((s) => !instanceIds.has(s.instanceId));
-        const newSymbols = appendSymbolDefIdsToPlayer(
-            baseFiltered,
-            symAgg.addSymbolDefIds,
-            prev.unlockedKnowledgeUpgrades || [],
-        );
-        set({
-            board: markedBoard,
-            playerSymbols: newSymbols,
-            food: prev.food + dFood,
-            gold: prev.gold + dGold,
-            ...resolveKnowledgeProgression(prev, dKnowledge),
-            forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
-            forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
-            freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
-            isRelicShopOpen: prev.isRelicShopOpen || symAgg.openRelicShop,
-            lastEffects: [...prev.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
-            destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
-        });
-        scheduleMarkedBoardRemoval(set, instanceIds, blinkStartedAtMs);
-        if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
-        get().appendEventLog({
-            turn: prev.turn,
-            kind: 'board_action',
-            slot: { x, y },
-            symbolId: sid,
-            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
-            meta: {
-                action: sid === S.cattle ? 'cattle_butcher' : 'sheep_butcher',
-                butcherFood,
-                butcherGoldFlat,
-                destroyedSymbols: [destroyedSymbol(sym, x, y)],
-            },
-        });
-    },
     openLootAt: (x: number, y: number) => {
         const prev = get();
         if (!isBoardActionPhase(prev.phase)) return;
@@ -298,9 +231,10 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const dFood = symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
         const dGold = symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
+        const dCulture = boardOnlyDestroyDelta.culture;
         const boardEffects = createBoardDestroyResourceEffects(
             { x, y },
-            { food: dFood, gold: dGold, knowledge: dKnowledge },
+            { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
             storedFoodEffects,
         );
 
@@ -320,6 +254,8 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             food: state.food + dFood,
             gold: state.gold + dGold,
             ...resolveKnowledgeProgression(state, dKnowledge),
+            culture: state.culture + dCulture,
+            cultureLevel: getCultureLevel(state.culture + dCulture),
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
@@ -343,7 +279,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             kind: 'board_action',
             slot: { x: pending.x, y: pending.y },
             symbolId: S.edict,
-            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
+            delta: { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
             meta: {
                 action: 'edict_destroy',
                 targetSlot: { x, y },

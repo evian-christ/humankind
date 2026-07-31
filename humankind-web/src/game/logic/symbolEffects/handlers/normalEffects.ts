@@ -10,9 +10,6 @@ import {
     MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
-    PRESERVATION_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     SHIPBUILDING_UPGRADE_ID,
@@ -20,7 +17,16 @@ import {
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
-import { countOnBoard, SEA_TERRAIN_ID } from '../core';
+import {
+    addRainforestGrowth,
+    CASSAVA_GROWTH_AMOUNT,
+    CASSAVA_GROWTH_KIND,
+    countOnBoard,
+    getSameColumnCoordsBySymbolId,
+    getSameRowCoordsBySymbolId,
+    isCoastAt,
+    SEA_TERRAIN_ID,
+} from '../core';
 import type { SymbolEffectHandler } from '../core';
 import type { BoardGrid } from '../types';
 
@@ -42,7 +48,7 @@ const getEffectiveSeaCount = (boardGrid: BoardGrid, upgrades: number[]): number 
 export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, adj, upgrades, relicEffects, state }) => {
     switch (symbolInstance.definition.id) {
         case S.wheat: {
-            const grassAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.grassland);
+            const grassAdj = getSameRowCoordsBySymbolId(boardGrid, x, y, S.grassland);
             const grassCount = grassAdj.length;
             if (grassCount > 0) grassAdj.forEach((pos) => state.contributors.push(pos));
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
@@ -66,7 +72,7 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
         }
 
         case S.rice: {
-            const grassAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.grassland);
+            const grassAdj = getSameRowCoordsBySymbolId(boardGrid, x, y, S.grassland);
             const grassCount = grassAdj.length;
             if (grassCount > 0) grassAdj.forEach((pos) => state.contributors.push(pos));
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
@@ -89,57 +95,52 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
         }
 
-        case S.cattle:
+        case S.cattle: {
             state.food += 1;
-            if (upgrades.includes(PASTORALISM_UPGRADE_ID) && Math.random() < 0.1) {
-                state.addSymbolIds.push(S.cattle);
-                state.contributors.push({ x, y });
+            const plainsCol = getSameColumnCoordsBySymbolId(boardGrid, x, y, S.plains);
+            if (plainsCol.length > 0) {
+                state.food += 1;
+                state.contributors.push(...plainsCol);
             }
             return true;
+        }
 
         case S.banana: {
-            const perm = symbolInstance.banana_permanent_food_bonus ?? 0;
-            state.food += 1 + perm;
-            let nearRainforest = false;
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t?.definition.id === S.rainforest) {
-                    nearRainforest = true;
-                    state.contributors.push(pos);
+            // 기본 식량 +1; 열대우림에 인접 시 식량 +1.
+            state.food += 1;
+            const rainforestAdj = adj.filter(
+                (pos) => boardGrid[pos.x][pos.y]?.definition.id === S.rainforest,
+            );
+            if (rainforestAdj.length > 0) {
+                state.food += 1;
+                rainforestAdj.forEach((pos) => state.contributors.push(pos));
+            }
+            return true;
+        }
+
+        case S.cassava: {
+            // 인접한 열대우림 1개에 성장치 +2를 준 뒤 스스로 파괴된다.
+            const rainforestAdj = adj.filter(
+                (pos) => boardGrid[pos.x][pos.y]?.definition.id === S.rainforest,
+            );
+            if (rainforestAdj.length > 0) {
+                const target = rainforestAdj[Math.floor(Math.random() * rainforestAdj.length)];
+                const rainforest = boardGrid[target.x][target.y];
+                if (rainforest) {
+                    addRainforestGrowth(rainforest, CASSAVA_GROWTH_AMOUNT, CASSAVA_GROWTH_KIND);
+                    state.contributors.push(target);
+                    symbolInstance.is_marked_for_destruction = true;
                 }
-            });
-            if (nearRainforest) {
-                let p = (symbolInstance.effect_counter || 0) + 1;
-                const threshold = upgrades.includes(PLANTATION_UPGRADE_ID) ? 5 : 10;
-                if (p >= threshold) {
-                    p = 0;
-                    symbolInstance.banana_permanent_food_bonus = perm + 1;
-                }
-                symbolInstance.effect_counter = p;
             }
             return true;
         }
 
         case S.fish: {
-            const seaCoords = getBoardCoordsBySymbolId(boardGrid, SEA_TERRAIN_ID);
-            const effectiveSeaCount = getEffectiveSeaCount(boardGrid, upgrades);
-            if (effectiveSeaCount >= 1) {
-                let food = 1;
-                if (upgrades.includes(OCEANIC_ROUTES_UPGRADE_ID)) {
-                    if (effectiveSeaCount >= 3) food = 15;
-                    else if (effectiveSeaCount >= 2) food = 8;
-                    else food = 5;
-                } else if (upgrades.includes(FISHERY_GUILD_UPGRADE_ID)) {
-                    if (effectiveSeaCount >= 3) food = 10;
-                    else if (effectiveSeaCount >= 2) food = 5;
-                    else food = 3;
-                } else {
-                    if (effectiveSeaCount >= 3) food = 4;
-                    else if (effectiveSeaCount >= 2) food = 2;
-                    if (upgrades.includes(SEAFARING_UPGRADE_ID)) food += 1;
-                }
-                state.food += food;
-                state.contributors.push(...seaCoords);
+            // 인접한 해안(가장자리에 놓인 바다) 1개당 식량 +2.
+            const coastAdj = adj.filter((pos) => isCoastAt(boardGrid, pos.x, pos.y));
+            if (coastAdj.length > 0) {
+                state.food += coastAdj.length * 2;
+                state.contributors.push(...coastAdj);
             }
             return true;
         }
@@ -254,14 +255,10 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
         }
 
         case S.deer: {
+            // 숲에 인접 시 식량 +2 (인접한 숲 개수와 무관한 정액).
             const forestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.forest);
             if (forestAdj.length > 0) {
-                const multiplier = upgrades.includes(PRESERVATION_UPGRADE_ID)
-                    ? 3
-                    : upgrades.includes(TANNING_UPGRADE_ID)
-                        ? 2
-                        : 1;
-                state.food += forestAdj.length * multiplier;
+                state.food += 2;
                 forestAdj.forEach((pos) => state.contributors.push(pos));
             }
             return true;
@@ -367,13 +364,15 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
         }
 
-        case S.sheep:
+        case S.sheep: {
             state.food += 1;
-            if (upgrades.includes(PASTORALISM_UPGRADE_ID) && Math.random() < 0.1) {
-                state.addSymbolIds.push(S.sheep);
-                state.contributors.push({ x, y });
+            const plainsCol = getSameColumnCoordsBySymbolId(boardGrid, x, y, S.plains);
+            if (plainsCol.length > 0) {
+                state.gold += 1;
+                state.contributors.push(...plainsCol);
             }
             return true;
+        }
 
         case S.fur: {
             const forestCount = countOnBoard(boardGrid, S.forest);

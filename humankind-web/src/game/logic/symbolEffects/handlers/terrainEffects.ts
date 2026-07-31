@@ -1,43 +1,27 @@
-import { S, SymbolType } from '../../../data/symbolDefinitions';
+import { S } from '../../../data/symbolDefinitions';
 import {
-    countOnBoard,
     isDesertDestructibleSymbol,
 } from '../core';
 import type { SymbolEffectHandler } from '../core';
+import { CONSUMABLE_RELIC_IDS } from '../../relics/relicClassification';
 import {
-    CELESTIAL_NAVIGATION_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
-    FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
-    MARITIME_TRADE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
-    OCEANIC_ROUTES_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    TRACKING_UPGRADE_ID,
-    TROPICAL_AGRICULTURE_UPGRADE_ID,
-    TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
 
 export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, adj, upgrades, relicEffects, state }) => {
     switch (symbolInstance.definition.id) {
-        case S.sea: {
-            const occupiedAdj = adj.filter(pos => boardGrid[pos.x][pos.y] != null);
-            const divisor = upgrades.includes(OCEANIC_ROUTES_UPGRADE_ID)
-                ? 1
-                : upgrades.includes(MARITIME_TRADE_UPGRADE_ID)
-                    ? 2
-                    : upgrades.includes(CELESTIAL_NAVIGATION_UPGRADE_ID)
-                        ? 3
-                        : 4;
-            const seaGold = Math.floor(occupiedAdj.length / divisor);
-            state.gold += seaGold;
-            if (seaGold > 0) occupiedAdj.forEach(pos => state.contributors.push(pos));
+        // 바다는 자체 산출이 없는 참조용 지형입니다.
+        // 가장자리에 놓이면 해안, 안쪽에 놓이면 해양으로 취급되며
+        // 판정은 core.ts의 isCoastAt / isOceanAt이 담당합니다.
+        case S.sea:
             return true;
-        }
 
         case S.grassland:
             state.food += upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
@@ -57,16 +41,13 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
         }
 
-        case S.rainforest:
-            if (upgrades.includes(TROPICAL_DEVELOPMENT_UPGRADE_ID)) {
-                state.food += 5;
-                state.gold += 5;
-                state.knowledge += 5;
-            } else if (upgrades.includes(TROPICAL_AGRICULTURE_UPGRADE_ID)) {
-                state.food += 3;
-            } else {
-                state.food += 1;
-            }
+        case S.rainforest: {
+            // 기본 식량 +1에 성장으로 누적된 영구 보너스를 더한다.
+            const growth = symbolInstance.rainforest_growth_bonus;
+            state.food += 1 + (growth?.food ?? 0);
+            state.gold += growth?.gold ?? 0;
+            state.knowledge += growth?.knowledge ?? 0;
+
             adj.forEach(pos => {
                 const t = boardGrid[pos.x][pos.y];
                 if (t?.definition.id === S.banana && relicEffects.bananaFossilBonus) {
@@ -75,6 +56,7 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 }
             });
             return true;
+        }
 
         case S.plains:
             state.food += 1;
@@ -158,29 +140,20 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
 
         case S.forest:
             {
-                const forestCount = countOnBoard(boardGrid, S.forest);
-                const forestry = upgrades.includes(FORESTRY_UPGRADE_ID);
-                const tracking = upgrades.includes(TRACKING_UPGRADE_ID);
-                let food = 0;
-                let gold = 0;
-
-                if (forestCount >= 3) food += forestry ? 3 : 2;
-                if (forestCount >= 5) gold += forestry ? 3 : tracking ? 2 : 1;
-
-                const terrainTypes = new Set<number>();
-                for (let bx = 0; bx < boardGrid.length; bx++) {
-                    for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
-                        const cell = boardGrid[bx][by];
-                        if (cell?.definition.type === SymbolType.TERRAIN) terrainTypes.add(cell.definition.id);
-                    }
+                // 다른 숲에 인접 시 식량 +1 (인접한 숲 개수와 무관한 정액).
+                const forestAdj = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.forest);
+                if (forestAdj.length > 0) {
+                    state.food += 1;
+                    forestAdj.forEach((pos) => state.contributors.push(pos));
                 }
 
-                if (terrainTypes.size === 1 && terrainTypes.has(S.forest)) {
-                    food += forestry ? 3 : tracking ? 2 : 1;
+                // 10턴마다 무작위 인장 1개를 생산한다.
+                symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
+                if (symbolInstance.effect_counter >= 10) {
+                    symbolInstance.effect_counter -= 10;
+                    const sealIndex = Math.floor(Math.random() * CONSUMABLE_RELIC_IDS.length);
+                    state.grantRelicIds.push(CONSUMABLE_RELIC_IDS[sealIndex]);
                 }
-
-                state.food += food;
-                state.gold += gold;
             }
             return true;
 
