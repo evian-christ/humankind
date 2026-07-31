@@ -15,7 +15,7 @@ const btnStyle = (color: string): React.CSSProperties => ({
     border: 'none',
     padding: '2px 7px',
     fontSize: '12px',
-    borderRadius: '2px',
+    borderRadius: 0,
 });
 
 const StatRow = ({
@@ -77,7 +77,7 @@ const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
     const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devForceScreen, devTriggerNaturalDisaster, barbarianSymbolThreat, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
+    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devAddBoardExpansion, devForceScreen, devTriggerNaturalDisaster, barbarianSymbolThreat, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
     const { relics, addRelic, removeRelic } = useRelicStore();
     const language = useSettingsStore(s => s.language);
 
@@ -149,7 +149,7 @@ const DevOverlay = () => {
                             border: 'none',
                             padding: '7px 4px',
                             fontSize: '12px',
-                            borderRadius: '4px',
+                            borderRadius: 0,
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -169,7 +169,7 @@ const DevOverlay = () => {
                             border: 'none',
                             padding: '7px 4px',
                             fontSize: '12px',
-                            borderRadius: '4px',
+                            borderRadius: 0,
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -189,7 +189,7 @@ const DevOverlay = () => {
                             border: 'none',
                             padding: '7px 4px',
                             fontSize: '12px',
-                            borderRadius: '4px',
+                            borderRadius: 0,
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -199,6 +199,26 @@ const DevOverlay = () => {
                         <span style={{ fontSize: '18px' }}>Lv</span>
                         <span>레벨 +1</span>
                         <span style={{ fontSize: '10px', opacity: 0.85 }}>(연구 포인트 +1)</span>
+                    </button>
+                    <button
+                        onClick={devAddBoardExpansion}
+                        style={{
+                            flex: '1',
+                            minWidth: '140px',
+                            background: '#047857',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '7px 4px',
+                            fontSize: '12px',
+                            borderRadius: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '3px',
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>▦</span>
+                        <span>슬롯 보드 확장 +1</span>
                     </button>
                 </div>
             </div>
@@ -409,12 +429,17 @@ const DevOverlay = () => {
                         <span>
                             <span style={{ color: '#888', marginRight: '6px' }}>[E{sym.definition.type}]</span>
                             {t(`symbol.${sym.definition.key}.name`, language)}
-                            {sym.definition.id === S.banana ? (
-                                ((sym.banana_permanent_food_bonus ?? 0) > 0 || (sym.effect_counter ?? 0) > 0) && (
+                            {sym.definition.id === S.rainforest ? (
+                                (((sym.rainforest_growth_bonus?.food ?? 0)
+                                    + (sym.rainforest_growth_bonus?.gold ?? 0)
+                                    + (sym.rainforest_growth_bonus?.knowledge ?? 0)) > 0
+                                    || (sym.effect_counter ?? 0) > 0) && (
                                     <span style={{ color: '#fbbf24', marginLeft: '6px' }}>
                                         (
                                         {[
-                                            (sym.banana_permanent_food_bonus ?? 0) > 0 ? `+${sym.banana_permanent_food_bonus}` : '',
+                                            (sym.rainforest_growth_bonus?.food ?? 0) > 0 ? `식량+${sym.rainforest_growth_bonus?.food}` : '',
+                                            (sym.rainforest_growth_bonus?.gold ?? 0) > 0 ? `골드+${sym.rainforest_growth_bonus?.gold}` : '',
+                                            (sym.rainforest_growth_bonus?.knowledge ?? 0) > 0 ? `지식+${sym.rainforest_growth_bonus?.knowledge}` : '',
                                             (sym.effect_counter ?? 0) > 0 ? `${sym.effect_counter}` : '',
                                         ]
                                             .filter(Boolean)
