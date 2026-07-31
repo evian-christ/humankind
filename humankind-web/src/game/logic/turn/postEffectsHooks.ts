@@ -3,7 +3,7 @@ import { isLeaderUnlockActive } from '../../data/leaders';
 import type { PlayerSymbolInstance } from '../../types';
 import { FOOD_PRODUCING_IDS, GOLD_PRODUCING_IDS, KNOWLEDGE_PRODUCING_IDS, SymbolType, S } from '../../data/symbolDefinitions';
 import { RELIC_ID } from '../relics/relicIds';
-import { countNonConsumableRelics } from '../relics/relicClassification';
+import { countRelics } from '../relics/relicClassification';
 
 export type BoardGrid = (PlayerSymbolInstance | null)[][];
 export type EffectEntry = { x: number; y: number; food: number; gold: number; knowledge: number };
@@ -501,9 +501,9 @@ export function runPostEffectsHooks(args: {
         if (qinKnowledge > 0) bonusKnowledge += qinKnowledge;
     }
 
-    // 람세스 유물 금고: 보유 비소모형 유물 1개당 지식 +1/턴
+    // 람세스 유물 금고: 보유 유물(인장 제외) 1개당 지식 +1/턴
     if (isLeaderUnlockActive(leaderId, leaderProgressLevel, 'relic_vault')) {
-        const relicVaultKnowledge = countNonConsumableRelics(relics);
+        const relicVaultKnowledge = countRelics(relics);
         if (relicVaultKnowledge > 0) {
             bonusKnowledge += relicVaultKnowledge;
         }

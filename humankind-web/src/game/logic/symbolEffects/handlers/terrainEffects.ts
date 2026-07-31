@@ -3,7 +3,7 @@ import {
     isDesertDestructibleSymbol,
 } from '../core';
 import type { SymbolEffectHandler } from '../core';
-import { CONSUMABLE_RELIC_IDS } from '../../relics/relicClassification';
+import { SEAL_RELIC_IDS } from '../../relics/relicClassification';
 import {
     DESERT_STORAGE_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
@@ -151,8 +151,8 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
                 if (symbolInstance.effect_counter >= 10) {
                     symbolInstance.effect_counter -= 10;
-                    const sealIndex = Math.floor(Math.random() * CONSUMABLE_RELIC_IDS.length);
-                    state.grantRelicIds.push(CONSUMABLE_RELIC_IDS[sealIndex]);
+                    const sealIndex = Math.floor(Math.random() * SEAL_RELIC_IDS.length);
+                    state.grantRelicIds.push(SEAL_RELIC_IDS[sealIndex]);
                 }
             }
             return true;

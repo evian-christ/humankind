@@ -1,6 +1,7 @@
 import { RELIC_ID } from './relicIds';
 
-export const CONSUMABLE_RELIC_IDS = [
+/** 소모성 유물 5종 — 플레이어에게는 "인장"(Seal)으로 통칭해 노출한다 */
+export const SEAL_RELIC_IDS = [
     RELIC_ID.ANCIENT_RELIC_DEBRIS,
     RELIC_ID.OBLIVION_FURNACE,
     RELIC_ID.ANCIENT_TRIBE_JOIN,
@@ -8,19 +9,20 @@ export const CONSUMABLE_RELIC_IDS = [
     RELIC_ID.PROPHECY_DIE,
 ] as const;
 
-const CONSUMABLE_RELIC_ID_SET = new Set<number>(CONSUMABLE_RELIC_IDS);
+const SEAL_RELIC_ID_SET = new Set<number>(SEAL_RELIC_IDS);
 
-export const isConsumableRelicId = (relicId: number): boolean =>
-    CONSUMABLE_RELIC_ID_SET.has(relicId);
+export const isSealRelicId = (relicId: number): boolean =>
+    SEAL_RELIC_ID_SET.has(relicId);
 
 export const isRelicAvailableForShop = (
     relicId: number,
     ownedRelicIds: ReadonlySet<number>,
 ): boolean =>
-    isConsumableRelicId(relicId) || !ownedRelicIds.has(relicId);
+    isSealRelicId(relicId) || !ownedRelicIds.has(relicId);
 
-export const countNonConsumableRelics = <T extends { definition: { id: number } }>(relics: readonly T[]): number =>
-    relics.filter((relic) => !isConsumableRelicId(relic.definition.id)).length;
+/** 인장을 제외한, 슬롯 제한(MAX_RELICS)이 걸리는 유물 개수 */
+export const countRelics = <T extends { definition: { id: number } }>(relics: readonly T[]): number =>
+    relics.filter((relic) => !isSealRelicId(relic.definition.id)).length;
 
 export interface RelicDisplayStack<T> {
     relic: T;
@@ -32,12 +34,12 @@ export const groupRelicsForDisplay = <T extends { definition: { id: number } }>(
     relics: readonly T[],
 ): RelicDisplayStack<T>[] => {
     const stacks: RelicDisplayStack<T>[] = [];
-    const consumableStackIndexById = new Map<number, number>();
+    const sealStackIndexById = new Map<number, number>();
 
     for (const relic of relics) {
         const relicId = relic.definition.id;
-        const existingIndex = isConsumableRelicId(relicId)
-            ? consumableStackIndexById.get(relicId)
+        const existingIndex = isSealRelicId(relicId)
+            ? sealStackIndexById.get(relicId)
             : undefined;
 
         if (existingIndex !== undefined) {
@@ -47,8 +49,8 @@ export const groupRelicsForDisplay = <T extends { definition: { id: number } }>(
             continue;
         }
 
-        if (isConsumableRelicId(relicId)) {
-            consumableStackIndexById.set(relicId, stacks.length);
+        if (isSealRelicId(relicId)) {
+            sealStackIndexById.set(relicId, stacks.length);
         }
         stacks.push({ relic, relics: [relic], count: 1 });
     }

@@ -1,6 +1,6 @@
 import type { Language } from '../state/settingsStore';
 import { hasLeaderProgressRecord, type LeaderGameOutcome, type LeaderId } from './leaders';
-import { countNonConsumableRelics } from '../logic/relics/relicClassification';
+import { countRelics } from '../logic/relics/relicClassification';
 
 export type DemoAchievementDifficulty = 'very-easy' | 'easy' | 'normal' | 'hard';
 
@@ -99,10 +99,10 @@ export const DEMO_ACHIEVEMENT_SECTIONS: DemoAchievementSection[] = [
           zh: '遗物成山',
         },
         condition: {
-          en: 'Play as Ramesses II and own 5 non-consumable relics.',
-          ru: 'Играя за Рамсеса II, получите 5 несгораемых реликвий.',
-          ko: '람세스 2세로 플레이하여 비소모형 유물 5개를 보유하세요',
-          zh: '使用拉美西斯二世进行游戏，并拥有 5 个非消耗型遗物。',
+          en: 'Play as Ramesses II and own 5 Relics.',
+          ru: 'Играя за Рамсеса II, получите 5 реликвий.',
+          ko: '람세스 2세로 플레이하여 유물 5개를 보유하세요',
+          zh: '使用拉美西斯二世进行游戏，并拥有 5 个遗物。',
         },
         requiredLeaderId: 'ramesses',
         requiredNonConsumableRelics: 5,
@@ -191,7 +191,7 @@ export function recordDemoNonConsumableRelicProgress(
 
   const data = readDemoAchievementSaveData();
   const nonConsumableRelicCountsByLeader = { ...(data.nonConsumableRelicCountsByLeader ?? {}) };
-  const count = countNonConsumableRelics(relics);
+  const count = countRelics(relics);
   nonConsumableRelicCountsByLeader[leaderId] = Math.max(nonConsumableRelicCountsByLeader[leaderId] ?? 0, count);
   writeDemoAchievementSaveData({ ...data, nonConsumableRelicCountsByLeader });
 }

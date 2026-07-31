@@ -50,7 +50,7 @@ export interface EffectResult {
 
 /** 현재 보유 유물의 활성 효과 플래그 (`relicDefinitions` 1–19 + 지식 업그레이드 일부, gameStore에서 조합) */
 export interface ActiveRelicEffects {
-    /** 비소모형 유물 보유 수 (석판 효과용) */
+    /** 유물(인장 제외) 보유 수 (석판 효과용) */
     relicCount: number;
     /** 유물 5 이집트 구리 톱 — 산 인접 빈 슬롯마다 골드 */
     quarryEmptyGold: boolean;

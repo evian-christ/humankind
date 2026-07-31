@@ -6,8 +6,8 @@ import { MAX_RELICS, useRelicStore } from '../../../game/state/relicStore';
 import { useSettingsStore } from '../../../game/state/settingsStore';
 import type { RelicInstance } from '../../../game/state/relicStore';
 import {
-    CONSUMABLE_RELIC_IDS,
-    isConsumableRelicId,
+    SEAL_RELIC_IDS,
+    isSealRelicId,
     type RelicDisplayStack,
 } from '../../../game/logic/relics/relicClassification';
 import { audioManager } from '../../../audio/audioManager';
@@ -75,7 +75,7 @@ export class RelicRenderer {
         this.validateHover(pointer);
         if (!this.hoverSnapshot) return;
         const relic = useRelicStore.getState().relics.find((r) => r.instanceId === this.hoverSnapshot!.instanceId)
-            ?? this.createEmptyConsumable(this.hoverSnapshot.relicId);
+            ?? this.createEmptySeal(this.hoverSnapshot.relicId);
         if (relic) {
             this.onHoverRelic({
                 relicInfo: relic,
@@ -97,7 +97,7 @@ export class RelicRenderer {
         fontFamily: string,
     ) {
         const relics = useRelicStore.getState().relics;
-        const permanentRelics = relics.filter((relic) => !isConsumableRelicId(relic.definition.id));
+        const permanentRelics = relics.filter((relic) => !isSealRelicId(relic.definition.id));
         this.screenHitBounds = [];
         this.screenHitBoundsByInstanceId.clear();
 
@@ -150,12 +150,12 @@ export class RelicRenderer {
             }
 
             this.renderIcon(relicPanel, relic, iconX, iconY, iconSize, shakeX, shakeY);
-            this.renderConsumableBadge(relicPanel, relic, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
+            this.renderSealBadge(relicPanel, relic, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
             this.renderHitArea(stack, worldIconX, worldIconY, iconSize, fontFamily);
             this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale, fontFamily);
         }
 
-        this.renderConsumablePanel(
+        this.renderSealPanel(
             relics,
             relicCenterByInstanceId,
             scale,
@@ -173,7 +173,7 @@ export class RelicRenderer {
         );
     }
 
-    private renderConsumablePanel(
+    private renderSealPanel(
         relics: RelicInstance[],
         relicCenterByInstanceId: Map<string, { x: number; y: number }>,
         scale: number,
@@ -184,16 +184,16 @@ export class RelicRenderer {
         const sealIconSize = getSealSpriteSize(scale);
         const gapX = 8 * scale;
         const edgeOffset = 24 * scale;
-        const panelWidth = sealIconSize * CONSUMABLE_RELIC_IDS.length
-            + gapX * (CONSUMABLE_RELIC_IDS.length - 1);
+        const panelWidth = sealIconSize * SEAL_RELIC_IDS.length
+            + gapX * (SEAL_RELIC_IDS.length - 1);
         const panel = new PIXI.Container();
         panel.x = screenWidth - panelWidth - edgeOffset;
         panel.y = screenHeight - sealIconSize - edgeOffset;
         this.displayContainer.addChild(panel);
 
-        for (const [index, relicId] of CONSUMABLE_RELIC_IDS.entries()) {
+        for (const [index, relicId] of SEAL_RELIC_IDS.entries()) {
             const matchingRelics = relics.filter((relic) => relic.definition.id === relicId);
-            const relic = matchingRelics[0] ?? this.createEmptyConsumable(relicId);
+            const relic = matchingRelics[0] ?? this.createEmptySeal(relicId);
             const iconX = index * (sealIconSize + gapX);
             const iconY = 0;
             const worldIconX = panel.x + iconX;
@@ -260,7 +260,7 @@ export class RelicRenderer {
         panel.addChild(counterText);
     }
 
-    private createEmptyConsumable(relicId: number): RelicInstance {
+    private createEmptySeal(relicId: number): RelicInstance {
         return {
             instanceId: `empty_consumable_${relicId}`,
             definition: RELICS[relicId],
@@ -370,7 +370,7 @@ export class RelicRenderer {
         panel.addChild(placeholder);
     }
 
-    private renderConsumableBadge(
+    private renderSealBadge(
         panel: PIXI.Container,
         relic: RelicInstance,
         iconX: number,
@@ -381,7 +381,7 @@ export class RelicRenderer {
         shakeY: number,
         fontFamily: string,
     ) {
-        if (!isConsumableRelicId(relic.definition.id)) return;
+        if (!isSealRelicId(relic.definition.id)) return;
 
         const badgeSize = 24 * scale;
         const badgeX = iconX + iconSize + shakeX;
@@ -473,7 +473,7 @@ export class RelicRenderer {
         if (relicClickable) {
             hitArea.on('pointertap', () => {
                 const state = useGameStore.getState();
-                if (state.phase === 'selection' && isConsumableRelicId(relic.definition.id)) {
+                if (state.phase === 'selection' && isSealRelicId(relic.definition.id)) {
                     void audioManager.play('denied');
                     const message = new PIXI.Text({
                         text: t(

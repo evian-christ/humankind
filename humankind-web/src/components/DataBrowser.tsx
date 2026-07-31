@@ -18,7 +18,7 @@ import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
 import { getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
-import { isConsumableRelicId } from '../game/logic/relics/relicClassification';
+import { isSealRelicId } from '../game/logic/relics/relicClassification';
 import { getEventDescription, getEventDescriptionAllEras, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
@@ -203,7 +203,7 @@ const DataBrowser = () => {
             const name = t(`relic.${r.id}.name`, language).toLowerCase();
             const desc = getDisplayedRelicDesc(r.id).toLowerCase();
             const consumptionType = t(
-                isConsumableRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
+                isSealRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
                 language,
             ).toLowerCase();
             const q = search.toLowerCase();
@@ -221,7 +221,7 @@ const DataBrowser = () => {
                     case 'id': va = a.id; vb = b.id; break;
                     case 'name': va = t(`relic.${a.id}.name`, language); vb = t(`relic.${b.id}.name`, language); break;
                     case 'era': va = RELIC_RARITY_ORDER.indexOf(a.rarity); vb = RELIC_RARITY_ORDER.indexOf(b.rarity); break;
-                    case 'consumptionType': va = isConsumableRelicId(a.id) ? 1 : 0; vb = isConsumableRelicId(b.id) ? 1 : 0; break;
+                    case 'consumptionType': va = isSealRelicId(a.id) ? 1 : 0; vb = isSealRelicId(b.id) ? 1 : 0; break;
                     case 'cost': va = a.cost; vb = b.cost; break;
                     case 'desc': va = getDisplayedRelicDesc(a.id); vb = getDisplayedRelicDesc(b.id); break;
                     case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
@@ -666,7 +666,7 @@ const DataBrowser = () => {
                                     </td>
                                     <td className="databrowser-cell--type">
                                         {t(
-                                            isConsumableRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
+                                            isSealRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
                                             language,
                                         )}
                                     </td>

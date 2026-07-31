@@ -1,7 +1,7 @@
 import { type CSSProperties } from 'react';
 import { audioManager } from '../audio/audioManager';
 import { getRelicRarityColorHex, type RelicDefinition, type RelicRarity } from '../game/data/relicDefinitions';
-import { isConsumableRelicId, countNonConsumableRelics } from '../game/logic/relics/relicClassification';
+import { isSealRelicId, countRelics } from '../game/logic/relics/relicClassification';
 import { RELIC_ID } from '../game/logic/relics/relicIds';
 import { getInflatedGoldCost, getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { MAX_RELICS, useRelicStore } from '../game/state/relicStore';
@@ -36,7 +36,7 @@ const RelicSelection = () => {
     const gold = useGameStore((state) => state.gold);
     const level = useGameStore((state) => state.level);
     const leaderId = useGameStore((state) => state.leaderId);
-    const relicCount = useRelicStore((state) => countNonConsumableRelics(state.relics));
+    const relicCount = useRelicStore((state) => countRelics(state.relics));
     const language = useSettingsStore((state) => state.language);
 
     if (!isRelicShopOpen) return null;
@@ -59,7 +59,7 @@ const RelicSelection = () => {
 
     const handlePurchase = (relic: RelicDefinition) => {
         const cost = getEffectiveCost(relic);
-        const inventoryFull = !isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS;
+        const inventoryFull = !isSealRelicId(relic.id) && relicCount >= MAX_RELICS;
         if (gold < cost || inventoryFull) {
             void audioManager.play('denied');
             return;
@@ -87,7 +87,7 @@ const RelicSelection = () => {
                             const cost = getEffectiveCost(relic);
                             const originalCost = getInflatedGoldCost(relic.cost, level);
                             const discounted = hasGoldenTrade && relicHalfPriceRelicId === relic.id;
-                            const unavailable = gold < cost || (!isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS);
+                            const unavailable = gold < cost || (!isSealRelicId(relic.id) && relicCount >= MAX_RELICS);
                             const name = t(`relic.${relic.id}.name`, language);
                             const description = getDisplayedRelicDesc(
                                 relic.id,

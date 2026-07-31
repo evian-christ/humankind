@@ -5,7 +5,7 @@ import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
 import { generateCultureWeightedRelicChoices, getCultureLevel } from '../data/cultureProgression';
 import { useRelicStore } from './relicStore';
 import { RELIC_ID } from '../logic/relics/relicIds';
-import { countNonConsumableRelics, isRelicAvailableForShop } from '../logic/relics/relicClassification';
+import { countRelics, isRelicAvailableForShop } from '../logic/relics/relicClassification';
 import {
     generateChoices as generateChoicesSelection,
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
@@ -358,7 +358,7 @@ const generateRelicChoices = (cultureLevel = 0): RelicDefinition[] => {
     // 3 unique relics
     const choices: RelicDefinition[] = [];
     const pool = [...RELIC_LIST];
-    // Non-consumables are unique; owned consumables may return to later shop stocks.
+    // Relics are unique; owned Seals may return to later shop stocks.
     const ownedIds = new Set(useRelicStore.getState().relics.map(r => r.definition.id));
     const available = pool.filter(r => isRelicAvailableForShop(r.id, ownedIds));
     choices.push(...generateCultureWeightedRelicChoices(available, cultureLevel, 3));
@@ -379,7 +379,7 @@ const buildActiveRelicEffects = (): ActiveRelicEffects => {
     const upgrades = (useGameStore.getState().unlockedKnowledgeUpgrades || []).map((x) => Number(x));
 
     return {
-        relicCount: countNonConsumableRelics(relics),
+        relicCount: countRelics(relics),
         quarryEmptyGold: hasRelic(RELIC_ID.EGYPT_SAW),
         bananaFossilBonus: hasRelic(RELIC_ID.GOANNA_BANANA),
         horsemansihpPastureBonus: upgrades.includes(HORSEMANSHIP_UPGRADE_ID),

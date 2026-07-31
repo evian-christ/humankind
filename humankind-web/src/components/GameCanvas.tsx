@@ -14,7 +14,7 @@ import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, Hovere
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
 import { MAX_RELICS, useRelicStore } from '../game/state/relicStore';
-import { isConsumableRelicId } from '../game/logic/relics/relicClassification';
+import { isSealRelicId } from '../game/logic/relics/relicClassification';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const ERA_NAME_KEYS: Record<number, string> = {
@@ -103,7 +103,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         })),
     );
     const permanentRelicCount = useRelicStore((s) =>
-        s.relics.filter((relic) => !isConsumableRelicId(relic.definition.id)).length,
+        s.relics.filter((relic) => !isSealRelicId(relic.definition.id)).length,
     );
 
     // onReady는 App에서 매 렌더마다 새 함수가 들어올 수 있으므로 ref로 고정해둠
