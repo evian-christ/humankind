@@ -7,7 +7,6 @@ import { useSettingsStore } from '../../../game/state/settingsStore';
 import type { RelicInstance } from '../../../game/state/relicStore';
 import {
     CONSUMABLE_RELIC_IDS,
-    groupRelicsForDisplay,
     isConsumableRelicId,
     type RelicDisplayStack,
 } from '../../../game/logic/relics/relicClassification';
@@ -15,7 +14,14 @@ import { audioManager } from '../../../audio/audioManager';
 import { t } from '../../../i18n';
 import type { HoveredRelic } from '../types';
 import type { FloatingTextRenderer } from './FloatingTextRenderer';
-import { ASSET_BASE_URL, CLICKABLE_RELIC_IDS, GAME_CURSOR_HELP, GAME_CURSOR_POINTER } from './rendererShared';
+import {
+    ASSET_BASE_URL,
+    CLICKABLE_RELIC_IDS,
+    GAME_CURSOR_HELP,
+    GAME_CURSOR_POINTER,
+    getSealSpriteSize,
+} from './rendererShared';
+import { RELIC_ID } from '../../../game/logic/relics/relicIds';
 
 export class RelicRenderer {
     private displayContainer: PIXI.Container;
@@ -30,7 +36,7 @@ export class RelicRenderer {
         relicId: number;
         screenX: number;
         screenY: number;
-        placement: 'side' | 'above';
+        placement: 'left' | 'side' | 'above';
     } | null = null;
 
     constructor(args: {
@@ -92,43 +98,40 @@ export class RelicRenderer {
     ) {
         const relics = useRelicStore.getState().relics;
         const permanentRelics = relics.filter((relic) => !isConsumableRelicId(relic.definition.id));
-        const displayStacks = groupRelicsForDisplay(permanentRelics);
         this.screenHitBounds = [];
         this.screenHitBoundsByInstanceId.clear();
 
         const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
+        const columnCount = 2;
+        const rowCount = MAX_RELICS / columnCount;
         const gapX = 8 * scale;
+        const gapY = 4 * scale;
         const minimumSideMargin = 16 * scale;
-        const iconSize = (
-            screenWidth
-            - minimumSideMargin * 2
-            - gapX * (MAX_RELICS - 1)
-        ) / MAX_RELICS;
-        const marginTop = 80 * scale + 8 * scale;
-        const columnStep = iconSize + gapX;
+        const iconSize = 64 * scale;
+        const panelPadding = 8 * scale;
+        const panelWidth = iconSize * columnCount + gapX + panelPadding * 2;
+        const panelHeight = iconSize * rowCount + gapY * (rowCount - 1) + panelPadding * 2;
 
         const relicPanel = new PIXI.Container();
-        relicPanel.x = 0;
-        relicPanel.y = marginTop;
+        relicPanel.x = Math.round(screenWidth - panelWidth - minimumSideMargin);
+        relicPanel.y = Math.round((screenHeight - panelHeight) / 2);
         this.displayContainer.addChild(relicPanel);
 
-        this.renderCapacity(
+        this.renderPanelBackground(relicPanel, panelWidth, panelHeight, scale);
+        this.renderEmptySlots(
             relicPanel,
             permanentRelics.length,
-            displayStacks.length,
             iconSize,
             gapX,
-            minimumSideMargin,
-            screenWidth,
-            scale,
-            fontFamily,
+            gapY,
+            panelPadding,
         );
-
         const layout = this.buildLayout(
-            displayStacks,
+            permanentRelics,
             iconSize,
             gapX,
-            minimumSideMargin,
+            gapY,
+            panelPadding,
         );
         const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
 
@@ -148,7 +151,6 @@ export class RelicRenderer {
 
             this.renderIcon(relicPanel, relic, iconX, iconY, iconSize, shakeX, shakeY);
             this.renderConsumableBadge(relicPanel, relic, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
-            this.renderStackCount(relicPanel, stack.count, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
             this.renderHitArea(stack, worldIconX, worldIconY, iconSize, fontFamily);
             this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale, fontFamily);
         }
@@ -156,7 +158,6 @@ export class RelicRenderer {
         this.renderConsumablePanel(
             relics,
             relicCenterByInstanceId,
-            iconSize,
             scale,
             screenWidth,
             screenHeight,
@@ -175,40 +176,36 @@ export class RelicRenderer {
     private renderConsumablePanel(
         relics: RelicInstance[],
         relicCenterByInstanceId: Map<string, { x: number; y: number }>,
-        iconSize: number,
         scale: number,
         screenWidth: number,
         screenHeight: number,
         fontFamily: string,
     ) {
+        const sealIconSize = getSealSpriteSize(scale);
         const gapX = 8 * scale;
-        const countGap = 3 * scale;
-        const countHeight = 22 * scale;
         const edgeOffset = 24 * scale;
-        const slotHeight = iconSize + countGap + countHeight;
-        const panelWidth = iconSize * CONSUMABLE_RELIC_IDS.length
+        const panelWidth = sealIconSize * CONSUMABLE_RELIC_IDS.length
             + gapX * (CONSUMABLE_RELIC_IDS.length - 1);
         const panel = new PIXI.Container();
         panel.x = screenWidth - panelWidth - edgeOffset;
-        panel.y = screenHeight - slotHeight - edgeOffset;
+        panel.y = screenHeight - sealIconSize - edgeOffset;
         this.displayContainer.addChild(panel);
 
         for (const [index, relicId] of CONSUMABLE_RELIC_IDS.entries()) {
             const matchingRelics = relics.filter((relic) => relic.definition.id === relicId);
             const relic = matchingRelics[0] ?? this.createEmptyConsumable(relicId);
-            const iconX = index * (iconSize + gapX);
+            const iconX = index * (sealIconSize + gapX);
             const iconY = 0;
             const worldIconX = panel.x + iconX;
             const worldIconY = panel.y + iconY;
 
-            this.renderIcon(panel, relic, iconX, iconY, iconSize, 0, 0);
-            this.renderConsumableCount(
+            this.renderIcon(panel, relic, iconX, iconY, sealIconSize, 0, 0);
+            this.renderSealCount(
                 panel,
                 matchingRelics.length,
                 iconX,
-                iconSize,
-                slotHeight,
-                countHeight,
+                iconY,
+                sealIconSize,
                 scale,
                 fontFamily,
             );
@@ -220,15 +217,15 @@ export class RelicRenderer {
             };
             for (const stackedRelic of matchingRelics) {
                 relicCenterByInstanceId.set(stackedRelic.instanceId, {
-                    x: worldIconX + iconSize / 2,
-                    y: worldIconY + iconSize / 2,
+                    x: worldIconX + sealIconSize / 2,
+                    y: worldIconY + sealIconSize / 2,
                 });
             }
             this.renderHitArea(
                 stack,
                 worldIconX,
                 worldIconY,
-                iconSize,
+                sealIconSize,
                 fontFamily,
                 {
                     placement: 'above',
@@ -238,30 +235,29 @@ export class RelicRenderer {
         }
     }
 
-    private renderConsumableCount(
+    private renderSealCount(
         panel: PIXI.Container,
         count: number,
         iconX: number,
+        iconY: number,
         iconSize: number,
-        slotHeight: number,
-        countHeight: number,
         scale: number,
         fontFamily: string,
     ) {
-        const label = new PIXI.Text({
-            text: `x${count}`,
+        const counterText = new PIXI.Text({
+            text: String(count),
             style: new PIXI.TextStyle({
                 fill: count > 0 ? '#ffffff' : '#9ca3af',
-                fontSize: 20 * scale,
+                fontSize: Math.max(22, 26 * scale),
                 fontWeight: 'bold',
                 fontFamily,
-                stroke: { color: '#000000', width: Math.max(2, 4 * scale) },
+                stroke: { color: '#000000', width: Math.max(3, 3 * scale) },
             }),
         });
-        label.anchor.set(0.5);
-        label.x = iconX + iconSize / 2;
-        label.y = slotHeight - countHeight / 2 - scale;
-        panel.addChild(label);
+        counterText.anchor.set(0.5);
+        counterText.x = iconX + iconSize - Math.max(14, 14 * scale);
+        counterText.y = iconY + iconSize - Math.max(16, 16 * scale);
+        panel.addChild(counterText);
     }
 
     private createEmptyConsumable(relicId: number): RelicInstance {
@@ -273,81 +269,81 @@ export class RelicRenderer {
         };
     }
 
-    private renderCapacity(
+    private renderPanelBackground(
         panel: PIXI.Container,
-        relicCount: number,
-        displayedStackCount: number,
+        panelWidth: number,
+        panelHeight: number,
+        scale: number,
+    ) {
+        const borderWidth = Math.max(1, 2 * scale);
+        const innerInset = 4 * scale;
+        const background = new PIXI.Graphics();
+
+        background.rect(0, 0, panelWidth, panelHeight);
+        background.fill({ color: 0x1c1c1c, alpha: 1 });
+
+        background.rect(0, 0, panelWidth, panelHeight);
+        background.fill({ color: 0x000000, alpha: 0.09 });
+
+        background.rect(0, 0, panelWidth, panelHeight);
+        background.stroke({ color: 0x0e0e0e, width: borderWidth, alpha: 1 });
+
+        background.rect(
+            innerInset,
+            innerInset,
+            panelWidth - innerInset * 2,
+            panelHeight - innerInset * 2,
+        );
+        background.stroke({ color: 0x0e0e0e, width: borderWidth, alpha: 1 });
+
+        panel.addChild(background);
+    }
+
+    private renderEmptySlots(
+        panel: PIXI.Container,
+        occupiedSlotCount: number,
         iconSize: number,
         gapX: number,
-        startX: number,
-        screenWidth: number,
-        scale: number,
-        fontFamily: string,
+        gapY: number,
+        panelPadding: number,
     ) {
-        const columnStep = iconSize + gapX;
-        const capacityText = new PIXI.Text({
-            text: `${relicCount}/${MAX_RELICS}`,
-            style: new PIXI.TextStyle({
-                fill: relicCount >= MAX_RELICS ? '#fbbf24' : '#d1d5db',
-                fontSize: Math.max(11, 15 * scale),
-                fontWeight: 'bold',
-                fontFamily,
-                stroke: { color: '#000000', width: Math.max(1, 2 * scale) },
-            }),
-        });
-        capacityText.alpha = relicCount >= MAX_RELICS ? 0.95 : 0.62;
-        capacityText.anchor.set(0, 0.5);
-        capacityText.x = startX + displayedStackCount * columnStep;
-        capacityText.y = iconSize / 2;
-        if (capacityText.x + capacityText.width > screenWidth - startX) {
-            capacityText.anchor.set(1, 1);
-            capacityText.x = screenWidth - startX;
-            capacityText.y = -2 * scale;
+        const rowCount = MAX_RELICS / 2;
+        const dots = new PIXI.Graphics();
+        const dotRadius = 3;
+
+        for (let index = Math.min(occupiedSlotCount, MAX_RELICS); index < MAX_RELICS; index += 1) {
+            const column = Math.floor(index / rowCount);
+            const row = index % rowCount;
+            const centerX = Math.round(panelPadding + column * (iconSize + gapX) + iconSize / 2);
+            const centerY = Math.round(panelPadding + row * (iconSize + gapY) + iconSize / 2);
+            dots.circle(centerX, centerY, dotRadius);
+            dots.fill({ color: 0x777777, alpha: 0.5 });
         }
-        panel.addChild(capacityText);
+
+        panel.addChild(dots);
     }
 
     private buildLayout(
-        stacks: RelicDisplayStack<RelicInstance>[],
+        relics: RelicInstance[],
         iconSize: number,
         gapX: number,
-        startX: number,
+        gapY: number,
+        panelPadding: number,
     ) {
-        const columnStep = iconSize + gapX;
-        return stacks.map((stack, index) => ({
-            stack,
-            iconX: startX + index * columnStep,
-            iconY: 0,
-        }));
-    }
-
-    private renderStackCount(
-        panel: PIXI.Container,
-        count: number,
-        iconX: number,
-        iconY: number,
-        iconSize: number,
-        scale: number,
-        shakeX: number,
-        shakeY: number,
-        fontFamily: string,
-    ) {
-        if (count <= 1) return;
-
-        const label = new PIXI.Text({
-            text: `x${count}`,
-            style: new PIXI.TextStyle({
-                fill: '#ffffff',
-                fontSize: 22 * scale,
-                fontWeight: 'bold',
-                fontFamily,
-                stroke: { color: '#000000', width: Math.max(2, 4 * scale) },
-            }),
+        const rowCount = MAX_RELICS / 2;
+        return relics.slice(0, MAX_RELICS).map((relic, index) => {
+            const column = Math.floor(index / rowCount);
+            const row = index % rowCount;
+            return {
+                stack: { relic, relics: [relic], count: 1 },
+                iconX: panelPadding + column * (iconSize + gapX),
+                iconY: panelPadding + row * (iconSize + gapY),
+            } satisfies {
+                stack: RelicDisplayStack<RelicInstance>;
+                iconX: number;
+                iconY: number;
+            };
         });
-        label.anchor.set(1, 1);
-        label.x = iconX + iconSize - 5 * scale + shakeX;
-        label.y = iconY + iconSize - 4 * scale + shakeY;
-        panel.addChild(label);
     }
 
     private renderIcon(panel: PIXI.Container, relic: RelicInstance, iconX: number, iconY: number, iconSize: number, shakeX: number, shakeY: number) {
@@ -426,7 +422,7 @@ export class RelicRenderer {
         iconSize: number,
         fontFamily: string,
         options: {
-            placement?: 'side' | 'above';
+            placement?: 'left' | 'side' | 'above';
             clickable?: boolean;
         } = {},
     ) {
@@ -446,21 +442,26 @@ export class RelicRenderer {
         hitArea.rect(bounds.x, bounds.y, bounds.width, bounds.height);
         hitArea.fill({ color: 0x000000, alpha: 0 });
         hitArea.eventMode = 'static';
-        const placement = options.placement ?? 'side';
+        const placement = options.placement ?? 'left';
         const relicClickable = (options.clickable ?? true) && CLICKABLE_RELIC_IDS.has(relic.definition.id);
         hitArea.cursor = relicClickable ? GAME_CURSOR_POINTER : GAME_CURSOR_HELP;
 
         hitArea.on('pointerover', () => {
+            const tooltipAnchorX = placement === 'above'
+                ? worldIconX + iconSize / 2
+                : placement === 'left'
+                    ? worldIconX
+                    : worldIconX + iconSize;
             this.hoverSnapshot = {
                 instanceId: relic.instanceId,
                 relicId: relic.definition.id,
-                screenX: placement === 'above' ? worldIconX + iconSize / 2 : worldIconX + iconSize,
+                screenX: tooltipAnchorX,
                 screenY: worldIconY,
                 placement,
             };
             this.onHoverRelic({
                 relicInfo: relic,
-                screenX: placement === 'above' ? worldIconX + iconSize / 2 : worldIconX + iconSize,
+                screenX: tooltipAnchorX,
                 screenY: worldIconY,
                 placement,
             });
@@ -507,9 +508,9 @@ export class RelicRenderer {
     private renderCounter(panel: PIXI.Container, relic: RelicInstance, iconX: number, iconY: number, iconSize: number, scale: number, fontFamily: string) {
         const rid = relic.definition.id;
         let counterStr: string | null = null;
-        if (rid === 3 || rid === 9) counterStr = String(relic.effect_counter);
-        else if (rid === 4) counterStr = String(relic.bonus_stacks);
-        else if (rid === 6) counterStr = String(1 + (relic.bonus_stacks ?? 0));
+        if (rid === RELIC_ID.UR_WHEEL || rid === RELIC_ID.NILE_SILT) counterStr = String(relic.effect_counter);
+        else if (rid === RELIC_ID.JOMON_POTTERY) counterStr = String(relic.bonus_stacks);
+        else if (rid === RELIC_ID.BABYLON_MAP) counterStr = String(1 + (relic.bonus_stacks ?? 0));
         if (counterStr === null) return;
 
         const counterText = new PIXI.Text({

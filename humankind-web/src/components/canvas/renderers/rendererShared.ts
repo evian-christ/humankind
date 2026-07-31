@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import type { Language } from '../../../game/state/settingsStore';
 import { S, SymbolType } from '../../../game/data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../../game/types';
+import { RELIC_ID } from '../../../game/logic/relics/relicIds';
 
 export const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -31,31 +32,31 @@ export function clearPixiContainer(container: PIXI.Container) {
 }
 
 const SYMBOL_SPRITE_CELL_RATIO = 96 / (163.2 * 0.8);
+/** 심볼 스프라이트 원본 해상도(32x32 도트). 배수가 아닌 크기로 그리면 픽셀이 불균일하게 늘어나 깨져 보인다. */
+const SYMBOL_SPRITE_NATIVE_PX = 32;
+const SEAL_SPRITE_TARGET_PX = 96;
 
 export function getBoardSymbolSpriteSize(cellWidth: number, cellHeight: number): number {
-    return Math.min(cellWidth, cellHeight) * SYMBOL_SPRITE_CELL_RATIO;
+    const target = Math.min(cellWidth, cellHeight) * SYMBOL_SPRITE_CELL_RATIO;
+    const steps = Math.max(1, Math.round(target / SYMBOL_SPRITE_NATIVE_PX));
+    return steps * SYMBOL_SPRITE_NATIVE_PX;
 }
 
-export const CLICKABLE_RELIC_IDS = new Set([4, 13, 15, 19, 24, 37, 39, 40]);
-
-export function boardHasAdjacentPlains(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (
-                nx < 0 ||
-                nx >= board.length ||
-                ny < 0 ||
-                ny >= (board[nx]?.length ?? 0) ||
-                !Object.prototype.hasOwnProperty.call(board[nx], ny)
-            ) continue;
-            if (board[nx][ny]?.definition.id === S.plains) return true;
-        }
-    }
-    return false;
+export function getSealSpriteSize(viewScale: number): number {
+    const steps = Math.max(2, Math.round((SEAL_SPRITE_TARGET_PX * viewScale) / SYMBOL_SPRITE_NATIVE_PX));
+    return steps * SYMBOL_SPRITE_NATIVE_PX;
 }
+
+export const CLICKABLE_RELIC_IDS = new Set<number>([
+    RELIC_ID.ANCIENT_RELIC_DEBRIS,
+    RELIC_ID.OBLIVION_FURNACE,
+    RELIC_ID.ANCIENT_TRIBE_JOIN,
+    RELIC_ID.MILITARY_LEVY,
+    RELIC_ID.PROPHECY_DIE,
+    RELIC_ID.JOMON_POTTERY,
+    RELIC_ID.TROY_GOLD_LOOT,
+    RELIC_ID.EGYPTIAN_GRANARY_MODEL,
+]);
 
 export function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
     for (let dx = -1; dx <= 1; dx++) {

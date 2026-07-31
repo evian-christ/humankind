@@ -6,6 +6,18 @@ import { computeBoardPixelLayout } from '../../../game/layout/boardPixelLayout';
 import type { CellLayout } from '../types';
 import { getGameFontFamily } from './rendererShared';
 
+/** DOS 스타일 플랫 팔레트 — 단색 배경 + 단선 프레임 */
+const BACKGROUND_COLOR = 0x000000;
+const SLOT_FACE_COLOR = 0xffffff;
+const SLOT_NUMBER_COLOR = 0x000000;
+const SLOT_NUMBER_ALPHA = 0.18;
+
+/** 프레임 규격 — 슬롯 가장자리에서 바깥으로 CLEARANCE만큼 나간 실루엣에 단선 테두리 */
+export const BOARD_FRAME_CLEARANCE = 10;
+const FRAME_LINE_WIDTH = 2;
+const FRAME_LINE_COLOR = 0x606060;
+const FRAME_FILL_COLOR = 0x000000;
+
 export interface BoardRenderFrame {
     width: number;
     height: number;
@@ -78,6 +90,7 @@ export class BoardRenderer {
 
         this.renderBackground(frame);
         this.renderBoardAura(frame, state);
+        this.renderBoardFrame(frame, state);
         this.renderSlotCells(frame, state);
         this.renderSlotNumbers(frame, state);
         return frame;
@@ -120,8 +133,45 @@ export class BoardRenderer {
     private renderBackground(frame: BoardRenderFrame) {
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, frame.width, frame.height);
-        bg.fill({ color: 0x242424 });
+        bg.fill({ color: BACKGROUND_COLOR });
         this.bgContainer.addChild(bg);
+    }
+
+    /**
+     * 활성 슬롯 실루엣에 딱 맞게 두르는 단선 프레임.
+     * 셀 사각형들을 d만큼 부풀린 합집합을 겹쳐 그려서,
+     * 보드가 계단형·비정형으로 확장돼도 테두리가 모양을 그대로 따라간다.
+     */
+    private renderBoardFrame(frame: BoardRenderFrame, state: GameState) {
+        const boardX = frame.startX + frame.gridOffsetX;
+        const boardY = frame.startY + frame.gridOffsetY;
+        const stepX = frame.cellWidth + frame.colGap;
+        const stepY = frame.cellHeight + frame.rowGap;
+        const w = frame.cellWidth;
+        const h = frame.cellHeight;
+        const cells: Array<{ gx: number; gy: number; l: number; t: number }> = [];
+        for (let y = 0; y < frame.boardHeight; y++) {
+            for (let x = 0; x < frame.boardWidth; x++) {
+                if (!isBoardSlotActive(state.board, x, y)) continue;
+                cells.push({ gx: x, gy: y, l: boardX + x * stepX, t: boardY + y * stepY });
+            }
+        }
+        if (cells.length === 0) return;
+
+        // 셀 사각형들을 d만큼 부풀려 합집합으로 채운다.
+        // (그리드 인접 셀 사이 틈은 d*2가 틈 폭보다 크면 자연스럽게 메워진다)
+        const fillExpanded = (g: PIXI.Graphics, d: number, color: number, alpha = 1, dx = 0, dy = 0) => {
+            for (const c of cells) {
+                g.rect(c.l - d + dx, c.t - d + dy, w + d * 2, h + d * 2);
+            }
+            g.fill({ color, alpha });
+        };
+
+        // 플랫 프레임: 실루엣 단선 테두리 + 안쪽 단색 채움
+        const g = new PIXI.Graphics();
+        fillExpanded(g, BOARD_FRAME_CLEARANCE, FRAME_LINE_COLOR);
+        fillExpanded(g, BOARD_FRAME_CLEARANCE - FRAME_LINE_WIDTH, FRAME_FILL_COLOR);
+        this.boardContainer.addChild(g);
     }
 
     private renderBoardAura(frame: BoardRenderFrame, state: GameState) {
@@ -210,17 +260,32 @@ export class BoardRenderer {
     }
 
     private renderSlotCells(frame: BoardRenderFrame, state: GameState) {
-        const cellGraphics = new PIXI.Graphics();
-        for (let y = 0; y < frame.boardHeight; y++) {
-            for (let x = 0; x < frame.boardWidth; x++) {
-                if (!isBoardSlotActive(state.board, x, y)) continue;
-                const cellX = frame.startX + frame.gridOffsetX + x * (frame.cellWidth + frame.colGap);
-                const cellY = frame.startY + frame.gridOffsetY + y * (frame.cellHeight + frame.rowGap);
-                cellGraphics.rect(cellX, cellY, frame.cellWidth, frame.cellHeight);
-                cellGraphics.fill({ color: 0xffffff });
+        // 플랫 단색 릴 창. 세로로 이어진 활성 칸은 경계 없이 하나의 릴 창으로 그린다.
+        const windows: Array<{ x: number; y: number; w: number; h: number }> = [];
+        for (let x = 0; x < frame.boardWidth; x++) {
+            let runStart = -1;
+            for (let y = 0; y <= frame.boardHeight; y++) {
+                const active = y < frame.boardHeight && isBoardSlotActive(state.board, x, y);
+                if (active && runStart < 0) runStart = y;
+                if (active || runStart < 0) continue;
+                const runRows = y - runStart;
+                windows.push({
+                    x: frame.startX + frame.gridOffsetX + x * (frame.cellWidth + frame.colGap),
+                    y: frame.startY + frame.gridOffsetY + runStart * (frame.cellHeight + frame.rowGap),
+                    w: frame.cellWidth,
+                    h: runRows * frame.cellHeight + (runRows - 1) * frame.rowGap,
+                });
+                runStart = -1;
             }
         }
-        this.boardContainer.addChild(cellGraphics);
+        if (windows.length === 0) return;
+
+        const faces = new PIXI.Graphics();
+        for (const win of windows) {
+            faces.rect(win.x, win.y, win.w, win.h);
+        }
+        faces.fill({ color: SLOT_FACE_COLOR });
+        this.boardContainer.addChild(faces);
     }
 
     private renderSlotNumbers(frame: BoardRenderFrame, state: GameState) {
@@ -231,19 +296,24 @@ export class BoardRenderer {
                 slotNum += 1;
                 const cellX = frame.startX + frame.gridOffsetX + x * (frame.cellWidth + frame.colGap);
                 const cellY = frame.startY + frame.gridOffsetY + y * (frame.cellHeight + frame.rowGap);
-                const text = new PIXI.Text({
-                    text: slotNum.toString(),
-                    style: new PIXI.TextStyle({
-                        fontFamily: frame.fontFamily,
-                        fontSize: 64 * frame.scale,
-                        fill: 0xe0e0e0,
-                        fontWeight: 'bold',
-                    }),
-                });
-                text.anchor.set(0.5);
-                text.x = cellX + frame.cellWidth / 2;
-                text.y = cellY + frame.cellHeight / 2;
-                this.boardContainer.addChild(text);
+                const centerX = cellX + frame.cellWidth / 2;
+                const centerY = cellY + frame.cellHeight / 2;
+                const makeNumberText = (fill: number) =>
+                    new PIXI.Text({
+                        text: slotNum.toString(),
+                        style: new PIXI.TextStyle({
+                            fontFamily: frame.fontFamily,
+                            fontSize: 64 * frame.scale,
+                            fill,
+                            fontWeight: 'bold',
+                        }),
+                    });
+                const numberText = makeNumberText(SLOT_NUMBER_COLOR);
+                numberText.alpha = SLOT_NUMBER_ALPHA;
+                numberText.anchor.set(0.5);
+                numberText.x = centerX;
+                numberText.y = centerY;
+                this.boardContainer.addChild(numberText);
             }
         }
     }

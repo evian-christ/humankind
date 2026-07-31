@@ -42,6 +42,7 @@ export const loadGameAssets = async () => {
     const upgradePaths = getUpgradeSpritePaths();
 
     const allPaths = [
+        `${ASSET_BASE_URL}assets/background.png`,
         `${ASSET_BASE_URL}assets/ui/slot_bg.png`,
         FOOD_RESOURCE_ICON_URL,
         GOLD_RESOURCE_ICON_URL,

@@ -6,7 +6,7 @@ import type { HoveredStatus } from '../types';
 import { ASSET_BASE_URL } from './rendererShared';
 
 export class StatusRenderer {
-    private static readonly SCREEN_EDGE_OFFSET = 24;
+    private static readonly BOARD_GAP = 20;
 
     private bgContainer: PIXI.Container;
     private onHoverStatus: (status: HoveredStatus | null) => void;
@@ -60,7 +60,8 @@ export class StatusRenderer {
     public render(
         state: GameState,
         scale: number,
-        screenHeight: number,
+        boardLeft: number,
+        boardBottom: number,
         fontFamily: string,
     ) {
         this.hitTargets = [];
@@ -87,8 +88,8 @@ export class StatusRenderer {
         const gapX = 8 * scale;
 
         const panel = new PIXI.Container();
-        panel.x = StatusRenderer.SCREEN_EDGE_OFFSET * scale;
-        panel.y = screenHeight - iconSize - StatusRenderer.SCREEN_EDGE_OFFSET * scale;
+        panel.x = boardLeft;
+        panel.y = boardBottom + StatusRenderer.BOARD_GAP * scale;
         this.bgContainer.addChildAt(panel, Math.min(1, this.bgContainer.children.length));
 
         let iconX = 0;
@@ -110,7 +111,7 @@ export class StatusRenderer {
 
     private renderFrame(panel: PIXI.Container, iconX: number, iconY: number, iconSize: number, scale: number) {
         const frame = new PIXI.Graphics();
-        frame.roundRect(iconX, iconY, iconSize, iconSize, 8 * scale);
+        frame.rect(iconX, iconY, iconSize, iconSize);
         frame.stroke({ width: Math.max(1, 2 * scale), color: 0xe5e7eb, alpha: 0.74 });
         panel.addChild(frame);
     }

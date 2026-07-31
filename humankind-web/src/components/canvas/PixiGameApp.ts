@@ -9,7 +9,7 @@ import { getSymbolColor, SymbolType, S } from '../../game/data/symbolDefinitions
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat, CellLayout, ReelState } from './types';
 import { loadGameAssets } from './AssetLoader';
-import { BoardRenderer } from './renderers/BoardRenderer';
+import { BOARD_FRAME_CLEARANCE, BoardRenderer } from './renderers/BoardRenderer';
 import { CombatRenderer } from './renderers/CombatRenderer';
 import { FloatingTextRenderer } from './renderers/FloatingTextRenderer';
 import { HudRenderer } from './renderers/HudRenderer';
@@ -20,7 +20,6 @@ import { audioManager, type AudioPlaybackHandle } from '../../audio/audioManager
 import { DEFAULT_AUDIO_CUES } from '../../audio/audioCues';
 import {
     GAME_CURSOR_POINTER,
-    boardHasAdjacentPlains,
     boardHasDestroyableAdjacentSymbol,
     clearPixiContainer,
     getBoardSymbolSpriteSize,
@@ -277,15 +276,6 @@ export class PixiGameApp {
         this.clearAllHover();
     };
 
-    private handleBoardWheel = (event: WheelEvent) => {
-        if (event.deltaY === 0) return;
-        event.preventDefault();
-        const { zoom, setZoom } = useBoardViewStore.getState();
-        const nextZoom = zoom * Math.exp(-event.deltaY * 0.0012);
-        setZoom(nextZoom);
-        this.renderBoard(useGameStore.getState(), useSettingsStore.getState());
-    };
-
     private getPulse01() {
         // 0..1 부드러운 펄스
         return 0.5 + 0.5 * Math.sin(Date.now() / 140);
@@ -522,7 +512,6 @@ export class PixiGameApp {
         canvas.addEventListener('pointermove', this.handleCanvasPointerMove);
         canvas.addEventListener('pointerleave', this.handlePointerExit);
         canvas.addEventListener('pointercancel', this.handlePointerExit);
-        canvas.addEventListener('wheel', this.handleBoardWheel, { passive: false });
         window.addEventListener('blur', this.handlePointerExit);
     }
 
@@ -533,7 +522,6 @@ export class PixiGameApp {
         canvas?.removeEventListener('pointermove', this.handleCanvasPointerMove);
         canvas?.removeEventListener('pointerleave', this.handlePointerExit);
         canvas?.removeEventListener('pointercancel', this.handlePointerExit);
-        canvas?.removeEventListener('wheel', this.handleBoardWheel);
         window.removeEventListener('blur', this.handlePointerExit);
     }
 
@@ -587,7 +575,6 @@ export class PixiGameApp {
             onHoverUpgrade({ ...upgrade, screenX: projected.x, screenY: projected.y });
         });
         audioManager.registerCue('spin_loop', DEFAULT_AUDIO_CUES.spin_loop);
-        audioManager.registerCue('cow_butcher', DEFAULT_AUDIO_CUES.cow_butcher);
     }
 
     public async init() {
@@ -597,7 +584,7 @@ export class PixiGameApp {
         // (React <img>는 표시 자체가 되지만, Pixi 로더는 실패해서 보드 스프라이트가 안 보이는 케이스가 있습니다.)
         (PIXI.TextureSource.defaultOptions as unknown as { crossOrigin?: string | null }).crossOrigin = null;
         await this.app.init({
-            background: '#242424',
+            background: '#000000',
             antialias: false,
             preference: 'webgl',
             roundPixels: true,
@@ -1114,11 +1101,6 @@ export class PixiGameApp {
                 const symDef = symbol.definition;
                 const canUseBoardSymbolAction =
                     state.phase === 'idle' || state.phase === 'food_payment';
-                const canButcherPasture =
-                    canUseBoardSymbolAction &&
-                    (symDef.id === S.cattle || symDef.id === S.sheep) &&
-                    !symbol.is_marked_for_destruction &&
-                    boardHasAdjacentPlains(state.board, x, y);
                 const canOpenLoot =
                     canUseBoardSymbolAction &&
                     !symbol.is_marked_for_destruction &&
@@ -1142,7 +1124,7 @@ export class PixiGameApp {
                     this.onHoverSymbol(null);
                 };
 
-                if (canButcherPasture || canOpenLoot || canUseEdict || canConsumeTribalVillage) {
+                if (canOpenLoot || canUseEdict || canConsumeTribalVillage) {
                     const cellRoot = new PIXI.Container();
                     cellRoot.x = cellX;
                     cellRoot.y = cellY;
@@ -1155,10 +1137,8 @@ export class PixiGameApp {
                     const btnFs = Math.max(12, 18 * scale);
                     const btnPadY = Math.max(6.4, 10 * scale);
                     const btnPadX = Math.max(14.4, 22 * scale);
-                    const btnLabel = canButcherPasture
-                        ? t('cattleButcher.button', lang)
-                        : canUseEdict
-                          ? t('edictBoard.remove', lang)
+                    const btnLabel = canUseEdict
+                        ? t('edictBoard.remove', lang)
                         : canOpenLoot
                           ? t('lootOpen.button', lang)
                         : canConsumeTribalVillage
@@ -1214,13 +1194,7 @@ export class PixiGameApp {
                         if (!actionBtn.visible) return;
                         const local = e.getLocalPosition(cellRoot);
                         if (local.x >= btnX1 && local.x <= btnX2 && local.y >= btnY1 && local.y <= btnY2) {
-                            if (canButcherPasture) {
-                                const store = useGameStore.getState();
-                                if (store.board[x]?.[y]?.definition.id === S.cattle) {
-                                    void audioManager.play('cow_butcher');
-                                }
-                                store.butcherPastureAnimalAt(x, y);
-                            } else if (canUseEdict) {
+                            if (canUseEdict) {
                                 useGameStore.getState().activateEdictAt(x, y);
                             } else if (canConsumeTribalVillage) {
                                 useGameStore.getState().consumeTribalVillageAt(x, y);
@@ -1295,7 +1269,7 @@ export class PixiGameApp {
                     : 0;
                 const contribGreenTint = isContrib ? 0x90ee90 : 0xffffff; // 밝은 초록
                 const isActionable =
-                    canButcherPasture || canOpenLoot || canUseEdict || canConsumeTribalVillage;
+                    canOpenLoot || canUseEdict || canConsumeTribalVillage;
 
                 // active 심볼: 들린 것 + 바로 아랫쪽에 픽셀 느낌 화살표(머리만, ▲, 밝은 연두 + 검은 테두리)
                 if (isActive) {
@@ -1450,9 +1424,10 @@ export class PixiGameApp {
                     drawTarget.addChild(mark);
                 }
 
-                // 바나나 영구 식량 보너스: 좌하단 별도 표시
-                if (symDef.id === S.banana) {
-                    const perm = symbol.banana_permanent_food_bonus ?? 0;
+                // 열대우림 성장 보너스: 좌하단 별도 표시
+                if (symDef.id === S.rainforest) {
+                    const growth = symbol.rainforest_growth_bonus;
+                    const perm = (growth?.food ?? 0) + (growth?.gold ?? 0) + (growth?.knowledge ?? 0);
                     if (perm > 0) {
                         const permText = new PIXI.Text({
                             text: `+${perm}`,
@@ -1549,7 +1524,8 @@ export class PixiGameApp {
         this.statusRenderer.render(
             state,
             viewScale,
-            frame.height,
+            startX + gridOffsetX - BOARD_FRAME_CLEARANCE,
+            startY + gridOffsetY + cellHeight * boardHeight + BOARD_FRAME_CLEARANCE,
             fontFamily,
         );
         this.relicRenderer.render(state, viewScale, w, frame.height, fontFamily);
