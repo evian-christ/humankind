@@ -526,7 +526,7 @@ const formatDeltaText = (delta?: { food: number; gold: number; knowledge: number
     if (delta.food) parts.push(`food ${delta.food > 0 ? '+' : ''}${delta.food}`);
     if (delta.gold) parts.push(`gold ${delta.gold > 0 ? '+' : ''}${delta.gold}`);
     if (delta.knowledge) parts.push(`knowledge ${delta.knowledge > 0 ? '+' : ''}${delta.knowledge}`);
-    if (delta.military) parts.push(`military ${delta.military > 0 ? '+' : ''}${delta.military}`);
+    if (delta.military) parts.push(`military power ${delta.military > 0 ? '+' : ''}${delta.military}`);
     return parts.join(' ');
 };
 
@@ -578,7 +578,7 @@ const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold:
             {badge(delta.food, FOOD_RESOURCE_ICON_URL, C_FOOD, 'Food')}
             {badge(delta.gold, GOLD_RESOURCE_ICON_URL, C_GOLD, 'Gold')}
             {badge(delta.knowledge, KNOWLEDGE_RESOURCE_ICON_URL, C_KNOW, 'Knowledge')}
-            {badge(delta.military ?? 0, MILITARY_RESOURCE_ICON_URL, C_MILITARY, 'Military')}
+            {badge(delta.military ?? 0, MILITARY_RESOURCE_ICON_URL, C_MILITARY, 'Military Power')}
         </div>
     );
 };

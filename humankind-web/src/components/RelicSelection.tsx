@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { useGameStore } from '../game/state/gameStore';
-import { getInflatedGoldCost, getTrojanGoldLootReward } from '../game/state/gameCalculations';
-import { RELIC_ID } from '../game/logic/relics/relicIds';
-import { useSettingsStore } from '../game/state/settingsStore';
-import { getRelicRarityColorHex, type RelicRarity } from '../game/data/relicDefinitions';
-import { t } from '../i18n';
-import { EffectText } from './EffectText';
+import { type CSSProperties } from 'react';
 import { audioManager } from '../audio/audioManager';
-import { GOLD_RESOURCE_ICON_URL } from '../uiAssetUrls';
+import { getRelicRarityColorHex, type RelicDefinition, type RelicRarity } from '../game/data/relicDefinitions';
+import { isConsumableRelicId, countNonConsumableRelics } from '../game/logic/relics/relicClassification';
+import { RELIC_ID } from '../game/logic/relics/relicIds';
+import { getInflatedGoldCost, getTrojanGoldLootReward } from '../game/state/gameCalculations';
 import { MAX_RELICS, useRelicStore } from '../game/state/relicStore';
-import { countNonConsumableRelics, isConsumableRelicId } from '../game/logic/relics/relicClassification';
+import { useGameStore } from '../game/state/gameStore';
+import { useSettingsStore } from '../game/state/settingsStore';
+import { t } from '../i18n';
+import { GOLD_RESOURCE_ICON_URL } from '../uiAssetUrls';
+import { EffectText } from './EffectText';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -21,111 +21,46 @@ const RELIC_RARITY_NAME_KEYS: Record<RelicRarity, string> = {
     legendary: 'rarity.legendary',
 };
 
-// Helper function inside component to render effect text
-const renderRelicDesc = (desc: string) => {
-    return desc.split('\n').map((line, i) => (
-        <div key={i} className="relic-card-desc-line" style={{ color: '#e5e7eb', textShadow: '0 1px 3px #000' }}>
-            <EffectText text={line} />
-        </div>
-    ));
-};
-
-const getDisplayedRelicDesc = (relicId: number, desc: string, level: number) => {
-    if (relicId !== RELIC_ID.TROY_GOLD_LOOT) return desc;
-    return desc.replace('{gold}', String(getTrojanGoldLootReward(level)));
-};
+const getDisplayedRelicDesc = (relicId: number, desc: string, level: number) =>
+    relicId === RELIC_ID.TROY_GOLD_LOOT
+        ? desc.replace('{gold}', String(getTrojanGoldLootReward(level)))
+        : desc;
 
 const RelicSelection = () => {
-    const isRelicShopOpen = useGameStore((s) => s.isRelicShopOpen);
-    const toggleRelicShop = useGameStore((s) => s.toggleRelicShop);
-    const relicChoices = useGameStore((s) => s.relicChoices);
-    const buyRelic = useGameStore((s) => s.buyRelic);
-    const refreshRelicShop = useGameStore((s) => s.refreshRelicShop);
-    const gold = useGameStore((s) => s.gold);
-    const level = useGameStore((s) => s.level);
-    const turn = useGameStore((s) => s.turn);
-    const leaderId = useGameStore((s) => s.leaderId);
-    const relicHalfPriceRelicId = useGameStore((s) => s.relicHalfPriceRelicId);
-    const phase = useGameStore((s) => s.phase);
-    const relicCount = useRelicStore((s) => countNonConsumableRelics(s.relics));
-    const language = useSettingsStore((s) => s.language);
-    const [purchaseDeniedHint, setPurchaseDeniedHint] = useState<{ key: number; slotIndex: number } | null>(null);
-    const [isClosing, setIsClosing] = useState(false);
-    const purchaseInputLockedRef = useRef(true);
-
-    const closeWithSlide = () => {
-        if (isClosing) return;
-        setIsClosing(true);
-        document.body.classList.add('screen-return-from-relic');
-        window.setTimeout(() => {
-            document.body.classList.remove('screen-return-from-relic');
-            toggleRelicShop();
-        }, 160);
-    };
-
-    useEffect(() => () => {
-        document.body.classList.remove('screen-return-from-relic');
-    }, []);
-
-    useEffect(() => {
-        if (isRelicShopOpen) {
-            setIsClosing(false);
-            purchaseInputLockedRef.current = true;
-            const unlockTimer = window.setTimeout(() => {
-                purchaseInputLockedRef.current = false;
-            }, 200);
-            return () => window.clearTimeout(unlockTimer);
-        }
-        purchaseInputLockedRef.current = true;
-        setPurchaseDeniedHint(null);
-    }, [isRelicShopOpen]);
-
-    useEffect(() => {
-        if (!import.meta.env.DEV || !isRelicShopOpen) return;
-
-        const handleKeyDown = (event: KeyboardEvent) => {
-            const target = event.target as HTMLElement | null;
-            if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
-            if (event.key !== '+' && event.code !== 'NumpadAdd') return;
-
-            event.preventDefault();
-            refreshRelicShop(true);
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isRelicShopOpen, refreshRelicShop]);
+    const isRelicShopOpen = useGameStore((state) => state.isRelicShopOpen);
+    const phase = useGameStore((state) => state.phase);
+    const relicChoices = useGameStore((state) => state.relicChoices);
+    const relicHalfPriceRelicId = useGameStore((state) => state.relicHalfPriceRelicId);
+    const buyRelic = useGameStore((state) => state.buyRelic);
+    const toggleRelicShop = useGameStore((state) => state.toggleRelicShop);
+    const gold = useGameStore((state) => state.gold);
+    const level = useGameStore((state) => state.level);
+    const leaderId = useGameStore((state) => state.leaderId);
+    const relicCount = useRelicStore((state) => countNonConsumableRelics(state.relics));
+    const language = useSettingsStore((state) => state.language);
 
     if (!isRelicShopOpen) return null;
 
-    const turnsUntilRefresh = 10 - (turn % 10);
-    const relicShopTitle = t('game.relicShopTitle', language).replace('{turns}', String(turnsUntilRefresh));
     const hasGoldenTrade = leaderId === 'ramesses';
+    const getEffectiveCost = (relic: RelicDefinition) =>
+        getInflatedGoldCost(
+            relic.cost,
+            level,
+            hasGoldenTrade && relicHalfPriceRelicId === relic.id ? 0.5 : 1,
+        );
 
-    const getEffectiveRelicCost = (relic: { id: number; cost: number }) => {
-        const isHalfPrice = relicHalfPriceRelicId === relic.id;
-        return getInflatedGoldCost(relic.cost, level, hasGoldenTrade && isHalfPrice ? 0.5 : 1);
+    const closeSelection = () => {
+        if (phase === 'relic_shop') {
+            useGameStore.setState({ phase: 'idle', isRelicShopOpen: false });
+            return;
+        }
+        toggleRelicShop();
     };
 
-    const isGoldenTradeDiscount = (relic: { id: number; cost: number }) =>
-        hasGoldenTrade && relicHalfPriceRelicId === relic.id;
-
-    const handleBuyRelic = (relic: { id: number; cost: number }, slotIndex: number) => {
-        if (purchaseInputLockedRef.current) return;
-
-        if (phase === 'selection') {
-            void audioManager.play('denied');
-            setPurchaseDeniedHint((current) => ({
-                key: (current?.key ?? 0) + 1,
-                slotIndex,
-            }));
-            return;
-        }
-        if (gold < getEffectiveRelicCost(relic)) {
-            void audioManager.play('denied');
-            return;
-        }
-        if (!isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS) {
+    const handlePurchase = (relic: RelicDefinition) => {
+        const cost = getEffectiveCost(relic);
+        const inventoryFull = !isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS;
+        if (gold < cost || inventoryFull) {
             void audioManager.play('denied');
             return;
         }
@@ -134,158 +69,86 @@ const RelicSelection = () => {
     };
 
     return (
-        <div className={`selection-overlay selection-overlay--relic${isClosing ? ' selection-overlay--relic-closing' : ''}`}>
-            <button
-                type="button"
-                className="knowledge-edge-hotzone relic-return-hotzone"
-                onClick={closeWithSlide}
-                aria-label={t('game.back', language)}
-            >
-                <span className="edge-hotzone-label">
-                    <span className="edge-hotzone-arrow edge-hotzone-arrow--left" aria-hidden="true" />
-                    <span className="edge-hotzone-text">돌아가기</span>
-                </span>
-            </button>
-            <div className="relic-shop-restock-indicator" aria-label={relicShopTitle}>
-                <span className="relic-shop-restock-label">{t('game.relicShopTitleShort', language)}</span>
-                <span className="relic-shop-restock-count">{turnsUntilRefresh}</span>
-                <span className="relic-shop-restock-unit">{t('game.turn', language)}</span>
-            </div>
-            <header className="relic-shop-header">
-                <div className="relic-shop-header-main">
-                    <div className="relic-shop-header-start">
-                        <button
-                            type="button"
-                            className="relic-shop-back-btn"
-                            onClick={closeWithSlide}
-                            aria-label={t('game.back', language)}
-                        >
-                            <span className="relic-shop-back-icon" aria-hidden>
-                                ←
-                            </span>
-                            <span className="relic-shop-back-label">{t('game.back', language)}</span>
-                        </button>
-                    </div>
-                    <h1 className="selection-title selection-title--relic-shop">{relicShopTitle}</h1>
-                    <div className="relic-shop-header-end">
-                        <div className="relic-selection-gold relic-selection-gold--header">
-                            <span className="relic-selection-gold-icon">&#9679;</span>
-                            <span className="relic-selection-gold-val">{gold}</span>
+        <div className="selection-overlay selection-overlay--relic-choice">
+            <div className="selection-panel-wrapper">
+                <div className="selection-panel">
+                    <div className="relic-choice-heading">
+                        <div className="selection-title selection-title--plain">{t('game.chooseRelic', language)}</div>
+                        <div className="relic-choice-gold" aria-label={`Gold ${gold}`}>
+                            <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
+                            <span>{gold}</span>
                         </div>
                     </div>
-                </div>
-            </header>
-            <div className="selection-panel-wrapper selection-panel-wrapper--relic-shop" style={{ position: 'relative' }}>
-                <div className="selection-panel" style={{ position: 'relative', zIndex: 1 }}>
-                    <div className="relic-museum-wrapper">
-                        <div className="relic-museum-bg">
-                            {relicChoices.map((relic, i) => (
-                                <div className="relic-museum-slot" key={`slot-${i}`}>
-                                    <div className="relic-spotlight" />
-                                    {relic ? (
-                                        <div className="relic-sprite-in-case">
-                                            <span className="relic-sprite-shadow" aria-hidden="true" />
-                                            {relic.sprite && relic.sprite !== '-' && relic.sprite !== '-.png' ? (
-                                                <img src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`} alt={t(`relic.${relic.id}.name`, language)} />
-                                            ) : (
-                                                <div className="placeholder">🏺</div>
-                                            )}
-                                        </div>
-                                    ) : null}
-                                </div>
-                            ))}
-                        </div>
-                        <div className="relic-museum-info-row">
-                            {relicChoices.map((relic, i) => (
-                                <div className="relic-museum-info-slot" key={`info-${i}`}>
-                                    {relic ? (
-                                        <div className="relic-museum-details">
-                                            <div
-                                                className="relic-card-era"
-                                                style={{
-                                                    color: getRelicRarityColorHex(relic.rarity),
-                                                    textShadow: `0 0 8px ${getRelicRarityColorHex(relic.rarity)}88`,
-                                                }}
-                                            >
-                                                {t(RELIC_RARITY_NAME_KEYS[relic.rarity], language)}
-                                            </div>
-                                            <div className="relic-card-name" style={{ color: '#fff', textShadow: '0 2px 4px #000, 0 0 10px rgba(0,0,0,0.8)' }}>
-                                                {t(`relic.${relic.id}.name`, language)}
-                                            </div>
-                                            <div className="relic-card-desc">
-                                                {renderRelicDesc(getDisplayedRelicDesc(
-                                                    relic.id,
-                                                    t(`relic.${relic.id}.desc`, language),
-                                                    level,
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="relic-sold-out">{t('game.relicShopSoldOut', language)}</div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="relic-museum-buy-bar">
-                <div className="relic-museum-buy-bar-inner">
-                    {relicChoices.map((relic, i) => (
-                        <div className="relic-museum-buy-slot" key={`buy-${i}`}>
-                            {relic ? (
-                                <div style={{ position: 'relative', width: '100%' }}>
+
+                    <div className="selection-cards relic-choice-cards">
+                        {relicChoices.map((relic, index) => {
+                            if (!relic) return null;
+                            const rarityColor = getRelicRarityColorHex(relic.rarity);
+                            const cost = getEffectiveCost(relic);
+                            const originalCost = getInflatedGoldCost(relic.cost, level);
+                            const discounted = hasGoldenTrade && relicHalfPriceRelicId === relic.id;
+                            const unavailable = gold < cost || (!isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS);
+                            const name = t(`relic.${relic.id}.name`, language);
+                            const description = getDisplayedRelicDesc(
+                                relic.id,
+                                t(`relic.${relic.id}.desc`, language),
+                                level,
+                            );
+
+                            return (
+                                <div
+                                    key={`${relic.id}-${index}`}
+                                    className="selection-card-frame selection-relic-card-frame"
+                                    style={{
+                                        '--card-glow': `${rarityColor}cc`,
+                                        '--selection-era-color': rarityColor,
+                                    } as CSSProperties}
+                                >
                                     <button
                                         type="button"
-                                        className="relic-card-buy-btn"
-                                        data-audio-click="relic_buy"
-                                        onClick={() => handleBuyRelic(relic, i)}
-                                        disabled={!isConsumableRelicId(relic.id) && relicCount >= MAX_RELICS}
-                                        aria-label={
-                                            isGoldenTradeDiscount(relic)
-                                                ? t('game.relicShopBuyDiscountAria', language)
-                                                    .replace('{sale}', String(getEffectiveRelicCost(relic)))
-                                                    .replace('{original}', String(getInflatedGoldCost(relic.cost, level)))
-                                                : undefined
-                                        }
+                                        className={`selection-card relic-choice-card${unavailable ? ' relic-choice-card--unavailable' : ''}`}
+                                        onClick={() => handlePurchase(relic)}
+                                        aria-label={`${name}, ${cost}`}
                                     >
-                                        {isGoldenTradeDiscount(relic) ? (
-                                            <span className="relic-card-buy-price relic-card-buy-price--discount">
-                                                <span className="relic-card-buy-price-was">
-                                                    <span className="relic-card-buy-price-icon relic-card-buy-price-icon--was" aria-hidden>
-                                                        <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
-                                                    </span>
-                                                    <span className="relic-card-buy-price-num relic-card-buy-price-num--struck">{getInflatedGoldCost(relic.cost, level)}</span>
-                                                </span>
-                                                <span className="relic-card-buy-price-now">
-                                                    <span className="relic-card-buy-price-icon" aria-hidden>
-                                                        <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
-                                                    </span>
-                                                    <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
-                                                </span>
-                                            </span>
-                                        ) : (
-                                            <span className="relic-card-buy-price">
-                                                <span className="relic-card-buy-price-icon" aria-hidden>
-                                                    <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
-                                                </span>
-                                                <span className="relic-card-buy-price-num">{getEffectiveRelicCost(relic)}</span>
-                                            </span>
-                                        )}
+                                        <div className="selection-card-rarity relic-choice-rarity" style={{ color: rarityColor }}>
+                                            {t(RELIC_RARITY_NAME_KEYS[relic.rarity], language)}
+                                        </div>
+                                        <div className="relic-sprite-in-case relic-choice-sprite-wrap">
+                                            {relic.sprite && relic.sprite !== '-' && relic.sprite !== '-.png' ? (
+                                                <img
+                                                    className="selection-card-sprite relic-choice-sprite"
+                                                    src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`}
+                                                    alt={name}
+                                                    draggable={false}
+                                                />
+                                            ) : (
+                                                <div className="selection-card-sprite-placeholder">?</div>
+                                            )}
+                                        </div>
+                                        <div className="selection-card-name relic-choice-name">{name}</div>
+                                        <div className="selection-card-desc relic-choice-desc">
+                                            {description.split('\n').map((line, lineIndex) => (
+                                                <div className="selection-card-desc-line" key={`${relic.id}-${lineIndex}`}>
+                                                    <EffectText text={line} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="relic-card-buy-btn relic-choice-price" aria-hidden="true">
+                                            {discounted && <span className="relic-choice-original-price">{originalCost}</span>}
+                                            <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
+                                            <span>{cost}</span>
+                                        </div>
                                     </button>
-                                    {purchaseDeniedHint?.slotIndex === i && (
-                                        <span
-                                            key={purchaseDeniedHint.key}
-                                            className="spin-research-hint-float"
-                                            aria-hidden="true"
-                                        >
-                                            {t('game.chooseSymbolBeforeRelicPurchase', language)}
-                                        </span>
-                                    )}
                                 </div>
-                            ) : null}
-                        </div>
-                    ))}
+                            );
+                        })}
+                    </div>
+
+                    <div className="selection-actions">
+                        <button type="button" className="selection-skip-btn" onClick={closeSelection}>
+                            <span>{t('game.skip', language)}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

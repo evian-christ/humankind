@@ -14,22 +14,15 @@
 }
 
 .crt-display .hud-top {
-  transform: perspective(1400px) rotateX(-1.5deg) scaleX(0.992);
-  transform-origin: 50% 0;
+  transform: none;
 }
 
 .crt-display .bottom-action-bar {
-  transform:
-    translateX(-50%)
-    perspective(1400px)
-    rotateX(1.8deg)
-    scaleX(0.992);
-  transform-origin: 50% 100%;
+  transform: translateX(-50%);
 }
 
 .crt-display :is(.demo-start-root, .leader-select-root, .leader-progress-root) {
-  transform: perspective(1600px) rotateX(0.45deg) scale(0.994);
-  transform-origin: 50% 50%;
+  transform: none;
 }
 
 .crt-display.crt-disabled {

@@ -96,12 +96,12 @@ const BoardExpansionOverlay = ({ anchorRef }: Props) => {
                             width: buttonSize,
                             height: buttonSize,
                             padding: 0,
-                            borderRadius: '50%',
+                            borderRadius: 0,
                             border: `${Math.max(2, 3 * layout.scale)}px solid rgba(134, 239, 172, 0.96)`,
                             background: 'rgba(5, 46, 22, 0.92)',
                             fontFamily: 'inherit',
                             cursor: 'pointer',
-                            boxShadow: '0 0 20px rgba(34, 197, 94, 0.72), inset 0 0 14px rgba(134, 239, 172, 0.18)',
+                            boxShadow: 'none',
                         }}
                     >
                         <span
@@ -112,9 +112,9 @@ const BoardExpansionOverlay = ({ anchorRef }: Props) => {
                                 top: '50%',
                                 width: buttonSize * 0.58,
                                 height: buttonSize * 0.18,
-                                borderRadius: buttonSize,
+                                borderRadius: 0,
                                 background: '#4ade80',
-                                boxShadow: '0 0 8px rgba(134, 239, 172, 0.9)',
+                                boxShadow: 'none',
                                 transform: 'translate(-50%, -50%)',
                             }}
                         />
@@ -126,9 +126,9 @@ const BoardExpansionOverlay = ({ anchorRef }: Props) => {
                                 top: '50%',
                                 width: buttonSize * 0.18,
                                 height: buttonSize * 0.58,
-                                borderRadius: buttonSize,
+                                borderRadius: 0,
                                 background: '#4ade80',
-                                boxShadow: '0 0 8px rgba(134, 239, 172, 0.9)',
+                                boxShadow: 'none',
                                 transform: 'translate(-50%, -50%)',
                             }}
                         />

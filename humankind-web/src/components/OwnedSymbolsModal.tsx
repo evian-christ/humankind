@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-    useGameStore,
-    BOARD_CELL_WIDTH_PX,
     BOARD_CELL_HEIGHT_PX,
+    BOARD_CELL_WIDTH_PX,
+    useGameStore,
 } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
-import { getSymbolColorHex, SymbolType, SYMBOLS } from '../game/data/symbolDefinitions';
+import { getSymbolColorHex, SymbolType, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
-import { EffectText } from './EffectText';
-import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
+import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
+import { EffectText } from './EffectText';
 
-const BASE_W = 1920;
-const BASE_H = 1080;
-const OWNED_SYMBOL_CELL_SCALE = 0.5;
-const OWNED_SYMBOL_SPRITE_FILL = 0.98;
-const OWNED_SYMBOL_GRID_GAP = 4;
+const OWNED_SYMBOL_CELL_SCALE = 0.56;
+const OWNED_SYMBOL_CELL_WIDTH = BOARD_CELL_WIDTH_PX * OWNED_SYMBOL_CELL_SCALE;
+const OWNED_SYMBOL_CELL_HEIGHT = BOARD_CELL_HEIGHT_PX * OWNED_SYMBOL_CELL_SCALE;
 const TOOLTIP_W = 280;
 const TOOLTIP_H = 180;
 const TOOLTIP_MARGIN = 12;
@@ -54,50 +52,30 @@ type Props = {
     onClose: () => void;
 };
 
+type OwnedSymbolSort = 'acquired' | 'type' | 'name' | 'count';
+
 type HoveredOwnedSymbol = {
-    symbolId: number;
-    symbolType: number;
+    definition: SymbolDefinition;
     left: number;
     right: number;
     top: number;
 } | null;
 
-type OwnedSymbolSort = 'acquired' | 'type' | 'name' | 'count';
-
-function computeBoardMetrics(resW: number, resH: number) {
-    const scale = Math.min(resW / BASE_W, resH / BASE_H);
-    const cellWidth  = BOARD_CELL_WIDTH_PX * scale * OWNED_SYMBOL_CELL_SCALE;
-    const cellHeight = BOARD_CELL_HEIGHT_PX * scale * OWNED_SYMBOL_CELL_SCALE;
-    const spriteSize = Math.min(cellWidth, cellHeight) * OWNED_SYMBOL_SPRITE_FILL;
-
-    return {
-        cellWidth,
-        cellHeight,
-        spriteSize,
-    };
-}
-
 const OwnedSymbolsModal = ({ open, onClose }: Props) => {
-    const playerSymbols = useGameStore((s) => s.playerSymbols);
-    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
-    const resolutionWidth = useSettingsStore((s) => s.resolutionWidth);
-    const resolutionHeight = useSettingsStore((s) => s.resolutionHeight);
-    const language = useSettingsStore((s) => s.language);
+    const playerSymbols = useGameStore((state) => state.playerSymbols);
+    const unlockedKnowledgeUpgrades = useGameStore((state) => state.unlockedKnowledgeUpgrades ?? []);
+    const language = useSettingsStore((state) => state.language);
     const panelRef = useRef<HTMLDivElement | null>(null);
-    const [hoveredSymbol, setHoveredSymbol] = useState<HoveredOwnedSymbol>(null);
-    const [panelSize, setPanelSize] = useState({ w: 0, h: 0 });
     const [sortBy, setSortBy] = useState<OwnedSymbolSort>('acquired');
     const [sortDescending, setSortDescending] = useState(false);
-
-    const metrics = useMemo(
-        () => computeBoardMetrics(resolutionWidth, resolutionHeight),
-        [resolutionWidth, resolutionHeight],
-    );
+    const [hoveredSymbol, setHoveredSymbol] = useState<HoveredOwnedSymbol>(null);
+    const [panelSize, setPanelSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
         if (!open) return;
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+        setHoveredSymbol(null);
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onClose();
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
@@ -106,44 +84,29 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     useRegisterBoardTooltipBlock('owned-symbols-modal', open);
 
     useLayoutEffect(() => {
-        if (!open) return;
-        const el = panelRef.current;
-        if (!el) return;
-
-        const measure = () => {
-            setPanelSize({ w: el.clientWidth, h: el.clientHeight });
-        };
+        if (!open || !panelRef.current) return;
+        const panel = panelRef.current;
+        const measure = () => setPanelSize({ width: panel.clientWidth, height: panel.clientHeight });
         measure();
 
-        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => measure()) : null;
-        ro?.observe(el);
-        return () => ro?.disconnect();
+        const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+        observer?.observe(panel);
+        return () => observer?.disconnect();
     }, [open]);
 
     const ownedSymbolCounts = useMemo(() => {
         const counts = new Map<number, number>();
-        for (const symbol of playerSymbols) {
+        playerSymbols.forEach((symbol) => {
             counts.set(symbol.definition.id, (counts.get(symbol.definition.id) ?? 0) + 1);
-        }
+        });
         return counts;
-    }, [playerSymbols]);
-
-    const typeSummaries = useMemo(() => {
-        const counts = new Map<number, number>();
-        for (const symbol of playerSymbols) {
-            counts.set(symbol.definition.type, (counts.get(symbol.definition.type) ?? 0) + 1);
-        }
-
-        return SYMBOL_TYPE_ORDER
-            .filter((type) => counts.has(type))
-            .map((type) => ({ type, count: counts.get(type) ?? 0 }));
     }, [playerSymbols]);
 
     const sortedSymbols = useMemo(() => {
         const typeRank = new Map(SYMBOL_TYPE_ORDER.map((type, index) => [type, index]));
-        const decorated = playerSymbols.map((symbol, acquiredIndex) => ({ symbol, acquiredIndex }));
+        const symbols = playerSymbols.map((symbol, acquiredIndex) => ({ symbol, acquiredIndex }));
 
-        decorated.sort((left, right) => {
+        symbols.sort((left, right) => {
             const leftDef = left.symbol.definition;
             const rightDef = right.symbol.definition;
             let result = 0;
@@ -158,34 +121,35 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                     language,
                 );
             } else if (sortBy === 'count') {
-                result = (ownedSymbolCounts.get(leftDef.id) ?? 0) - (ownedSymbolCounts.get(rightDef.id) ?? 0);
-            }
-
-            if (result === 0 && sortBy !== 'acquired') {
-                result = leftDef.id - rightDef.id;
-            }
-            if (result === 0) {
+                result =
+                    (ownedSymbolCounts.get(leftDef.id) ?? 0) -
+                    (ownedSymbolCounts.get(rightDef.id) ?? 0);
+            } else {
                 result = left.acquiredIndex - right.acquiredIndex;
             }
 
+            if (result === 0 && sortBy !== 'acquired') result = leftDef.id - rightDef.id;
+            if (result === 0) result = left.acquiredIndex - right.acquiredIndex;
             return sortDescending ? -result : result;
         });
 
-        return decorated.map(({ symbol }) => symbol);
+        return symbols.map(({ symbol }) => symbol);
     }, [language, ownedSymbolCounts, playerSymbols, sortBy, sortDescending]);
 
-    const updateHoveredSymbol = useCallback((symbolId: number, symbolType: number, e: React.MouseEvent<HTMLDivElement>) => {
+    const updateHoveredSymbol = useCallback((
+        definition: SymbolDefinition,
+        event: React.SyntheticEvent<HTMLDivElement>,
+    ) => {
         const panel = panelRef.current;
         if (!panel) return;
 
         const panelRect = panel.getBoundingClientRect();
-        const itemRect = e.currentTarget.getBoundingClientRect();
+        const itemRect = event.currentTarget.getBoundingClientRect();
         const scaleX = panel.clientWidth / panelRect.width;
         const scaleY = panel.clientHeight / panelRect.height;
 
         setHoveredSymbol({
-            symbolId,
-            symbolType,
+            definition,
             left: (itemRect.left - panelRect.left) * scaleX,
             right: (itemRect.right - panelRect.left) * scaleX,
             top: (itemRect.top - panelRect.top) * scaleY,
@@ -193,23 +157,20 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     }, []);
 
     const getTooltipStyle = (hoveredItem: HoveredOwnedSymbol): React.CSSProperties => {
-        if (!hoveredItem || panelSize.w <= 0 || panelSize.h <= 0) return { display: 'none' };
+        if (!hoveredItem || panelSize.width <= 0 || panelSize.height <= 0) return { display: 'none' };
 
         let left = hoveredItem.right + TOOLTIP_MARGIN;
         let top = hoveredItem.top;
-        const panelWidth = panelSize.w;
-        const panelHeight = panelSize.h;
-
-        if (left + TOOLTIP_W > panelWidth) left = hoveredItem.left - TOOLTIP_W - TOOLTIP_MARGIN;
+        if (left + TOOLTIP_W > panelSize.width) left = hoveredItem.left - TOOLTIP_W - TOOLTIP_MARGIN;
         if (left < TOOLTIP_MARGIN) left = TOOLTIP_MARGIN;
-        if (top + TOOLTIP_H > panelHeight) top = panelHeight - TOOLTIP_H - TOOLTIP_MARGIN;
+        if (top + TOOLTIP_H > panelSize.height) top = panelSize.height - TOOLTIP_H - TOOLTIP_MARGIN;
         if (top < 0) top = 0;
 
         return {
             position: 'absolute',
             left: `${left}px`,
             top: `${top}px`,
-            zIndex: 2,
+            zIndex: 6,
             pointerEvents: 'none',
         };
     };
@@ -217,188 +178,95 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     if (!open) return null;
 
     return (
-        <div
-            className="owned-symbols-modal"
-            style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 10001,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'transparent',
-                padding: '42px',
-                overflow: 'hidden',
-            }}
-            onClick={onClose}
-        >
+        <div className="owned-symbols-modal" onClick={onClose}>
             <div
-                className="owned-symbols-panel"
+                className="owned-symbols-panel owned-symbols-panel--simple"
                 ref={panelRef}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                    width: 'min(1220px, calc(100vw - 72px))',
-                    height: 'min(820px, calc(100vh - 72px))',
-                    minHeight: '420px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                    position: 'relative',
-                }}
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="owned-symbols-title"
             >
-                <div
-                    className="owned-symbols-header"
-                    style={{
-                        padding: '22px 28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexShrink: 0,
-                        gap: 16,
-                    }}
-                >
-                    <div
-                        className="owned-symbols-title"
-                        style={{
-                            fontFamily: 'var(--game-font-family), sans-serif',
-                        }}
-                    >
-                        {t('ownedSymbols.title', language)} ({playerSymbols.length})
+                <header className="owned-symbols-header owned-symbols-header--simple">
+                    <div className="owned-symbols-title owned-symbols-title--simple" id="owned-symbols-title">
+                        {t('ownedSymbols.title', language)}
+                        <strong>{playerSymbols.length}</strong>
                     </div>
-                    <button
-                        className="owned-symbols-close-btn"
-                        onClick={onClose}
-                        style={{
-                            padding: '9px 16px',
-                            fontSize: 20,
-                            fontFamily: 'var(--game-font-family), sans-serif',
-                        }}
-                    >
-                        {t('ownedSymbols.close', language)}
-                    </button>
-                </div>
 
-                <div
-                    className="owned-symbols-toolbar"
-                    style={{
-                        padding: '14px 28px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 16,
-                        flexWrap: 'wrap',
-                        flexShrink: 0,
-                    }}
-                >
-                    <div className="owned-symbols-type-summary" aria-label={t('ownedSymbols.types', language)}>
-                        {typeSummaries.map(({ type, count }) => (
-                            <span
-                                key={type}
-                                className="owned-symbols-type-pill"
-                                style={{ '--owned-symbol-type-color': getSymbolColorHex(type) } as React.CSSProperties}
+                    <div className="owned-symbols-header-actions owned-symbols-header-actions--simple">
+                        <div className="owned-symbols-sort-controls owned-symbols-sort-controls--simple">
+                            <label htmlFor="owned-symbol-sort">{t('ownedSymbols.sort', language)}</label>
+                            <select
+                                id="owned-symbol-sort"
+                                value={sortBy}
+                                onChange={(event) => setSortBy(event.target.value as OwnedSymbolSort)}
                             >
-                                {t(ERA_NAME_KEYS[type] ?? 'era.ancient', language)}
-                                <strong>{count}</strong>
-                            </span>
-                        ))}
-                    </div>
-                    <div className="owned-symbols-sort-controls">
-                        <label htmlFor="owned-symbol-sort">{t('ownedSymbols.sort', language)}</label>
-                        <select
-                            id="owned-symbol-sort"
-                            value={sortBy}
-                            onChange={(event) => setSortBy(event.target.value as OwnedSymbolSort)}
-                        >
-                            <option value="acquired">{t('ownedSymbols.sort.acquired', language)}</option>
-                            <option value="type">{t('ownedSymbols.sort.type', language)}</option>
-                            <option value="name">{t('ownedSymbols.sort.name', language)}</option>
-                            <option value="count">{t('ownedSymbols.sort.count', language)}</option>
-                        </select>
+                                <option value="acquired">{t('ownedSymbols.sort.acquired', language)}</option>
+                                <option value="type">{t('ownedSymbols.sort.type', language)}</option>
+                                <option value="name">{t('ownedSymbols.sort.name', language)}</option>
+                                <option value="count">{t('ownedSymbols.sort.count', language)}</option>
+                            </select>
+                            <button
+                                type="button"
+                                className={sortDescending ? 'owned-symbols-sort-direction owned-symbols-sort-direction--desc' : 'owned-symbols-sort-direction'}
+                                aria-label={t(sortDescending ? 'ownedSymbols.sort.desc' : 'ownedSymbols.sort.asc', language)}
+                                onClick={() => setSortDescending((value) => !value)}
+                            >
+                                <span aria-hidden="true" />
+                            </button>
+                        </div>
+
                         <button
                             type="button"
-                            className={sortDescending ? 'owned-symbols-sort-direction owned-symbols-sort-direction--desc' : 'owned-symbols-sort-direction'}
-                            aria-label={t(sortDescending ? 'ownedSymbols.sort.desc' : 'ownedSymbols.sort.asc', language)}
-                            onClick={() => setSortDescending((value) => !value)}
+                            className="owned-symbols-close-btn owned-symbols-close-btn--simple"
+                            onClick={onClose}
                         >
-                            <span aria-hidden="true" />
+                            {t('ownedSymbols.close', language)}
                         </button>
                     </div>
-                </div>
+                </header>
 
                 <div
+                    className="owned-symbols-scroll owned-symbols-scroll--simple"
                     onScroll={() => setHoveredSymbol(null)}
-                    style={{
-                        padding: '22px 28px 28px',
-                        overflowY: 'auto',
-                        flex: 1,
-                    }}
                 >
-                    {playerSymbols.length === 0 ? (
-                        <div
-                            style={{
-                                color: '#9ca3af',
-                                textAlign: 'center',
-                                padding: '72px 28px',
-                                fontSize: 30,
-                                fontFamily: 'var(--game-font-family), sans-serif',
-                            }}
-                        >
+                    {sortedSymbols.length === 0 ? (
+                        <div className="owned-symbols-empty">
                             {t('ownedSymbols.empty', language)}
                         </div>
                     ) : (
-                        <div
-                            className="owned-symbols-grid"
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-                                gap: OWNED_SYMBOL_GRID_GAP,
-                                alignItems: 'start',
-                                alignContent: 'start',
-                            }}
-                        >
-                            {sortedSymbols.map((sym, idx) => {
-                                const def = sym.definition;
-                                const spriteUrl = getSymbolSpriteUrl(def);
+                        <div className="owned-symbols-grid owned-symbols-grid--simple">
+                            {sortedSymbols.map((symbol, index) => {
+                                const definition = symbol.definition;
+                                const symbolName = t(`symbol.${definition.key}.name`, language);
+                                const spriteUrl = getSymbolSpriteUrl(definition);
 
                                 return (
                                     <div
-                                        key={`${sym.instanceId}-${idx}`}
-                                        className={def.key === 'monument' ? 'owned-symbol-item owned-symbol-item--monument' : 'owned-symbol-item'}
-                                        onMouseEnter={(e) => updateHoveredSymbol(def.id, def.type, e)}
+                                        key={`${symbol.instanceId}-${index}`}
+                                        className={definition.key === 'monument'
+                                            ? 'owned-symbol-item owned-symbol-item--simple owned-symbol-item--monument'
+                                            : 'owned-symbol-item owned-symbol-item--simple'}
+                                        onMouseEnter={(event) => updateHoveredSymbol(definition, event)}
+                                        onMouseMove={(event) => updateHoveredSymbol(definition, event)}
                                         onMouseLeave={() => setHoveredSymbol(null)}
-                                        style={{
-                                            width: '100%',
-                                            aspectRatio: `${metrics.cellWidth} / ${metrics.cellHeight}`,
-                                            position: 'relative',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: 'help',
-                                            borderColor: `${getSymbolColorHex(def.type)}55`,
-                                        }}
+                                        onFocus={(event) => updateHoveredSymbol(definition, event)}
+                                        onBlur={() => setHoveredSymbol(null)}
+                                        tabIndex={0}
+                                        aria-label={symbolName}
                                     >
-                                        {spriteUrl ? (
-                                            <img
-                                                src={spriteUrl}
-                                                alt={t(`symbol.${def.key}.name`, language)}
-                                                style={{
-                                                    width: `${OWNED_SYMBOL_SPRITE_FILL * 100}%`,
-                                                    height: `${OWNED_SYMBOL_SPRITE_FILL * 100}%`,
-                                                    objectFit: 'contain',
-                                                    imageRendering: 'pixelated',
-                                                }}
+                                        <div className="owned-symbol-sprite-frame owned-symbol-sprite-frame--simple">
+                                            {spriteUrl ? (
+                                                <img src={spriteUrl} alt="" draggable={false} />
+                                            ) : (
+                                                <span className="owned-symbol-missing-sprite">?</span>
+                                            )}
+                                            <SymbolCellBoardOverlays
+                                                sym={symbol}
+                                                cellWidth={OWNED_SYMBOL_CELL_WIDTH}
+                                                cellHeight={OWNED_SYMBOL_CELL_HEIGHT}
                                             />
-                                        ) : (
-                                            <div style={{ fontSize: 18, opacity: 0.6, fontFamily: 'var(--game-font-family), sans-serif' }}>
-                                                ?
-                                            </div>
-                                        )}
-
-                                        <SymbolCellBoardOverlays
-                                            sym={sym}
-                                            cellWidth={metrics.cellWidth}
-                                            cellHeight={metrics.cellHeight}
-                                        />
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -409,29 +277,29 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                 {hoveredSymbol && (
                     <div className="symbol-tooltip" style={getTooltipStyle(hoveredSymbol)}>
                         <div className="symbol-tooltip-name">
-                            {t(`symbol.${SYMBOLS[hoveredSymbol.symbolId]?.key ?? hoveredSymbol.symbolId}.name`, language)}
+                            {t(`symbol.${hoveredSymbol.definition.key}.name`, language)}
                         </div>
                         <div
                             className="symbol-tooltip-rarity"
                             style={{
-                                color: getSymbolColorHex(hoveredSymbol.symbolType),
+                                color: getSymbolColorHex(hoveredSymbol.definition.type),
                                 fontWeight: 'bold',
                                 fontSize: '18px',
                                 letterSpacing: '2px',
-                                textShadow: `0 0 10px ${getSymbolColorHex(hoveredSymbol.symbolType)}80`,
+                                textShadow: `0 0 10px ${getSymbolColorHex(hoveredSymbol.definition.type)}80`,
                             }}
                         >
-                            {t(ERA_NAME_KEYS[hoveredSymbol.symbolType] ?? 'era.ancient', language)}
+                            {t(ERA_NAME_KEYS[hoveredSymbol.definition.type] ?? 'era.ancient', language)}
                         </div>
                         <div className="symbol-tooltip-desc">
                             {getBoardSymbolTooltipDesc(
-                                String(SYMBOLS[hoveredSymbol.symbolId]?.key ?? hoveredSymbol.symbolId),
+                                hoveredSymbol.definition.key,
                                 language,
                                 unlockedKnowledgeUpgrades,
                             )
                                 .split('\n')
-                                .map((line, i) => (
-                                    <div key={i} className="symbol-tooltip-desc-line">
+                                .map((line, index) => (
+                                    <div key={index} className="symbol-tooltip-desc-line">
                                         <EffectText text={line} />
                                     </div>
                                 ))}

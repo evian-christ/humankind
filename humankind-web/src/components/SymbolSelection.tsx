@@ -12,6 +12,7 @@ import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBl
 import { audioManager } from '../audio/audioManager';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 import { getActionForKeyCode } from '../game/input/keyBindings';
+import { RELIC_ID } from '../game/logic/relics/relicIds';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -28,11 +29,6 @@ const ERA_NAME_KEYS: Record<number, string> = {
 };
 
 /** gameStore RELIC_ID: 고대 유물 잔해 / 고대 부족 합류 — 심볼 선택 UI 전용 표시·리롤 숨김 */
-const RELIC_ANCIENT_DEBRIS = 13;
-const RELIC_ANCIENT_TRIBE_JOIN = 19;
-const RELIC_MILITARY_LEVY = 39;
-const RELIC_PROPHECY_DIE = 40;
-
 const SymbolCard = ({
     symbol,
     unlockedKnowledgeUpgrades,
@@ -187,7 +183,7 @@ const SymbolSelection = () => {
     }, [phase]);
 
     // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
-    const hasLydia = relics.some(r => r.definition.id === 2);
+    const hasLydia = relics.some(r => r.definition.id === RELIC_ID.LYDIA_COIN);
     const rerollCost = getRerollCost(level, hasLydia ? 0.5 : 1, rerollsThisTurn);
     const maxRerolls = hasLydia ? 3 : Infinity;
     const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
@@ -197,10 +193,10 @@ const SymbolSelection = () => {
     const canReroll = !isSelectionBlockedByPlague && (hasFreeReroll || gold >= rerollCost) && (rerollsLeft === null || rerollsLeft > 0);
 
     const hideRerollFromRelicSource =
-        symbolSelectionRelicSourceId === RELIC_ANCIENT_DEBRIS ||
-        symbolSelectionRelicSourceId === RELIC_ANCIENT_TRIBE_JOIN ||
-        symbolSelectionRelicSourceId === RELIC_MILITARY_LEVY ||
-        symbolSelectionRelicSourceId === RELIC_PROPHECY_DIE;
+        symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_RELIC_DEBRIS ||
+        symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_TRIBE_JOIN ||
+        symbolSelectionRelicSourceId === RELIC_ID.MILITARY_LEVY ||
+        symbolSelectionRelicSourceId === RELIC_ID.PROPHECY_DIE;
     const hideRerollFromSymbolSource = symbolSelectionSymbolSourceId === S.tribal_village;
     const canUseReroll = canReroll && !hideRerollFromRelicSource && !hideRerollFromSymbolSource;
     const symbolSource = symbolSelectionSymbolSourceId == null ? null : SYMBOLS[symbolSelectionSymbolSourceId] ?? null;
@@ -361,7 +357,7 @@ const SymbolSelection = () => {
                             </button>
                         )}
                         <button type="button" className="selection-skip-btn" onClick={skipSelection}>
-                            {t('game.skip', language)}
+                            <span>{t('game.skip', language)}</span>
                         </button>
                     </div>
                 </div>

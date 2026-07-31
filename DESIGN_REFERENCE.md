@@ -107,6 +107,25 @@
 
 ---
 
+### 5-2. 기본 버튼 디자인 (DOS 스타일, 2026-07 확정)
+"기본 버튼"을 요청받으면 크기(width/height/padding/font-size)를 제외한 아래 스펙을 그대로 적용한다. `spin-btn`, `relic-shop-btn`, `pause-btn-top`, `endgame-btn`, `pause-menu-btn`이 이미 이 규칙을 공유하며, 새 버튼도 동일한 클래스 묶음에 합류시키는 것을 우선 고려한다.
+
+- **배경**: 불투명 `background-color: #1c1c1c` + `background-image: linear-gradient(rgba(0,0,0,0.09), rgba(0,0,0,0.09))`. 반투명 `rgba` 배경 단독 사용 금지(과거 청동 팔레트 시절 방식이며 현재는 대체됨).
+- **테두리 — 이중 구조**:
+  - 버튼 자체: `border: 2px solid #0e0e0e`, `border-radius: 0`.
+  - `::after` 의사요소로 내부 인셋 테두리를 하나 더 그린다: `content: ""`, `position: absolute`, `inset: 4px`, `z-index: 0`, `box-sizing: border-box`, `border: 2px solid #0e0e0e`, `box-shadow: none`, `pointer-events: none`. 버튼 본체는 `position: relative; isolation: isolate;`가 필요.
+  - 아이콘/텍스트 등 실제 내용물은 `position: relative; z-index: 1;`로 인셋 테두리 위에 뜨도록 한다.
+- **텍스트**: `color: rgba(255, 255, 255, 0.88)`, `text-shadow: none`. 폰트는 `var(--game-font-family), sans-serif` 공통.
+- **box-shadow**: 항상 `none`. 그림자/글로우 장식 금지(DOS 플랫 원칙).
+- **상태별 배경색** (테두리·그라데이션 오버레이는 유지, `background-color`만 교체):
+  - 기본: `#1c1c1c`
+  - hover / focus-visible: `#2e2e2e`
+  - active: `#0e0e0e`
+- **커서**: `cursor: var(--app-cursor-pointer)`.
+- **금지 사항**: `border-radius` 0이 아닌 값, 그라데이션 색 변경(항상 검정 계열 9% 오버레이), 4면이 다른 색인 베벨, 갈색/청동/아이보리 색조(→ [[game-ui-layout]] 이전의 팔레트, 현재는 검정+회색 램프로 전면 교체됨).
+
+참고: `humankind-web/src/index.css`의 `button.spin-btn`, `button.relic-shop-btn`, `button.pause-btn-top`, `button.endgame-btn`, `.pause-menu-btn`, `.pause-log-btn` 규칙 블록이 코드 기준 원본이다.
+
 ### 5-4. 기본 UI 구현 원칙 (미니멀 우선)
 - 새로운 오버레이/모달/패널은 사용자가 “스타일을 화려하게” 요청하기 전까지 **초미니멀** 형태로 먼저 구현한다.
 - 초미니멀 기본 레이아웃 규격:
@@ -114,6 +133,7 @@
   - 본문: 단순 `border` 또는 얇은 구획선(둥근 모서리/그라데이션/강한 그림자 최소화)
   - 타이포: 통일된 폰트 + 과도한 텍스트 효과(획/그림자/입체효과) 지양
   - 동작: 클릭 배경 닫기 + `Esc` 닫기(가능하면) 같은 기본 UX만 포함
+- 버튼 자체의 색/테두리/그림자 스펙은 5-2를 따른다(패널 배경의 반투명 규칙과는 별개).
 - 이후 단계에서만 요청/가이드가 있을 때:
   - 박물관 감성(조명/포인트 컬러/디테일 프레임), 프리미엄 그림자/그라데이션, 애니메이션을 점진적으로 추가한다.
 

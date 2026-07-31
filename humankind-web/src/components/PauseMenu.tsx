@@ -15,6 +15,7 @@ import {
     isBindableKeyCode,
     type KeyBindingAction,
 } from '../game/input/keyBindings';
+import { HISTORY_ICON_URL } from '../uiAssetUrls';
 
 const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
     { value: 'en', label: 'English' },
@@ -49,9 +50,10 @@ interface PauseMenuProps {
     isOpen: boolean;
     onClose: () => void;
     initialScreen?: 'main' | 'settings';
+    onOpenLog?: () => void;
 }
 
-const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) => {
+const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: PauseMenuProps) => {
     const [screen, setScreen] = useState<'main' | 'settings'>(initialScreen);
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
@@ -129,6 +131,11 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
         onClose();
     };
 
+    const handleOpenLog = () => {
+        onClose();
+        onOpenLog?.();
+    };
+
     const handleSettings = () => {
         setScreen('settings');
     };
@@ -200,6 +207,17 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main' }: PauseMenuProps) 
 
     return (
         <div className={`pause-overlay ${screen === 'settings' ? 'pause-overlay--settings' : ''}`}>
+            {onOpenLog && screen === 'main' && (
+                <button
+                    type="button"
+                    className="pause-log-btn"
+                    onClick={handleOpenLog}
+                    aria-label={t('pause.log', language)}
+                >
+                    <img src={HISTORY_ICON_URL} alt="" draggable={false} style={{ imageRendering: 'pixelated' }} />
+                    <span>{t('pause.log', language)}</span>
+                </button>
+            )}
             {screen === 'main' && (
                 <div className="pause-panel">
                     <div className="pause-title">{t('pause.title', language)}</div>

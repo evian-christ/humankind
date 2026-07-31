@@ -354,22 +354,24 @@ function DemoMainMenu({
           >
             {t('mainMenu.achievements', language)}
           </button>
+          <button
+            type="button"
+            className="main-menu-button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label={t('mainMenu.settings', language)}
+          >
+            {t('mainMenu.settings', language)}
+          </button>
+          <button
+            type="button"
+            className="main-menu-button"
+            onClick={handleQuit}
+            aria-label={quitLabel}
+          >
+            {quitLabel}
+          </button>
         </nav>
       </main>
-      <button
-        type="button"
-        className="main-menu-settings-button"
-        onClick={() => setSettingsOpen(true)}
-        aria-label={t('mainMenu.settings', language)}
-      />
-      <button
-        type="button"
-        className="main-menu-exit-button"
-        onClick={handleQuit}
-        aria-label={quitLabel}
-      >
-        ×
-      </button>
       <PauseMenu isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} initialScreen="settings" />
     </div>
   );

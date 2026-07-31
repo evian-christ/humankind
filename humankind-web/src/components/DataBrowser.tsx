@@ -599,7 +599,7 @@ const DataBrowser = () => {
                                             <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
                                             <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                             <td style={{ textAlign: 'center' }}>
-                                                <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                                <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 0 }}>Add</button>
                                             </td>
                                         </tr>
                                     );
@@ -626,7 +626,7 @@ const DataBrowser = () => {
                                         <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{isBasePool(s) ? 'O' : 'X'}</td>
                                         <td className="databrowser-cell--sprite">{s.sprite || '-'}</td>
                                         <td style={{ textAlign: 'center' }}>
-                                            <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px' }}>Add</button>
+                                            <button onClick={() => devAddSymbol(s.id)} style={{ padding: '4px 8px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 0 }}>Add</button>
                                         </td>
                                     </tr>
                                 ))
@@ -718,7 +718,7 @@ const DataBrowser = () => {
                                         <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             {sprite !== '-' ? (
                                                 <>
-                                                    <img src={`${ASSET_BASE_URL}assets/leaders/${sprite}`} alt={t(l.nameKey, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'cover', borderRadius: '50%' }} />
+                                                    <img src={`${ASSET_BASE_URL}assets/leaders/${sprite}`} alt={t(l.nameKey, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'cover', borderRadius: 0 }} />
                                                     <span style={{ fontSize: '11px', color: '#888' }}>{sprite}</span>
                                                 </>
                                             ) : '-'}

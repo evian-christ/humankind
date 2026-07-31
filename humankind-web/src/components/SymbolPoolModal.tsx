@@ -107,12 +107,12 @@ const SymbolPoolModal = () => {
                     maxHeight: '82vh',
                     background: '#111827',
                     border: '1px solid #374151',
-                    borderRadius: '8px',
+                    borderRadius: 0,
                     display: 'flex',
                     flexDirection: 'column',
                     fontFamily: 'var(--game-font-family), monospace',
                     overflow: 'hidden',
-                    boxShadow: '0 0 40px rgba(0,0,0,0.8)',
+                    boxShadow: 'none',
                 }}
             >
                 <div style={{
@@ -138,7 +138,7 @@ const SymbolPoolModal = () => {
                             color: '#fbbf24',
                             background: '#292524',
                             border: '1px solid #57534e',
-                            borderRadius: '4px',
+                            borderRadius: 0,
                             padding: '2px 8px',
                         }}>
                             {probabilityLabel}
@@ -153,7 +153,7 @@ const SymbolPoolModal = () => {
                                 color: '#9ca3af',
                                 padding: '2px 8px',
                                 fontSize: '14px',
-                                borderRadius: '4px',
+                                borderRadius: 0,
                             }}
                         >
                             ×
@@ -230,7 +230,7 @@ const SymbolPoolModal = () => {
                                                         fontSize: '11px',
                                                         color: meta.color,
                                                         border: `1px solid ${meta.color}55`,
-                                                        borderRadius: '3px',
+                                                        borderRadius: 0,
                                                         padding: '1px 6px',
                                                     }}>
                                                         {typeLabel}
@@ -242,14 +242,14 @@ const SymbolPoolModal = () => {
                                                             width: '50px',
                                                             height: '4px',
                                                             background: '#374151',
-                                                            borderRadius: '2px',
+                                                            borderRadius: 0,
                                                             overflow: 'hidden',
                                                         }}>
                                                             <div style={{
                                                                 width: `${Math.min(100, row.probability * 3)}%`,
                                                                 height: '100%',
                                                                 background: meta.color,
-                                                                borderRadius: '2px',
+                                                                borderRadius: 0,
                                                             }} />
                                                         </div>
                                                         <span style={{ fontVariantNumeric: 'tabular-nums', width: '52px', textAlign: 'right', color: '#fbbf24' }}>

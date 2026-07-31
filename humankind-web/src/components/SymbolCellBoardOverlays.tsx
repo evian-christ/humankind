@@ -24,16 +24,21 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const fs = Math.max(18, Math.round(27 * sx));
     const fsIcon = Math.max(22, Math.round(34 * sx));
 
-    const bananaPermanentFoodText =
-        def.id === S.banana && (sym.banana_permanent_food_bonus ?? 0) > 0
-            ? `+${sym.banana_permanent_food_bonus}`
-            : null;
+    // 열대우림은 좌하단에 누적된 영구 생산량 보너스, 우하단에 성장치를 표시한다.
+    const growthBonusTotal =
+        def.id === S.rainforest
+            ? (sym.rainforest_growth_bonus?.food ?? 0)
+                + (sym.rainforest_growth_bonus?.gold ?? 0)
+                + (sym.rainforest_growth_bonus?.knowledge ?? 0)
+            : 0;
+    const usesGrowthDisplay = def.id === S.rainforest;
+    const bananaPermanentFoodText = growthBonusTotal > 0 ? `+${growthBonusTotal}` : null;
     const bananaProgressText =
-        def.id === S.banana && (sym.effect_counter ?? 0) > 0
+        usesGrowthDisplay && (sym.effect_counter ?? 0) > 0
             ? String(sym.effect_counter)
             : null;
     const showCounter =
-        def.id !== S.banana &&
+        !usesGrowthDisplay &&
         sym.effect_counter > 0 &&
         def.type !== SymbolType.ENEMY;
     const font = { fontFamily: 'var(--game-font-family), sans-serif' as const, lineHeight: 1 as const };
