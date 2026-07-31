@@ -9,6 +9,8 @@ import type { BoardEffectDelta } from '../logic/turn/turnTypes';
 
 export const BOARD_WIDTH = 3;
 export const BOARD_HEIGHT = 2;
+export const MAX_BOARD_WIDTH = 8;
+export const MAX_BOARD_HEIGHT = 6;
 
 export const ORAL_TRADITION_ANCHOR = { x: 1, y: 0 } as const;
 export const STARTING_WILD_SEED_ANCHORS = [
@@ -151,6 +153,10 @@ export const getActiveBoardCoords = (
     return coords;
 };
 
+export const getRemainingBoardExpansionCapacity = (
+    board: (PlayerSymbolInstance | null)[][],
+): number => Math.max(0, MAX_BOARD_WIDTH * MAX_BOARD_HEIGHT - getActiveBoardCoords(board).length);
+
 export const getBoardExpansionCandidates = (
     board: (PlayerSymbolInstance | null)[][],
 ): Array<{ x: number; y: number }> => {
@@ -165,10 +171,25 @@ export const getBoardExpansionCandidates = (
             const x = slot.x + dx;
             const y = slot.y + dy;
             if (isBoardSlotActive(board, x, y)) continue;
+            const { width, height } = getExpandedBoardDimensions(board, x, y);
+            if (width > MAX_BOARD_WIDTH || height > MAX_BOARD_HEIGHT) continue;
             candidates.set(`${x},${y}`, { x, y });
         }
     }
     return [...candidates.values()];
+};
+
+const getExpandedBoardDimensions = (
+    board: (PlayerSymbolInstance | null)[][],
+    targetX: number,
+    targetY: number,
+): { width: number; height: number } => {
+    const shiftX = targetX < 0 ? -targetX : 0;
+    const shiftY = targetY < 0 ? -targetY : 0;
+    const width = Math.max(board.length + shiftX, targetX + shiftX + 1);
+    const currentHeight = Math.max(0, ...board.map((col) => col.length));
+    const height = Math.max(currentHeight + shiftY, targetY + shiftY + 1);
+    return { width, height };
 };
 
 export const expandBoardAt = (
@@ -180,9 +201,8 @@ export const expandBoardAt = (
 
     const shiftX = targetX < 0 ? -targetX : 0;
     const shiftY = targetY < 0 ? -targetY : 0;
-    const width = Math.max(board.length + shiftX, targetX + shiftX + 1);
-    const currentHeight = Math.max(0, ...board.map((col) => col.length));
-    const height = Math.max(currentHeight + shiftY, targetY + shiftY + 1);
+    const { width, height } = getExpandedBoardDimensions(board, targetX, targetY);
+    if (width > MAX_BOARD_WIDTH || height > MAX_BOARD_HEIGHT) return null;
     const next = Array.from({ length: width }, () => new Array<PlayerSymbolInstance | null>(height));
 
     for (let x = 0; x < board.length; x++) {
@@ -377,8 +397,8 @@ export const createStoredFoodDestroyEffects = (
                 knowledge: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
             });
         } else if (symbol.definition.id === S.oral_tradition) {
-            const knowledge = countAdjacentBoardSymbols(board, slot.x, slot.y) * 10;
-            if (knowledge > 0) effects.push({ ...slot, food: 0, gold: 0, knowledge });
+            const culture = countAdjacentBoardSymbols(board, slot.x, slot.y) * 10;
+            if (culture > 0) effects.push({ ...slot, food: 0, gold: 0, knowledge: 0, culture });
         }
     }
     return effects;
@@ -404,7 +424,7 @@ const countAdjacentBoardSymbols = (
 
 export const createBoardDestroyResourceEffects = (
     primarySlot: { x: number; y: number },
-    delta: { food: number; gold: number; knowledge: number },
+    delta: { food: number; gold: number; knowledge: number; culture?: number },
     symbolDestroyEffects: readonly BoardEffectDelta[],
 ): BoardEffectDelta[] => {
     const symbolDestroyTotals = symbolDestroyEffects.reduce(
@@ -412,8 +432,9 @@ export const createBoardDestroyResourceEffects = (
             food: totals.food + effect.food,
             gold: totals.gold + effect.gold,
             knowledge: totals.knowledge + effect.knowledge,
+            culture: totals.culture + (effect.culture ?? 0),
         }),
-        { food: 0, gold: 0, knowledge: 0 },
+        { food: 0, gold: 0, knowledge: 0, culture: 0 },
     );
     const primaryEffect = {
         x: primarySlot.x,
@@ -421,9 +442,10 @@ export const createBoardDestroyResourceEffects = (
         food: delta.food - symbolDestroyTotals.food,
         gold: delta.gold - symbolDestroyTotals.gold,
         knowledge: delta.knowledge - symbolDestroyTotals.knowledge,
+        culture: (delta.culture ?? 0) - symbolDestroyTotals.culture,
     };
     const effects: BoardEffectDelta[] = [];
-    if (primaryEffect.food !== 0 || primaryEffect.gold !== 0 || primaryEffect.knowledge !== 0) {
+    if (primaryEffect.food !== 0 || primaryEffect.gold !== 0 || primaryEffect.knowledge !== 0 || primaryEffect.culture !== 0) {
         effects.push(primaryEffect);
     }
     effects.push(...symbolDestroyEffects);
@@ -433,7 +455,7 @@ export const createBoardDestroyResourceEffects = (
 export const getBoardOnlyDestroyEffectTotals = (
     effects: readonly BoardEffectDelta[],
     board: (PlayerSymbolInstance | null)[][],
-): { food: number; gold: number; knowledge: number } =>
+): { food: number; gold: number; knowledge: number; culture: number } =>
     effects.reduce(
         (totals, effect) => {
             const symbol = board[effect.x]?.[effect.y];
@@ -442,9 +464,10 @@ export const getBoardOnlyDestroyEffectTotals = (
                 food: totals.food + effect.food,
                 gold: totals.gold + effect.gold,
                 knowledge: totals.knowledge + effect.knowledge,
+                culture: totals.culture + (effect.culture ?? 0),
             };
         },
-        { food: 0, gold: 0, knowledge: 0 },
+        { food: 0, gold: 0, knowledge: 0, culture: 0 },
     );
 
 export const markBoardSymbolsForRemoval = (

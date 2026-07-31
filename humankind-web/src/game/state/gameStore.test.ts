@@ -23,7 +23,7 @@ const createInstance = (definition: SymbolDefinition, id: string): PlayerSymbolI
     is_marked_for_destruction: false,
 });
 
-describe('gameStore pasture butchering', () => {
+describe('gameStore board interactions', () => {
     const ensureDomGlobals = () => {
         vi.stubGlobal('window', {
             screen: { width: 1920, height: 1080 },
@@ -40,6 +40,31 @@ describe('gameStore pasture butchering', () => {
             documentElement: { style: { setProperty: vi.fn() } },
         });
     };
+
+    it('adds one pending board expansion from the dev action', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        useGameStore.setState({ pendingBoardExpansions: 2 });
+
+        useGameStore.getState().devAddBoardExpansion();
+
+        expect(useGameStore.getState().pendingBoardExpansions).toBe(3);
+    });
+
+    it('offers the relic shop after placing the food-payment expansion', async () => {
+        ensureDomGlobals();
+        const { useGameStore } = await import('./gameStore');
+        useGameStore.getState().startGameWithDraft([], 'ramesses');
+        useGameStore.setState({
+            phase: 'board_expansion_placement',
+            pendingBoardExpansions: 1,
+        });
+
+        useGameStore.getState().expandBoardSlotAt(1, -1);
+
+        expect(useGameStore.getState().pendingBoardExpansions).toBe(0);
+        expect(useGameStore.getState().phase).toBe('relic_shop_ready');
+    });
 
     it('starts a drafted game with the six-slot board', async () => {
         ensureDomGlobals();
@@ -124,70 +149,6 @@ describe('gameStore pasture butchering', () => {
         expect(next.knowledgeResearchCredits).toEqual([
             { grantLevel: 1, minLevel: 1, maxLevel: 1 },
         ]);
-    });
-
-    it('increments adjacent plains counters when Pasture Management is researched', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const board = createEmptyBoard();
-        const cattle = createInstance(Sym.cattle, 'cattle');
-        const plains = createInstance(Sym.plains, 'plains');
-        board[1][1] = cattle;
-        board[0][0] = plains;
-
-        useGameStore.setState({
-            board,
-            playerSymbols: [cattle, plains],
-            phase: 'idle',
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            unlockedKnowledgeUpgrades: [PASTURE_MANAGEMENT_UPGRADE_ID],
-            lastEffects: [],
-        });
-
-        vi.useFakeTimers();
-        useGameStore.getState().butcherPastureAnimalAt(1, 1);
-
-        const next = useGameStore.getState();
-        expect(next.board[1][1]?.is_marked_for_destruction).toBe(true);
-        expect(next.board[0][0]?.effect_counter).toBe(1);
-        expect(next.food).toBe(10);
-        await vi.advanceTimersByTimeAsync(360);
-        expect(useGameStore.getState().board[1][1]).toBeNull();
-        vi.useRealTimers();
-    });
-
-    it('upgrades cattle and sheep butcher rewards with Nomadic Tradition', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const board = createEmptyBoard();
-        const cattle = createInstance(Sym.cattle, 'cattle');
-        const sheep = createInstance(Sym.sheep, 'sheep');
-        const plainsA = createInstance(Sym.plains, 'plains_a');
-        const plainsB = createInstance(Sym.plains, 'plains_b');
-        board[1][1] = cattle;
-        board[0][0] = plainsA;
-        board[2][1] = sheep;
-        board[2][0] = plainsB;
-
-        useGameStore.setState({
-            board,
-            playerSymbols: [cattle, sheep, plainsA, plainsB],
-            phase: 'idle',
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            unlockedKnowledgeUpgrades: [NOMADIC_TRADITION_UPGRADE_ID],
-            lastEffects: [],
-        });
-
-        useGameStore.getState().butcherPastureAnimalAt(1, 1);
-        useGameStore.getState().butcherPastureAnimalAt(2, 1);
-
-        const next = useGameStore.getState();
-        expect(next.food).toBe(30);
-        expect(next.gold).toBe(10);
     });
 
     it('opens radiant loot choice and can grant a relic reward', async () => {
@@ -495,39 +456,6 @@ describe('gameStore pasture butchering', () => {
         expect(storeAfterSecondSelect.phase).toBe('idle');
         expect(storeAfterSecondSelect.bonusSelectionQueue).toEqual([]);
         expect(storeAfterSecondSelect.symbolSelectionSymbolSourceId).toBeNull();
-    });
-
-    it('allows pasture animals to be butchered during food payment', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const board = createEmptyBoard();
-        const cattle = createInstance(Sym.cattle, 'payment_cattle');
-        const plains = createInstance(Sym.plains, 'payment_plains');
-        board[1][1] = cattle;
-        board[0][0] = plains;
-
-        useGameStore.setState({
-            board,
-            playerSymbols: [cattle, plains],
-            phase: 'food_payment',
-            pendingFoodPayment: true,
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            unlockedKnowledgeUpgrades: [],
-            lastEffects: [],
-        });
-
-        vi.useFakeTimers();
-        useGameStore.getState().butcherPastureAnimalAt(1, 1);
-
-        expect(useGameStore.getState().board[1][1]?.is_marked_for_destruction).toBe(true);
-        expect(useGameStore.getState().phase).toBe('food_payment');
-        expect(useGameStore.getState().food).toBe(10);
-        await vi.advanceTimersByTimeAsync(360);
-        expect(useGameStore.getState().board[1][1]).toBeNull();
-        vi.useRealTimers();
-        useGameStore.setState({ pendingFoodPayment: false });
     });
 
     it('returns to food payment after opening loot during food payment', async () => {

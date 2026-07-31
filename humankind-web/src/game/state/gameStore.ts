@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { SYMBOLS, S } from '../data/symbolDefinitions';
 import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
 import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
+import { generateCultureWeightedRelicChoices, getCultureLevel } from '../data/cultureProgression';
 import { useRelicStore } from './relicStore';
 import { RELIC_ID } from '../logic/relics/relicIds';
 import { countNonConsumableRelics, isRelicAvailableForShop } from '../logic/relics/relicClassification';
@@ -33,6 +34,7 @@ import {
     createInstance,
     createStartingBoard,
     expandBoardAt,
+    getRemainingBoardExpansionCapacity,
     getStandardSymbolChoiceCount,
     phaseAfterTurnFlowComplete,
     shiftBoardToMatchExpansion,
@@ -46,7 +48,7 @@ import { createBoardInteractionActions } from './actions/boardInteraction';
 import type { BoardEffectDelta, PendingThreatFloat } from '../logic/turn/turnTypes';
 
 export { type PlayerSymbolInstance } from '../types';
-export { BOARD_HEIGHT, BOARD_WIDTH } from './gameStoreHelpers';
+export { BOARD_HEIGHT, BOARD_WIDTH, MAX_BOARD_HEIGHT, MAX_BOARD_WIDTH } from './gameStoreHelpers';
 
 /**
  * 1920×1080 기준 보드·셀 실제 픽셀 크기.
@@ -65,6 +67,10 @@ export type GamePhase =
     | 'showing_new_threats'
     | 'processing'
     | 'food_payment'
+    | 'board_expansion_ready'
+    | 'board_expansion_placement'
+    | 'relic_shop_ready'
+    | 'relic_shop'
     | 'selection'
     | 'loot_reward_selection'
     | 'oblivion_furnace_board'
@@ -95,7 +101,7 @@ export interface GameEventLogEntry {
     /** 주체 심볼 (있으면) */
     symbolId?: number;
     /** 수치 변화 (있으면) */
-    delta?: { food: number; gold: number; knowledge: number; military?: number };
+    delta?: { food: number; gold: number; knowledge: number; culture?: number; military?: number };
     /** 기여자 스냅샷 (있으면) */
     contributors?: Array<{ x: number; y: number; symbolId?: number }>;
     /** 추가 정보 (디테일용) */
@@ -110,6 +116,8 @@ export interface GameState {
     gold: number;
     military?: number;
     knowledge: number; // 기존 knowledge
+    culture: number;
+    cultureLevel: number;
     level: number; // 0 ~ 30
     era: number; // derived from level
     turn: number;
@@ -141,7 +149,7 @@ export interface GameState {
     lastEffects: BoardEffectDelta[];
     counterDisplayOverrides: Array<{ x: number; y: number; text: string | null }>;
     /** processing 중 누적 합산 (food, gold, knowledge) */
-    runningTotals: { food: number; gold: number; knowledge: number; military?: number };
+    runningTotals: { food: number; gold: number; knowledge: number; culture?: number; military?: number };
     /** 현재 처리 중인 슬롯 좌표 (null이면 하이라이트 없음) */
     activeSlot: { x: number; y: number } | null;
     /** 현재 슬롯의 효과에 기여한 인접 심볼 좌표 */
@@ -237,6 +245,7 @@ export interface GameState {
     // Actions
     spinBoard: () => void;
     payFoodCost: () => void;
+    claimBoardExpansion: () => void;
     /** spinning 애니메이션이 끝난 후 호출 — pendingNewThreatFloats 있으면 먼저 플로팅 표시, 없으면 processing 시작 */
     startProcessing: () => void;
     /** 플로팅 표시 후 실제 processing 시작 (뷰에서 호출) */
@@ -264,7 +273,8 @@ export interface GameState {
     spinTutorialAdjacencyStep: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
-    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'level' | 'turn', value: number) => void;
+    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'culture' | 'level' | 'turn', value: number) => void;
+    devAddBoardExpansion: () => void;
     devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => void;
     devTriggerNaturalDisaster: (symbolId: number) => void;
     /** 망각의 화로: 보드 (x,y) 심볼 파괴 확정 */
@@ -279,8 +289,6 @@ export interface GameState {
     cancelEdictPick: () => void;
     /** 조몬 토기 조각·고대 유물 잔해 등 클릭 발동 유물 */
     activateClickableRelic: (instanceId: string) => void;
-    /** 소·양: 평원 인접·idle 시 도축(보드 제거; 소 +10 Food, 양 +5 Food/+5 Gold; 파괴 보상은 집계 반영) */
-    butcherPastureAnimalAt: (x: number, y: number) => void;
     /** 부족 마을: idle 시 소모하여 심볼 선택 페이즈를 연속 발동 */
     consumeTribalVillageAt: (x: number, y: number) => void;
 
@@ -346,19 +354,14 @@ export const getSymbolPoolProbabilities = (era: number, religionUnlocked: boolea
     });
 
 
-const generateRelicChoices = (): RelicDefinition[] => {
+const generateRelicChoices = (cultureLevel = 0): RelicDefinition[] => {
     // 3 unique relics
     const choices: RelicDefinition[] = [];
     const pool = [...RELIC_LIST];
     // Non-consumables are unique; owned consumables may return to later shop stocks.
     const ownedIds = new Set(useRelicStore.getState().relics.map(r => r.definition.id));
-    const available = shuffle(pool.filter(r => isRelicAvailableForShop(r.id, ownedIds)));
-
-    for (let i = 0; i < 3; i++) {
-        if (available[i]) {
-            choices.push(available[i]);
-        }
-    }
+    const available = pool.filter(r => isRelicAvailableForShop(r.id, ownedIds));
+    choices.push(...generateCultureWeightedRelicChoices(available, cultureLevel, 3));
     return choices;
 };
 
@@ -393,6 +396,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     gold: 0,
     military: 0,
     knowledge: 0,
+    culture: 0,
+    cultureLevel: 0,
     level: 0,
     era: 0,
     turn: 0,
@@ -474,10 +479,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         const expanded = expandBoardAt(state.board, x, y);
         if (!expanded) return;
         const shiftedPrev = shiftBoardToMatchExpansion(state.prevBoard, expanded.shiftX, expanded.shiftY, expanded.board);
+        const remainingBoardExpansions = state.pendingBoardExpansions - 1;
         set({
             board: expanded.board,
             prevBoard: shiftedPrev,
-            pendingBoardExpansions: state.pendingBoardExpansions - 1,
+            pendingBoardExpansions: remainingBoardExpansions,
+            phase:
+                state.phase === 'board_expansion_placement' && remainingBoardExpansions === 0
+                    ? 'relic_shop_ready'
+                    : state.phase,
             lastEffects: [],
             counterDisplayOverrides: [],
             activeSlot: null,
@@ -522,7 +532,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const hasGoldenTrade = state.leaderId === 'ramesses';
 
-        const newChoices = generateRelicChoices();
+        const newChoices = generateRelicChoices(state.cultureLevel);
         const nextHalfRelicId = pickRelicHalfPriceIdForGoldenTrade(newChoices, hasGoldenTrade);
 
         set({
@@ -574,7 +584,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
     },
 
-    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'level' | 'turn', value: number) => {
+    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'culture' | 'level' | 'turn', value: number) => {
         if (stat === 'level') {
             const L = Math.max(0, Math.min(30, Math.round(value)));
             set({ level: L, era: getEraFromLevel(L) });
@@ -590,7 +600,20 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
             return;
         }
+        if (stat === 'culture') {
+            const culture = Math.max(0, value);
+            set({ culture, cultureLevel: getCultureLevel(culture) });
+            return;
+        }
         set({ [stat]: Math.max(0, value) });
+    },
+
+    devAddBoardExpansion: () => {
+        set((state) => {
+            const remainingCapacity = getRemainingBoardExpansionCapacity(state.board);
+            if (state.pendingBoardExpansions >= remainingCapacity) return {};
+            return { pendingBoardExpansions: state.pendingBoardExpansions + 1 };
+        });
     },
 
     devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => {

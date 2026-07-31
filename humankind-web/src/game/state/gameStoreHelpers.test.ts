@@ -6,6 +6,7 @@ import {
     expandBoardAt,
     getActiveBoardCoords,
     getBoardExpansionCandidates,
+    getRemainingBoardExpansionCapacity,
     ensureStartingWildSeedsOwned,
     createInstance,
     placeOralTraditionAtBoardCenter,
@@ -47,6 +48,28 @@ describe('gameStoreHelpers starting layout', () => {
         expect(expanded!.board[1][1]?.definition.id).toBe(S.oral_tradition);
     });
 
+    it('does not offer expansions beyond the 8x6 board limit', () => {
+        const fullBoard = Array(8).fill(null).map(() => Array(6).fill(null));
+
+        expect(getActiveBoardCoords(fullBoard)).toHaveLength(48);
+        expect(getRemainingBoardExpansionCapacity(fullBoard)).toBe(0);
+        expect(getBoardExpansionCandidates(fullBoard)).toEqual([]);
+        expect(expandBoardAt(fullBoard, 8, 0)).toBeNull();
+        expect(expandBoardAt(fullBoard, 0, 6)).toBeNull();
+    });
+
+    it('allows the final slot inside the 8x6 board limit', () => {
+        const board = Array(8).fill(null).map(() => Array(6).fill(null));
+        delete board[7][5];
+
+        expect(getRemainingBoardExpansionCapacity(board)).toBe(1);
+        expect(getBoardExpansionCandidates(board)).toContainEqual({ x: 7, y: 5 });
+        const expanded = expandBoardAt(board, 7, 5);
+
+        expect(expanded).not.toBeNull();
+        expect(getActiveBoardCoords(expanded!.board)).toHaveLength(48);
+    });
+
     it('moves the center occupant when anchoring oral tradition', () => {
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
         const wildSeed = createInstance(SYMBOLS[S.wild_seeds]!, []);
@@ -79,7 +102,7 @@ describe('gameStoreHelpers starting layout', () => {
         expect(result.food).toBe(24);
     });
 
-    it('creates Oral Tradition board destroy knowledge from adjacent symbols', () => {
+    it('creates Oral Tradition board destroy culture from adjacent symbols', () => {
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
         const wheat = createInstance(SYMBOLS[S.wheat]!, []);
         const rice = createInstance(SYMBOLS[S.rice]!, []);
@@ -90,7 +113,7 @@ describe('gameStoreHelpers starting layout', () => {
 
         const effects = createStoredFoodDestroyEffects([oral], board);
 
-        expect(effects).toEqual([{ x: 2, y: 1, food: 0, gold: 0, knowledge: 20 }]);
+        expect(effects).toEqual([{ x: 2, y: 1, food: 0, gold: 0, knowledge: 0, culture: 20 }]);
     });
 
     it('forces event choices when royal colony is destroyed from collection', () => {

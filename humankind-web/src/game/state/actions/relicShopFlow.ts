@@ -40,6 +40,7 @@ export const createRelicShopFlowActions = ({ get, set }: RelicShopFlowDeps) => (
                 gold: s.gold - effectiveCost,
                 relicChoices: newChoices,
                 relicHalfPriceRelicId: s.relicHalfPriceRelicId === relicId ? null : s.relicHalfPriceRelicId,
+                ...(s.phase === 'relic_shop' ? { phase: 'idle' as const, isRelicShopOpen: false } : {}),
             };
         });
         get().appendEventLog({

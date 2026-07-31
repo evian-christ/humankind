@@ -23,7 +23,7 @@ interface GameLifecycleDeps {
     set: GameStoreSet;
     get: () => GameState;
     createInstance: (def: SymbolDefinition, unlockedUpgrades?: readonly number[]) => ReturnType<typeof import('../gameStoreHelpers').createInstance>;
-    generateRelicChoices: () => GameState['relicChoices'];
+    generateRelicChoices: (cultureLevel?: number) => GameState['relicChoices'];
     pickRelicHalfPriceIdForGoldenTrade: (
         inStock: NonNullable<GameState['relicChoices'][number]>[],
         hasGoldenTrade: boolean,
@@ -63,6 +63,8 @@ const createCommonResetPatch = () => ({
     combatFloats: [],
     relicFloats: [],
     knowledgeUpgradeFloats: [],
+    culture: 0,
+    cultureLevel: 0,
     religionUnlocked: false,
     unlockedKnowledgeUpgrades: [],
     qinCurrencyStandardTurnsRemaining: 0,

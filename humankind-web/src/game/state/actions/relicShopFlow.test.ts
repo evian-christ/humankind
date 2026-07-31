@@ -28,7 +28,7 @@ describe('relic shop flow', () => {
     });
 
     it('does not charge gold when the relic inventory is full', () => {
-        const relic = RELICS[1]!;
+        const relic = RELICS[RELIC_ID.CLOVIS_SPEAR]!;
         for (let index = 0; index < MAX_RELICS; index += 1) {
             useRelicStore.getState().addRelic(relic);
         }
@@ -78,5 +78,29 @@ describe('relic shop flow', () => {
 
         expect(useRelicStore.getState().relics).toHaveLength(MAX_RELICS + 1);
         expect(set).toHaveBeenCalled();
+    });
+
+    it('closes the scheduled relic choice after a successful purchase', () => {
+        const relic = RELICS[RELIC_ID.CLOVIS_SPEAR]!;
+        const state = {
+            phase: 'relic_shop',
+            isRelicShopOpen: true,
+            relicChoices: [relic],
+            relicHalfPriceRelicId: null,
+            leaderId: null,
+            level: 0,
+            gold: 100,
+            turn: 10,
+            appendEventLog: vi.fn(),
+        } as unknown as GameState;
+        const set = (patch: Partial<GameState> | ((current: GameState) => Partial<GameState>)) => {
+            Object.assign(state, typeof patch === 'function' ? patch(state) : patch);
+        };
+        const actions = createRelicShopFlowActions({ get: () => state, set });
+
+        actions.buyRelic(relic.id);
+
+        expect(state.phase).toBe('idle');
+        expect(state.isRelicShopOpen).toBe(false);
     });
 });

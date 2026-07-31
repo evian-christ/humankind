@@ -40,6 +40,8 @@ const makeState = (): GameState => {
         food: 0,
         gold: 0,
         knowledge: 0,
+        culture: 0,
+        cultureLevel: 0,
         level: 0,
         era: 0,
         turn: 0,
@@ -93,6 +95,7 @@ const makeState = (): GameState => {
         pendingFoodPayment: false,
         spinBoard: () => {},
         payFoodCost: () => {},
+        claimBoardExpansion: () => {},
         startProcessing: () => {},
         continueProcessingAfterNewThreatFloats: () => {},
         selectSymbol: () => {},
@@ -117,6 +120,7 @@ const makeState = (): GameState => {
         devAddSymbol: () => {},
         devRemoveSymbol: () => {},
         devSetStat: () => {},
+        devAddBoardExpansion: () => {},
         devForceScreen: () => {},
         devTriggerNaturalDisaster: () => {},
         confirmOblivionFurnaceDestroyAt: () => {},
@@ -125,7 +129,6 @@ const makeState = (): GameState => {
         confirmEdictDestroyAt: () => {},
         cancelEdictPick: () => {},
         activateClickableRelic: () => {},
-        butcherPastureAnimalAt: () => {},
         consumeTribalVillageAt: () => {},
 
         openLootAt: () => {},
@@ -249,7 +252,7 @@ describe('turnFlow actions', () => {
         expect(harness.get().pendingFoodPayment).toBe(true);
     });
 
-    it('payFoodCost subtracts the payment and grants one board expansion', () => {
+    it('payFoodCost subtracts the payment and waits for the expansion claim', () => {
         const harness = createHarness({
             phase: 'food_payment',
             turn: 10,
@@ -260,8 +263,13 @@ describe('turnFlow actions', () => {
         harness.actions.payFoodCost();
 
         expect(harness.get().food).toBe(50 - calculateFoodCost(10));
-        expect(harness.get().phase).toBe('idle');
+        expect(harness.get().phase).toBe('board_expansion_ready');
         expect(harness.get().pendingFoodPayment).toBe(false);
+        expect(harness.get().pendingBoardExpansions).toBe(0);
+
+        harness.actions.claimBoardExpansion();
+
+        expect(harness.get().phase).toBe('board_expansion_placement');
         expect(harness.get().pendingBoardExpansions).toBe(1);
     });
 
@@ -278,7 +286,7 @@ describe('turnFlow actions', () => {
         harness.actions.payFoodCost();
 
         expect(harness.get().food).toBe(0);
-        expect(harness.get().phase).toBe('idle');
+        expect(harness.get().phase).toBe('board_expansion_ready');
     });
 
     it('payFoodCost moves to game_over without subtracting when food is insufficient', () => {
