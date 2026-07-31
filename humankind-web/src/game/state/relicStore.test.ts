@@ -3,7 +3,7 @@ import { RELICS } from '../data/relicDefinitions';
 import { MAX_RELICS, useRelicStore } from './relicStore';
 import { RELIC_ID } from '../logic/relics/relicIds';
 
-const testRelic = RELICS[1]!;
+const testRelic = RELICS[RELIC_ID.CLOVIS_SPEAR]!;
 
 describe('relic store capacity', () => {
     beforeEach(() => {

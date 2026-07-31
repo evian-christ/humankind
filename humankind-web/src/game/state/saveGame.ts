@@ -9,9 +9,11 @@ import type { GamePhase, GameState, GameEventLogEntry } from './gameStore';
 import { createEmptyBoard, isBoardSlotActive } from './gameStoreHelpers';
 import { normalizeKnowledgeResearchCredits, type KnowledgeResearchCredit } from './gameCalculations';
 import { useRelicStore, type RelicInstance } from './relicStore';
+import { remapLegacyRelicId } from '../logic/relics/relicIds';
 
 const SAVE_KEY = 'humankind.save.v1';
-const SAVE_VERSION = 1;
+const LEGACY_SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 const MAX_SAVED_EVENT_LOG = 400;
 
 type SerializedBoard = (string | null | false)[][];
@@ -21,7 +23,7 @@ interface SerializedSymbol {
     instanceId: string;
     effect_counter: number;
     is_marked_for_destruction: boolean;
-    banana_permanent_food_bonus?: number;
+    rainforest_growth_bonus?: { food: number; gold: number; knowledge: number };
     stored_gold?: number;
     merchant_store_pending?: boolean;
     suppress_destroy_overlay?: boolean;
@@ -37,7 +39,7 @@ interface SerializedRelic {
 }
 
 interface SavedGame {
-    version: typeof SAVE_VERSION;
+    version: number;
     savedAt: number;
     state: {
         leaderId: GameState['leaderId'];
@@ -46,6 +48,8 @@ interface SavedGame {
         gold: number;
         military?: number;
         knowledge: number;
+        culture?: number;
+        cultureLevel?: number;
         level: number;
         era: number;
         turn: number;
@@ -100,7 +104,7 @@ const serializeSymbol = (symbol: PlayerSymbolInstance): SerializedSymbol => ({
     instanceId: symbol.instanceId,
     effect_counter: symbol.effect_counter,
     is_marked_for_destruction: symbol.is_marked_for_destruction,
-    banana_permanent_food_bonus: symbol.banana_permanent_food_bonus,
+    rainforest_growth_bonus: symbol.rainforest_growth_bonus,
     stored_gold: symbol.stored_gold,
     merchant_store_pending: symbol.merchant_store_pending,
     suppress_destroy_overlay: symbol.suppress_destroy_overlay,
@@ -120,7 +124,7 @@ const deserializeSymbol = (
         instanceId: saved.instanceId,
         effect_counter: saved.effect_counter ?? 0,
         is_marked_for_destruction: saved.is_marked_for_destruction ?? false,
-        banana_permanent_food_bonus: saved.banana_permanent_food_bonus,
+        rainforest_growth_bonus: saved.rainforest_growth_bonus,
         stored_gold: saved.stored_gold,
         merchant_store_pending: saved.merchant_store_pending,
         suppress_destroy_overlay: saved.suppress_destroy_overlay,
@@ -162,8 +166,11 @@ const serializeRelic = (relic: RelicInstance): SerializedRelic => ({
     bonus_stacks: relic.bonus_stacks,
 });
 
-const deserializeRelic = (saved: SerializedRelic): RelicInstance | null => {
-    const definition = RELICS[saved.definitionId];
+const deserializeRelic = (saved: SerializedRelic, hasLegacyRelicIds = false): RelicInstance | null => {
+    const definitionId = hasLegacyRelicIds
+        ? remapLegacyRelicId(saved.definitionId)
+        : saved.definitionId;
+    const definition = RELICS[definitionId];
     if (!definition) return null;
     return {
         definition,
@@ -195,7 +202,7 @@ export function hasSavedGame(): boolean {
     if (!raw) return false;
     try {
         const save = JSON.parse(raw) as Partial<SavedGame>;
-        return save.version === SAVE_VERSION
+        return (save.version === SAVE_VERSION || save.version === LEGACY_SAVE_VERSION)
             && save.state != null
             && save.state.phase !== 'game_over'
             && save.state.phase !== 'victory';
@@ -228,6 +235,8 @@ export function saveGameState(state: GameState): void {
             gold: state.gold,
             military: state.military ?? 0,
             knowledge: state.knowledge,
+            culture: state.culture,
+            cultureLevel: state.cultureLevel,
             level: state.level,
             era: state.era,
             turn: state.turn,
@@ -278,7 +287,8 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
 
     try {
         const save = JSON.parse(raw) as SavedGame;
-        if (save.version !== SAVE_VERSION) return null;
+        if (save.version !== SAVE_VERSION && save.version !== LEGACY_SAVE_VERSION) return null;
+        const hasLegacyRelicIds = save.version === LEGACY_SAVE_VERSION;
         if (save.state.phase === 'game_over' || save.state.phase === 'victory') {
             clearSavedGame();
             return null;
@@ -289,7 +299,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             .filter((symbol): symbol is PlayerSymbolInstance => symbol != null);
         const symbolByInstanceId = new Map(playerSymbols.map((symbol) => [symbol.instanceId, symbol]));
         const relics = save.relics
-            .map(deserializeRelic)
+            .map((relic) => deserializeRelic(relic, hasLegacyRelicIds))
             .filter((relic): relic is RelicInstance => relic != null);
         useRelicStore.getState().hydrateRelics(relics);
         const knowledgeResearchCredits = normalizeKnowledgeResearchCredits(
@@ -309,6 +319,8 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             gold: save.state.gold,
             military: save.state.military ?? 0,
             knowledge: save.state.knowledge,
+            culture: save.state.culture ?? 0,
+            cultureLevel: save.state.cultureLevel ?? 0,
             level: save.state.level,
             era: save.state.era,
             turn: save.state.turn,
@@ -316,7 +328,10 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             board: deserializeBoard(save.state.board, symbolByInstanceId),
             playerSymbols,
             symbolChoices: mapSelectionChoices(save.state.symbolChoices, save.state.unlockedKnowledgeUpgrades),
-            symbolSelectionRelicSourceId: save.state.symbolSelectionRelicSourceId,
+            symbolSelectionRelicSourceId:
+                hasLegacyRelicIds && save.state.symbolSelectionRelicSourceId != null
+                    ? remapLegacyRelicId(save.state.symbolSelectionRelicSourceId)
+                    : save.state.symbolSelectionRelicSourceId,
             symbolSelectionSymbolSourceId: save.state.symbolSelectionSymbolSourceId ?? null,
             isTurnSymbolSelection:
                 save.state.isTurnSymbolSelection ??
@@ -326,8 +341,15 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
                     save.state.symbolSelectionSymbolSourceId == null &&
                     save.state.bonusSelectionQueue.length === 0
                 ),
-            relicChoices: save.state.relicChoices.map((id) => (id == null ? null : RELICS[id] ?? null)),
-            relicHalfPriceRelicId: save.state.relicHalfPriceRelicId,
+            relicChoices: save.state.relicChoices.map((id) => {
+                if (id == null) return null;
+                const definitionId = hasLegacyRelicIds ? remapLegacyRelicId(id) : id;
+                return RELICS[definitionId] ?? null;
+            }),
+            relicHalfPriceRelicId:
+                hasLegacyRelicIds && save.state.relicHalfPriceRelicId != null
+                    ? remapLegacyRelicId(save.state.relicHalfPriceRelicId)
+                    : save.state.relicHalfPriceRelicId,
             lastEffects: [],
             counterDisplayOverrides: [],
             runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },

@@ -10,6 +10,7 @@ import { RELIC_ID } from './relicIds';
 
 describe('relicClassification', () => {
     it('keeps the five consumable relic slots in a stable display order', () => {
+        expect(CONSUMABLE_RELIC_IDS).toEqual([1, 2, 3, 4, 5]);
         expect(CONSUMABLE_RELIC_IDS).toEqual([
             RELIC_ID.ANCIENT_RELIC_DEBRIS,
             RELIC_ID.OBLIVION_FURNACE,

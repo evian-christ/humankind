@@ -5,6 +5,7 @@
  */
 
 import { SymbolType } from './symbolDefinitions';
+import { LEGACY_RELIC_ID_BY_ID } from '../logic/relics/relicIds';
 
 export type RelicRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -37,7 +38,7 @@ export const getRelicRarityColorHex = (rarity: RelicRarity): string => {
     }
 };
 
-export const RELICS: Record<number, RelicDefinition> = {
+const LEGACY_RELICS: Record<number, RelicDefinition> = {
     1: {
         id: 1,
         name: "클로비스 투창촉",
@@ -148,7 +149,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     },
     13: {
         id: 13,
-        name: "고대 유물 잔해",
+        name: "노란 인장",
         description: "심볼 선택을 1회 할 수 있습니다. 클릭하여 발동합니다.",
         cost: 10,
         rarity: "common",
@@ -166,7 +167,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     },
     15: {
         id: 15,
-        name: "국가 정비",
+        name: "검은 인장",
         description: "소모하여 보드 위에 있는 심볼 1개 파괴.",
         cost: 12,
         rarity: "common",
@@ -202,7 +203,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     },
     19: {
         id: 19,
-        name: "개척자",
+        name: "초록 인장",
         description: "지형 선택을 1회 합니다. 클릭하여 사용.",
         cost: 15,
         rarity: "common",
@@ -382,7 +383,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     },
     39: {
         id: 39,
-        name: "징집령",
+        name: "빨간 인장",
         description: "소모하여 유닛 심볼 획득. 클릭하여 사용.",
         cost: 14,
         rarity: "common",
@@ -391,7 +392,7 @@ export const RELICS: Record<number, RelicDefinition> = {
     },
     40: {
         id: 40,
-        name: "예언의 주사위",
+        name: "파란 인장",
         description: "소모하여 이벤트 선택을 발동합니다.",
         cost: 14,
         rarity: "common",
@@ -399,5 +400,17 @@ export const RELICS: Record<number, RelicDefinition> = {
         sprite: "040.png",
     },
 };
+
+export const RELICS: Record<number, RelicDefinition> = Object.fromEntries(
+    Object.entries(LEGACY_RELIC_ID_BY_ID).map(([idText, legacyId]) => {
+        const id = Number(idText);
+        const legacyRelic = LEGACY_RELICS[legacyId];
+        return [id, {
+            ...legacyRelic,
+            id,
+            sprite: `${String(id).padStart(3, '0')}.png`,
+        }];
+    }),
+);
 
 export const RELIC_LIST = Object.values(RELICS);
