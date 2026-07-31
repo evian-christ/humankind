@@ -1,4 +1,5 @@
 import type { Language } from '../game/state/settingsStore';
+import { LEGACY_RELIC_ID_BY_ID } from '../game/logic/relics/relicIds';
 import {
     AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
@@ -8,7 +9,6 @@ import {
     ELECTRICITY_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    FORESTRY_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
     GREAT_MIGRATION_UPGRADE_ID,
     GUILD_UPGRADE_ID,
@@ -23,16 +23,12 @@ import {
     OASIS_RECOVERY_UPGRADE_ID,
     PASTURE_MANAGEMENT_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
-    PRESERVATION_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
     SEAFARING_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
-    SHIPBUILDING_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     TANNING_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
-    TRACKING_UPGRADE_ID,
     TROPICAL_AGRICULTURE_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
     THREE_FIELD_SYSTEM_UPGRADE_ID,
@@ -66,6 +62,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'pause.resume': 'RESUME',
         'pause.settings': 'SETTINGS',
         'pause.mainMenu': 'MAIN MENU',
+        'pause.log': 'LOG',
 
         // Settings
         'settings.title': 'SETTINGS',
@@ -172,6 +169,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.detail.prereqComplete': 'Prerequisite complete',
         'knowledgeUpgrade.detail.prereqRequired': 'Prerequisite required',
         'knowledgeUpgrade.detail.dependent': 'Next',
+        'knowledgeUpgrade.status.researched': 'Researched',
+        'knowledgeUpgrade.status.available': 'Available',
+        'knowledgeUpgrade.status.locked': 'Locked',
         'knowledgeUpgrade.symbolRelation.pool_add': 'Added Symbols',
         'knowledgeUpgrade.symbolRelation.effect_modify': 'Changed Symbols',
         'knowledgeUpgrade.symbolRelation.pool_remove': 'Removed Symbols',
@@ -211,13 +211,13 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.22.warrior': 'Legacy military upgrade. No current effect.',
         'knowledgeUpgrade.symbolDescAfter.6.warrior': 'Legacy military upgrade. No current effect.',
         'knowledgeUpgrade.symbolDescAfter.16.wheat':
-            'Every 10 turns: 10 Food. Per adjacent Grassland: production interval shortened by 1 turn.',
+            'Every 10 turns: 10 Food. Per Grassland in the same row: production interval shortened by 1 turn.',
         'knowledgeUpgrade.symbolDescAfter.16.rice':
-            'Every 20 turns: 25 Food. Per adjacent Grassland: production interval shortened by 1 turn.',
+            'Every 20 turns: 25 Food. Per Grassland in the same row: production interval shortened by 1 turn.',
         'knowledgeUpgrade.symbolDescAfter.5.wheat':
-            'Every 10 turns: 15 Food. Adjacent to Grassland: production interval shortened by 1 turn.',
+            'Every 10 turns: 15 Food. In the same row as Grassland: production interval shortened by 1 turn.',
         'knowledgeUpgrade.symbolDescAfter.5.rice':
-            'Every 20 turns: 30 Food. Adjacent to Grassland: production interval shortened by 1 turn.',
+            'Every 20 turns: 30 Food. In the same row as Grassland: production interval shortened by 1 turn.',
         'knowledgeUpgrade.symbolDescAfter.3.plains': '+2 Food.',
         'knowledgeUpgrade.symbolDescAfter.13.warrior': 'Adds Horse to the selection pool.',
         'knowledgeUpgrade.symbolDescAfter.35.warrior': 'Horse produces +3 Food and +4 Gold.',
@@ -249,10 +249,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.60.expedition': 'When adjacent to Rainforest: +15 Gold and +15 Knowledge.',
         'knowledgeUpgrade.symbolDescAfter.26.mountain': '+5 Food, +5 Knowledge.',
         'knowledgeUpgrade.symbolDescAfter.51.mountain': '+10 Food, +10 Knowledge.',
-        'knowledgeUpgrade.symbolDescAfter.3.sheep':
-            '+1 Food; 10% chance to produce Sheep. Butcher when adjacent to Plains: +5 Food, +5 Gold.',
-        'knowledgeUpgrade.symbolDescAfter.3.cattle':
-            '+1 Food; 10% chance to produce Cattle. Butcher when adjacent to Plains: +10 Food.',
+        'knowledgeUpgrade.symbolDescAfter.3.sheep': '+1 Food; in the same column as Plains: +1 Gold.',
+        'knowledgeUpgrade.symbolDescAfter.3.cattle': '+1 Food; in the same column as Plains: +1 Food.',
         'game.reroll': 'Reroll',
         'game.rerollKnowledgeUpgrade': 'Replace this card with another upgrade (once per choice)',
         'game.skip': 'Skip',
@@ -396,6 +394,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'rarity.rare': 'Rare',
         'rarity.epic': 'Epic',
         'rarity.legendary': 'Legendary',
+        'cultureTooltip.relicRarity': 'RELIC RARITY',
+        'cultureTooltip.maxLevel': 'MAX LEVEL',
+        'cultureTooltip.nextLevel': 'NOW → LV.{level}',
 
         // Tags
         'tag.religion': 'Religion',
@@ -557,6 +558,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.rice.name': 'Rice',
         'symbol.cattle.name': 'Cattle',
         'symbol.banana.name': 'Banana',
+        'symbol.cassava.name': 'Cassava',
         'symbol.fish.name': 'Fish',
         'symbol.sea.name': 'Sea',
         'symbol.grassland.name': 'Grassland',
@@ -645,26 +647,22 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.radiant_loot.name': 'Radiant Loot',
 
         // ── Symbol Descriptions ──
-        'symbol.wheat.desc': 'Every 10 turns: 10 Food. Adjacent to Grassland: production interval shortened by 1 turn.',
-        'symbol.wheat.descBoard.both': 'Every 10 turns: 15 Food. Per adjacent Grassland: production interval shortened by 1 turn.',
-        'symbol.rice.desc': 'Every 20 turns: 25 Food. Adjacent to Grassland: production interval shortened by 1 turn.',
-        'symbol.rice.descBoard.both': 'Every 20 turns: 30 Food. Per adjacent Grassland: production interval shortened by 1 turn.',
-        'symbol.cattle.desc': '+1 Food. When adjacent to Plains, can butcher; on butcher: +10 Food.',
-        'symbol.cattle.descBoard.pastoral':
-            '+1 Food; 10% chance to produce Cattle. When adjacent to Plains, can butcher; on butcher: +10 Food.',
-        'symbol.cattle.descBoard.stirrup': '+3 Food per turn. When adjacent to Plains, can butcher; on butcher: +10 Food.',
-        'symbol.cattle.descBoard.stirrupPastoral':
-            '+3 Food per turn; 10% chance to produce Cattle. When adjacent to Plains, can butcher; on butcher: +10 Food.',
-        'symbol.banana.desc': '+1 Food; every 10 turns adjacent to Rainforest: +1 Food production.',
-        'symbol.fish.desc': 'With 1+ Sea on the board: +1 Food; 2+ Seas: +1 Food; 3+ Seas: +2 Food.',
-        'symbol.sea.desc': '+1 Gold per 4 adjacent symbols.',
+        'symbol.wheat.desc': 'Every 10 turns: 10 Food. In the same row as Grassland: production interval shortened by 1 turn.',
+        'symbol.wheat.descBoard.both': 'Every 10 turns: 15 Food. Per Grassland in the same row: production interval shortened by 1 turn.',
+        'symbol.rice.desc': 'Every 20 turns: 25 Food. In the same row as Grassland: production interval shortened by 1 turn.',
+        'symbol.rice.descBoard.both': 'Every 20 turns: 30 Food. Per Grassland in the same row: production interval shortened by 1 turn.',
+        'symbol.cattle.desc': '+1 Food; in the same column as Plains: +1 Food.',
+        'symbol.banana.desc': '+1 Food; when adjacent to Rainforest: +1 Food.',
+        'symbol.cassava.desc': 'Adds 2 Growth to an adjacent Rainforest, then is destroyed. Growth kind: Food.',
+        'symbol.fish.desc': '+2 Food per adjacent Coast.',
+        'symbol.sea.desc': 'On an edge slot: becomes Coast. Otherwise: becomes Ocean.',
         'symbol.grassland.desc': '+2 Food.',
         'symbol.grassland.descWithIrrigation': '+3 Food.',
         'symbol.grassland.descWithThreeField': '+5 Food.',
         'symbol.monument.desc': '+5 Knowledge.',
         'symbol.oasis.desc': '+2 Food per 2 adjacent empty slots.',
-        'symbol.oral_tradition.desc': 'After 10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.',
-        'symbol.rainforest.desc': '+1 Food.',
+        'symbol.oral_tradition.desc': 'After 10 turns: destroyed; on destroy: +10 Culture per adjacent symbol.',
+        'symbol.rainforest.desc': '+1 Food. When Growth reaches 10, consumes 10 Growth to permanently increase production by 1. The growth kind of the symbol that filled it decides which resource increases.',
         'symbol.plains.desc': '+1 Food.',
         'symbol.mountain.desc': '+2 Food, +2 Knowledge.',
         'symbol.totem.desc': 'In a corner: +12 Knowledge.',
@@ -679,8 +677,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.pearl.desc': 'With 1+ Sea on the board: +1 Gold; 2+ Seas: +1 Gold; 3+ Seas: +1 Gold.',
         'symbol.compass.desc': 'With 1+ Sea on the board: +5 Knowledge; 2+ Seas: +5 Knowledge; 3+ Seas: +5 Knowledge.',
         'symbol.desert.desc': 'Destroys 1 random adjacent Resource, Luxury, or era symbol. When Desert destroys a symbol: +5 Food.',
-        'symbol.forest.desc': 'If 3 or more Forests are placed on the board: +2 Food; 5 or more: +1 Gold; if Forest is the only terrain on the board: +1 Food.',
-        'symbol.deer.desc': '+1 Food per adjacent Forest.',
+        'symbol.forest.desc': 'Every 10 turns: produces a random Seal. When adjacent to Forest: +1 Food.',
+        'symbol.deer.desc': 'When adjacent to Forest: +2 Food.',
         'symbol.loot.desc': 'Open to gain a Normal reward. When adjacent to Loot: absorb it and upgrade into Greater Loot.',
         'symbol.greater_loot.desc': 'Open to gain a Large reward. When adjacent to Greater Loot: absorb it and upgrade into Radiant Loot.',
         'symbol.radiant_loot.desc': 'Open to gain an Extra Large reward.',
@@ -690,11 +688,11 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.islam.desc': '+2 Food per Knowledge-producing symbol on the board. Destroyed if two or more Religion symbols are on the board.',
         'symbol.buddhism.desc': '+2 Food per empty slot on the board. Destroyed if two or more Religion symbols are on the board.',
         'symbol.hinduism.desc': 'If there are no duplicate symbols on the board: +1 Food per 2 symbols on the board. Destroyed if two or more Religion symbols are on the board.',
-        'symbol.militia.desc': '+3 Military. Destroyed after 5 turns.',
-        'symbol.warrior.desc': '+2 Military.',
-        'symbol.archer.desc': '+1 Military; adjacent to Forest or Mountain: +3 Military.',
-        'symbol.horseman.desc': '+1 Military; if there is an Enemy symbol on the board: +5 Military.',
-        'symbol.mercenary.desc': '+4 Military; -2 Gold.',
+        'symbol.militia.desc': '+3 Military Power. Destroyed after 5 turns.',
+        'symbol.warrior.desc': '+2 Military Power.',
+        'symbol.archer.desc': '+1 Military Power; adjacent to Forest or Mountain: +3 Military Power.',
+        'symbol.horseman.desc': '+1 Military Power; if there is an Enemy symbol on the board: +5 Military Power.',
+        'symbol.mercenary.desc': '+4 Military Power; -2 Gold.',
         'symbol.relic_caravan.desc': 'Destroyed; on destroy: refreshes relic shop.',
         'symbol.stargazer.desc': 'Per 4 empty slots: +4 Knowledge.',
         'symbol.stone_tablet.desc': 'Per non-consumable relic owned: +2 Knowledge.',
@@ -721,10 +719,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.tax.desc': '+Gold equal to a random adjacent symbol\'s Food produced this turn.',
         'symbol.aqueduct.desc': 'Adjacent Wheat, Rice, and Rye produce double Food this turn.',
         'symbol.rye.desc': '+2 Food; when adjacent to Plains: +2 Food.',
-        'symbol.sheep.desc':
-            '+1 Food. When adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold.',
-        'symbol.sheep.descBoard.pastoral':
-            '+1 Food; 10% chance to produce Sheep. When adjacent to Plains, can butcher; on butcher: +5 Food, +5 Gold.',
+        'symbol.sheep.desc': '+1 Food; in the same column as Plains: +1 Gold.',
         'symbol.scholar.desc': 'Destroys all adjacent Ancient symbols. This Scholar permanently produces +5 Knowledge per Ancient symbol destroyed.',
         'symbol.holy_relic.desc': 'If there is a Religion symbol on the board: +7 Knowledge, +7 Gold.',
         'symbol.monastery_garden.desc': 'If there is a Religion symbol on the board: +7 Food, +7 Knowledge.',
@@ -763,11 +758,11 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'relic.11.desc': 'If 15 or more symbols on the board: +5 Food.',
         'relic.12.name': 'Ancient Egyptian Scarab Amulet',
         'relic.12.desc': 'At end of turn, gain 3 Gold per symbol destroyed this turn.',
-        'relic.13.name': 'Ancient Relic Debris',
+        'relic.13.name': 'Yellow Seal',
         'relic.13.desc': 'Consumes this relic to trigger a symbol selection.',
         'relic.14.name': 'Epicurus\' Atomic Plaque',
         'relic.14.desc': 'If no Religion symbol on the board: +3 Knowledge per turn.',
-        'relic.15.name': 'State Reorganization',
+        'relic.15.name': 'Black Seal',
         'relic.15.desc': 'Consumes this relic to destroy 1 symbol on the board.',
         'relic.16.name': 'Terra Fossil Grape',
         'relic.16.desc': 'Natural disaster symbols produce +2 Food.',
@@ -775,7 +770,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'relic.17.desc': 'When you skip symbol selection: +2 Gold.',
         'relic.18.name': 'Andean Chuño',
         'relic.18.desc': '+2 Food per turn.',
-        'relic.19.name': 'Pioneer',
+        'relic.19.name': 'Green Seal',
         'relic.19.desc': 'Consumes this relic to trigger a terrain selection.',
         'relic.20.name': 'Lascaux Cave Pigment',
         'relic.20.desc': 'Every 5 turns: gain +5 random Food, Gold, or Knowledge.',
@@ -815,9 +810,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'relic.37.desc': 'One-use: immediately gain +30 Food. Click to use.',
         'relic.38.name': 'Ashurbanipal Index Tablet',
         'relic.38.desc': 'If there are no duplicate symbols on the board: +5 Food and +5 Gold per turn.',
-        'relic.39.name': 'Conscription Order',
+        'relic.39.name': 'Red Seal',
         'relic.39.desc': 'Consumes this relic to trigger a unit selection.',
-        'relic.40.name': 'Prophecy Die',
+        'relic.40.name': 'Blue Seal',
         'relic.40.desc': 'Consumes this relic to trigger an event selection.',
 
         // ── Knowledge Upgrades ──
@@ -862,15 +857,15 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.75.name': 'Total Mobilization',
         'knowledgeUpgrade.75.desc': 'Gain 4 Conscription Orders.',
         'knowledgeUpgrade.4.name': 'Fisheries',
-        'knowledgeUpgrade.4.desc': 'Crab and Pearl are added to the symbol selection pool.',
+        'knowledgeUpgrade.4.desc': 'Unlocks Pearl.',
         'knowledgeUpgrade.14.name': 'Navigation',
         'knowledgeUpgrade.14.desc': 'Upgrades Fish and Crab.',
         'knowledgeUpgrade.15.name': 'Celestial Navigation',
         'knowledgeUpgrade.15.desc': 'Upgrades Pearl and Sea.',
         [`knowledgeUpgrade.${TROPICAL_AGRICULTURE_UPGRADE_ID}.name`]: 'Tropical Agriculture',
-        [`knowledgeUpgrade.${TROPICAL_AGRICULTURE_UPGRADE_ID}.desc`]: 'Upgrades Rainforest.',
+        [`knowledgeUpgrade.${TROPICAL_AGRICULTURE_UPGRADE_ID}.desc`]: 'Unlocks Cassava.',
         'knowledgeUpgrade.2.name': 'Hunting',
-        'knowledgeUpgrade.2.desc': 'Unlocks Fur for selection.',
+        'knowledgeUpgrade.2.desc': 'Unlocks Deer.',
         'knowledgeUpgrade.10.name': 'Law Code',
         'knowledgeUpgrade.10.desc': 'Base Knowledge production +2.',
         'knowledgeUpgrade.7.name': 'Foreign Trade',
@@ -922,9 +917,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.1.name': 'Ancient Era',
         'knowledgeUpgrade.1.desc': 'Unlocks all Ancient symbols. Expand the slot board three times.',
         'knowledgeUpgrade.3.name': 'Pastoralism',
-        'knowledgeUpgrade.3.desc': 'Upgrades Cattle, Sheep, and Plains.',
+        'knowledgeUpgrade.3.desc': 'Unlocks Sheep.',
         'knowledgeUpgrade.5.name': 'Agriculture',
-        'knowledgeUpgrade.5.desc': 'Upgrades Wheat and Rice.',
+        'knowledgeUpgrade.5.desc': 'Unlocks Rice.',
         'knowledgeUpgrade.26.name': 'Medieval Age',
         'knowledgeUpgrade.26.desc': 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2. Upgrades Mountain. Expand the slot board three times.',
         'knowledgeUpgrade.51.name': 'Modern Age',
@@ -990,8 +985,6 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'edictBoard.title': 'Edict: destroy an adjacent symbol',
         'edictBoard.remove': 'Destroy',
         'edictBoard.cancel': 'Cancel',
-        'cattleButcher.button': 'Butcher',
-        'cattleButcher.aria': 'Butcher for bonus resources',
         'lootOpen.button': 'Open',
         'lootOpen.aria': 'Open for treasure rewards',
         'lootReward.title.small': 'Open Loot',
@@ -1035,6 +1028,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'pause.resume': '계속하기',
         'pause.settings': '설정',
         'pause.mainMenu': '메인 메뉴',
+        'pause.log': '로그',
 
         // Settings
         'settings.title': '설정',
@@ -1142,6 +1136,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.detail.prereqComplete': '선행 완료',
         'knowledgeUpgrade.detail.prereqRequired': '선행 필요',
         'knowledgeUpgrade.detail.dependent': '후속',
+        'knowledgeUpgrade.status.researched': '연구 완료',
+        'knowledgeUpgrade.status.available': '연구 가능',
+        'knowledgeUpgrade.status.locked': '잠김',
         'knowledgeUpgrade.symbolRelation.pool_add': '추가되는 심볼',
         'knowledgeUpgrade.symbolRelation.effect_modify': '변경되는 심볼',
         'knowledgeUpgrade.symbolRelation.pool_remove': '제거되는 심볼',
@@ -1181,10 +1178,10 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.9.archer': '레거시 군사 업그레이드입니다. 현재 효과 없음.',
         'knowledgeUpgrade.symbolDescAfter.22.warrior': '레거시 군사 업그레이드입니다. 현재 효과 없음.',
         'knowledgeUpgrade.symbolDescAfter.6.warrior': '레거시 군사 업그레이드입니다. 현재 효과 없음.',
-        'knowledgeUpgrade.symbolDescAfter.16.wheat': '10턴마다: 식량10. 인접한 초원 1개당: 생산 주기 1턴 단축.',
-        'knowledgeUpgrade.symbolDescAfter.16.rice': '20턴마다: 식량25. 인접한 초원 1개당: 생산 주기 1턴 단축.',
-        'knowledgeUpgrade.symbolDescAfter.5.wheat': '10턴마다: 식량15. 초원에 인접 시: 생산 주기 1턴 단축.',
-        'knowledgeUpgrade.symbolDescAfter.5.rice': '20턴마다: 식량30. 초원에 인접 시: 생산 주기 1턴 단축.',
+        'knowledgeUpgrade.symbolDescAfter.16.wheat': '10턴마다: 식량10. 같은 가로줄의 초원 1개당: 생산 주기 1턴 단축.',
+        'knowledgeUpgrade.symbolDescAfter.16.rice': '20턴마다: 식량25. 같은 가로줄의 초원 1개당: 생산 주기 1턴 단축.',
+        'knowledgeUpgrade.symbolDescAfter.5.wheat': '10턴마다: 식량15. 초원과 같은 가로줄에 있을 시: 생산 주기 1턴 단축.',
+        'knowledgeUpgrade.symbolDescAfter.5.rice': '20턴마다: 식량30. 초원과 같은 가로줄에 있을 시: 생산 주기 1턴 단축.',
         'knowledgeUpgrade.symbolDescAfter.3.plains': '식량 +2.',
         'knowledgeUpgrade.symbolDescAfter.14.fish': '보드에 배치된 바다가 1개 이상: 식량 +2; 2개 이상: 식량 +1; 3개 이상: 식량 +2.',
         'knowledgeUpgrade.symbolDescAfter.14.crab': '보드에 배치된 바다가 1개 이상: 식량 +2, 골드 +1; 2개 이상: 식량 +1, 골드 +1.',
@@ -1214,10 +1211,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.symbolDescAfter.60.expedition': '열대우림 인접 시: 골드 +15, 지식 +15.',
         'knowledgeUpgrade.symbolDescAfter.26.mountain': '식량 +5, 지식 +5.',
         'knowledgeUpgrade.symbolDescAfter.51.mountain': '식량 +10, 지식 +10.',
-        'knowledgeUpgrade.symbolDescAfter.3.sheep':
-            '식량 +1; 10% 확률로 양 생산. 평원 인접 시 도축 시 식량 +5, 골드 +5.',
-        'knowledgeUpgrade.symbolDescAfter.3.cattle':
-            '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 시 식량 +10.',
+        'knowledgeUpgrade.symbolDescAfter.3.sheep': '식량 +1; 평원과 같은 세로줄에 있을 시: 골드 +1.',
+        'knowledgeUpgrade.symbolDescAfter.3.cattle': '식량 +1; 평원과 같은 세로줄에 있을 시: 식량 +1.',
         'game.reroll': '리롤',
         'game.rerollKnowledgeUpgrade': '이 카드를 다른 업그레이드로 바꾸기 (이번 선택에 한 번만)',
         'game.skip': '건너뛰기',
@@ -1355,6 +1350,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'rarity.rare': '희귀',
         'rarity.epic': '영웅',
         'rarity.legendary': '전설',
+        'cultureTooltip.relicRarity': '유물 희귀도',
+        'cultureTooltip.maxLevel': '최대 레벨',
+        'cultureTooltip.nextLevel': '현재 → Lv.{level}',
 
         // Tags
         'tag.religion': '종교',
@@ -1516,6 +1514,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.rice.name': '쌀',
         'symbol.cattle.name': '소',
         'symbol.banana.name': '바나나',
+        'symbol.cassava.name': '카사바',
         'symbol.fish.name': '물고기',
         'symbol.sea.name': '바다',
         'symbol.grassland.name': '초원',
@@ -1603,26 +1602,22 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.radiant_loot.name': '빛나는 전리품',
 
         // ── Symbol Descriptions ──
-        'symbol.wheat.desc': '10턴마다: 식량10. 초원에 인접 시: 생산 주기 1턴 단축.',
-        'symbol.wheat.descBoard.both': '10턴마다: 식량15. 인접한 초원 1개당: 생산 주기 1턴 단축.',
-        'symbol.rice.desc': '20턴마다: 식량25. 초원에 인접 시: 생산 주기 1턴 단축.',
-        'symbol.rice.descBoard.both': '20턴마다: 식량30. 인접한 초원 1개당: 생산 주기 1턴 단축.',
-        'symbol.cattle.desc': '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +10.',
-        'symbol.cattle.descBoard.pastoral':
-            '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +10.',
-        'symbol.cattle.descBoard.stirrup': '턴당 식량 +3. 평원 인접 시 도축 가능; 도축 시: 식량 +10.',
-        'symbol.cattle.descBoard.stirrupPastoral':
-            '턴당 식량 +3; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +10.',
-        'symbol.banana.desc': '식량 +1; 열대우림에 10회 인접마다: 식량 생산 +1.',
-        'symbol.fish.desc': '보드에 배치된 바다가 1개 이상: 식량 +1; 2개 이상: 식량 +1; 3개 이상: 식량 +2.',
-        'symbol.sea.desc': '인접한 심볼 4개당: 골드 +1.',
+        'symbol.wheat.desc': '10턴마다: 식량10. 초원과 같은 가로줄에 있을 시: 생산 주기 1턴 단축.',
+        'symbol.wheat.descBoard.both': '10턴마다: 식량15. 같은 가로줄의 초원 1개당: 생산 주기 1턴 단축.',
+        'symbol.rice.desc': '20턴마다: 식량25. 초원과 같은 가로줄에 있을 시: 생산 주기 1턴 단축.',
+        'symbol.rice.descBoard.both': '20턴마다: 식량30. 같은 가로줄의 초원 1개당: 생산 주기 1턴 단축.',
+        'symbol.cattle.desc': '식량 +1; 평원과 같은 세로줄에 있을 시: 식량 +1.',
+        'symbol.banana.desc': '식량 +1; 열대우림에 인접 시: 식량 +1.',
+        'symbol.cassava.desc': '인접한 열대우림에 성장치 +2 후 파괴. 성장 종류: 식량.',
+        'symbol.fish.desc': '인접한 해안 1개당: 식량 +2.',
+        'symbol.sea.desc': '가장자리에 배치 시: 해안이 됩니다. 그 외: 해양이 됩니다.',
         'symbol.grassland.desc': '식량 +2.',
         'symbol.grassland.descWithIrrigation': '식량 +3.',
         'symbol.grassland.descWithThreeField': '식량 +5.',
         'symbol.monument.desc': '지식 +5.',
         'symbol.oasis.desc': '인접 빈 슬롯 2개당: 식량 +2.',
-        'symbol.oral_tradition.desc': '10턴 후: 파괴; 파괴 시: 인접 심볼 1개당 지식 +10.',
-        'symbol.rainforest.desc': '식량 +1.',
+        'symbol.oral_tradition.desc': '10턴 후: 파괴; 파괴 시: 인접 심볼 1개당 문화 +10.',
+        'symbol.rainforest.desc': '식량 +1. 성장치가 10 이상이 되면 10을 소모하여 생산량이 영구히 +1 증가합니다. 성장치가 10이 되게 만든 심볼의 성장 종류에 따라 증가하는 생산량이 결정됩니다.',
         'symbol.plains.desc': '식량 +1.',
         'symbol.mountain.desc': '식량 +2, 지식 +2.',
         'symbol.totem.desc': '구석 배치 시: 지식 +12.',
@@ -1637,8 +1632,8 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.pearl.desc': '보드에 배치된 바다가 1개 이상: 골드 +1; 2개 이상: 골드 +1; 3개 이상: 골드 +1.',
         'symbol.compass.desc': '보드에 배치된 바다가 1개 이상: 지식 +5; 2개 이상: 지식 +5; 3개 이상: 지식 +5.',
         'symbol.desert.desc': '무작위 인접한 자원, 사치품, 시대 심볼 1개 파괴. 사막 효과로 심볼 파괴 시: 식량 +5.',
-        'symbol.forest.desc': '보드에 배치된 숲이 3개 이상: 식량 +2; 5개 이상: 골드 +1; 보드에 유일한 지형이 숲이면: 식량 +1.',
-        'symbol.deer.desc': '인접한 숲마다: 식량 +1.',
+        'symbol.forest.desc': '10턴마다: 무작위 인장을 생산합니다; 숲에 인접 시: 식량 +1.',
+        'symbol.deer.desc': '숲에 인접 시: 식량 +2.',
         'symbol.loot.desc': '개봉하여 일반 보상을 획득합니다. 전리품에 인접 시: 흡수하며 대형 전리품으로 업그레이드 됩니다.',
         'symbol.greater_loot.desc': '개봉하여 대형 보상을 획득합니다. 대형 전리품에 인접 시: 흡수하며 빛나는 전리품으로 업그레이드 됩니다.',
         'symbol.radiant_loot.desc': '개봉하여 초대형 보상을 획득합니다.',
@@ -1679,10 +1674,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'symbol.tax.desc': '무작위 인접 심볼이 이번 턴 생산한 식량만큼 골드를 생산합니다.',
         'symbol.aqueduct.desc': '인접한 밀·쌀·귀리의 이번 턴 식량 생산이 2배가 됩니다.',
         'symbol.rye.desc': '식량 +2. 평원 인접 시: 식량 +2.',
-        'symbol.sheep.desc':
-            '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +5.',
-        'symbol.sheep.descBoard.pastoral':
-            '식량 +1; 10% 확률로 양 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +5, 골드 +5.',
+        'symbol.sheep.desc': '식량 +1; 평원과 같은 세로줄에 있을 시: 골드 +1.',
         'symbol.scholar.desc': '인접한 고대 심볼을 모두 파괴합니다. 파괴한 고대 심볼 하나당 이 학자의 지식 생산량이 영구적으로 +5.',
         'symbol.holy_relic.desc': '보드 위에 종교 심볼이 있으면: 지식 +7, 골드 +7.',
         'symbol.monastery_garden.desc': '보드 위에 종교 심볼이 있으면: 식량 +7, 지식 +7.',
@@ -1721,11 +1713,11 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'relic.11.desc': '보드에 심볼이 15개 이상이면 매 턴 식량 5를 생산합니다.',
         'relic.12.name': '이집트 쇠똥구리 부적',
         'relic.12.desc': '이번 턴에 파괴된 심볼 하나당, 턴 종료 시 골드 3을 생산합니다.',
-        'relic.13.name': '고대 유물 잔해',
+        'relic.13.name': '노란 인장',
         'relic.13.desc': '소모하여 심볼 선택을 발동합니다.',
         'relic.14.name': '에피쿠로스 원자론 명판',
         'relic.14.desc': '보드에 종교 심볼이 없으면 매 턴 지식 +3.',
-        'relic.15.name': '국가 정비',
+        'relic.15.name': '검은 인장',
         'relic.15.desc': '소모하여 보드 위에 있는 심볼 1개 파괴.',
         'relic.16.name': '테라의 화석 포도',
         'relic.16.desc': '자연재해 심볼이 식량 +2를 추가로 생산합니다.',
@@ -1733,7 +1725,7 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'relic.17.desc': '심볼 선택을 건너뛰면 골드 +2.',
         'relic.18.name': '안데스의 추뇨',
         'relic.18.desc': '매 턴 식량 +2.',
-        'relic.19.name': '개척자',
+        'relic.19.name': '초록 인장',
         'relic.19.desc': '소모하여 지형 선택을 발동합니다.',
         'relic.20.name': '라스코 동굴 안료',
         'relic.20.desc': '매 5턴마다 식량/골드/지식 중 무작위 1종 +5.',
@@ -1773,9 +1765,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'relic.37.desc': '1회용: 즉시 식량 +30. 클릭하여 사용.',
         'relic.38.name': '아슈르바니팔 색인 점토판',
         'relic.38.desc': '보드 위에 같은 심볼이 하나도 없을 때 매 턴 식량 +5, 골드 +5.',
-        'relic.39.name': '징집령',
+        'relic.39.name': '빨간 인장',
         'relic.39.desc': '소모하여 유닛 선택을 발동합니다.',
-        'relic.40.name': '예언의 주사위',
+        'relic.40.name': '파란 인장',
         'relic.40.desc': '소모하여 이벤트 선택을 발동합니다.',
 
         // ── Knowledge Upgrades ──
@@ -1818,15 +1810,15 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.75.name': '총동원령',
         'knowledgeUpgrade.75.desc': '징집령 4개를 획득합니다.',
         'knowledgeUpgrade.4.name': '어업',
-        'knowledgeUpgrade.4.desc': '게와 진주를 해금합니다.',
+        'knowledgeUpgrade.4.desc': '진주를 해금합니다.',
         'knowledgeUpgrade.14.name': '항해술',
         'knowledgeUpgrade.14.desc': '물고기와 게를 업그레이드합니다.',
         'knowledgeUpgrade.15.name': '천문항법',
         'knowledgeUpgrade.15.desc': '진주와 바다를 업그레이드합니다.',
         [`knowledgeUpgrade.${TROPICAL_AGRICULTURE_UPGRADE_ID}.name`]: '열대 농경',
-        [`knowledgeUpgrade.${TROPICAL_AGRICULTURE_UPGRADE_ID}.desc`]: '열대우림을 업그레이드합니다.',
+        [`knowledgeUpgrade.${TROPICAL_AGRICULTURE_UPGRADE_ID}.desc`]: '카사바를 해금합니다.',
         'knowledgeUpgrade.2.name': '수렵',
-        'knowledgeUpgrade.2.desc': '모피를 해금합니다.',
+        'knowledgeUpgrade.2.desc': '사슴을 해금합니다.',
         'knowledgeUpgrade.10.name': '법전',
         'knowledgeUpgrade.10.desc': '기본 지식 생산 +2.',
         'knowledgeUpgrade.7.name': '외국 무역',
@@ -1878,9 +1870,9 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'knowledgeUpgrade.1.name': '고대 시대',
         'knowledgeUpgrade.1.desc': '고대 심볼을 모두 해금합니다. 슬롯 보드를 3회 확장합니다.',
         'knowledgeUpgrade.3.name': '목축업',
-        'knowledgeUpgrade.3.desc': '소, 양, 평원을 업그레이드합니다.',
+        'knowledgeUpgrade.3.desc': '양을 해금합니다.',
         'knowledgeUpgrade.5.name': '농업',
-        'knowledgeUpgrade.5.desc': '밀과 쌀을 업그레이드합니다.',
+        'knowledgeUpgrade.5.desc': '쌀을 해금합니다.',
         'knowledgeUpgrade.26.name': '중세시대',
         'knowledgeUpgrade.26.desc': '고대 심볼이 더 이상 등장하지 않습니다. 중세 심볼을 모두 해금합니다. 지형 심볼 등장 확률이 x0.2로 감소합니다. 산이 업그레이드됩니다. 슬롯 보드를 3회 확장합니다.',
         'knowledgeUpgrade.51.name': '현대 시대',
@@ -1946,8 +1938,6 @@ const translations: Partial<Record<Language, Record<string, string>>> & Record<'
         'edictBoard.title': '칙령: 인접 심볼 파괴',
         'edictBoard.remove': '파괴',
         'edictBoard.cancel': '취소',
-        'cattleButcher.button': '도축',
-        'cattleButcher.aria': '도축 시 보너스 획득',
         'lootOpen.button': '개봉',
         'lootOpen.aria': '전리품 보상 개봉',
         'lootReward.title.small': '전리품 개봉',
@@ -2009,22 +1999,22 @@ function cropThreeFieldDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgri
         : hasAgriculture ? 30 : 25;
     if (lang === 'ko') {
         return symbolKey === 'wheat'
-            ? `10턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원 1개당: 생산 주기 1턴 단축.`
-            : `20턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원 1개당: 생산 주기 1턴 단축.`;
+            ? `10턴마다: 식량 +${food}+보드 위 초원 수. 같은 가로줄의 초원 1개당: 생산 주기 1턴 단축.`
+            : `20턴마다: 식량 +${food}+보드 위 초원 수. 같은 가로줄의 초원 1개당: 생산 주기 1턴 단축.`;
     }
     if (lang === 'zh') {
         return symbolKey === 'wheat'
-            ? `每 10 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：生产周期缩短 1 回合。`
-            : `每 20 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：生产周期缩短 1 回合。`;
+            ? `每 10 回合获得 ${food} 食物 + 棋盘上的草原数量。同一行中每个草原：生产周期缩短 1 回合。`
+            : `每 20 回合获得 ${food} 食物 + 棋盘上的草原数量。同一行中每个草原：生产周期缩短 1 回合。`;
     }
     if (lang === 'ru') {
         return symbolKey === 'wheat'
-            ? `Каждые 10 ходов: ${food} еды + количество лугов на поле. За каждый соседний луг: интервал производства сокращается на 1 ход.`
-            : `Каждые 20 ходов: ${food} еды + количество лугов на поле. За каждый соседний луг: интервал производства сокращается на 1 ход.`;
+            ? `Каждые 10 ходов: ${food} еды + количество лугов на поле. За каждый луг в том же ряду: интервал производства сокращается на 1 ход.`
+            : `Каждые 20 ходов: ${food} еды + количество лугов на поле. За каждый луг в том же ряду: интервал производства сокращается на 1 ход.`;
     }
     return symbolKey === 'wheat'
-        ? `Every 10 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: production interval shortened by 1 turn.`
-        : `Every 20 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: production interval shortened by 1 turn.`;
+        ? `Every 10 turns: ${food} Food + number of Grasslands on the board. Per Grassland in the same row: production interval shortened by 1 turn.`
+        : `Every 20 turns: ${food} Food + number of Grasslands on the board. Per Grassland in the same row: production interval shortened by 1 turn.`;
 }
 
 function cropAgriculturalSurplusDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgriculture: boolean): string {
@@ -2033,22 +2023,22 @@ function cropAgriculturalSurplusDesc(symbolKey: 'wheat' | 'rice', lang: Language
         : hasAgriculture ? 30 : 25;
     if (lang === 'ko') {
         return symbolKey === 'wheat'
-            ? `10턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원 1개당: 생산 주기 2턴 단축.`
-            : `20턴마다: 식량 +${food}+보드 위 초원 수. 인접한 초원 1개당: 생산 주기 2턴 단축.`;
+            ? `10턴마다: 식량 +${food}+보드 위 초원 수. 같은 가로줄의 초원 1개당: 생산 주기 2턴 단축.`
+            : `20턴마다: 식량 +${food}+보드 위 초원 수. 같은 가로줄의 초원 1개당: 생산 주기 2턴 단축.`;
     }
     if (lang === 'zh') {
         return symbolKey === 'wheat'
-            ? `每 10 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：生产周期缩短 2 回合。`
-            : `每 20 回合获得 ${food} 食物 + 棋盘上的草原数量。每个相邻草原：生产周期缩短 2 回合。`;
+            ? `每 10 回合获得 ${food} 食物 + 棋盘上的草原数量。同一行中每个草原：生产周期缩短 2 回合。`
+            : `每 20 回合获得 ${food} 食物 + 棋盘上的草原数量。同一行中每个草原：生产周期缩短 2 回合。`;
     }
     if (lang === 'ru') {
         return symbolKey === 'wheat'
-            ? `Каждые 10 ходов: ${food} еды + количество лугов на поле. За каждый соседний луг: интервал производства сокращается на 2 хода.`
-            : `Каждые 20 ходов: ${food} еды + количество лугов на поле. За каждый соседний луг: интервал производства сокращается на 2 хода.`;
+            ? `Каждые 10 ходов: ${food} еды + количество лугов на поле. За каждый луг в том же ряду: интервал производства сокращается на 2 хода.`
+            : `Каждые 20 ходов: ${food} еды + количество лугов на поле. За каждый луг в том же ряду: интервал производства сокращается на 2 хода.`;
     }
     return symbolKey === 'wheat'
-        ? `Every 10 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: production interval shortened by 2 turns.`
-        : `Every 20 turns: ${food} Food + number of Grasslands on the board. Per adjacent Grassland: production interval shortened by 2 turns.`;
+        ? `Every 10 turns: ${food} Food + number of Grasslands on the board. Per Grassland in the same row: production interval shortened by 2 turns.`
+        : `Every 20 turns: ${food} Food + number of Grasslands on the board. Per Grassland in the same row: production interval shortened by 2 turns.`;
 }
 
 function cropModernAgricultureDesc(symbolKey: 'wheat' | 'rice', lang: Language, hasAgriculture: boolean): string {
@@ -2091,59 +2081,13 @@ export function getBoardSymbolTooltipDesc(
             : t('symbol.grassland.desc', lang);
     }
     if (symbolKey === 'cattle') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        const hasPast = have.has(PASTORALISM_UPGRADE_ID);
-        const hasNomadicTradition = have.has(NOMADIC_TRADITION_UPGRADE_ID);
-        if (hasNomadicTradition && hasPast) {
-            if (lang === 'zh') {
-                return '+1 食物；10% 概率生产牛。与平原相邻时可屠宰；屠宰时：+20 食物。';
-            }
-            return lang === 'ko'
-                ? '식량 +1; 10% 확률로 소 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +20.'
-                : '+1 Food; 10% chance to produce Cattle. When adjacent to Plains, can butcher; on butcher: +20 Food.';
-        }
-        if (hasNomadicTradition) {
-            if (lang === 'zh') {
-                return '+1 食物。与平原相邻时可屠宰；屠宰时：+20 食物。';
-            }
-            return lang === 'ko'
-                ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +20.'
-                : '+1 Food. When adjacent to Plains, can butcher; on butcher: +20 Food.';
-        }
-        if (hasPast) return t('symbol.cattle.descBoard.pastoral', lang);
         return t('symbol.cattle.desc', lang);
     }
     if (symbolKey === 'sheep') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        if (have.has(NOMADIC_TRADITION_UPGRADE_ID)) {
-            if (lang === 'zh') {
-                return have.has(PASTORALISM_UPGRADE_ID)
-                    ? '+1 食物；10% 概率生产羊。与平原相邻时可屠宰；屠宰时：+10 食物，+10 金币。'
-                    : '+1 食物。与平原相邻时可屠宰；屠宰时：+10 食物，+10 金币。';
-            }
-            return have.has(PASTORALISM_UPGRADE_ID)
-                ? lang === 'ko'
-                    ? '식량 +1; 10% 확률로 양 생산. 평원 인접 시 도축 가능; 도축 시: 식량 +10, 골드 +10.'
-                    : '+1 Food; 10% chance to produce Sheep. When adjacent to Plains, can butcher; on butcher: +10 Food, +10 Gold.'
-                : lang === 'ko'
-                    ? '식량 +1. 평원 인접 시 도축 가능; 도축 시: 식량 +10, 골드 +10.'
-                    : '+1 Food. When adjacent to Plains, can butcher; on butcher: +10 Food, +10 Gold.';
-        }
-        return have.has(PASTORALISM_UPGRADE_ID)
-            ? t('symbol.sheep.descBoard.pastoral', lang)
-            : t('symbol.sheep.desc', lang);
+        return t('symbol.sheep.desc', lang);
     }
     if (symbolKey === 'plains') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        const base = have.has(PASTORALISM_UPGRADE_ID) ? 2 : 1;
-        if (have.has(PASTURE_MANAGEMENT_UPGRADE_ID)) {
-            if (lang === 'zh') {
-                return `+${base} 食物 + 计数器。相邻的牛或羊被屠宰时：计数器 +1。`;
-            }
-            return lang === 'ko'
-                ? `식량 +${base}+카운터. 인접한 소 또는 양이 도축될 때: 카운터 +1.`
-                : `+${base} Food + Counter. When adjacent Cattle or Sheep is butchered: +1 Counter.`;
-        }
         if (have.has(PASTORALISM_UPGRADE_ID)) {
             if (lang === 'zh') {
                 return '+2 食物。';
@@ -2154,16 +2098,7 @@ export function getBoardSymbolTooltipDesc(
         }
         return t('symbol.plains.desc', lang);
     }
-    if (symbolKey === 'fish') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(OCEANIC_ROUTES_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.52.fish', lang)
-            : have.has(FISHERY_GUILD_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.27.fish', lang)
-            : have.has(SEAFARING_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.14.fish', lang)
-            : t('symbol.fish.desc', lang);
-    }
+    // 물고기는 인접 해안 기반으로 바뀌어 지식 업그레이드 오버라이드가 없습니다.
     if (symbolKey === 'crab') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         return have.has(OCEANIC_ROUTES_UPGRADE_ID)
@@ -2174,30 +2109,7 @@ export function getBoardSymbolTooltipDesc(
             ? t('knowledgeUpgrade.symbolDescAfter.14.crab', lang)
             : t('symbol.crab.desc', lang);
     }
-    if (symbolKey === 'sea') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        if (have.has(SHIPBUILDING_UPGRADE_ID) && have.has(OCEANIC_ROUTES_UPGRADE_ID)) {
-            return t('knowledgeUpgrade.symbolDescAfter.52.seaWithShipbuilding', lang);
-        }
-        if (have.has(OCEANIC_ROUTES_UPGRADE_ID)) {
-            return t('knowledgeUpgrade.symbolDescAfter.52.sea', lang);
-        }
-        if (have.has(SHIPBUILDING_UPGRADE_ID) && have.has(MARITIME_TRADE_UPGRADE_ID)) {
-            return t('knowledgeUpgrade.symbolDescAfter.34.seaWithShipbuilding', lang);
-        }
-        if (have.has(MARITIME_TRADE_UPGRADE_ID)) {
-            return t('knowledgeUpgrade.symbolDescAfter.34.sea', lang);
-        }
-        if (have.has(SHIPBUILDING_UPGRADE_ID) && have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)) {
-            return t('knowledgeUpgrade.symbolDescAfter.39.seaWithCelestial', lang);
-        }
-        if (have.has(SHIPBUILDING_UPGRADE_ID)) {
-            return t('knowledgeUpgrade.symbolDescAfter.39.sea', lang);
-        }
-        return have.has(CELESTIAL_NAVIGATION_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.15.sea', lang)
-            : t('symbol.sea.desc', lang);
-    }
+    // 바다는 자체 산출이 없는 참조용 지형이라 지식 업그레이드 오버라이드가 없습니다.
     if (symbolKey === 'pearl') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         return have.has(OCEANIC_ROUTES_UPGRADE_ID)
@@ -2208,14 +2120,7 @@ export function getBoardSymbolTooltipDesc(
             ? t('knowledgeUpgrade.symbolDescAfter.15.pearl', lang)
             : t('symbol.pearl.desc', lang);
     }
-    if (symbolKey === 'rainforest') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(TROPICAL_DEVELOPMENT_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.60.rainforest', lang)
-            : have.has(TROPICAL_AGRICULTURE_UPGRADE_ID)
-            ? t(`knowledgeUpgrade.symbolDescAfter.${TROPICAL_AGRICULTURE_UPGRADE_ID}.rainforest`, lang)
-            : t('symbol.rainforest.desc', lang);
-    }
+    // 열대우림은 나이 기반으로 바뀌어 지식 업그레이드 오버라이드가 없습니다.
     if (symbolKey === 'mountain') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         return have.has(MODERN_AGE_UPGRADE_ID)
@@ -2224,36 +2129,15 @@ export function getBoardSymbolTooltipDesc(
             ? t('knowledgeUpgrade.symbolDescAfter.26.mountain', lang)
             : t('symbol.mountain.desc', lang);
     }
-    if (symbolKey === 'forest') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(FORESTRY_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.46.forest', lang)
-            : have.has(TRACKING_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.20.forest', lang)
-            : t('symbol.forest.desc', lang);
-    }
-    if (symbolKey === 'banana') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(PLANTATION_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.29.banana', lang)
-            : t('symbol.banana.desc', lang);
-    }
+    // 숲은 인장 생산 + 정액 식량으로 바뀌어 지식 업그레이드 오버라이드가 없습니다.
+    // 바나나는 성장 구조가 빠져 지식 업그레이드 오버라이드가 없습니다.
     if (symbolKey === 'fur') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         return have.has(TANNING_UPGRADE_ID)
             ? t('knowledgeUpgrade.symbolDescAfter.30.fur', lang)
             : t('symbol.fur.desc', lang);
     }
-    if (symbolKey === 'deer') {
-        const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
-        return have.has(PRESERVATION_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.57.deer', lang)
-            : have.has(TANNING_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.30.deer', lang)
-            : have.has(TRACKING_UPGRADE_ID)
-            ? t('knowledgeUpgrade.symbolDescAfter.20.deer', lang)
-            : t('symbol.deer.desc', lang);
-    }
+    // 사슴은 정액 효과로 바뀌어 지식 업그레이드 오버라이드가 없습니다.
     if (symbolKey === 'expedition') {
         const have = new Set((unlockedKnowledgeUpgrades ?? []).map((x) => Number(x)));
         return have.has(TROPICAL_DEVELOPMENT_UPGRADE_ID)
@@ -2404,10 +2288,14 @@ function russianizeFallback(value: string): string {
 }
 
 export function t(key: string, lang: Language): string {
-    const translated = translations[lang]?.[key];
+    const relicKeyMatch = /^relic\.(\d+)\.(name|desc)$/.exec(key);
+    const lookupKey = relicKeyMatch
+        ? `relic.${LEGACY_RELIC_ID_BY_ID[Number(relicKeyMatch[1])] ?? relicKeyMatch[1]}.${relicKeyMatch[2]}`
+        : key;
+    const translated = translations[lang]?.[lookupKey];
     if (translated != null) return translated;
-    const english = translations['en'][key];
-    if (lang === 'ru') return getRussianFallback(key, english) ?? (english != null ? russianizeFallback(english) : key);
+    const english = translations['en'][lookupKey];
+    if (lang === 'ru') return getRussianFallback(lookupKey, english) ?? (english != null ? russianizeFallback(english) : key);
     return english ?? key;
 }
 
