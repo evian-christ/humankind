@@ -80,6 +80,25 @@ describe('knowledge upgrade tree layout', () => {
         }
     });
 
+    /**
+     * 지형축 제거로 한 선행조건에서 여러 갈래가 뻗는 구간이 사라져,
+     * 분기 팬아웃은 남아 있는 트리 전체 기준으로 검증한다.
+     * 축 재도입 시 구체적인 분기 케이스를 다시 추가한다.
+     */
+    it('fans shared-prerequisite branches into separate horizontal rows', () => {
+        const rows = new Map(
+            buildHorizontalEraNodes(1, 30).map((node) => [node.id, node.row]),
+        );
+
+        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
+            const dependents = getKnowledgeUpgradeDirectDependents(upgrade.id);
+            if (dependents.length <= 1) continue;
+
+            const dependentRows = dependents.map((dependentId) => rows.get(dependentId));
+            expect(new Set(dependentRows).size, upgrade.name).toBe(dependentRows.length);
+        }
+    });
+
     it('places era-page upgrades in unique level and soft-row slots', () => {
         for (const [minLevel, maxLevel] of [[0, 9], [10, 19], [20, 30]] as const) {
             const nodes = buildHorizontalEraNodes(minLevel, maxLevel);
