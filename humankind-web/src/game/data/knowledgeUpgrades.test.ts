@@ -2,23 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
     buildAncientSymbolsUnlockDescSymbols,
     buildFeudalismDescSymbols,
-    COLONIALISM_UPGRADE_ID,
-    AGRICULTURE_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
-    GREAT_MIGRATION_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
-    INQUISITION_UPGRADE_ID,
     KNOWLEDGE_UPGRADES,
-    LAND_ALLOTMENT_UPGRADE_ID,
-    MERCENARIES_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    RESTRUCTURING_UPGRADE_ID,
-    SACRIFICIAL_RITE_UPGRADE_ID,
-    STATE_LABOR_UPGRADE_ID,
-    TOTAL_MOBILIZATION_UPGRADE_ID,
-    TRIBAL_FEDERATION_UPGRADE_ID,
 } from './knowledgeUpgrades';
 import { isBasePool, SYMBOLS_BY_KEY, SymbolType } from './symbolDefinitions';
 import { RELIC_ID } from '../logic/relics/relicIds';
@@ -74,48 +59,29 @@ describe('knowledgeUpgrades', () => {
         });
     });
 
-    it('shows relic grants on knowledge upgrades that grant relics', () => {
-        expect(KNOWLEDGE_UPGRADES[STATE_LABOR_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[SACRIFICIAL_RITE_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[INQUISITION_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[RESTRUCTURING_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 3 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[COLONIALISM_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 3 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[GREAT_MIGRATION_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 2 },
-            { relicId: RELIC_ID.OBLIVION_FURNACE, count: 1 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[LAND_ALLOTMENT_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.ANCIENT_TRIBE_JOIN, count: 3 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[TRIBAL_FEDERATION_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.MILITARY_LEVY, count: 2 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[MERCENARIES_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.MILITARY_LEVY, count: 2 },
-        ]);
-        expect(KNOWLEDGE_UPGRADES[TOTAL_MOBILIZATION_UPGRADE_ID]?.descRelics).toEqual([
-            { relicId: RELIC_ID.MILITARY_LEVY, count: 4 },
-        ]);
+    /**
+     * 유물 지급 업그레이드를 전부 트리에서 걷어내면서 `descRelics` 검증 대상이 사라졌다.
+     * 카드를 다시 넣을 때 `removedGeneralUpgrades.ts`의 relicGrant 그룹을 참고해 복원한다.
+     */
+    it('keeps relic grant metadata well-formed on any upgrade that declares it', () => {
+        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
+            for (const grant of upgrade.descRelics ?? []) {
+                expect(grant.count, upgrade.name).toBeGreaterThan(0);
+                expect(Object.values(RELIC_ID), upgrade.name).toContain(grant.relicId);
+            }
+        }
     });
 
-    it('spaces level 2 upgrades across the tree', () => {
-        expect([
-            HUNTING_UPGRADE_ID,
-            PASTORALISM_UPGRADE_ID,
-            AGRICULTURE_UPGRADE_ID,
-            FISHERIES_UPGRADE_ID,
-            FOREIGN_TRADE_UPGRADE_ID,
-            LAND_ALLOTMENT_UPGRADE_ID,
-        ].map((id) => KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[id])).toEqual([0, 2, 4, 6, 8, 12]);
+    /**
+     * 지형축 업그레이드를 트리에서 걷어내면서 레인 간격 검증 대상이 사라졌다.
+     * 축을 다시 넣을 때 레인 배치 검증을 함께 복원한다.
+     */
+    it('assigns every tree upgrade a lane inside the grid', () => {
+        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
+            const col = KNOWLEDGE_UPGRADE_TREE_PREFERRED_COLUMN_BY_ID[upgrade.id];
+            if (col == null) continue;
+            expect(col, upgrade.name).toBeGreaterThanOrEqual(0);
+            expect(col, upgrade.name).toBeLessThan(13);
+        }
     });
 });

@@ -9,29 +9,10 @@ import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import {
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    COLONIALISM_UPGRADE_ID,
-    ELECTRICITY_UPGRADE_ID,
-    ELECTION_SYSTEM_UPGRADE_ID,
+    CURRENCY_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    GREAT_MIGRATION_UPGRADE_ID,
-    GUNPOWDER_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
-    INQUISITION_UPGRADE_ID,
-    IRON_WORKING_UPGRADE_ID,
-    LAND_ALLOTMENT_UPGRADE_ID,
-    MECHANICS_UPGRADE_ID,
-    MERCENARIES_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
-    NOMADIC_TRADITION_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
-    RESTRUCTURING_UPGRADE_ID,
-    SACRIFICIAL_RITE_UPGRADE_ID,
-    STATE_LABOR_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
-    TOTAL_MOBILIZATION_UPGRADE_ID,
-    TRIBAL_FEDERATION_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
 const makeState = (): GameState => {
@@ -46,6 +27,8 @@ const makeState = (): GameState => {
         food: 0,
         gold: 10,
         knowledge: 0,
+        culture: 0,
+        cultureLevel: 0,
         level: 1,
         era: 1,
         turn: 1,
@@ -100,6 +83,7 @@ const makeState = (): GameState => {
         pendingLootSlot: null,
         spinBoard: () => {},
         payFoodCost: () => {},
+        claimBoardExpansion: () => {},
         startProcessing: () => {},
         continueProcessingAfterNewThreatFloats: () => {},
         selectSymbol: () => {},
@@ -124,6 +108,7 @@ const makeState = (): GameState => {
         devAddSymbol: () => {},
         devRemoveSymbol: () => {},
         devSetStat: () => {},
+        devAddBoardExpansion: () => {},
         devForceScreen: () => {},
         devTriggerNaturalDisaster: () => {},
         confirmOblivionFurnaceDestroyAt: () => {},
@@ -132,7 +117,6 @@ const makeState = (): GameState => {
         confirmEdictDestroyAt: () => {},
         cancelEdictPick: () => {},
         activateClickableRelic: () => {},
-        butcherPastureAnimalAt: () => {},
         consumeTribalVillageAt: () => {},
 
         openLootAt: () => {},
@@ -299,7 +283,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().knowledge).toBe(51);
     });
 
-    it('triggers Banana food, rainforest progress, and board floats for Jungle Expedition event', () => {
+    it('triggers Banana food and board floats for Jungle Expedition event', () => {
         const banana = createInstance(SYMBOLS[S.banana]!, []);
         const rainforest = createInstance(SYMBOLS[S.rainforest]!, []);
         const board = createEmptyBoard();
@@ -314,44 +298,37 @@ describe('selectionFlow actions', () => {
 
         harness.actions.selectEvent(17);
 
+        // 열대우림에 인접하므로 식량 +2.
+        expect(harness.get().food).toBe(5);
+        expect(harness.get().lastEffects).toContainEqual({
+            x: 1,
+            y: 1,
+            food: 2,
+            gold: 0,
+            knowledge: 0,
+        });
+    });
+
+    it('gives Banana only its base Food when no Rainforest is adjacent', () => {
+        const banana = createInstance(SYMBOLS[S.banana]!, []);
+        const board = createEmptyBoard();
+        board[1][1] = banana;
+
+        const harness = createHarness({
+            food: 3,
+            board,
+            playerSymbols: [banana],
+        });
+
+        harness.actions.selectEvent(17);
+
         expect(harness.get().food).toBe(4);
-        expect(harness.get().board[1]?.[1]?.effect_counter).toBe(1);
         expect(harness.get().lastEffects).toContainEqual({
             x: 1,
             y: 1,
             food: 1,
             gold: 0,
             knowledge: 0,
-            counter: 1,
-            counterAnchor: 'bottom-right',
-        });
-    });
-
-    it('wraps Banana progress through Plantation threshold during Jungle Expedition event', () => {
-        const banana = createInstance(SYMBOLS[S.banana]!, []);
-        banana.effect_counter = 4;
-        const rainforest = createInstance(SYMBOLS[S.rainforest]!, []);
-        const board = createEmptyBoard();
-        board[1][1] = banana;
-        board[2][1] = rainforest;
-
-        const harness = createHarness({
-            food: 3,
-            board,
-            playerSymbols: [banana, rainforest],
-            unlockedKnowledgeUpgrades: [PLANTATION_UPGRADE_ID],
-        });
-
-        harness.actions.selectEvent(17);
-
-        expect(harness.get().food).toBe(4);
-        expect(harness.get().board[1]?.[1]?.effect_counter).toBe(0);
-        expect(harness.get().board[1]?.[1]?.banana_permanent_food_bonus).toBe(1);
-        expect(harness.get().lastEffects.at(-1)).toMatchObject({
-            x: 1,
-            y: 1,
-            food: 1,
-            counter: 1,
         });
     });
 
@@ -381,7 +358,8 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().food).toBe(28);
-        expect(harness.get().knowledge).toBe(29);
+        expect(harness.get().knowledge).toBe(19);
+        expect(harness.get().culture).toBe(10);
         expect(harness.get().playerSymbols).toHaveLength(3);
         expect(harness.get().playerSymbols.map((symbol) => symbol.instanceId)).toEqual([
             symbols[2]!.instanceId,
@@ -469,12 +447,12 @@ describe('selectionFlow actions', () => {
             phase: 'idle',
             levelUpResearchPoints: 2,
             level: 10,
-            unlockedKnowledgeUpgrades: [PASTORALISM_UPGRADE_ID],
+            unlockedKnowledgeUpgrades: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
         });
 
-        harness.actions.selectUpgrade(NOMADIC_TRADITION_UPGRADE_ID);
+        harness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(NOMADIC_TRADITION_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(1);
     });
 
@@ -492,9 +470,9 @@ describe('selectionFlow actions', () => {
         expect(harness.get().levelUpResearchPoints).toBe(1);
         expect(harness.get().pendingBoardExpansions).toBe(3);
 
-        harness.actions.selectUpgrade(HUNTING_UPGRADE_ID);
+        harness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(HUNTING_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 
@@ -520,14 +498,14 @@ describe('selectionFlow actions', () => {
             level: 10,
         });
 
-        lockedHarness.actions.selectUpgrade(HUNTING_UPGRADE_ID);
+        lockedHarness.actions.selectUpgrade(CURRENCY_UPGRADE_ID);
 
-        expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(HUNTING_UPGRADE_ID);
+        expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(CURRENCY_UPGRADE_ID);
         expect(lockedHarness.get().levelUpResearchPoints).toBe(1);
 
-        lockedHarness.actions.selectUpgrade(STATE_LABOR_UPGRADE_ID);
+        lockedHarness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
 
-        expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(STATE_LABOR_UPGRADE_ID);
+        expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(THEOLOGY_UPGRADE_ID);
         expect(lockedHarness.get().levelUpResearchPoints).toBe(1);
 
         const availableHarness = createHarness({
@@ -550,9 +528,9 @@ describe('selectionFlow actions', () => {
             level: 4,
         });
 
-        harness.actions.selectUpgrade(HUNTING_UPGRADE_ID);
+        harness.actions.selectUpgrade(CURRENCY_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(HUNTING_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(CURRENCY_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 
@@ -564,35 +542,16 @@ describe('selectionFlow actions', () => {
             unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
         });
 
-        harness.actions.selectUpgrade(ELECTRICITY_UPGRADE_ID);
+        harness.actions.selectUpgrade(AGI_PROJECT_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(ELECTRICITY_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(AGI_PROJECT_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(4);
     });
 
-    it('grants the first selection reroll when Election System is researched', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 22,
-            era: 3,
-            gold: 0,
-            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(ELECTION_SYSTEM_UPGRADE_ID);
-
-        expect(harness.get().phase).toBe('selection');
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(ELECTION_SYSTEM_UPGRADE_ID);
-        expect(harness.get().freeSelectionRerolls).toBe(1);
-
-        harness.actions.rerollSymbols();
-
-        expect(harness.get().gold).toBe(0);
-        expect(harness.get().freeSelectionRerolls).toBe(0);
-        expect(harness.get().rerollsThisTurn).toBe(1);
-        expect(harness.get().symbolChoices).toHaveLength(3);
-    });
+    /**
+     * 선거제도(무료 리롤) 카드를 트리에서 걷어내면서 해당 검증도 제거했다.
+     * `freeSelectionRerolls` 소비 로직은 살아 있으므로, 카드를 다시 넣을 때 테스트도 함께 복원한다.
+     */
 
     it('blocks rerolls for tribal village symbol selections', () => {
         const originalChoices = [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.honey]!];
@@ -609,112 +568,24 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toBe(originalChoices);
     });
 
-    it('grants 3 Ancient Tribe Joins when Colonialism is researched', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 21,
-            era: 3,
-            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(COLONIALISM_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(COLONIALISM_UPGRADE_ID);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
-        ).toHaveLength(3);
-    });
-
-    it('grants 2 Pioneers and 1 State Reorganization when Great Migration is researched', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 11,
-            era: 2,
-            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(GREAT_MIGRATION_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(GREAT_MIGRATION_UPGRADE_ID);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
-        ).toHaveLength(2);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
-        ).toHaveLength(1);
-    });
-
-    it('grants 3 Pioneers when Land Allotment is researched', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 2,
-            era: 1,
-            unlockedKnowledgeUpgrades: [],
-        });
-
-        harness.actions.selectUpgrade(LAND_ALLOTMENT_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(LAND_ALLOTMENT_UPGRADE_ID);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.ANCIENT_TRIBE_JOIN),
-        ).toHaveLength(3);
-    });
-
-    it.each([
-        ['Tribal Federation', TRIBAL_FEDERATION_UPGRADE_ID, 4, [], 2],
-        ['Mercenaries', MERCENARIES_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 2],
-        ['Total Mobilization', TOTAL_MOBILIZATION_UPGRADE_ID, 22, [MODERN_AGE_UPGRADE_ID], 4],
-    ])('grants Military Levies when %s is researched', (_name, upgradeId, level, unlockedKnowledgeUpgrades, count) => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level,
-            unlockedKnowledgeUpgrades,
-        });
-
-        harness.actions.selectUpgrade(upgradeId);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(upgradeId);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.MILITARY_LEVY),
-        ).toHaveLength(count);
-    });
-
-    it.each([
-        ['Sacrificial Rite', SACRIFICIAL_RITE_UPGRADE_ID, 4, [], 3],
-        ['Inquisition', INQUISITION_UPGRADE_ID, 14, [FEUDALISM_UPGRADE_ID], 3],
-        ['Restructuring', RESTRUCTURING_UPGRADE_ID, 23, [MODERN_AGE_UPGRADE_ID], 3],
-        ['State Labor', STATE_LABOR_UPGRADE_ID, 9, [], 1],
-    ])('grants Furnaces of Oblivion when %s is researched', (_name, upgradeId, level, unlockedKnowledgeUpgrades, count) => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level,
-            unlockedKnowledgeUpgrades,
-        });
-
-        harness.actions.selectUpgrade(upgradeId);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(upgradeId);
-        expect(
-            useRelicStore.getState().relics.filter((relic) => relic.definition.id === RELIC_ID.OBLIVION_FURNACE),
-        ).toHaveLength(count);
-    });
+    /**
+     * 유물 지급 업그레이드(희생 제의·이단심문·구조조정·식민주의·대이주·토지분배·
+     * 부족 연맹·용병·총동원령·국가노동력)를 트리에서 걷어내면서 해당 지급 검증도 제거했다.
+     * 지급 로직(`grantRelicsForUpgrade`) 자체는 살아 있으므로, 카드를 다시 넣을 때
+     * `removedGeneralUpgrades.ts`의 relicGrant 그룹을 참고해 테스트도 함께 복원한다.
+     */
 
     it('unlocks religion only when Theology is researched', () => {
-        const fisheriesHarness = createHarness({
+        const otherHarness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
-            level: 2,
+            level: 3,
         });
 
-        fisheriesHarness.actions.selectUpgrade(FISHERIES_UPGRADE_ID);
+        otherHarness.actions.selectUpgrade(CURRENCY_UPGRADE_ID);
 
-        expect(fisheriesHarness.get().unlockedKnowledgeUpgrades).toContain(FISHERIES_UPGRADE_ID);
-        expect(fisheriesHarness.get().religionUnlocked).toBe(false);
+        expect(otherHarness.get().unlockedKnowledgeUpgrades).toContain(CURRENCY_UPGRADE_ID);
+        expect(otherHarness.get().religionUnlocked).toBe(false);
 
         const theologyHarness = createHarness({
             phase: 'idle',
@@ -728,68 +599,12 @@ describe('selectionFlow actions', () => {
         expect(theologyHarness.get().religionUnlocked).toBe(true);
     });
 
-    it('does not replace an already-owned Warrior when Iron Working is researched', () => {
-        const warrior = createInstance(SYMBOLS[S.warrior]!, []);
-        const board = createEmptyBoard();
-        board[0][0] = warrior;
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 3,
-            playerSymbols: [warrior],
-            board,
-            unlockedKnowledgeUpgrades: [],
-        });
-
-        harness.actions.selectUpgrade(IRON_WORKING_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(IRON_WORKING_UPGRADE_ID);
-        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
-    });
-
-    it('does not replace already-owned units when Stirrups is researched', () => {
-        const warrior = createInstance(SYMBOLS[S.warrior]!, [IRON_WORKING_UPGRADE_ID]);
-        const horseman = createInstance(SYMBOLS[S.horseman]!, [IRON_WORKING_UPGRADE_ID]);
-        const board = createEmptyBoard();
-        board[0][0] = warrior;
-        board[1][0] = horseman;
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 13,
-            playerSymbols: [warrior, horseman],
-            board,
-            unlockedKnowledgeUpgrades: [IRON_WORKING_UPGRADE_ID, FEUDALISM_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(GUNPOWDER_UPGRADE_ID);
-
-        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().playerSymbols[1]?.definition.id).toBe(S.horseman);
-        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.warrior);
-        expect(harness.get().board[1]?.[0]?.definition.id).toBe(S.horseman);
-    });
-
-    it('does not replace or restat an already-owned Archer when Mechanics is researched', () => {
-        const archer = createInstance(SYMBOLS[S.archer]!, []);
-        const board = createEmptyBoard();
-        board[0][0] = archer;
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 13,
-            playerSymbols: [archer],
-            board,
-            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(MECHANICS_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(MECHANICS_UPGRADE_ID);
-        expect(harness.get().playerSymbols[0]?.definition.id).toBe(S.archer);
-        expect(harness.get().board[0]?.[0]?.definition.id).toBe(S.archer);
-    });
+    /**
+     * 레거시 군사 업그레이드(철제기술·등자·기계장치)를 트리에서 걷어내면서,
+     * 이미 보유한 유닛이 교체·재산정되지 않는지 확인하던 검증도 제거했다.
+     * 유닛 업그레이드 해석(`resolveUpgradedUnitDefinition`)은 살아 있으므로,
+     * 카드를 다시 넣을 때 `removedGeneralUpgrades.ts`의 military 그룹을 참고해 복원한다.
+     */
 
     it('opens oblivion furnace board mode only when a relic-backed cell destroy resolves', () => {
         const relicDef = RELICS[RELIC_ID.OBLIVION_FURNACE]!;

@@ -9,7 +9,6 @@ import {
     KNOWLEDGE_UPGRADES,
     LAND_ALLOTMENT_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
     RESTRUCTURING_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     TRIBAL_FEDERATION_UPGRADE_ID,
@@ -52,6 +51,7 @@ import {
     createBoardDestroyResourceEffects,
     createStoredFoodDestroyEffects,
     getBoardOnlyDestroyEffectTotals,
+    getRemainingBoardExpansionCapacity,
     getStandardSymbolChoiceCount,
     markBoardSymbolsForRemoval,
     removeBoardSymbolsByInstanceIds,
@@ -68,6 +68,7 @@ import { saveGameState } from '../saveGame';
 import type { GamePhase, GameState } from '../gameStore';
 import type { PlayerSymbolInstance } from '../../types';
 import type { BoardEffectDelta } from '../../logic/turn/turnTypes';
+import { getCultureLevel } from '../../data/cultureProgression';
 import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
@@ -188,21 +189,15 @@ const countOwnedSymbols = (playerSymbols: PlayerSymbolInstance[], symbolId: numb
 /** 보드 위 모든 바나나의 효과를 즉시 한 번 더 적용하고, 보드 플로팅용 결과를 생성 */
 const triggerBananaEffectsOnce = (
     board: GameState['board'],
-    upgrades: readonly number[],
 ): { foodGain: number; effects: BoardEffectDelta[] } => {
     let foodGain = 0;
     const effects: BoardEffectDelta[] = [];
-    const plantation = upgrades.map(Number).includes(PLANTATION_UPGRADE_ID);
-    const threshold = plantation ? 5 : 10;
 
     for (let x = 0; x < board.length; x += 1) {
         const col = board[x];
         for (let y = 0; y < (col?.length ?? 0); y += 1) {
             const cell = col?.[y];
             if (cell?.definition.id === S.banana) {
-                const perm = cell.banana_permanent_food_bonus ?? 0;
-                const food = 1 + perm;
-                let counterDelta = 0;
                 const nearRainforest = [
                     { x: x - 1, y: y - 1 },
                     { x, y: y - 1 },
@@ -214,16 +209,8 @@ const triggerBananaEffectsOnce = (
                     { x: x + 1, y: y + 1 },
                 ].some((pos) => board[pos.x]?.[pos.y]?.definition.id === S.rainforest);
 
-                if (nearRainforest) {
-                    const before = cell.effect_counter || 0;
-                    let next = before + 1;
-                    if (next >= threshold) {
-                        next = 0;
-                        cell.banana_permanent_food_bonus = perm + 1;
-                    }
-                    cell.effect_counter = next;
-                    counterDelta = next >= before ? next - before : threshold - before + next;
-                }
+                // 기본 식량 +1; 열대우림에 인접 시 식량 +1.
+                const food = nearRainforest ? 2 : 1;
 
                 foodGain += food;
                 effects.push({
@@ -232,7 +219,6 @@ const triggerBananaEffectsOnce = (
                     food,
                     gold: 0,
                     knowledge: 0,
-                    ...(counterDelta > 0 ? { counter: counterDelta, counterAnchor: 'bottom-right' as const } : {}),
                 });
             }
         }
@@ -374,6 +360,7 @@ export const createSelectionFlowActions = ({
         let foodDelta = 0;
         let goldDelta = 0;
         let knowledgeDelta = 0;
+        let cultureDelta = 0;
         let destroyedSymbols: ReturnType<typeof makeDestroyedSymbolSnapshots> = [];
         let addedSymbolIds: number[] = [];
         let destroyedBoardIds: Set<string> | null = null;
@@ -415,7 +402,7 @@ export const createSelectionFlowActions = ({
                 ];
             }
         } else if (event.key === 'jungle_expedition') {
-            const bananaTrigger = triggerBananaEffectsOnce(state.board, state.unlockedKnowledgeUpgrades || []);
+            const bananaTrigger = triggerBananaEffectsOnce(state.board);
             foodDelta += bananaTrigger.foodGain;
             if (bananaTrigger.effects.length > 0) {
                 patch.board = cloneBoardPreservingSlots(state.board);
@@ -467,6 +454,7 @@ export const createSelectionFlowActions = ({
             foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
             goldDelta += symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
             knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
+            cultureDelta += boardOnlyDestroyDelta.culture;
             if (symbolDestroyEffects.length > 0) {
                 patch.lastEffects = [...(state.lastEffects ?? []), ...symbolDestroyEffects];
             }
@@ -480,6 +468,10 @@ export const createSelectionFlowActions = ({
         if (foodDelta !== 0) patch.food = state.food + foodDelta;
         if (goldDelta !== 0) patch.gold = state.gold + goldDelta;
         if (knowledgeDelta !== 0) Object.assign(patch, resolveKnowledgeProgression(state, knowledgeDelta));
+        if (cultureDelta !== 0) {
+            patch.culture = state.culture + cultureDelta;
+            patch.cultureLevel = getCultureLevel(state.culture + cultureDelta);
+        }
 
         set({
             ...patch,
@@ -492,7 +484,7 @@ export const createSelectionFlowActions = ({
         get().appendEventLog({
             turn: state.turn,
             kind: 'selection',
-            delta: { food: foodDelta, gold: goldDelta, knowledge: knowledgeDelta },
+            delta: { food: foodDelta, gold: goldDelta, knowledge: knowledgeDelta, culture: cultureDelta },
             meta: {
                 action: 'select_event',
                 eventId,
@@ -709,6 +701,19 @@ export const createSelectionFlowActions = ({
         const newBoard = cloneBoardPreservingSlots(state.board);
         const newPlayerSymbols = [...state.playerSymbols];
 
+        const awardedBoardExpansions = (
+            uid === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ||
+            uid === FEUDALISM_UPGRADE_ID ||
+            uid === MODERN_AGE_UPGRADE_ID
+                ? 3
+                : 0
+        );
+        const boardExpansionCapacity = getRemainingBoardExpansionCapacity(state.board);
+        const nextPendingBoardExpansions = Math.min(
+            state.pendingBoardExpansions + awardedBoardExpansions,
+            boardExpansionCapacity,
+        );
+
         const baseUnlock = {
             unlockedKnowledgeUpgrades: newUnlocked,
             religionUnlocked,
@@ -721,15 +726,7 @@ export const createSelectionFlowActions = ({
                 : state.relicFloats,
             levelUpResearchPoints: nextResearchPts,
             knowledgeResearchCredits: nextResearchCredits,
-            pendingBoardExpansions:
-                state.pendingBoardExpansions +
-                (
-                    uid === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ||
-                    uid === FEUDALISM_UPGRADE_ID ||
-                    uid === MODERN_AGE_UPGRADE_ID
-                        ? 3
-                        : 0
-                ),
+            pendingBoardExpansions: nextPendingBoardExpansions,
         };
 
         if (state.returnPhaseAfterDevKnowledgeUpgrade != null) {
@@ -785,12 +782,13 @@ export const createSelectionFlowActions = ({
         const dFood = symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
         const dGold = symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
         const dKnowledge = symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
+        const dCulture = boardOnlyDestroyDelta.culture;
         const removedIdSet = new Set(instanceIds);
         const markedBoard = markBoardSymbolsForRemoval(state.board, removedIdSet);
         const blinkStartedAtMs = getNowMs();
         const boardEffects = createBoardDestroyResourceEffects(
             { x, y },
-            { food: dFood, gold: dGold, knowledge: dKnowledge },
+            { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
             storedFoodEffects,
         );
 
@@ -798,6 +796,8 @@ export const createSelectionFlowActions = ({
             food: s.food + dFood,
             gold: s.gold + dGold,
             ...resolveKnowledgeProgression(s, dKnowledge),
+            culture: s.culture + dCulture,
+            cultureLevel: getCultureLevel(s.culture + dCulture),
             forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
@@ -834,7 +834,7 @@ export const createSelectionFlowActions = ({
             kind: 'board_action',
             slot: { x, y },
             symbolId: sym.definition.id,
-            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
+            delta: { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
             meta: {
                 action: 'oblivion_furnace_destroy',
                 relicInstanceId: relicInstId,

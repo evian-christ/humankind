@@ -1,52 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
-    AGRICULTURE_UPGRADE_ID,
-    AGRICULTURAL_SURPLUS_UPGRADE_ID,
     AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    CARAVANSERAI_UPGRADE_ID,
     CURRENCY_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
-    CELESTIAL_NAVIGATION_UPGRADE_ID,
-    COMPASS_UPGRADE_ID,
-    DESERT_STORAGE_UPGRADE_ID,
-    DRY_STORAGE_UPGRADE_ID,
-    FISHERY_GUILD_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    FORESTRY_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
-    JUNGLE_EXPEDITION_UPGRADE_ID,
     LAND_ALLOTMENT_UPGRADE_ID,
-    MARITIME_TRADE_UPGRADE_ID,
-    MODERN_AGRICULTURE_UPGRADE_ID,
-    MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
-    NOMADIC_TRADITION_UPGRADE_ID,
-    OCEANIC_ROUTES_UPGRADE_ID,
-    OASIS_RECOVERY_UPGRADE_ID,
-    PASTURE_MANAGEMENT_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    PLANTATION_UPGRADE_ID,
-    PRESERVATION_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
-    SEAFARING_UPGRADE_ID,
-    SHIPBUILDING_UPGRADE_ID,
-    TANNING_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
-    TRACKING_UPGRADE_ID,
-    TROPICAL_AGRICULTURE_UPGRADE_ID,
-    TROPICAL_DEVELOPMENT_UPGRADE_ID,
-    THREE_FIELD_SYSTEM_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
     GUILD_UPGRADE_ID,
-    GUNPOWDER_UPGRADE_ID,
-    HORSEMANSHIP_UPGRADE_ID,
-    IRON_WORKING_UPGRADE_ID,
     MATHEMATICS_UPGRADE_ID,
-    MECHANICS_UPGRADE_ID,
     MERCENARIES_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
@@ -206,7 +171,7 @@ describe('knowledge research credits', () => {
             { grantLevel: 10, minLevel: 10, maxLevel: 10 },
         ]);
         expect(isUpgradeLegalForKnowledgePick(
-            HUNTING_UPGRADE_ID,
+            THEOLOGY_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
             credits,
@@ -226,7 +191,7 @@ describe('knowledge research credits', () => {
         const remaining = consumeKnowledgeResearchCreditForUpgrade(FEUDALISM_UPGRADE_ID, credits);
 
         expect(isUpgradeLegalForKnowledgePick(
-            HUNTING_UPGRADE_ID,
+            THEOLOGY_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, FEUDALISM_UPGRADE_ID],
             10,
             remaining,
@@ -243,13 +208,13 @@ describe('knowledge research credits', () => {
 describe('isUpgradeLegalForKnowledgePick', () => {
     it('locks upgrades at or below the current locked-through level', () => {
         expect(isUpgradeLegalForKnowledgePick(
-            HUNTING_UPGRADE_ID,
+            CURRENCY_UPGRADE_ID,
             [],
             10,
             9,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
-            STATE_LABOR_UPGRADE_ID,
+            THEOLOGY_UPGRADE_ID,
             [],
             10,
             9,
@@ -264,9 +229,9 @@ describe('isUpgradeLegalForKnowledgePick', () => {
 
     it('does not require Ancient Era for upgrades that only depend on their visible prerequisite line', () => {
         expect(isUpgradeLegalForKnowledgePick(
-            IRRIGATION_UPGRADE_ID,
-            [AGRICULTURE_UPGRADE_ID],
-            5,
+            AGI_PROJECT_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID],
+            30,
         )).toBe(true);
     });
 
@@ -322,59 +287,12 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('requires Horsemanship before Military Science at level 14', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            MILITARY_SCIENCE_UPGRADE_ID,
-            [],
-            14,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            MILITARY_SCIENCE_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, HORSEMANSHIP_UPGRADE_ID],
-            14,
-        )).toBe(true);
-    });
-
     it('keeps Medieval Age as the only upgrade that depends on Ancient Era', () => {
         expect(isUpgradeLegalForKnowledgePick(FEUDALISM_UPGRADE_ID, [], 10)).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             FEUDALISM_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
-        )).toBe(true);
-    });
-
-    it('allows Three-field System once Irrigation and level requirements are met', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            THREE_FIELD_SYSTEM_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, IRRIGATION_UPGRADE_ID],
-            11,
-        )).toBe(true);
-    });
-
-    it('chains Agricultural Surplus after Three-field System', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            AGRICULTURAL_SURPLUS_UPGRADE_ID,
-            [IRRIGATION_UPGRADE_ID],
-            17,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            AGRICULTURAL_SURPLUS_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID],
-            17,
-        )).toBe(true);
-    });
-
-    it('chains Modern Agriculture after Agricultural Surplus in the modern era', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            MODERN_AGRICULTURE_UPGRADE_ID,
-            [THREE_FIELD_SYSTEM_UPGRADE_ID],
-            23,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            MODERN_AGRICULTURE_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID, AGRICULTURAL_SURPLUS_UPGRADE_ID],
-            23,
         )).toBe(true);
     });
 
@@ -414,97 +332,32 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('chains Nomadic Tradition after Pastoralism', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            NOMADIC_TRADITION_UPGRADE_ID,
-            [],
-            9,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            NOMADIC_TRADITION_UPGRADE_ID,
-            [PASTORALISM_UPGRADE_ID],
-            9,
-        )).toBe(true);
-    });
-
-    it('chains Pasture Management after Nomadic Tradition', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            PASTURE_MANAGEMENT_UPGRADE_ID,
-            [PASTORALISM_UPGRADE_ID],
-            18,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            PASTURE_MANAGEMENT_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, NOMADIC_TRADITION_UPGRADE_ID],
-            18,
-        )).toBe(true);
-    });
-
-    it('still requires Fisheries before Compass even above its unlock level', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            COMPASS_UPGRADE_ID,
-            [],
-            11,
-        )).toBe(false);
-    });
-
-    it('uses Fisheries as the prerequisite for Celestial Navigation', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            CELESTIAL_NAVIGATION_UPGRADE_ID,
-            [],
-            11,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            CELESTIAL_NAVIGATION_UPGRADE_ID,
-            [FISHERIES_UPGRADE_ID],
-            6,
-        )).toBe(true);
-    });
-
-    it('allows Iron Working at level 3 without Archery', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            IRON_WORKING_UPGRADE_ID,
-            [],
-            3,
-        )).toBe(true);
-    });
-
-    it('does not require Iron Working before Mechanics', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            MECHANICS_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID],
-            13,
-        )).toBe(true);
-    });
-
-    it('allows Stirrups at level 13 without Mechanics', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            GUNPOWDER_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID],
-            13,
-        )).toBe(true);
-    });
+    /**
+     * 레거시 군사 카드(궁술·철제기술·기계장치·등자·탄도학·교체식 부품)를 트리에서
+     * 걷어내면서 "선행조건 없이 뽑힌다"를 확인하던 검증도 제거했다.
+     * 재도입 시 `removedGeneralUpgrades.ts`의 military 그룹을 참고한다.
+     */
 
     it('locks earlier research tiers at explicit locked-through levels', () => {
         expect(isUpgradeLegalForKnowledgePick(
-            NOMADIC_TRADITION_UPGRADE_ID,
-            [PASTORALISM_UPGRADE_ID],
+            THEOLOGY_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             9,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
-            NOMADIC_TRADITION_UPGRADE_ID,
-            [PASTORALISM_UPGRADE_ID],
+            THEOLOGY_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
             9,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
-            ELECTRICITY_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
+            SCIENTIFIC_THEORY_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID, EDUCATION_UPGRADE_ID],
             29,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
-            ELECTRICITY_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
+            SCIENTIFIC_THEORY_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID, EDUCATION_UPGRADE_ID],
             30,
             29,
         )).toBe(false);
@@ -512,8 +365,8 @@ describe('isUpgradeLegalForKnowledgePick', () => {
 
     it('uses locked-through level separately from the reached player level', () => {
         expect(isUpgradeLegalForKnowledgePick(
-            NOMADIC_TRADITION_UPGRADE_ID,
-            [PASTORALISM_UPGRADE_ID],
+            THEOLOGY_UPGRADE_ID,
+            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
             0,
         )).toBe(true);
@@ -524,14 +377,14 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             9,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
-            ELECTRICITY_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
+            SCIENTIFIC_THEORY_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID, EDUCATION_UPGRADE_ID],
             30,
             19,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
-            ELECTRICITY_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
+            SCIENTIFIC_THEORY_UPGRADE_ID,
+            [MODERN_AGE_UPGRADE_ID, EDUCATION_UPGRADE_ID],
             30,
             29,
         )).toBe(false);
@@ -543,218 +396,11 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('requires Fisheries for Compass', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            COMPASS_UPGRADE_ID,
-            [],
-            12,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            COMPASS_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, FISHERIES_UPGRADE_ID],
-            12,
-        )).toBe(true);
-    });
-
-    it('requires Seafaring for Fishery Guild', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            FISHERY_GUILD_UPGRADE_ID,
-            [FISHERIES_UPGRADE_ID],
-            11,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            FISHERY_GUILD_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, SEAFARING_UPGRADE_ID],
-            11,
-        )).toBe(true);
-    });
-
-    it('requires Celestial Navigation for Maritime Trade', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            MARITIME_TRADE_UPGRADE_ID,
-            [FISHERIES_UPGRADE_ID],
-            13,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            MARITIME_TRADE_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID],
-            13,
-        )).toBe(true);
-    });
-
-    it('requires Tropical Agriculture for Plantation', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            PLANTATION_UPGRADE_ID,
-            [],
-            11,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            PLANTATION_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, TROPICAL_AGRICULTURE_UPGRADE_ID],
-            11,
-        )).toBe(true);
-    });
-
-    it('requires Hunting for Tracking', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            TRACKING_UPGRADE_ID,
-            [],
-            6,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            TRACKING_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID],
-            6,
-        )).toBe(true);
-    });
-
-    it('requires Tracking for Tanning', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            TANNING_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID],
-            12,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            TANNING_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID],
-            12,
-        )).toBe(true);
-    });
-
-    it('requires Tanning for Forestry', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            FORESTRY_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID],
-            18,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            FORESTRY_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID, TANNING_UPGRADE_ID],
-            18,
-        )).toBe(true);
-    });
-
-    it('requires Forestry for Preservation', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            PRESERVATION_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID, TANNING_UPGRADE_ID],
-            24,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            PRESERVATION_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID, HUNTING_UPGRADE_ID, TRACKING_UPGRADE_ID, TANNING_UPGRADE_ID, FORESTRY_UPGRADE_ID],
-            24,
-        )).toBe(true);
-    });
-
-    it('requires Plantation for Jungle Expedition', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            JUNGLE_EXPEDITION_UPGRADE_ID,
-            [HUNTING_UPGRADE_ID],
-            16,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            JUNGLE_EXPEDITION_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, PLANTATION_UPGRADE_ID],
-            16,
-        )).toBe(true);
-    });
-
-    it('requires Jungle Expedition for Tropical Development', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            TROPICAL_DEVELOPMENT_UPGRADE_ID,
-            [PLANTATION_UPGRADE_ID],
-            25,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            TROPICAL_DEVELOPMENT_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID],
-            25,
-        )).toBe(true);
-    });
-
-    it('requires both Maritime Trade and Fishery Guild for Oceanic Routes', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            OCEANIC_ROUTES_UPGRADE_ID,
-            [MARITIME_TRADE_UPGRADE_ID],
-            21,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            OCEANIC_ROUTES_UPGRADE_ID,
-            [FISHERY_GUILD_UPGRADE_ID],
-            21,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            OCEANIC_ROUTES_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID],
-            21,
-        )).toBe(true);
-    });
-
-    it('requires Fisheries for Shipbuilding', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            SHIPBUILDING_UPGRADE_ID,
-            [],
-            15,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            SHIPBUILDING_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, FISHERIES_UPGRADE_ID],
-            15,
-        )).toBe(true);
-    });
-
-    it('requires Foreign Trade for Dry Storage', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            DRY_STORAGE_UPGRADE_ID,
-            [],
-            6,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            DRY_STORAGE_UPGRADE_ID,
-            [FOREIGN_TRADE_UPGRADE_ID],
-            6,
-        )).toBe(true);
-    });
-
-    it('requires Trade Goods Exchange for Dry Storage at level 12', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            DESERT_STORAGE_UPGRADE_ID,
-            [],
-            12,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            DESERT_STORAGE_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, DRY_STORAGE_UPGRADE_ID],
-            12,
-        )).toBe(true);
-    });
-
-    it('requires Dry Storage for Caravanserai at level 17', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            CARAVANSERAI_UPGRADE_ID,
-            [DRY_STORAGE_UPGRADE_ID],
-            17,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            CARAVANSERAI_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID],
-            17,
-        )).toBe(true);
-    });
-
-    it('requires Caravanserai for Oasis Recovery Network at level 21', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            OASIS_RECOVERY_UPGRADE_ID,
-            [DESERT_STORAGE_UPGRADE_ID],
-            21,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            OASIS_RECOVERY_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID],
-            21,
-        )).toBe(true);
-    });
+    /**
+     * 지형축(숲/평원/초원/바다/사막/열대우림) 선행조건 체인 검증은 축을 트리에서
+     * 걷어내면서 함께 제거했다. 축을 다시 넣을 때 해당 체인 테스트도 함께 복원한다.
+     * 남아 있는 체인(문자→교육→과학이론, 화폐→길드, 신학→신정, 시대 전환)은 위에서 검증한다.
+     */
 });
 
 describe('getHudTurnStartPassiveTotals', () => {
