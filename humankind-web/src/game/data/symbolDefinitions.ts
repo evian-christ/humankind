@@ -28,10 +28,10 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('grassland', { name: "Grassland", type: SymbolType.TERRAIN, description: "+2 Food.", sprite: "001.png" }),
     def('plains', { name: "Plains", type: SymbolType.TERRAIN, description: "+1 Food.", sprite: "002.png" }),
     def('sea', { name: "Sea", type: SymbolType.TERRAIN, description: "On an edge slot: becomes Coast. Otherwise: becomes Ocean.", sprite: "003.png" }),
-    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "Every 10 turns: produces a random Seal. When adjacent to Forest: +1 Food.", sprite: "004.png" }),
+    def('forest', { name: "Forest", type: SymbolType.TERRAIN, description: "Every 10 turns: produces a random Seal. +1 Food; +1 Food per adjacent Forest.", sprite: "004.png" }),
     def('rainforest', { name: "Rainforest", type: SymbolType.TERRAIN, description: "+1 Food. When Growth reaches 10, consumes 10 Growth to permanently increase production by 1. The growth kind of the symbol that filled it decides which resource increases.", sprite: "005.png" }),
-    def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Resource, Luxury, or era symbol. When Desert destroys a symbol: +5 Food.", sprite: "006.png" }),
-    def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+2 Food per 2 adjacent empty slots. (Post-Arid Preservation: +4, Post-Oasis Reclamation: +6)", sprite: "007.png" }),
+    def('desert', { name: "Desert", type: SymbolType.TERRAIN, description: "Destroys 1 random adjacent Resource or era symbol. On food payment, if you own no terrain symbols other than Desert and Oasis: gain 1 extra board expansion.", sprite: "006.png" }),
+    def('oasis', { name: "Oasis", type: SymbolType.TERRAIN, description: "+1 Food per adjacent empty slot. (Post-Arid Preservation: +2, Post-Oasis Reclamation: +3)", sprite: "007.png" }),
     def('mountain', { name: "Mountain", type: SymbolType.TERRAIN, description: "+2 Food, +2 Knowledge.", sprite: "008.png" }),
 
     // Resource: grassland deck
@@ -103,7 +103,7 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('merchant', { name: "Merchant", type: SymbolType.SPECIAL, description: "Produces Gold equal to the highest Food produced by an adjacent symbol.", sprite: "034.png" }),
     def('monument', { name: "Monument", type: SymbolType.SPECIAL, description: "+5 Knowledge.", sprite: "035.png" }),
     def('library', { name: "Library", type: SymbolType.SPECIAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
-    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.SPECIAL, description: "+2 Knowledge per non-consumable relic owned.", sprite: "037.png" }),
+    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.SPECIAL, description: "+2 Knowledge per Relic owned.", sprite: "037.png" }),
     def('relic_caravan', { name: "Relic Caravan", type: SymbolType.SPECIAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
 
     // Ancient
