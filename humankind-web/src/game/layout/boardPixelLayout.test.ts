@@ -7,7 +7,7 @@ import {
 
 describe('board pixel layout', () => {
     const statusReservedHeight = 84;
-    const extraUpwardOffset = 18;
+    const extraUpwardOffset = 6;
 
     it('renders the centered board at BOARD_DISPLAY_SCALE of its base size', () => {
         const layout = computeBoardPixelLayout(1920, 1080);

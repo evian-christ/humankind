@@ -275,10 +275,10 @@ function DemoMainMenu({
       <div className="main-menu-proof-code" aria-label={`Steam proof code ${steamProofCode}`}>
         {steamProofCode}
       </div>
+      <div className="main-menu-version" aria-label="version b1.2.3">
+        b1.2.3
+      </div>
       <main className="main-menu" aria-label={t('mainMenu.title', language)}>
-        <div className="main-menu-version" aria-label="version b1.2.3">
-          b1.2.3
-        </div>
         <h1 className="main-menu-title main-menu-title--image">
           <img
             className="main-menu-title-sprite"

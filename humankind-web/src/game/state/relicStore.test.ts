@@ -10,7 +10,7 @@ describe('relic store capacity', () => {
         useRelicStore.getState().resetRelics();
     });
 
-    it('caps owned relic instances at 20', () => {
+    it('caps owned relic instances at MAX_RELICS', () => {
         for (let index = 0; index < MAX_RELICS; index += 1) {
             expect(useRelicStore.getState().addRelic(testRelic)).toBe(true);
         }
@@ -19,7 +19,7 @@ describe('relic store capacity', () => {
         expect(useRelicStore.getState().relics).toHaveLength(MAX_RELICS);
     });
 
-    it('allows consumable relics beyond the 20 non-consumable slots', () => {
+    it('allows consumable relics beyond the MAX_RELICS non-consumable slots', () => {
         for (let index = 0; index < MAX_RELICS; index += 1) {
             expect(useRelicStore.getState().addRelic(testRelic)).toBe(true);
         }

@@ -92,82 +92,22 @@ export class RelicRenderer {
     public render(
         state: GameState,
         scale: number,
-        screenWidth: number,
-        screenHeight: number,
+        _screenWidth: number,
+        _screenHeight: number,
         fontFamily: string,
     ) {
-        const relics = useRelicStore.getState().relics;
-        const permanentRelics = relics.filter((relic) => !isSealRelicId(relic.definition.id));
         this.screenHitBounds = [];
         this.screenHitBoundsByInstanceId.clear();
 
-        const shakeRelicDefId = useGameStore.getState().preCombatShakeRelicDefId;
-        const columnCount = 2;
-        const rowCount = MAX_RELICS / columnCount;
-        const gapX = 8 * scale;
-        const gapY = 4 * scale;
-        const minimumSideMargin = 16 * scale;
-        const iconSize = 64 * scale;
-        const panelPadding = 8 * scale;
-        const panelWidth = iconSize * columnCount + gapX + panelPadding * 2;
-        const panelHeight = iconSize * rowCount + gapY * (rowCount - 1) + panelPadding * 2;
-
-        const relicPanel = new PIXI.Container();
-        relicPanel.x = Math.round(screenWidth - panelWidth - minimumSideMargin);
-        relicPanel.y = Math.round((screenHeight - panelHeight) / 2);
-        this.displayContainer.addChild(relicPanel);
-
-        this.renderPanelBackground(relicPanel, panelWidth, panelHeight, scale);
-        this.renderEmptySlots(
-            relicPanel,
-            permanentRelics.length,
-            iconSize,
-            gapX,
-            gapY,
-            panelPadding,
-        );
-        const layout = this.buildLayout(
-            permanentRelics,
-            iconSize,
-            gapX,
-            gapY,
-            panelPadding,
-        );
+        // Permanent relic slots and consumable seal controls now live in DOM UI.
+        // Keep this renderer only as a safe sink for relic floating-text calls.
+        const sealIconSize = getSealSpriteSize(scale);
         const relicCenterByInstanceId = new Map<string, { x: number; y: number }>();
-
-        for (const { stack, iconX, iconY } of layout) {
-            const { relic } = stack;
-            const isShakingThisRelic = shakeRelicDefId === relic.definition.id;
-            const shakeX = isShakingThisRelic ? Math.sin(Date.now() / 20) * (5 * scale) : 0;
-            const shakeY = isShakingThisRelic ? Math.cos(Date.now() / 17) * (4 * scale) : 0;
-            const worldIconX = relicPanel.x + iconX + shakeX;
-            const worldIconY = relicPanel.y + iconY + shakeY;
-            for (const stackedRelic of stack.relics) {
-                relicCenterByInstanceId.set(stackedRelic.instanceId, {
-                    x: worldIconX + iconSize / 2,
-                    y: worldIconY + iconSize / 2,
-                });
-            }
-
-            this.renderIcon(relicPanel, relic, iconX, iconY, iconSize, shakeX, shakeY);
-            this.renderSealBadge(relicPanel, relic, iconX, iconY, iconSize, scale, shakeX, shakeY, fontFamily);
-            this.renderHitArea(stack, worldIconX, worldIconY, iconSize, fontFamily);
-            this.renderCounter(relicPanel, relic, iconX, iconY, iconSize, scale, fontFamily);
-        }
-
-        this.renderSealPanel(
-            relics,
-            relicCenterByInstanceId,
-            scale,
-            screenWidth,
-            screenHeight,
-            fontFamily,
-        );
 
         this.floatingTextRenderer.renderRelicFloats(
             state,
             relicCenterByInstanceId,
-            iconSize,
+            sealIconSize,
             fontFamily,
             this.floatContainer,
         );

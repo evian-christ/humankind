@@ -4,7 +4,7 @@ import { scheduleGameLifecycleTimeout } from './game/state/gameLifecycleRun';
 import { useBoardTooltipBlockStore } from './game/state/boardTooltipBlockStore';
 import { useSettingsStore, type Language } from './game/state/settingsStore';
 import { usePreGameStore } from './game/state/preGameStore';
-import { useRelicStore } from './game/state/relicStore';
+import { MAX_RELICS, useRelicStore, type RelicInstance } from './game/state/relicStore';
 import { t } from './i18n';
 import GameCanvas from './components/GameCanvas';
 import SymbolSelection from './components/SymbolSelection';
@@ -25,10 +25,13 @@ import OwnedSymbolsModal from './components/OwnedSymbolsModal';
 import EffectLogOverlay from './components/EffectLogOverlay';
 import KnowledgeUpgradesOverlay from './components/KnowledgeUpgradesOverlay';
 import BalanceSimulatorOverlay from './components/BalanceSimulatorOverlay';
+import { EffectText } from './components/EffectText';
 import { LEADERS, MAX_LEADER_LEVEL, getLeaderXpRequiredForLevel, leaderHasPortraitSprite, type LeaderId, type LeaderProgressAwardResult } from './game/data/leaders';
-import { calculateFoodCost, formatTimelineYear, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel, getTimelineYearForTurn } from './game/state/gameCalculations';
+import { calculateFoodCost, formatTimelineYear, getHudTurnStartPassiveTotals, getKnowledgeRequiredForLevel, getTimelineYearForTurn, getTrojanGoldLootReward } from './game/state/gameCalculations';
 import { MAX_CULTURE_LEVEL, getCultureProgress, getRelicRarityWeightsForCulture } from './game/data/cultureProgression';
-import { getRelicRarityColorHex } from './game/data/relicDefinitions';
+import { getRelicRarityColorHex, type RelicRarity } from './game/data/relicDefinitions';
+import { isSealRelicId } from './game/logic/relics/relicClassification';
+import { RELIC_ID } from './game/logic/relics/relicIds';
 import { CULTURE_RESOURCE_ICON_URL, FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, INVENTORY_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL, RELIC_PANEL_TITLE_ICON_URL } from './uiAssetUrls';
 import { audioManager } from './audio/audioManager';
 import type { AudioPlaybackHandle } from './audio/audioManager';
@@ -36,6 +39,7 @@ import { DEFAULT_AUDIO_CUES } from './audio/audioCues';
 import { boardCellLocalRect, computeBoardPixelLayout } from './game/layout/boardPixelLayout';
 import { useBoardViewStore } from './game/state/boardViewStore';
 import { mapCrtSourceToOutput } from './components/canvas/crtProjection';
+import { CLICKABLE_RELIC_IDS } from './components/canvas/renderers/rendererShared';
 import { S } from './game/data/symbolDefinitions';
 import { viewportPointToRootPoint } from './ui/cursorPosition';
 
@@ -128,7 +132,7 @@ const GAMEPLAY_BGM_PLAYLISTS = [
   {
     id: 'modern_era',
     minLevel: 20,
-    maxLevel: 30,
+    maxLevel: Number.POSITIVE_INFINITY,
     cueIds: MODERN_ERA_BGM_CUE_IDS,
   },
 ] as const;
@@ -140,10 +144,38 @@ const GAME_OVER_MUSIC_FADE_IN_MS = 4200;
 const XP_FILL_FADE_OUT_MS = 120;
 const XP_LEVEL_UP_HOLD_MS = 220;
 const XP_LEVEL_UP_RESET_MS = 90;
+const RELIC_ASSET_BASE_URL = import.meta.env.BASE_URL;
+
+const RELIC_RARITY_NAME_KEYS: Record<RelicRarity, string> = {
+  common: 'rarity.common',
+  uncommon: 'rarity.uncommon',
+  rare: 'rarity.rare',
+  epic: 'rarity.epic',
+  legendary: 'rarity.legendary',
+};
 
 const uiText = (language: Language, ko: string, en: string, zh: string, ru?: string) => (
   language === 'ko' ? ko : language === 'zh' ? zh : language === 'ru' ? (ru ?? en) : en
 );
+
+function getRelicSpriteSrc(relic: RelicInstance) {
+  const { sprite } = relic.definition;
+  if (!sprite || sprite === '-' || sprite === '-.png') return null;
+  return `${RELIC_ASSET_BASE_URL}assets/relics/${sprite}`;
+}
+
+function getRelicCounterText(relic: RelicInstance) {
+  const relicId = relic.definition.id;
+  if (relicId === RELIC_ID.UR_WHEEL || relicId === RELIC_ID.NILE_SILT) return String(relic.effect_counter);
+  if (relicId === RELIC_ID.JOMON_POTTERY) return String(relic.bonus_stacks);
+  if (relicId === RELIC_ID.BABYLON_MAP) return String(1 + (relic.bonus_stacks ?? 0));
+  return null;
+}
+
+function getDisplayedRelicDesc(relicId: number, desc: string, level: number) {
+  if (relicId !== RELIC_ID.TROY_GOLD_LOOT) return desc;
+  return desc.replace('{gold}', String(getTrojanGoldLootReward(level)));
+}
 
 function getGameplayBgmPlaylist(level: number) {
   return GAMEPLAY_BGM_PLAYLISTS.find((playlist) => level >= playlist.minLevel && level <= playlist.maxLevel) ?? null;
@@ -421,10 +453,10 @@ const TUTORIAL_DIALOG_STEPS_KO = [
     '지식 업그레이드 창을 열어보세요.',
   ],
   [
-    '레벨 업을 할 때마다 이 곳에서 지식 업그레이드를 하나 연구할 수 있습니다.',
+    '레벨 업을 할 때마다 아홉 업그레이드 중 하나의 레벨을 올릴 수 있습니다.',
   ],
   [
-    '클릭하여 고대시대를 연구하세요.',
+    '시대 업그레이드를 클릭하여 시대 I을 연구하세요.',
   ],
   [
     '이전 화면으로 돌아가세요.',
@@ -470,14 +502,13 @@ const TUTORIAL_DIALOG_STEPS_KO = [
     '지식 업그레이드 창을 열어보세요.',
   ],
   [
-    '지식 업그레이드 화면을 가로로 끝까지 이동해보세요.',
+    '시대 업그레이드를 선택해 세 단계 구조를 확인해보세요.',
   ],
   [
-    '레벨 30이 되면 AGI 프로젝트를 연구할 수 있습니다.',
-    '연구하면 AGI 코어가 등장합니다.',
+    '시대 업그레이드는 고대, 중세, 현대의 세 단계로 구성됩니다.',
   ],
   [
-    'AGI 코어가 지식을 500 흡수하면 게임에서 승리합니다.',
+    '단계 바는 연구한 단계만 채워집니다.',
   ],
   [
     '이제 이전 화면으로 돌아가세요.',
@@ -535,10 +566,10 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'Open the Knowledge Upgrade window.',
   ],
   [
-    'Each time you gain a level, you can research one Knowledge Upgrade here.',
+    'Each time you gain a level, you can level up one of the nine upgrades.',
   ],
   [
-    'Click to research Ancient Era.',
+    'Select the Era upgrade to research Era I.',
   ],
   [
     'Return to the previous screen.',
@@ -584,14 +615,13 @@ const TUTORIAL_DIALOG_STEPS_EN: string[][] = [
     'Open the Knowledge Upgrade window.',
   ],
   [
-    'Scroll horizontally to the end of the Knowledge Upgrade tree.',
+    'Select the Era upgrade and inspect its three-stage structure.',
   ],
   [
-    'At level 30, you can research the AGI Project.',
-    'This makes AGI Core appear.',
+    'The Era upgrade has three stages: Ancient, Medieval, and Modern.',
   ],
   [
-    'You win when AGI Core absorbs 500 Knowledge.',
+    'The stage bar only fills stages you have already researched.',
   ],
   [
     'Now return to the previous screen.',
@@ -739,14 +769,13 @@ const TUTORIAL_DIALOG_STEPS_RU: string[][] = [
     'Откройте окно улучшений знаний.',
   ],
   [
-    'Прокрутите дерево улучшений знаний по горизонтали до конца.',
+    'Выберите улучшение эпохи и посмотрите его структуру из трех этапов.',
   ],
   [
-    'На уровне 30 можно изучить проект AGI.',
-    'После этого в игре появится ядро AGI.',
+    'Улучшение эпохи состоит из трех этапов: древность, средневековье и современность.',
   ],
   [
-    'Вы победите, когда ядро AGI поглотит 500 знаний.',
+    'Шкала этапов заполняется только для уже изученных этапов.',
   ],
   [
     'Теперь вернитесь на предыдущий экран.',
@@ -788,9 +817,9 @@ const TUTORIAL_DIALOG_STEPS_ZH: string[][] = [
   ['遗物拥有多种强力效果，可以帮助你走向繁荣。'],
   ['遗物需要用金币购买，所以尽量多收集金币。'],
   ['最后来看看如何赢得游戏。', '打开知识升级窗口。'],
-  ['将知识升级树水平滚动到最右侧。'],
-  ['达到等级 30 后可以研究 AGI 项目。', '研究后，AGI 核心就会出现。'],
-  ['当 AGI 核心吸收 500 知识时，你就会获胜。'],
+  ['选择时代升级，查看它的三个阶段结构。'],
+  ['时代升级分为三个阶段：古代、中世纪和现代。'],
+  ['阶段条只会填充已经研究过的阶段。'],
   ['现在返回上一个画面。'],
   ['基础教程到此结束。', '现在带领你的文明走向繁荣吧！'],
 ];
@@ -1201,50 +1230,6 @@ function TutorialBoardHighlights({
   );
 }
 
-/** 하단 유물/지식 버튼 HUD 툴팁: 뷰포트 왼쪽 밖으로 나가지 않도록 translateX 보정 */
-const BOTTOM_HUD_TIP_VIEWPORT_PAD = 20;
-
-function useViewportClampedBottomHudTooltip() {
-  const tooltipRef = useRef<HTMLSpanElement>(null);
-  const [shiftPx, setShiftPx] = useState(0);
-
-  const reclamp = useCallback(() => {
-    const el = tooltipRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      const root = document.getElementById('root');
-      const rootRect = root?.getBoundingClientRect();
-      const rootScale = root && rootRect && root.clientWidth > 0 ? rootRect.width / root.clientWidth : 1;
-      const visualPxToLocalPx = (px: number) => px / Math.max(rootScale, 0.001);
-      const leftNeed = Math.ceil(BOTTOM_HUD_TIP_VIEWPORT_PAD - rect.left);
-      const rightNeed = Math.ceil(rect.right - (window.innerWidth - BOTTOM_HUD_TIP_VIEWPORT_PAD));
-      if (leftNeed > 0) {
-        setShiftPx(visualPxToLocalPx(leftNeed));
-      } else if (rightNeed > 0) {
-        setShiftPx(-visualPxToLocalPx(rightNeed));
-      } else {
-        setShiftPx(0);
-      }
-    };
-    requestAnimationFrame(() => requestAnimationFrame(measure));
-  }, []);
-
-  const resetShift = useCallback(() => setShiftPx(0), []);
-
-  const bindButtonHoverHandlers = useMemo(
-    () => ({
-      onMouseEnter: reclamp,
-      onMouseLeave: resetShift,
-      onFocus: reclamp,
-      onBlur: resetShift,
-    }),
-    [reclamp, resetShift],
-  );
-
-  return { tooltipRef, shiftPx, bindButtonHoverHandlers };
-}
-
 function App() {
   const preGameScreen = usePreGameStore((s) => s.screen);
   const returnToIntro = usePreGameStore((s) => s.returnToIntro);
@@ -1273,6 +1258,8 @@ function App() {
   const level = useGameStore((s) => s.level);
   const pendingFoodPayment = useGameStore((s) => s.pendingFoodPayment);
   const resetRelics = useRelicStore((s) => s.resetRelics);
+  const relics = useRelicStore((s) => s.relics);
+  const activateClickableRelic = useGameStore((s) => s.activateClickableRelic);
   const fullscreenModalBlocksBoardTooltips = useBoardTooltipBlockStore((s) => s.ids.length > 0);
   const language = useSettingsStore((s) => s.language);
   const { resolutionWidth, resolutionHeight, setResolution } = useSettingsStore();
@@ -1281,11 +1268,11 @@ function App() {
   const tutorialFinishLabel = uiText(language, '종료', 'Finish', '完成', 'Готово');
   const tutorialExitLabel = uiText(language, '튜토리얼 종료', 'Exit Tutorial', '退出教程', 'Выйти из обучения');
   const tutorialAnywhereLabel = 'Press anywhere to continue';
+  const inventoryLabel = uiText(language, '인벤토리', 'Inventory', '物品栏', 'Инвентарь');
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedSymbolsOpen, setOwnedSymbolsOpen] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState(false);
-  const [knowledgeHudAttentionKey, setKnowledgeHudAttentionKey] = useState(0);
   const [spinBlockedHint, setSpinBlockedHint] = useState<{ key: number; text: string } | null>(null);
   const [tutorialDialogStep, setTutorialDialogStep] = useState(0);
   const [showGameOverProgress, setShowGameOverProgress] = useState(false);
@@ -1298,7 +1285,6 @@ function App() {
   const gameplayBgmTransitionTimerRef = useRef<number | null>(null);
   const gameOverMusicTimerRef = useRef<number | null>(null);
   const wasInGameOverPhaseRef = useRef(false);
-  const ownedSymbolsHudTooltip = useViewportClampedBottomHudTooltip();
 
   useEffect(() => {
     audioManager.registerCue('button_hover', DEFAULT_AUDIO_CUES.button_hover);
@@ -1522,7 +1508,6 @@ function App() {
     if (preGameScreen !== null) {
       setGameCanvasReady(false);
     } else {
-      setKnowledgeHudAttentionKey(0);
       setSpinBlockedHint(null);
     }
   }, [preGameScreen]);
@@ -1660,11 +1645,6 @@ function App() {
     }
 
     if (st.phase !== 'idle') return;
-    if ((st.levelUpResearchPoints ?? 0) > 0) {
-      showDeniedSpinHint(t('game.researchToContinue', language));
-      setKnowledgeHudAttentionKey((key) => key + 1);
-      return;
-    }
 
     void audioManager.unlock();
     spinBoard();
@@ -1713,6 +1693,11 @@ function App() {
     openMenuUnlessSpinning(toggleRelicShop);
   }, [isUserMenuOpen, openMenuUnlessSpinning, pendingBoardExpansions, toggleRelicShop]);
 
+  const handleLeftPanelRelicClick = useCallback((relic: RelicInstance) => {
+    if (!CLICKABLE_RELIC_IDS.has(relic.definition.id)) return;
+    activateClickableRelic(relic.instanceId);
+  }, [activateClickableRelic]);
+
   const handleTutorialNext = useCallback(() => {
     if (tutorialDialogStep === 28) {
       if (isRelicShopOpen) toggleRelicShop();
@@ -1746,7 +1731,7 @@ function App() {
     if (tutorialDialogStep === 16 && target.closest('.knowledge-return-hotzone')) return true;
     if (tutorialDialogStep === 26 && target.closest('.relic-edge-hotzone')) return true;
     if (tutorialDialogStep === 29 && target.closest('.knowledge-upgrades-btn')) return true;
-    if (tutorialDialogStep === 30 && target.closest('.knowledge-upgrades-tree-scroll')) return true;
+    if (tutorialDialogStep === 30 && target.closest('.knowledge-upgrade-track--era')) return true;
     if (tutorialDialogStep === 33 && target.closest('.knowledge-return-hotzone')) return true;
     return false;
   }, [isTutorialMode, tutorialDialogStep]);
@@ -1844,7 +1829,7 @@ function App() {
     setShowVictoryProgress(false);
   }, [phase]);
 
-  // 스페이스바로 스핀 (idle + 연구 포인트 없음, 입력 필드 포커스 시 무시)
+  // 스페이스바로 스핀 (idle, 입력 필드 포커스 시 무시)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -1991,7 +1976,7 @@ function App() {
   // ===== 본게임 =====
   const eraName = t(ERA_NAME_KEYS[era] ?? 'era.ancient', language);
 
-  const knowledgeRequired = getKnowledgeRequiredForLevel(Math.min(level, 29));
+  const knowledgeRequired = getKnowledgeRequiredForLevel(level);
   const knowledgeRatio = Math.min(1, knowledge / knowledgeRequired);
   const cultureProgress = getCultureProgress(culture);
   const cultureRarityWeights = getRelicRarityWeightsForCulture(cultureLevel);
@@ -2000,6 +1985,32 @@ function App() {
   const isCultureMaxLevel = cultureLevel >= MAX_CULTURE_LEVEL;
   const turnsUntilPayment = pendingFoodPayment ? 0 : turn % 10 === 0 ? 10 : 10 - (turn % 10);
   const nextCost = calculateFoodCost(pendingFoodPayment ? turn : turn + turnsUntilPayment);
+  const foodDemandTooltipLines = [
+    uiText(
+      language,
+      `${turnsUntilPayment}턴 뒤, 식량을 지불하지 못하면 패배합니다.`,
+      `In ${turnsUntilPayment} turns, you lose if you cannot pay Food.`,
+      `${turnsUntilPayment}回合后，如果无法支付食物就会失败。`,
+      `Через ${turnsUntilPayment} ход(ов) вы проиграете, если не сможете заплатить еду.`,
+    ),
+    uiText(
+      language,
+      '식량 지불 후 보드를 1칸 확장합니다.',
+      'After paying Food, expand the board by 1 slot.',
+      '支付食物后，棋盘扩展1格。',
+      'После оплаты еды поле расширяется на 1 клетку.',
+    ),
+    uiText(
+      language,
+      '식량 지불 후 유물 상점이 열립니다.',
+      'After paying Food, the Relic Shop opens.',
+      '支付食物后，遗物商店会开启。',
+      'После оплаты еды открывается магазин реликвий.',
+    ),
+  ];
+  const payFoodButtonActionLabel = uiText(language, '지불', 'PAY', '支付', 'ЗАПЛАТИТЬ');
+  const boardExpansionButtonLabel = uiText(language, '확장 +1', 'EXPAND +1', '扩展 +1', 'РАСШИРИТЬ +1');
+  const relicShopButtonLabel = t('game.relicShopTitleShort', language);
   const foodDemandWarningClass =
     turnsUntilPayment <= 3 ? `warning-${turnsUntilPayment}` : turnsUntilPayment <= 4 ? 'warning-mid' : '';
   const timelineYearLabel = formatTimelineYear(getTimelineYearForTurn(turn), language);
@@ -2007,6 +2018,8 @@ function App() {
 
   const activeState = useGameStore.getState();
   const hudPassiveTotals = hoveredStat ? getHudTurnStartPassiveTotals(activeState) : null;
+  const permanentRelics = relics.filter((relic) => !isSealRelicId(relic.definition.id)).slice(0, MAX_RELICS);
+  const leftRelicSlots = Array.from({ length: MAX_RELICS }, (_, index) => permanentRelics[index] ?? null);
 
   const renderTooltip = (kind: 'knowledge' | 'food' | 'gold' | 'military') => {
     if (hoveredStat !== kind || !hudPassiveTotals) return null;
@@ -2078,116 +2091,7 @@ function App() {
       onClickCapture={blockUnhandledTutorialInteraction}
     >
       <CustomCursor />
-      {isTutorialMode && tutorialDialogStep === 26 && (
-        <button
-          type="button"
-          className="relic-edge-hotzone"
-          onClick={handleRelicEdgeOpen}
-          data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
-          aria-label={
-            hasNewRelicShopStock
-              ? t('game.relicShopNewStockAria', language)
-              : t('game.relicShopTitleShort', language)
-          }
-          disabled={pendingBoardExpansions > 0 || isUserMenuOpen}
-        >
-          <span className="edge-hotzone-label">
-            <img className="edge-hotzone-icon" src={RELIC_PANEL_TITLE_ICON_URL} alt="" draggable={false} />
-            <span className="edge-hotzone-text">유물 상점</span>
-          </span>
-        </button>
-      )}
-      <div className="hud-top">
-        <div className="progress-hud-panels">
-          <button
-            key={knowledgeHudAttentionKey}
-            type="button"
-            className={[
-              'relic-shop-btn',
-              'relic-shop-btn--knowledge',
-              'knowledge-upgrades-btn',
-              levelUpResearchPoints > 0 ? 'relic-shop-btn--knowledge-attention' : '',
-            ].filter(Boolean).join(' ')}
-            onClick={handleKnowledgeUpgradesOpen}
-            onMouseEnter={() => setHoveredStat('knowledge')}
-            onMouseLeave={() => setHoveredStat(null)}
-            onFocus={() => setHoveredStat('knowledge')}
-            onBlur={() => setHoveredStat(null)}
-            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
-            aria-label={levelUpResearchPoints > 0
-              ? t('game.knowledgeHudButtonHintPending', language).replace('{title}', t('game.knowledgeUpgradeTreeTitle', language))
-              : t('game.knowledgeUpgradeTreeTitle', language)}
-            disabled={pendingBoardExpansions > 0 || isKnowledgeOpen}
-          >
-            <span className="knowledge-upgrade-progress">
-              <span className="knowledge-upgrade-progress-heading">
-                <span className="knowledge-upgrade-progress-level">Lv.{level}</span>
-                <span className="knowledge-upgrade-progress-era">{eraName}</span>
-              </span>
-              <span className="knowledge-upgrade-progress-bar-wrap">
-                <span className="knowledge-upgrade-progress-bar">
-                  <span className="knowledge-upgrade-progress-fill" style={{ width: `${knowledgeRatio * 100}%` }} />
-                  <span className="knowledge-upgrade-progress-value">
-                    <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" draggable={false} />
-                    <span>{knowledge}/{knowledgeRequired}</span>
-                  </span>
-                </span>
-                {renderRunningTotal('knowledge')}
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="relic-shop-btn relic-shop-btn--culture culture-level-hud"
-            onMouseEnter={() => setHoveredStat('culture')}
-            onMouseLeave={() => setHoveredStat(null)}
-            onFocus={() => setHoveredStat('culture')}
-            onBlur={() => setHoveredStat(null)}
-            aria-label={`Culture level ${cultureLevel} of ${MAX_CULTURE_LEVEL}`}
-          >
-            <span className="knowledge-upgrade-progress">
-              <span className="knowledge-upgrade-progress-heading">
-                <span className="knowledge-upgrade-progress-level">Lv.{cultureLevel}/{MAX_CULTURE_LEVEL}</span>
-              </span>
-              <span className="knowledge-upgrade-progress-bar-wrap">
-                <span className="knowledge-upgrade-progress-bar">
-                  <span className="knowledge-upgrade-progress-fill culture-level-progress-fill" style={{ width: `${cultureProgress.ratio * 100}%` }} />
-                  <span className="knowledge-upgrade-progress-value">
-                    <img src={CULTURE_RESOURCE_ICON_URL} alt="" draggable={false} />
-                    <span>{cultureProgress.isMax ? 'MAX' : `${cultureProgress.current}/${cultureProgress.required}`}</span>
-                  </span>
-                </span>
-                {renderRunningTotal('culture')}
-              </span>
-            </span>
-            {hoveredStat === 'culture' && (
-              <div className="culture-level-tooltip">
-                <strong>
-                  <span>{t('cultureTooltip.relicRarity', language)}</span>
-                  <small>
-                    {isCultureMaxLevel
-                      ? t('cultureTooltip.maxLevel', language)
-                      : t('cultureTooltip.nextLevel', language).replace('{level}', String(nextCultureLevel))}
-                  </small>
-                </strong>
-                {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as const).map((rarity) => (
-                  <span
-                    key={rarity}
-                    className="culture-level-tooltip-row"
-                    style={{ color: getRelicRarityColorHex(rarity) }}
-                  >
-                    <span>{t(`rarity.${rarity}`, language)}</span>
-                    <b>
-                      {cultureRarityWeights[rarity]}%
-                      {!isCultureMaxLevel && <> → {nextCultureRarityWeights[rarity]}%</>}
-                    </b>
-                  </span>
-                ))}
-              </div>
-            )}
-          </button>
-          {renderTooltip('knowledge')}
-        </div>
+      <aside className="game-left-section">
         <div className="hud-top-left">
           <div className="resource-group resource-group--food" onMouseEnter={() => setHoveredStat('food')} onMouseLeave={() => setHoveredStat(null)}>
             <img src={FOOD_RESOURCE_ICON_URL} alt="Food" className="resource-icon" />
@@ -2214,14 +2118,211 @@ function App() {
             {renderTooltip('military')}
           </div>
         </div>
+        <button
+          className="relic-shop-btn relic-shop-btn--owned-symbols game-left-owned-symbols-btn"
+          type="button"
+          aria-label={inventoryLabel}
+          onClick={() => openMenuUnlessSpinning(() => setOwnedSymbolsOpen(true))}
+          data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
+        >
+          <span className="relic-shop-btn-icon-layer" aria-hidden="true">
+            <img src={INVENTORY_ICON_URL} alt="" draggable={false} />
+          </span>
+          <span className="game-left-owned-symbols-label">{inventoryLabel}</span>
+        </button>
+        <div className="game-left-relic-panel" aria-label={uiText(language, '유물 슬롯', 'Relic slots', '遗物栏', 'Слоты реликвий')}>
+          <div className="game-left-relic-grid">
+            {leftRelicSlots.map((relic, index) => {
+              if (!relic) {
+                return (
+                  <div
+                    key={`empty-relic-${index}`}
+                    className="game-left-relic-slot game-left-relic-slot--empty"
+                    aria-hidden="true"
+                  >
+                    <span className="game-left-relic-empty-dot" />
+                  </div>
+                );
+              }
 
+              const relicName = t(`relic.${relic.definition.id}.name`, language);
+              const relicRarityName = t(RELIC_RARITY_NAME_KEYS[relic.definition.rarity], language);
+              const relicSpriteSrc = getRelicSpriteSrc(relic);
+              const relicCounterText = getRelicCounterText(relic);
+              const relicDescription = getDisplayedRelicDesc(
+                relic.definition.id,
+                t(`relic.${relic.definition.id}.desc`, language),
+                level,
+              );
+              const isClickableRelic = CLICKABLE_RELIC_IDS.has(relic.definition.id);
+
+              return (
+                <button
+                  key={relic.instanceId}
+                  type="button"
+                  className={[
+                    'game-left-relic-slot',
+                    'game-left-relic-slot--filled',
+                    isClickableRelic ? 'game-left-relic-slot--clickable' : '',
+                  ].filter(Boolean).join(' ')}
+                  style={{
+                    '--game-left-relic-rarity-color': getRelicRarityColorHex(relic.definition.rarity),
+                  } as React.CSSProperties}
+                  aria-label={`${uiText(language, '유물', 'Relic', '遗物', 'Реликвия')} ${index + 1}: ${relicName}`}
+                  aria-disabled={!isClickableRelic}
+                  onClick={isClickableRelic ? () => handleLeftPanelRelicClick(relic) : undefined}
+                >
+                  {relicSpriteSrc ? (
+                    <img className="game-left-relic-icon" src={relicSpriteSrc} alt="" draggable={false} />
+                  ) : (
+                    <span className="game-left-relic-placeholder" aria-hidden="true">?</span>
+                  )}
+                  {relicCounterText !== null && (
+                    <span className="game-left-relic-counter">{relicCounterText}</span>
+                  )}
+                  <span className="game-left-relic-tooltip" aria-hidden="true">
+                    <span className="game-left-relic-tooltip-name">{relicName}</span>
+                    <span className="game-left-relic-tooltip-rarity">{relicRarityName}</span>
+                    <span className="game-left-relic-tooltip-desc">
+                      {relicDescription.split('\n').map((line, lineIndex) => (
+                        <span key={lineIndex} className="game-left-relic-tooltip-desc-line">
+                          <EffectText text={line} />
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </aside>
+      {isTutorialMode && tutorialDialogStep === 26 && (
+        <button
+          type="button"
+          className="relic-edge-hotzone"
+          onClick={handleRelicEdgeOpen}
+          data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
+          aria-label={
+            hasNewRelicShopStock
+              ? t('game.relicShopNewStockAria', language)
+              : t('game.relicShopTitleShort', language)
+          }
+          disabled={pendingBoardExpansions > 0 || isUserMenuOpen}
+        >
+          <span className="edge-hotzone-label">
+            <img className="edge-hotzone-icon" src={RELIC_PANEL_TITLE_ICON_URL} alt="" draggable={false} />
+            <span className="edge-hotzone-text">유물 상점</span>
+          </span>
+        </button>
+      )}
+      <aside className="game-right-section">
+        <div className="progress-hud-panels">
+          <button
+            type="button"
+            className={[
+              'relic-shop-btn',
+              'relic-shop-btn--knowledge',
+              'knowledge-upgrades-btn',
+              levelUpResearchPoints > 0 ? 'relic-shop-btn--knowledge-attention' : '',
+              hoveredStat === 'knowledge' ? 'game-right-action--hovered' : '',
+            ].filter(Boolean).join(' ')}
+            onClick={handleKnowledgeUpgradesOpen}
+            onMouseEnter={() => setHoveredStat('knowledge')}
+            onMouseLeave={() => setHoveredStat(null)}
+            onFocus={() => setHoveredStat('knowledge')}
+            onBlur={() => setHoveredStat(null)}
+            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
+            aria-label={levelUpResearchPoints > 0
+              ? t('game.knowledgeHudButtonHintPending', language).replace('{title}', t('game.knowledgeUpgradeTreeTitle', language))
+              : t('game.knowledgeUpgradeTreeTitle', language)}
+            disabled={pendingBoardExpansions > 0 || isKnowledgeOpen}
+          >
+            <span className="game-right-action-icon" aria-hidden="true">
+              <img src={KNOWLEDGE_RESOURCE_ICON_URL} alt="" draggable={false} />
+            </span>
+            <span className="game-right-action-copy">
+              <span className="game-right-action-meta">
+                <span>Lv.{level}</span>
+                <span>{eraName}</span>
+              </span>
+              <span className="game-right-action-bar" aria-hidden="true">
+                <span className="game-right-action-bar-fill game-right-action-bar-fill--knowledge" style={{ width: `${knowledgeRatio * 100}%` }} />
+                <span className="game-right-action-bar-value">
+                  {knowledge}/{knowledgeRequired}
+                </span>
+              </span>
+            </span>
+            {renderRunningTotal('knowledge')}
+          </button>
+          <div
+            className="relic-shop-btn relic-shop-btn--culture culture-level-hud"
+            onMouseEnter={() => setHoveredStat('culture')}
+            onMouseLeave={() => setHoveredStat(null)}
+            aria-label={`Culture level ${cultureLevel} of ${MAX_CULTURE_LEVEL}`}
+          >
+            <span className="game-right-action-icon" aria-hidden="true">
+              <img src={CULTURE_RESOURCE_ICON_URL} alt="" draggable={false} />
+            </span>
+            <span className="game-right-action-copy">
+              <span className="game-right-action-label">{uiText(language, '문화', 'Culture', '文化', 'Культура')}</span>
+              <span className="game-right-action-meta">
+                <span>Lv. {cultureLevel}</span>
+              </span>
+              <span className="game-right-action-bar" aria-hidden="true">
+                <span className="game-right-action-bar-fill game-right-action-bar-fill--culture" style={{ width: `${cultureProgress.ratio * 100}%` }} />
+                <span className="game-right-action-bar-value">
+                  {cultureProgress.isMax ? 'MAX' : `${cultureProgress.current}/${cultureProgress.required}`}
+                </span>
+              </span>
+            </span>
+            {renderRunningTotal('culture')}
+            {hoveredStat === 'culture' && (
+              <div className="culture-level-tooltip">
+                <strong>
+                  <span>{t('cultureTooltip.relicRarity', language)}</span>
+                  <small>
+                    {isCultureMaxLevel
+                      ? t('cultureTooltip.maxLevel', language)
+                      : t('cultureTooltip.nextLevel', language).replace('{level}', String(nextCultureLevel))}
+                  </small>
+                </strong>
+                {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as const).map((rarity) => (
+                  <span
+                    key={rarity}
+                    className="culture-level-tooltip-row"
+                    style={{ color: getRelicRarityColorHex(rarity) }}
+                  >
+                    <span>{t(`rarity.${rarity}`, language)}</span>
+                    <b>
+                      {cultureRarityWeights[rarity]}%
+                      {!isCultureMaxLevel && <> → {nextCultureRarityWeights[rarity]}%</>}
+                    </b>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          {renderTooltip('knowledge')}
+        </div>
         <div className="hud-top-center">
-          <div className={`food-demand-mini ${foodDemandWarningClass}`}>
-             {t('game.foodDemandFlavor', language).replace('{turns}', String(turnsUntilPayment)).replace('{amount}', nextCost.toLocaleString())}
+          <div
+            className={`food-demand-mini ${foodDemandWarningClass}`}
+            tabIndex={0}
+            aria-describedby="food-demand-tooltip"
+          >
+            {t('game.foodDemandFlavor', language).replace('{turns}', String(turnsUntilPayment)).replace('{amount}', nextCost.toLocaleString())}
+            <div id="food-demand-tooltip" className="food-demand-tooltip" role="tooltip">
+              {foodDemandTooltipLines.map((line) => (
+                <span key={line} className="food-demand-tooltip-line">
+                  {line}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="hud-top-right">
+        <div className="hud-top-right game-right-status-panel">
           <div className="turn-year-mini" aria-label={turnYearLabel}>
             <span className="turn-year-mini-turn">{t('game.turn', language)} {turn}</span>
             <span className="turn-year-mini-year">{timelineYearLabel}</span>
@@ -2236,7 +2337,48 @@ function App() {
             <span className="pause-btn-top-icon" aria-hidden="true" />
           </button>
         </div>
-      </div>
+        <div className="spin-area">
+          <button
+            type="button"
+            className={`spin-btn${isFoodPaymentPending ? ' spin-btn--food-payment' : ''}${isBoardExpansionReady ? ' spin-btn--board-expansion' : ''}${isRelicShopReady ? ' spin-btn--relic-shop' : ''}`}
+            onClick={handleSpinBoard}
+            disabled={!canPressSpin}
+            data-audio-click={
+              isUserMenuOpen ? 'skip' : undefined
+            }
+            aria-label={
+              isFoodPaymentPending
+                ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString())
+                : isBoardExpansionReady
+                  ? boardExpansionButtonLabel
+                  : isRelicShopReady
+                    ? relicShopButtonLabel
+                    : t('game.spin', language)
+            }
+          >
+            {isFoodPaymentPending ? (
+              <span className="spin-btn__state-label spin-btn__food-payment-label" aria-hidden="true">
+                <span className="spin-btn__food-payment-action">{payFoodButtonActionLabel}</span>
+                <span className="spin-btn__food-payment-cost">
+                  <img src={FOOD_RESOURCE_ICON_URL} alt="" draggable={false} />
+                  <span>{nextCost.toLocaleString()}</span>
+                </span>
+              </span>
+            ) : isBoardExpansionReady ? (
+              <span className="spin-btn__state-label spin-btn__board-expansion-label">{boardExpansionButtonLabel}</span>
+            ) : isRelicShopReady ? (
+              <span className="spin-btn__state-label spin-btn__relic-shop-label">{relicShopButtonLabel}</span>
+            ) : (
+              <span className="spin-btn__state-label">{t('game.spin', language)}</span>
+            )}
+          </button>
+          {spinBlockedHint && (
+            <span key={spinBlockedHint.key} className="spin-research-hint-float" aria-hidden="true">
+              {spinBlockedHint.text}
+            </span>
+          )}
+        </div>
+      </aside>
 
 
 
@@ -2253,80 +2395,6 @@ function App() {
       </div>
 
       {/* ===== 보드 하단: 왼쪽(유물) · 중앙 고정(스핀) · 오른쪽(⋯, 메뉴) ===== */}
-      <div className="bottom-action-bar">
-        <div className="spin-area">
-          <button
-            type="button"
-            className={`spin-btn${isFoodPaymentPending ? ' spin-btn--food-payment' : ''}${isBoardExpansionReady ? ' spin-btn--board-expansion' : ''}${isRelicShopReady ? ' spin-btn--relic-shop' : ''}`}
-            onClick={handleSpinBoard}
-            disabled={!canPressSpin}
-            data-audio-click={
-              isUserMenuOpen || (!isFoodPaymentPending && levelUpResearchPoints > 0)
-                ? 'skip'
-                : undefined
-            }
-            aria-label={
-              isFoodPaymentPending
-                ? t('game.payFood', language).replace('{amount}', nextCost.toLocaleString())
-                : isBoardExpansionReady
-                  ? 'EXPAND +1'
-                  : isRelicShopReady
-                    ? 'RELIC SHOP'
-                  : t('game.spin', language)
-            }
-          >
-            {isFoodPaymentPending ? (
-              <span className="spin-btn__food-payment-label" aria-hidden="true">
-                <span>PAY</span>
-                <img src={FOOD_RESOURCE_ICON_URL} alt="" draggable={false} />
-                <span>{nextCost.toLocaleString()}</span>
-              </span>
-            ) : isBoardExpansionReady ? (
-              <span className="spin-btn__board-expansion-label">EXPAND +1</span>
-            ) : isRelicShopReady ? (
-              <span className="spin-btn__relic-shop-label">RELIC SHOP</span>
-            ) : (
-              <span>SPIN</span>
-            )}
-          </button>
-          {spinBlockedHint && (
-            <span key={spinBlockedHint.key} className="spin-research-hint-float" aria-hidden="true">
-              {spinBlockedHint.text}
-            </span>
-          )}
-        </div>
-        <div className="bottom-action-bar-right">
-          <button
-            className="relic-shop-btn relic-shop-btn--owned-symbols"
-            type="button"
-            aria-label={t('ownedSymbols.title', language)}
-            {...ownedSymbolsHudTooltip.bindButtonHoverHandlers}
-            onClick={() => openMenuUnlessSpinning(() => setOwnedSymbolsOpen(true))}
-            data-audio-click={isTurnAnimationRunning ? 'skip' : undefined}
-          >
-            <span className="relic-shop-btn-icon-layer" aria-hidden="true">
-              <img src={INVENTORY_ICON_URL} alt="" draggable={false} style={{ imageRendering: 'pixelated' }} />
-            </span>
-            <span
-              ref={ownedSymbolsHudTooltip.tooltipRef}
-              className="bottom-action-hud-tooltip"
-              aria-hidden="true"
-              style={
-                {
-                  '--bottom-hud-tooltip-shift': `${ownedSymbolsHudTooltip.shiftPx}px`,
-                } as React.CSSProperties
-              }
-            >
-              <span className="hud-stat-tooltip">
-                <span className="hud-stat-tooltip-inner">
-                  <span style={{ color: '#e5e5e5' }}>{t('ownedSymbols.title', language)}</span>
-                </span>
-              </span>
-            </span>
-          </button>
-        </div>
-      </div>
-
       {/* ===== PAUSE MENU OVERLAY ===== */}
       <PauseMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} onOpenLog={() => setIsLogOpen(true)} />
 

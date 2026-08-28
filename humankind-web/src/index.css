@@ -41,6 +41,33 @@
   --panel-bg: rgba(28, 28, 28, 0.95);
   --accent: #808080;
   --accent-bright: #c0c0c0;
+  --game-ui-bg: #000000;
+  --game-ui-panel: #242424;
+  --game-ui-panel-deep: #1c1c1c;
+  --game-ui-panel-darker: #151515;
+  --game-ui-line: #0e0e0e;
+  --game-ui-line-soft: #141414;
+  --game-ui-text: rgba(255, 255, 255, 0.9);
+  --game-ui-text-muted: #a0a0a0;
+  --game-ui-bevel:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+  --game-ui-bevel-hover:
+    inset 0 2px 0 #777777,
+    inset 2px 0 0 #4a4a4a,
+    inset -2px 0 0 #171717,
+    inset 0 -2px 0 #080808;
+  --game-ui-face:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    var(--game-ui-panel);
+  --game-ui-face-hover:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.02)),
+    #2e2e2e;
+  --game-ui-face-active:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.025)),
+    var(--game-ui-panel-deep);
   --poker-felt-surface:
     linear-gradient(rgba(0, 13, 8, 0.42), rgba(0, 13, 8, 0.42)),
     linear-gradient(rgba(0, 9, 5, 0.052), rgba(0, 9, 5, 0.052)),
@@ -132,17 +159,28 @@ body {
 }
 
 .hud-top-left {
-  position: fixed;
-  left: 16px;
-  bottom: 24px;
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 72px;
-  padding: 8px;
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-height: 0;
+  padding: 10px;
+  box-sizing: border-box;
   border: 2px solid #0e0e0e;
-  background: #1c1c1c;
+  background: #242424;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
   isolation: isolate;
+  pointer-events: auto;
 }
 
 .hud-top-left::after {
@@ -155,16 +193,32 @@ body {
 }
 
 .hud-top-left .hud-stat-tooltip {
-  top: auto !important;
-  bottom: calc(100% + 12px);
+  top: 50% !important;
+  bottom: auto !important;
+  left: calc(100% + 40px) !important;
   margin-top: 0 !important;
+  transform: translateY(-50%) !important;
 }
 
 .hud-top-left .running-total-pop {
-  top: auto;
-  bottom: 100%;
+  top: 50%;
+  bottom: auto;
+  left: calc(100% + 16px);
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 0;
+  transform: translateY(-50%);
+}
+
+.hud-top-left .resource-group {
+  width: 100%;
+  min-height: 58px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+}
+
+.hud-top-left .resource-group + .resource-group {
+  margin-left: 0;
+  border-top: 2px solid #0e0e0e;
 }
 
 .hud-top-center {
@@ -326,6 +380,7 @@ body {
 }
 
 .food-demand-mini {
+  position: relative;
   box-sizing: border-box;
   padding: 5px 12px;
   font-size: 24px;
@@ -334,8 +389,67 @@ body {
   color: #e0e0e0;
   text-shadow: none;
   white-space: nowrap;
+  pointer-events: auto;
+  cursor: help;
   transform-origin: center;
   transition: color 160ms steps(2, end), font-size 160ms steps(2, end);
+}
+
+.food-demand-mini:focus-visible {
+  outline: 2px solid rgba(255, 246, 201, 0.72);
+  outline-offset: 4px;
+}
+
+.food-demand-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  z-index: 60;
+  width: max-content;
+  max-width: min(430px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 2px solid var(--game-ui-line);
+  background: rgba(36, 36, 36, 0.97);
+  box-shadow: var(--game-ui-bevel);
+  color: #e5e5e5;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(4px);
+  transition: opacity 120ms steps(2, end), visibility 120ms steps(2, end), transform 120ms steps(2, end);
+}
+
+.food-demand-mini:hover .food-demand-tooltip,
+.food-demand-mini:focus-visible .food-demand-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.food-demand-tooltip-line {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+}
+
+.food-demand-tooltip-line + .food-demand-tooltip-line {
+  margin-top: 7px;
+}
+
+.food-demand-tooltip-line::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin-top: 9px;
+  background: #f5c842;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 .food-demand-mini.warning-mid {
@@ -1369,6 +1483,7 @@ button.spin-btn:disabled:active {
 }
 
 .selection-event-card-condition span {
+  margin-right: 0.35em;
   color: #fde68a;
   font-weight: 900;
 }
@@ -3267,10 +3382,11 @@ button.spin-btn:disabled:active {
   opacity: 0;
   transform: translateX(-18px);
   pointer-events: none;
+  will-change: max-height, opacity, transform;
   transition:
-    max-height 180ms steps(2, end),
-    opacity 180ms steps(2, end),
-    transform 180ms steps(2, end);
+    max-height 280ms cubic-bezier(0.2, 0.82, 0.2, 1),
+    opacity 180ms ease-out,
+    transform 280ms cubic-bezier(0.2, 0.82, 0.2, 1);
 }
 
 .main-menu-play-options--open {
@@ -3422,11 +3538,12 @@ button.spin-btn:disabled:active {
 
 .main-menu-version {
   position: absolute;
-  left: 8px;
-  bottom: 8px;
+  left: max(6px, env(safe-area-inset-left, 0px));
+  bottom: max(6px, env(safe-area-inset-bottom, 0px));
+  z-index: 150;
   color: rgba(255, 255, 255, 0.78);
   font-family: var(--game-font-family), sans-serif;
-  font-size: clamp(16px, 1.7vw, 24px);
+  font-size: 16px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
@@ -5925,10 +6042,53 @@ button.spin-btn:disabled:active {
 
 /* ===== Main-game entry: black screen and load transition layout. ===== */
 .game-screen {
+  --game-screen-edge-gap: 16px;
+  --game-side-section-width: 286px;
   position: relative;
   width: 100%;
   height: 100%;
   background: #000000;
+}
+
+.game-left-section,
+.game-right-section {
+  position: fixed;
+  top: var(--game-screen-edge-gap);
+  bottom: var(--game-screen-edge-gap);
+  z-index: 90;
+  width: var(--game-side-section-width);
+  box-sizing: border-box;
+  padding: 14px;
+  border: 2px solid #0e0e0e;
+  background: #292929;
+  box-shadow:
+    inset 0 2px 0 #626262,
+    inset 2px 0 0 #414141,
+    inset -2px 0 0 #151515,
+    inset 0 -2px 0 #080808,
+    0 0 0 2px rgba(255, 255, 255, 0.035);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  pointer-events: none;
+}
+
+.game-left-section {
+  left: var(--game-screen-edge-gap);
+}
+
+.game-right-section {
+  right: var(--game-screen-edge-gap);
+}
+
+.game-left-section::after,
+.game-right-section::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 2px solid #141414;
+  pointer-events: none;
 }
 
 .knowledge-edge-hotzone,
@@ -8037,16 +8197,20 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
 .hud-stat-tooltip {
   width: max-content;
   max-width: none;
-  padding: 0;
+  padding: 10px 12px;
   margin: 0;
-  background: rgba(14, 14, 14, 0.95);
-  border: 1px solid #606060;
+  background: rgba(36, 36, 36, 0.97);
+  border: 2px solid var(--game-ui-line);
+  border-radius: 0;
+  color: #ffffff;
   pointer-events: none;
   font-family: var(--game-font-family), sans-serif;
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  line-height: 1.2;
+  line-height: 1.42;
+  text-align: left;
+  box-shadow: var(--game-ui-bevel);
 }
 
 .hud-stat-tooltip-inner {
@@ -8054,9 +8218,26 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
   flex-direction: row;
   align-items: center;
   gap: 10px;
-  padding: 12px 18px;
+  padding: 0;
   margin: 0;
-  font-size: 34px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #e5e5e5;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.42;
+}
+
+.hud-stat-tooltip-inner img {
+  width: 34px;
+  height: 34px;
+}
+
+.hud-stat-tooltip-inner > span {
+  margin-left: 0 !important;
+  color: #e5e5e5 !important;
+  white-space: nowrap;
 }
 
 /* EffectText: natural wrapping in text containers, separated from parent flex layout. */
@@ -9249,6 +9430,7 @@ button.relic-shop-btn--knowledge {
 
 /* ===== SETTINGS PANEL ===== */
 .settings-panel {
+  --settings-panel-inline-pad: 72px;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -9256,7 +9438,7 @@ button.relic-shop-btn--knowledge {
   gap: 28px;
   width: 100%;
   height: 100%;
-  padding: 52px 72px 48px;
+  padding: 52px var(--settings-panel-inline-pad) 48px;
   box-sizing: border-box;
 }
 
@@ -9276,9 +9458,12 @@ button.relic-shop-btn--knowledge {
   width: 100%;
   border-bottom: 2px solid #444444;
   flex-shrink: 0;
+  overflow: visible;
 }
 
 .settings-tab {
+  position: relative;
+  z-index: 1;
   flex: 1;
   padding: 12px 0;
   font-family: var(--game-font-family), sans-serif;
@@ -9297,7 +9482,13 @@ button.relic-shop-btn--knowledge {
   color: #c0c0c0;
 }
 
+.settings-tab:hover,
+.settings-tab:focus-visible {
+  z-index: 3;
+}
+
 .settings-tab.active {
+  z-index: 2;
   color: #ffffff;
   border-bottom-color: #ffffff;
 }
@@ -9308,13 +9499,56 @@ button.relic-shop-btn--knowledge {
   flex-direction: column;
   gap: 28px;
   width: min(920px, 100%);
+  box-sizing: border-box;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #606060 transparent;
   min-height: 160px;
   align-self: center;
   flex: 1;
-  padding-top: 24px;
+  padding: 24px 8px 8px;
+}
+
+.settings-body--key-bindings {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.settings-body--key-bindings::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.settings-key-bindings-scrollbar {
+  position: absolute;
+  top: 244px;
+  right: var(--settings-panel-inline-pad);
+  bottom: 140px;
+  z-index: 6;
+  width: 12px;
+  box-sizing: border-box;
+  border: 2px solid var(--game-ui-line);
+  background: #111111;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #151515,
+    inset -2px 0 0 #333333,
+    inset 0 -2px 0 #3a3a3a;
+  cursor: var(--app-cursor-pointer);
+}
+
+.settings-key-bindings-scrollbar-thumb {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  min-height: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02)),
+    #777777;
+  box-shadow:
+    inset 0 2px 0 #b0b0b0,
+    inset 0 -2px 0 #242424;
+  pointer-events: none;
 }
 
 /* Setting row: label left, controls right. */
@@ -9329,7 +9563,6 @@ button.relic-shop-btn--knowledge {
 .settings-row--danger {
   align-items: flex-start;
   padding-top: 18px;
-  border-top: 2px solid rgba(239, 68, 68, 0.22);
 }
 
 .settings-row-copy {
@@ -9364,14 +9597,87 @@ button.relic-shop-btn--knowledge {
 }
 
 .settings-row-controls--volume {
-  gap: 18px;
+  gap: 30px;
   min-width: 420px;
 }
 
 .settings-volume-slider {
+  --settings-volume-fill: 100%;
+  position: relative;
   width: 320px;
-  accent-color: #ffffff;
+  height: 34px;
   cursor: var(--app-cursor-pointer);
+  touch-action: none;
+  outline: none;
+}
+
+.settings-volume-slider-track,
+.settings-volume-slider-fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 14px;
+  transform: translateY(-50%);
+  border: 2px solid #0e0e0e;
+  box-sizing: border-box;
+}
+
+.settings-volume-slider-track {
+  right: 0;
+  background: #151515;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #444444;
+}
+
+.settings-volume-slider-fill {
+  width: var(--settings-volume-fill);
+  min-width: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0)),
+    #606060;
+  box-shadow:
+    inset 0 2px 0 #a0a0a0,
+    inset 2px 0 0 #777777,
+    inset -2px 0 0 #242424,
+    inset 0 -2px 0 #1c1c1c;
+}
+
+.settings-volume-slider-thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--settings-volume-fill);
+  width: 22px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  border: 2px solid #0e0e0e;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0)),
+    #303030;
+  box-shadow:
+    inset 0 2px 0 #777777,
+    inset 2px 0 0 #4a4a4a,
+    inset -2px 0 0 #171717,
+    inset 0 -2px 0 #080808;
+}
+
+.settings-volume-slider:hover .settings-volume-slider-thumb,
+.settings-volume-slider:focus-visible .settings-volume-slider-thumb {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.02)),
+    #3a3a3a;
+  box-shadow:
+    inset 0 2px 0 #a0a0a0,
+    inset 2px 0 0 #606060,
+    inset -2px 0 0 #1c1c1c,
+    inset 0 -2px 0 #080808,
+    0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+.settings-volume-slider:focus-visible .settings-volume-slider-track {
+  border-color: #a0a0a0;
 }
 
 .settings-volume-value {
@@ -9394,6 +9700,7 @@ button.relic-shop-btn--knowledge {
   border: 2px solid #444444;
   margin-left: -2px;
   position: relative;
+  z-index: 1;
   cursor: var(--app-cursor-pointer);
   transition: all 0.15s steps(2, end);
 }
@@ -9410,7 +9717,11 @@ button.relic-shop-btn--knowledge {
 .settings-seg-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #c0c0c0;
-  z-index: 1;
+  z-index: 4;
+}
+
+.settings-seg-btn:focus-visible {
+  z-index: 4;
 }
 
 .settings-seg-btn:disabled {
@@ -9421,7 +9732,73 @@ button.relic-shop-btn--knowledge {
   background: rgba(255, 255, 255, 0.12);
   border-color: #a0a0a0;
   color: #ffffff;
-  z-index: 2;
+  z-index: 3;
+}
+
+.settings-stepper {
+  display: grid;
+  grid-template-columns: 52px 148px 52px;
+  align-items: stretch;
+  min-height: 46px;
+}
+
+.settings-stepper--disabled {
+  opacity: 0.45;
+  filter: grayscale(0.55);
+}
+
+button.settings-stepper-btn {
+  width: 52px;
+  min-width: 52px;
+  padding: 0;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #d8d8d8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid #444444;
+  border-radius: 0;
+  cursor: var(--app-cursor-pointer);
+  transition: all 0.15s steps(2, end);
+}
+
+button.settings-stepper-btn:first-child {
+  margin-right: -2px;
+}
+
+button.settings-stepper-btn:last-child {
+  margin-left: -2px;
+}
+
+button.settings-stepper-btn:hover:not(:disabled),
+button.settings-stepper-btn:focus-visible:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #a0a0a0;
+  outline: none;
+  z-index: 1;
+}
+
+button.settings-stepper-btn:disabled {
+  cursor: default;
+}
+
+.settings-stepper-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 148px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 24px;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0;
 }
 
 .settings-danger-btn {
@@ -9593,6 +9970,138 @@ button.relic-shop-btn--knowledge {
   color: #e0e0e0;
   font-family: var(--game-font-family), sans-serif;
   font-size: 16px;
+}
+
+.settings-dropdown-custom {
+  position: relative;
+  width: 252px;
+  min-height: 46px;
+  z-index: 1;
+}
+
+.settings-dropdown-custom--open {
+  z-index: 20;
+}
+
+button.settings-dropdown-trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px;
+  align-items: stretch;
+  width: 100%;
+  min-height: 46px;
+  padding: 0;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid #606060;
+  border-radius: 0;
+  cursor: var(--app-cursor-pointer);
+  transition: all 0.15s steps(2, end);
+}
+
+button.settings-dropdown-trigger:hover:not(:disabled),
+button.settings-dropdown-trigger:focus-visible:not(:disabled),
+.settings-dropdown-custom--open button.settings-dropdown-trigger {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #a0a0a0;
+  outline: none;
+}
+
+button.settings-dropdown-trigger:disabled {
+  opacity: 0.42;
+  filter: grayscale(0.55);
+  cursor: default;
+}
+
+.settings-dropdown-trigger-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-dropdown-trigger-icon {
+  position: relative;
+  display: block;
+  width: 52px;
+  min-height: 100%;
+  margin: 0;
+  border-left: 2px solid #444444;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.settings-dropdown-trigger-icon::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  margin-left: -6px;
+  margin-top: -2px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #d8d8d8;
+}
+
+.settings-dropdown-custom--open .settings-dropdown-trigger-icon::before {
+  margin-top: -5px;
+  border-top: 0;
+  border-bottom: 8px solid #ffffff;
+}
+
+.settings-dropdown-menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 2px solid #606060;
+  background: #151515;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.35);
+}
+
+button.settings-dropdown-option {
+  position: relative;
+  z-index: 1;
+  min-height: 42px;
+  padding: 9px 14px;
+  font-family: var(--game-font-family), sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: #d8d8d8;
+  text-align: left;
+  background: #1c1c1c;
+  border: 0;
+  border-bottom: 2px solid #0e0e0e;
+  border-radius: 0;
+  cursor: var(--app-cursor-pointer);
+  transition: all 0.15s steps(2, end);
+}
+
+button.settings-dropdown-option:last-child {
+  border-bottom: 0;
+}
+
+button.settings-dropdown-option:hover,
+button.settings-dropdown-option:focus-visible {
+  color: #ffffff;
+  background: #2e2e2e;
+  outline: none;
+}
+
+button.settings-dropdown-option--selected {
+  color: #ffffff;
+  background: #303030;
 }
 
 /* Back button. */
@@ -10636,21 +11145,22 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 /* Progression panels belong to the top HUD, not the transformed bottom action bar. */
 .progress-hud-panels {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: calc(74px + var(--game-screen-edge-gap, 16px));
+  right: var(--game-screen-edge-gap, 16px);
+  left: auto;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: var(--bottom-action-gap, 18px);
-  width: var(--bottom-action-knowledge-width, 286px);
+  width: var(--game-side-section-width, 286px);
 }
 
 .progress-hud-panels button.relic-shop-btn--knowledge {
   position: relative;
   top: auto;
   left: auto;
-  width: var(--bottom-action-knowledge-width, 286px);
+  width: var(--game-side-section-width, 286px);
   height: 123px;
   flex: 0 0 123px;
   padding: 16px 18px;
@@ -10663,7 +11173,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   position: relative;
   top: auto;
   left: auto;
-  width: var(--bottom-action-knowledge-width, 286px);
+  width: var(--game-side-section-width, 286px);
   height: 123px;
   flex: 0 0 123px;
   padding: 16px 18px;
@@ -10673,16 +11183,557 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 }
 
 .progress-hud-panels .culture-level-tooltip {
-  width: var(--bottom-action-knowledge-width, 286px);
+  width: var(--game-side-section-width, 286px);
 }
 
 .progress-hud-panels > .hud-stat-tooltip {
   position: absolute !important;
   top: 0 !important;
-  left: calc(100% + 12px) !important;
+  left: calc(100% + 40px) !important;
   bottom: auto !important;
   margin-top: 0 !important;
   transform: none !important;
+}
+
+.game-right-section .hud-top-center {
+  position: fixed;
+  top: var(--game-screen-edge-gap, 16px);
+  left: 50%;
+  z-index: 2;
+  order: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.game-right-section .progress-hud-panels {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  z-index: 1;
+  order: 2;
+  width: 100%;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  pointer-events: auto;
+}
+
+.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge,
+.game-right-section .progress-hud-panels .relic-shop-btn--culture {
+  width: 100%;
+  height: 78px;
+  flex: 0 0 78px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  overflow: visible;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #242424;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+}
+
+.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge {
+  cursor: var(--app-cursor-pointer);
+}
+
+.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge:hover:not(:disabled),
+.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge:focus-visible:not(:disabled),
+.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge.game-right-action--hovered:not(:disabled) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.015)),
+    #2e2e2e;
+  outline: 2px solid rgba(255, 246, 201, 0.62);
+  outline-offset: 2px;
+  box-shadow:
+    inset 0 2px 0 #777777,
+    inset 2px 0 0 #4f4f4f,
+    inset -2px 0 0 #151515,
+    inset 0 -2px 0 #080808,
+    0 0 0 2px rgba(255, 255, 255, 0.035);
+  filter: brightness(1.08);
+}
+
+.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge:active:not(:disabled) {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.02)),
+    #1c1c1c;
+  outline: none;
+  filter: brightness(0.94);
+}
+
+.game-left-section button.game-left-owned-symbols-btn:hover,
+.game-left-section button.game-left-owned-symbols-btn:focus-visible,
+.game-right-section button.spin-btn:hover:not(:disabled),
+.game-right-section button.spin-btn:focus-visible:not(:disabled),
+.game-right-status-panel button.pause-btn-top:hover,
+.game-right-status-panel button.pause-btn-top:focus-visible {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.015)),
+    #2e2e2e;
+  outline: 2px solid rgba(255, 246, 201, 0.62);
+  outline-offset: 2px;
+  box-shadow:
+    inset 0 2px 0 #777777,
+    inset 2px 0 0 #4f4f4f,
+    inset -2px 0 0 #151515,
+    inset 0 -2px 0 #080808,
+    0 0 0 2px rgba(255, 255, 255, 0.035);
+  filter: brightness(1.08);
+}
+
+.game-left-section button.game-left-owned-symbols-btn:active,
+.game-right-section button.spin-btn:active:not(:disabled),
+.game-right-status-panel button.pause-btn-top:active {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.02)),
+    #1c1c1c;
+  outline: none;
+  filter: brightness(0.94);
+}
+
+.game-right-section .progress-hud-panels .relic-shop-btn--culture {
+  cursor: help;
+}
+
+.game-right-section .progress-hud-panels .relic-shop-btn--culture::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  box-sizing: border-box;
+  border: 2px solid #0e0e0e;
+  pointer-events: none;
+}
+
+.game-right-section .progress-hud-panels .relic-shop-btn--culture:hover,
+.game-right-section .progress-hud-panels .relic-shop-btn--culture:active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #242424;
+  outline: none;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+  filter: none;
+}
+
+.game-right-section .progress-hud-panels > .hud-stat-tooltip {
+  top: 39px !important;
+  left: auto !important;
+  right: calc(100% + 40px) !important;
+  transform: translateY(-50%) !important;
+}
+
+.game-right-action-icon {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+}
+
+.game-right-action-icon img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.game-right-action-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.game-right-action-label {
+  display: none;
+  max-width: 100%;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-right-action-meta {
+  max-width: 100%;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.game-right-action-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-right-action-meta span:last-child {
+  margin-left: auto;
+  text-align: right;
+}
+
+.game-right-section .relic-shop-btn--culture .game-right-action-meta {
+  justify-content: flex-start;
+}
+
+.game-right-section .relic-shop-btn--culture .game-right-action-meta span:last-child {
+  margin-left: 0;
+  text-align: left;
+}
+
+.game-right-action-bar {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 18px;
+  display: block;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 2px solid #0e0e0e;
+  background: #111111;
+  box-shadow:
+    inset 0 1px 0 #333333,
+    inset 0 -1px 0 #050505;
+}
+
+.game-right-action-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  min-width: 0;
+  transition: width 0.3s steps(2, end);
+}
+
+.game-right-action-bar-fill--knowledge {
+  background: #3b82f6;
+}
+
+.game-right-action-bar-fill--culture {
+  background: #c026d3;
+}
+
+.game-right-action-bar-value {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 1px 0 #000000,
+    1px 0 0 #000000,
+    -1px 0 0 #000000,
+    0 -1px 0 #000000;
+  pointer-events: none;
+}
+
+.game-right-section .relic-shop-btn--knowledge .running-total-pop,
+.game-right-section .relic-shop-btn--culture .running-total-pop {
+  top: 50%;
+  right: calc(100% + 12px);
+  left: auto;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+.game-right-section .progress-hud-panels .culture-level-tooltip {
+  top: 50%;
+  bottom: auto;
+  right: calc(100% + 12px);
+  left: auto;
+  width: var(--game-side-section-width, 286px);
+  transform: translateY(-50%);
+  text-align: left;
+}
+
+.game-right-status-panel {
+  position: relative;
+  z-index: 1;
+  order: 1;
+  width: 100%;
+  min-height: 96px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  align-items: center;
+  gap: 12px;
+  border: 2px solid #141414;
+  background: #242424;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+  pointer-events: auto;
+}
+
+.game-right-status-panel::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border: 2px solid #0e0e0e;
+  pointer-events: none;
+}
+
+.game-right-status-panel .turn-year-mini {
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  text-align: left;
+}
+
+.game-right-status-panel .turn-year-mini-turn {
+  font-size: 26px;
+}
+
+.game-right-status-panel .turn-year-mini-year {
+  font-size: 19px;
+}
+
+.game-right-status-panel .pause-btn-top {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  z-index: 1;
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  min-height: 58px;
+  padding: 0;
+  box-sizing: border-box;
+  border: 2px solid #141414;
+  color: #ffffff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #242424;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+  cursor: var(--app-cursor-pointer);
+}
+
+.game-right-status-panel .pause-btn-top::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  box-sizing: border-box;
+  border: 2px solid #0e0e0e;
+  pointer-events: none;
+}
+
+.game-right-status-panel .pause-btn-top .pause-btn-top-icon {
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
+}
+
+.game-right-section .spin-area {
+  position: relative;
+  z-index: 1;
+  order: 3;
+  width: 100%;
+  min-width: 0;
+  margin-top: auto;
+  flex: 0 0 78px;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  pointer-events: auto;
+}
+
+.game-right-section button.spin-btn {
+  width: 100%;
+  height: 78px;
+  padding: 10px 16px;
+  justify-content: flex-start;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #242424;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+}
+
+.game-right-section button.spin-btn > span {
+  position: relative;
+  z-index: 1;
+  transform: none;
+  color: #ffffff;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  width: 100%;
+  text-align: center;
+}
+
+.game-right-section .spin-area,
+.game-right-section button.spin-btn,
+.game-right-section button.spin-btn:hover:not(:disabled),
+.game-right-section button.spin-btn:focus-visible:not(:disabled),
+.game-right-section button.spin-btn:active:not(:disabled),
+.game-right-section button.spin-btn.spin-btn--food-payment,
+.game-right-section button.spin-btn.spin-btn--food-payment:hover:not(:disabled),
+.game-right-section button.spin-btn.spin-btn--food-payment:active:not(:disabled),
+.game-right-section button.spin-btn.spin-btn--board-expansion,
+.game-right-section button.spin-btn.spin-btn--board-expansion:hover:not(:disabled),
+.game-right-section button.spin-btn.spin-btn--board-expansion:active:not(:disabled),
+.game-right-section button.spin-btn.spin-btn--relic-shop,
+.game-right-section button.spin-btn.spin-btn--relic-shop:hover:not(:disabled),
+.game-right-section button.spin-btn.spin-btn--relic-shop:active:not(:disabled) {
+  flex: 0 0 78px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 78px;
+  min-height: 78px;
+  max-height: 78px;
+  box-sizing: border-box;
+  transform: none;
+}
+
+.game-right-section button.spin-btn,
+.game-right-section button.spin-btn.spin-btn--food-payment,
+.game-right-section button.spin-btn.spin-btn--board-expansion,
+.game-right-section button.spin-btn.spin-btn--relic-shop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  overflow: hidden;
+}
+
+.game-right-section button.spin-btn .spin-btn__state-label,
+.game-right-section button.spin-btn .spin-btn__food-payment-label,
+.game-right-section button.spin-btn .spin-btn__board-expansion-label,
+.game-right-section button.spin-btn .spin-btn__relic-shop-label {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transform: none;
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.game-right-section button.spin-btn .spin-btn__food-payment-label {
+  gap: 14px;
+  font-size: 29px;
+}
+
+.game-right-section button.spin-btn .spin-btn__food-payment-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: none;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  letter-spacing: inherit;
+}
+
+.game-right-section button.spin-btn .spin-btn__food-payment-label span,
+.game-right-section button.spin-btn .spin-btn__food-payment-label img {
+  transform: none;
+}
+
+.game-right-section button.spin-btn .spin-btn__food-payment-cost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transform: none;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  letter-spacing: inherit;
+}
+
+.game-right-section button.spin-btn .spin-btn__food-payment-cost > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: none;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.game-right-section button.spin-btn .spin-btn__food-payment-cost img {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.game-right-section button.spin-btn .spin-btn__board-expansion-label,
+.game-right-section button.spin-btn .spin-btn__relic-shop-label {
+  font-size: 27px;
+}
+
+.game-right-section .spin-research-hint-float {
+  left: 50%;
+  bottom: calc(100% + 10px);
 }
 
 .tutorial-highlight-knowledge-status .hud-top,
@@ -10692,14 +11743,14 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 
 /* Owned symbols: bare per-instance sprites with the same dark frame language as game buttons. */
 .owned-symbols-panel.owned-symbols-panel--simple {
-  width: min(1120px, calc(100vw - 72px));
-  height: min(700px, calc(100vh - 72px));
-  min-height: 440px;
+  width: min(1180px, calc(100vw - 72px));
+  height: min(760px, calc(100vh - 72px));
+  min-height: 500px;
   border: 2px solid #0e0e0e;
-  background: #1c1c1c;
+  background: #292929;
   box-shadow:
-    inset 0 2px 0 #444444,
-    inset 2px 0 0 #2e2e2e,
+    inset 0 2px 0 #555555,
+    inset 2px 0 0 #3a3a3a,
     inset -2px 0 0 #0e0e0e,
     inset 0 -2px 0 #000000;
 }
@@ -10714,7 +11765,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   min-height: 78px;
   padding: 16px 22px;
   border-bottom: 2px solid #0e0e0e;
-  background: #1c1c1c;
+  background: #242424;
 }
 
 .owned-symbols-title.owned-symbols-title--simple {
@@ -10723,11 +11774,24 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   letter-spacing: 0;
 }
 
-.owned-symbols-title.owned-symbols-title--simple strong {
-  min-width: 28px;
-  color: #808080;
+.owned-symbols-title-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.owned-symbols-title.owned-symbols-title--simple strong,
+.owned-symbols-title-counts strong {
+  min-width: 0;
+  padding: 5px 8px;
+  border: 2px solid #0e0e0e;
+  color: #d1d5db;
+  background: #1a1a1a;
   font-size: 17px;
   text-align: center;
+  box-shadow:
+    inset 0 1px 0 #3f3f3f,
+    inset 0 -1px 0 #050505;
 }
 
 .owned-symbols-header-actions--simple {
@@ -10746,7 +11810,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 .owned-symbols-sort-controls--simple button {
   height: 42px;
   border: 2px solid #0e0e0e;
-  background: #151515;
+  background: #1a1a1a;
 }
 
 .owned-symbols-sort-controls--simple select {
@@ -10763,7 +11827,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   min-height: 42px;
   padding: 0 14px;
   border: 2px solid #0e0e0e;
-  background: #1c1c1c;
+  background: #242424;
   font-size: 16px;
 }
 
@@ -10780,8 +11844,182 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 
 .owned-symbols-scroll.owned-symbols-scroll--simple {
   flex: 1 1 auto;
-  padding: 24px;
-  background: #0e0e0e;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 296px minmax(0, 1fr);
+  gap: 16px;
+  padding: 18px;
+  overflow: hidden;
+  background: #101010;
+}
+
+.inventory-section {
+  position: relative;
+  min-height: 0;
+  border: 2px solid #0e0e0e;
+  background: #242424;
+  box-shadow:
+    inset 0 2px 0 #454545,
+    inset 2px 0 0 #303030,
+    inset -2px 0 0 #101010,
+    inset 0 -2px 0 #050505;
+}
+
+.inventory-section::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 2px solid #0e0e0e;
+  pointer-events: none;
+}
+
+.inventory-section-header {
+  position: relative;
+  z-index: 1;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px 11px;
+  border-bottom: 2px solid #0e0e0e;
+  color: #f5f5f5;
+  font-size: 18px;
+}
+
+.inventory-section-header strong {
+  min-width: 34px;
+  padding: 3px 8px;
+  border: 2px solid #0e0e0e;
+  color: #fbbf24;
+  background: #171717;
+  text-align: center;
+}
+
+.inventory-seal-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.inventory-seal-list {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.inventory-seal-card {
+  position: relative;
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 2px solid #0e0e0e;
+  color: #d1d5db;
+  background: #1a1a1a;
+  font-family: inherit;
+  text-align: left;
+  image-rendering: pixelated;
+  box-shadow:
+    inset 0 2px 0 #333333,
+    inset 2px 0 0 #272727,
+    inset -2px 0 0 #090909,
+    inset 0 -2px 0 #050505;
+  opacity: 0.54;
+  cursor: help;
+}
+
+.inventory-seal-card--usable {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.inventory-seal-card--usable:hover,
+.inventory-seal-card--usable:focus-visible {
+  color: #ffffff;
+  background: #2f2f2f;
+  outline: none;
+  filter: brightness(1.08);
+}
+
+.inventory-seal-card[aria-disabled="true"] {
+  cursor: help;
+}
+
+.inventory-seal-icon {
+  width: 62px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #0e0e0e;
+  background: #111111;
+  box-shadow:
+    inset 0 1px 0 #3a3a3a,
+    inset 0 -2px 0 #030303;
+}
+
+.inventory-seal-icon img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.inventory-seal-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inventory-seal-name {
+  overflow: hidden;
+  color: #f5f5f5;
+  font-size: 15px;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventory-seal-state {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.inventory-seal-card--usable .inventory-seal-state {
+  color: #fbbf24;
+}
+
+.inventory-seal-count {
+  justify-self: end;
+  min-width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #0e0e0e;
+  color: #ffffff;
+  background: #111111;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 2px 0 #000000;
+}
+
+.inventory-symbol-section {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.inventory-symbol-section .owned-symbols-grid {
+  min-height: 0;
+  padding: 14px;
+  overflow: auto;
 }
 
 .owned-symbols-grid.owned-symbols-grid--simple {
@@ -10834,6 +12072,24 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   font-size: 22px;
 }
 
+.inventory-relic-tooltip {
+  text-align: left;
+}
+
+.inventory-relic-tooltip .symbol-tooltip-rarity {
+  align-self: flex-start;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  background: rgba(15, 23, 42, 0.55);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.inventory-relic-tooltip-count {
+  margin-top: 8px;
+  color: #fbbf24;
+}
+
 .tutorial-highlight-owned-close .owned-symbols-close-btn.owned-symbols-close-btn--simple::after,
 .tutorial-highlight-owned-monument .owned-symbol-item.owned-symbol-item--simple::after {
   content: "";
@@ -10871,7 +12127,29 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   }
 
   .owned-symbols-scroll.owned-symbols-scroll--simple {
+    grid-template-columns: 1fr;
+    overflow: auto;
     padding: 14px;
+  }
+
+  .inventory-seal-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+  }
+
+  .inventory-seal-card {
+    min-height: 78px;
+    grid-template-columns: 56px minmax(0, 1fr) 38px;
+  }
+
+  .inventory-seal-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .inventory-seal-icon img {
+    width: 48px;
+    height: 48px;
   }
 
   .owned-symbols-grid.owned-symbols-grid--simple {
@@ -10977,15 +12255,6 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   justify-content: center;
   gap: 3px;
   text-align: center;
-}
-
-.knowledge-upgrades-title-context {
-  color: #a0a0a0;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .knowledge-upgrades-title-block h1 {
@@ -12000,10 +13269,6 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable .k
   min-width: 320px;
 }
 
-.knowledge-upgrades-title-context {
-  font-size: 12px;
-}
-
 .knowledge-upgrades-title-block h1 {
   font-size: 27px;
 }
@@ -12519,8 +13784,23 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--denied {
   top: 0;
   bottom: 0;
   z-index: 0;
-  background: rgba(200, 190, 158, 0.085);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(202, 192, 162, 0.18) 0,
+      rgba(202, 192, 162, 0.17) max(0px, calc(var(--knowledge-reached-edge, 0px) - 180px)),
+      rgba(202, 192, 162, 0.115) calc(var(--knowledge-reached-edge, 0px) + 40px),
+      rgba(202, 192, 162, 0.062) calc(var(--knowledge-reached-edge, 0px) + 220px),
+      rgba(202, 192, 162, 0.035) calc(var(--knowledge-reached-edge, 0px) + 520px)
+    );
+  mix-blend-mode: normal;
+  opacity: 1;
   pointer-events: none;
+}
+
+.knowledge-upgrades-reached-backdrop::after {
+  content: none;
+  display: none;
 }
 
 .knowledge-upgrades-tree-panel {
@@ -12792,4 +14072,2460 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowl
   background: #242424;
   outline: 0;
   box-shadow: inset 0 2px #77756e;
+}
+
+/* Left rail owned-symbols entry: full-width icon + label action. */
+.game-left-section button.game-left-owned-symbols-btn {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 78px;
+  min-height: 78px;
+  flex: 0 0 78px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  overflow: visible;
+  pointer-events: auto;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #242424;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+}
+
+.game-left-section button.game-left-owned-symbols-btn .relic-shop-btn-icon-layer {
+  position: relative;
+  inset: auto;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+}
+
+.game-left-section button.game-left-owned-symbols-btn .relic-shop-btn-icon-layer img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.game-left-owned-symbols-label {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.game-left-section .game-left-owned-symbols-btn .bottom-action-hud-tooltip {
+  left: 100%;
+  bottom: 50%;
+  transform: translate(12px, 50%);
+}
+
+.game-left-section .game-left-owned-symbols-btn:hover .bottom-action-hud-tooltip,
+.game-left-section .game-left-owned-symbols-btn:focus-visible .bottom-action-hud-tooltip {
+  transform: translate(12px, 50%);
+}
+
+.game-left-relic-panel {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 2px solid #141414;
+  background: #242424;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808;
+  isolation: isolate;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.game-left-relic-panel::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  border: 2px solid #141414;
+  pointer-events: none;
+}
+
+.game-left-relic-grid {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  column-gap: 8px;
+  row-gap: 4px;
+}
+
+.game-left-relic-slot {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+button.game-left-relic-slot {
+  appearance: none;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ffffff;
+  font-family: var(--game-font-family), sans-serif;
+  cursor: var(--app-cursor-help);
+}
+
+.game-left-relic-slot--filled {
+  border: 0;
+  background: transparent;
+}
+
+.game-left-relic-slot--clickable {
+  cursor: var(--app-cursor-pointer);
+}
+
+.game-left-relic-slot--clickable:hover,
+.game-left-relic-slot--clickable:focus-visible {
+  outline: 0;
+  filter: brightness(1.16);
+  box-shadow: none;
+}
+
+.game-left-relic-empty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(156, 163, 175, 0.28);
+}
+
+.game-left-relic-icon {
+  width: min(88%, 84px);
+  height: min(88%, 84px);
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4));
+  transition: transform 120ms steps(2, end), filter 120ms steps(2, end);
+}
+
+.game-left-relic-slot--clickable:hover .game-left-relic-icon,
+.game-left-relic-slot--clickable:focus-visible .game-left-relic-icon {
+  transform: translateY(-2px);
+  filter:
+    drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4))
+    drop-shadow(0 0 7px var(--game-left-relic-rarity-color, rgba(255, 255, 255, 0.42)));
+}
+
+.game-left-relic-placeholder {
+  font-size: 38px;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.game-left-relic-counter {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    3px 0 #000000,
+    -3px 0 #000000,
+    0 3px #000000,
+    0 -3px #000000,
+    2px 2px #000000,
+    -2px 2px #000000,
+    2px -2px #000000,
+    -2px -2px #000000;
+}
+
+.game-left-relic-tooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 12px);
+  z-index: 30;
+  width: 280px;
+  max-width: 280px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 2px solid #141414;
+  background: rgba(20, 20, 20, 0.97);
+  color: #ffffff;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.08),
+    0 8px 0 rgba(0, 0, 0, 0.18);
+}
+
+.game-left-relic-slot--filled:hover .game-left-relic-tooltip,
+.game-left-relic-slot--filled:focus-visible .game-left-relic-tooltip {
+  opacity: 1;
+}
+
+.game-left-relic-tooltip-name {
+  color: #dcfce7;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.18;
+  text-align: left;
+  white-space: normal;
+}
+
+.game-left-relic-tooltip-rarity {
+  align-self: flex-start;
+  padding: 2px 7px;
+  border: 1px solid var(--game-left-relic-rarity-color, #777777);
+  background: rgba(15, 23, 42, 0.55);
+  color: var(--game-left-relic-rarity-color, #d1d5db);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.game-left-relic-tooltip-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  color: #e5e5e5;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.42;
+  text-align: left;
+  white-space: normal;
+}
+
+.game-left-relic-tooltip-desc-line {
+  display: block;
+  text-align: left;
+}
+
+.tutorial-highlight-owned-symbols-button .game-left-section {
+  z-index: 640;
+}
+
+/* ===== Unified game-screen visual language for every non-board screen ===== */
+:where(
+  .demo-start-root,
+  .initial-setup-root,
+  .leader-select-root,
+  .leader-progress-root,
+  .pregame-overlay,
+  .pause-overlay,
+  .selection-overlay,
+  .knowledge-upgrades-overlay,
+  .owned-symbols-modal,
+  .effect-log-modal,
+  .endgame-overlay
+) {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.012), rgba(255, 255, 255, 0.012)),
+    var(--game-ui-bg);
+}
+
+:where(
+  .main-menu,
+  .initial-setup-panel,
+  .leader-select-shell,
+  .leader-select-summary,
+  .leader-progress-shell,
+  .leader-detail-hero,
+  .pregame-panel,
+  .pause-panel,
+  .settings-panel,
+  .settings-confirm-panel,
+  .selection-panel,
+  .knowledge-upgrades-header,
+  .knowledge-upgrades-tree-panel,
+  .knowledge-upgrades-points,
+  .owned-symbols-panel,
+  .owned-symbols-header,
+  .owned-symbols-sidebar,
+  .owned-symbols-toolbar,
+  .effect-log-panel,
+  .demo-achievements-panel,
+  .demo-achievement-section,
+  .demo-achievements-completion,
+  .endgame-panel
+) {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  border: 2px solid var(--game-ui-line);
+  border-radius: 0;
+  background: var(--game-ui-face) !important;
+  color: var(--game-ui-text);
+  box-shadow: var(--game-ui-bevel) !important;
+}
+
+:where(
+  .main-menu,
+  .initial-setup-panel,
+  .leader-select-shell,
+  .leader-select-summary,
+  .leader-progress-shell,
+  .leader-detail-hero,
+  .pregame-panel,
+  .pause-panel,
+  .settings-panel,
+  .settings-confirm-panel,
+  .selection-panel,
+  .knowledge-upgrades-header,
+  .knowledge-upgrades-tree-panel,
+  .knowledge-upgrades-points,
+  .owned-symbols-panel,
+  .owned-symbols-header,
+  .owned-symbols-sidebar,
+  .owned-symbols-toolbar,
+  .effect-log-panel,
+  .demo-achievements-panel,
+  .demo-achievement-section,
+  .demo-achievements-completion,
+  .endgame-panel
+)::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--game-ui-line);
+  pointer-events: none;
+}
+
+:where(
+  .main-menu,
+  .initial-setup-panel,
+  .leader-select-shell,
+  .leader-select-summary,
+  .leader-progress-shell,
+  .leader-detail-hero,
+  .pregame-panel,
+  .pause-panel,
+  .settings-panel,
+  .settings-confirm-panel,
+  .selection-panel,
+  .knowledge-upgrades-header,
+  .knowledge-upgrades-tree-panel,
+  .knowledge-upgrades-points,
+  .owned-symbols-panel,
+  .owned-symbols-header,
+  .owned-symbols-sidebar,
+  .owned-symbols-toolbar,
+  .effect-log-panel,
+  .demo-achievements-panel,
+  .demo-achievement-section,
+  .demo-achievements-completion,
+  .endgame-panel
+) > * {
+  position: relative;
+  z-index: 1;
+}
+
+.main-menu {
+  min-height: auto;
+  padding: 34px 38px 42px;
+}
+
+.leader-select-shell {
+  padding: 24px 30px 28px;
+}
+
+.leader-select-summary,
+.demo-achievement-section {
+  padding: 18px;
+}
+
+.pause-panel {
+  min-width: 390px;
+  padding: 40px 34px;
+}
+
+.settings-panel {
+  margin: 24px;
+  width: calc(100% - 48px);
+  height: calc(100% - 48px);
+  background: var(--game-ui-face);
+}
+
+.selection-panel {
+  background: var(--game-ui-face);
+}
+
+.knowledge-upgrades-header {
+  border-bottom: 2px solid var(--game-ui-line);
+}
+
+.knowledge-upgrades-tree-panel {
+  padding: 10px;
+}
+
+.knowledge-upgrades-page,
+.knowledge-upgrades-era-scroll.knowledge-upgrades-tree-scroll,
+.knowledge-upgrades-horizontal-tree,
+.owned-symbols-collection,
+.effect-log-list,
+.settings-body {
+  background: var(--game-ui-panel-darker);
+}
+
+.owned-symbols-header,
+.owned-symbols-toolbar {
+  background: var(--game-ui-face);
+}
+
+.owned-symbols-sidebar {
+  background: var(--game-ui-panel-deep);
+}
+
+:where(
+  .main-menu-button,
+  .main-menu-settings-button,
+  .main-menu-exit-button,
+  .leader-select-back,
+  .leader-difficulty-button,
+  .initial-setup-language-trigger,
+  .initial-setup-language-option,
+  .initial-setup-continue,
+  .initial-setup-option,
+  .pause-log-btn,
+  .pause-menu-btn,
+  .settings-tab,
+  .settings-seg-btn,
+  .settings-danger-btn,
+  .settings-confirm-btn,
+  .settings-back-btn,
+  .settings-key-bind-btn,
+  .settings-key-bindings-reset,
+  .selection-card,
+  .selection-event-card,
+  .selection-reroll-btn,
+  .selection-skip-btn,
+  .selection-peek-handle,
+  .relic-card-buy-btn,
+  .relic-shop-back-btn,
+  .knowledge-upgrades-back-btn,
+  .knowledge-upgrades-era-tab,
+  .knowledge-upgrade-chip,
+  .knowledge-upgrade-docked-research-btn,
+  .knowledge-upgrade-researched-banner,
+  .owned-symbols-close-btn,
+  .owned-symbols-type-pill,
+  .owned-symbols-sort-controls button,
+  .effect-log-action-btn,
+  .effect-log-filter-btn,
+  .effect-log-row-button,
+  .demo-achievements-giveaway-button,
+  .tutorial-exit-button,
+  .tutorial-dialog-next,
+  .endgame-btn
+) {
+  position: relative;
+  isolation: isolate;
+  border: 2px solid var(--game-ui-line);
+  border-radius: 0;
+  background: var(--game-ui-face);
+  color: var(--game-ui-text);
+  text-shadow: none;
+  box-shadow: var(--game-ui-bevel);
+  transition:
+    transform 140ms steps(2, end),
+    color 140ms steps(2, end),
+    border-color 140ms steps(2, end),
+    background 140ms steps(2, end),
+    box-shadow 140ms steps(2, end),
+    filter 140ms steps(2, end);
+}
+
+:where(
+  .main-menu-button,
+  .main-menu-settings-button,
+  .main-menu-exit-button,
+  .leader-select-back,
+  .leader-difficulty-button,
+  .initial-setup-language-trigger,
+  .initial-setup-language-option,
+  .initial-setup-continue,
+  .initial-setup-option,
+  .pause-log-btn,
+  .pause-menu-btn,
+  .settings-tab,
+  .settings-seg-btn,
+  .settings-danger-btn,
+  .settings-confirm-btn,
+  .settings-back-btn,
+  .settings-key-bind-btn,
+  .settings-key-bindings-reset,
+  .selection-card,
+  .selection-event-card,
+  .selection-reroll-btn,
+  .selection-skip-btn,
+  .selection-peek-handle,
+  .relic-card-buy-btn,
+  .relic-shop-back-btn,
+  .knowledge-upgrades-back-btn,
+  .knowledge-upgrades-era-tab,
+  .knowledge-upgrade-chip,
+  .knowledge-upgrade-docked-research-btn,
+  .knowledge-upgrade-researched-banner,
+  .owned-symbols-close-btn,
+  .owned-symbols-type-pill,
+  .owned-symbols-sort-controls button,
+  .effect-log-action-btn,
+  .effect-log-filter-btn,
+  .effect-log-row-button,
+  .demo-achievements-giveaway-button,
+  .tutorial-exit-button,
+  .tutorial-dialog-next,
+  .endgame-btn
+)::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--game-ui-line);
+  pointer-events: none;
+}
+
+:where(
+  .main-menu-button,
+  .main-menu-settings-button,
+  .main-menu-exit-button,
+  .leader-select-back,
+  .leader-difficulty-button,
+  .initial-setup-language-trigger,
+  .initial-setup-language-option,
+  .initial-setup-continue,
+  .initial-setup-option,
+  .pause-log-btn,
+  .pause-menu-btn,
+  .settings-tab,
+  .settings-seg-btn,
+  .settings-danger-btn,
+  .settings-confirm-btn,
+  .settings-back-btn,
+  .settings-key-bind-btn,
+  .settings-key-bindings-reset,
+  .selection-card,
+  .selection-event-card,
+  .selection-reroll-btn,
+  .selection-skip-btn,
+  .selection-peek-handle,
+  .relic-card-buy-btn,
+  .relic-shop-back-btn,
+  .knowledge-upgrades-back-btn,
+  .knowledge-upgrades-era-tab,
+  .knowledge-upgrade-chip,
+  .knowledge-upgrade-docked-research-btn,
+  .knowledge-upgrade-researched-banner,
+  .owned-symbols-close-btn,
+  .owned-symbols-type-pill,
+  .owned-symbols-sort-controls button,
+  .effect-log-action-btn,
+  .effect-log-filter-btn,
+  .effect-log-row-button,
+  .demo-achievements-giveaway-button,
+  .tutorial-exit-button,
+  .tutorial-dialog-next,
+  .endgame-btn
+) > * {
+  position: relative;
+  z-index: 1;
+}
+
+:where(
+  .main-menu-button,
+  .main-menu-settings-button,
+  .main-menu-exit-button,
+  .leader-select-back,
+  .leader-difficulty-button,
+  .initial-setup-language-trigger,
+  .initial-setup-language-option,
+  .initial-setup-continue,
+  .initial-setup-option,
+  .pause-log-btn,
+  .pause-menu-btn,
+  .settings-tab,
+  .settings-seg-btn,
+  .settings-danger-btn,
+  .settings-confirm-btn,
+  .settings-back-btn,
+  .settings-key-bind-btn,
+  .settings-key-bindings-reset,
+  .selection-card,
+  .selection-event-card,
+  .selection-reroll-btn,
+  .selection-skip-btn,
+  .selection-peek-handle,
+  .relic-card-buy-btn,
+  .relic-shop-back-btn,
+  .knowledge-upgrades-back-btn,
+  .knowledge-upgrades-era-tab,
+  .knowledge-upgrade-chip,
+  .knowledge-upgrade-docked-research-btn,
+  .owned-symbols-close-btn,
+  .owned-symbols-type-pill,
+  .owned-symbols-sort-controls button,
+  .effect-log-action-btn,
+  .effect-log-filter-btn,
+  .effect-log-row-button,
+  .demo-achievements-giveaway-button,
+  .tutorial-exit-button,
+  .tutorial-dialog-next,
+  .endgame-btn
+):where(:hover, :focus-visible):not(:disabled):not([aria-disabled="true"]):not(.knowledge-upgrade-researched-banner) {
+  color: #ffffff;
+  border-color: var(--game-ui-line);
+  background: var(--game-ui-face-hover);
+  box-shadow: var(--game-ui-bevel-hover);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+:where(
+  .main-menu-button,
+  .main-menu-settings-button,
+  .main-menu-exit-button,
+  .leader-select-back,
+  .leader-difficulty-button,
+  .initial-setup-language-trigger,
+  .initial-setup-language-option,
+  .initial-setup-continue,
+  .initial-setup-option,
+  .pause-log-btn,
+  .pause-menu-btn,
+  .settings-tab,
+  .settings-seg-btn,
+  .settings-danger-btn,
+  .settings-confirm-btn,
+  .settings-back-btn,
+  .settings-key-bind-btn,
+  .settings-key-bindings-reset,
+  .selection-card,
+  .selection-event-card,
+  .selection-reroll-btn,
+  .selection-skip-btn,
+  .selection-peek-handle,
+  .relic-card-buy-btn,
+  .relic-shop-back-btn,
+  .knowledge-upgrades-back-btn,
+  .knowledge-upgrades-era-tab,
+  .knowledge-upgrade-chip,
+  .knowledge-upgrade-docked-research-btn,
+  .owned-symbols-close-btn,
+  .owned-symbols-type-pill,
+  .owned-symbols-sort-controls button,
+  .effect-log-action-btn,
+  .effect-log-filter-btn,
+  .effect-log-row-button,
+  .demo-achievements-giveaway-button,
+  .tutorial-exit-button,
+  .tutorial-dialog-next,
+  .endgame-btn
+):active:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--game-ui-face-active);
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a;
+  transform: translateY(1px);
+}
+
+:where(
+  .main-menu-button,
+  .leader-difficulty-button,
+  .initial-setup-continue,
+  .initial-setup-option,
+  .pause-menu-btn,
+  .settings-tab,
+  .settings-seg-btn,
+  .settings-danger-btn,
+  .settings-confirm-btn,
+  .settings-back-btn,
+  .settings-key-bind-btn,
+  .selection-card,
+  .selection-reroll-btn,
+  .selection-skip-btn,
+  .relic-card-buy-btn,
+  .knowledge-upgrades-era-tab,
+  .knowledge-upgrade-chip,
+  .knowledge-upgrade-docked-research-btn,
+  .endgame-btn
+):disabled,
+:where(
+  .main-menu-button,
+  .leader-difficulty-button,
+  .selection-reroll-btn,
+  .knowledge-upgrade-chip
+)[aria-disabled="true"] {
+  opacity: 0.42;
+  filter: grayscale(0.55);
+  cursor: default;
+  transform: none;
+}
+
+.settings-tab.active,
+.settings-seg-btn.active,
+.leader-difficulty-button--selected,
+.initial-setup-option.active,
+.owned-symbols-type-pill--active,
+.effect-log-filter-btn--selected,
+.knowledge-upgrades-era-tab--active,
+button.knowledge-upgrade-chip--selected,
+button.knowledge-upgrade-chip--available {
+  border-color: var(--game-ui-line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
+    #303030;
+  color: #ffffff;
+  box-shadow: var(--game-ui-bevel-hover);
+}
+
+.settings-dropdown,
+.owned-symbols-sort-controls select,
+.effect-log-search {
+  border: 2px solid var(--game-ui-line);
+  border-radius: 0;
+  background: var(--game-ui-panel-darker);
+  color: var(--game-ui-text);
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #444444;
+}
+
+.settings-dropdown:hover,
+.settings-dropdown:focus,
+.owned-symbols-sort-controls select:hover,
+.owned-symbols-sort-controls select:focus-visible,
+.effect-log-search:focus {
+  border-color: var(--game-ui-line);
+  background: #202020;
+  outline: none;
+}
+
+.initial-setup-language-menu,
+.culture-level-tooltip,
+.game-left-relic-tooltip,
+.hud-stat-tooltip,
+.bottom-action-hud-tooltip,
+.symbol-tooltip,
+.knowledge-upgrade-tooltip,
+.effect-log-entry,
+.effect-log-meta {
+  border: 2px solid var(--game-ui-line);
+  border-radius: 0;
+  background: rgba(36, 36, 36, 0.97);
+  box-shadow: var(--game-ui-bevel);
+}
+
+.demo-achievement-progress,
+.knowledge-upgrades-era-tab-progress,
+.knowledge-upgrade-progress-bar,
+.leader-detail-xpbar,
+.leader-select-xpbar {
+  border: 2px solid var(--game-ui-line);
+  background: var(--game-ui-panel-darker);
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #444444;
+}
+
+.effect-log-entry {
+  background: var(--game-ui-panel-deep);
+}
+
+.effect-log-entry:hover,
+.effect-log-entry--expanded {
+  background: #2e2e2e;
+}
+
+button.main-menu-button,
+button.main-menu-settings-button,
+button.main-menu-exit-button,
+button.leader-select-back,
+button.leader-difficulty-button,
+button.initial-setup-language-trigger,
+button.initial-setup-language-option,
+button.initial-setup-continue,
+button.initial-setup-option,
+button.pause-log-btn,
+button.pause-menu-btn,
+button.settings-tab,
+button.settings-seg-btn,
+button.settings-danger-btn,
+button.settings-confirm-btn,
+button.settings-back-btn,
+button.settings-key-bind-btn,
+button.settings-key-bindings-reset,
+button.selection-card,
+button.selection-event-card,
+button.selection-reroll-btn,
+button.selection-skip-btn,
+button.selection-peek-handle,
+button.relic-card-buy-btn,
+button.relic-shop-back-btn,
+button.knowledge-upgrades-back-btn,
+button.knowledge-upgrades-era-tab,
+button.knowledge-upgrade-chip,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal,
+button.knowledge-upgrade-docked-research-btn,
+button.owned-symbols-close-btn,
+button.owned-symbols-type-pill,
+.owned-symbols-sort-controls button,
+button.effect-log-action-btn,
+button.effect-log-filter-btn,
+button.effect-log-row-button,
+a.demo-achievements-giveaway-button,
+button.tutorial-exit-button,
+button.tutorial-dialog-next,
+button.endgame-btn {
+  border: 2px solid var(--game-ui-line);
+  background: var(--game-ui-face) !important;
+  color: var(--game-ui-text);
+  box-shadow: var(--game-ui-bevel) !important;
+}
+
+button.main-menu-button:hover,
+button.main-menu-button:focus-visible,
+button.main-menu-settings-button:hover,
+button.main-menu-settings-button:focus-visible,
+button.main-menu-exit-button:hover,
+button.main-menu-exit-button:focus-visible,
+button.leader-select-back:hover,
+button.leader-select-back:focus-visible,
+button.leader-difficulty-button:hover:not(:disabled),
+button.leader-difficulty-button:focus-visible:not(:disabled),
+button.initial-setup-language-trigger:hover,
+button.initial-setup-language-trigger:focus-visible,
+button.initial-setup-language-option:hover,
+button.initial-setup-language-option:focus-visible,
+button.initial-setup-continue:hover:not(:disabled),
+button.initial-setup-continue:focus-visible:not(:disabled),
+button.initial-setup-option:hover,
+button.initial-setup-option:focus-visible,
+button.pause-log-btn:hover,
+button.pause-log-btn:focus-visible,
+button.pause-menu-btn:hover,
+button.pause-menu-btn:focus-visible,
+button.settings-tab:hover,
+button.settings-tab:focus-visible,
+button.settings-seg-btn:hover:not(:disabled),
+button.settings-seg-btn:focus-visible:not(:disabled),
+button.settings-danger-btn:hover,
+button.settings-danger-btn:focus-visible,
+button.settings-confirm-btn:hover,
+button.settings-confirm-btn:focus-visible,
+button.settings-back-btn:hover,
+button.settings-back-btn:focus-visible,
+button.settings-key-bind-btn:hover,
+button.settings-key-bind-btn:focus-visible,
+button.settings-key-bindings-reset:hover,
+button.settings-key-bindings-reset:focus-visible,
+button.selection-card:hover,
+button.selection-card:focus-visible,
+button.selection-event-card:hover,
+button.selection-event-card:focus-visible,
+button.selection-reroll-btn:hover:not([aria-disabled="true"]),
+button.selection-reroll-btn:focus-visible:not([aria-disabled="true"]),
+button.selection-skip-btn:hover,
+button.selection-skip-btn:focus-visible,
+button.selection-peek-handle:hover,
+button.selection-peek-handle:focus-visible,
+button.relic-card-buy-btn:hover,
+button.relic-card-buy-btn:focus-visible,
+button.relic-shop-back-btn:hover,
+button.relic-shop-back-btn:focus-visible,
+button.knowledge-upgrades-back-btn:hover,
+button.knowledge-upgrades-back-btn:focus-visible,
+button.knowledge-upgrades-era-tab:hover,
+button.knowledge-upgrades-era-tab:focus-visible,
+button.knowledge-upgrade-chip:hover:not([aria-disabled="true"]),
+button.knowledge-upgrade-chip:focus-visible:not([aria-disabled="true"]),
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal:hover:not([aria-disabled="true"]),
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal:focus-visible:not([aria-disabled="true"]),
+button.knowledge-upgrade-docked-research-btn:hover:not(:disabled),
+button.knowledge-upgrade-docked-research-btn:focus-visible:not(:disabled),
+button.owned-symbols-close-btn:hover,
+button.owned-symbols-close-btn:focus-visible,
+button.owned-symbols-type-pill:hover,
+button.owned-symbols-type-pill:focus-visible,
+.owned-symbols-sort-controls button:hover,
+.owned-symbols-sort-controls button:focus-visible,
+button.effect-log-action-btn:hover,
+button.effect-log-action-btn:focus-visible,
+button.effect-log-filter-btn:hover,
+button.effect-log-filter-btn:focus-visible,
+button.effect-log-row-button:hover,
+button.effect-log-row-button:focus-visible,
+a.demo-achievements-giveaway-button:hover,
+a.demo-achievements-giveaway-button:focus-visible,
+button.tutorial-exit-button:hover,
+button.tutorial-exit-button:focus-visible,
+button.tutorial-dialog-next:hover,
+button.tutorial-dialog-next:focus-visible,
+button.endgame-btn:hover:not(:active),
+button.endgame-btn:focus-visible:not(:active) {
+  border-color: var(--game-ui-line);
+  background: var(--game-ui-face-hover) !important;
+  color: #ffffff;
+  box-shadow: var(--game-ui-bevel-hover) !important;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+button.main-menu-button:active,
+button.main-menu-settings-button:active,
+button.main-menu-exit-button:active,
+button.leader-select-back:active,
+button.leader-difficulty-button:active:not(:disabled),
+button.initial-setup-language-trigger:active,
+button.initial-setup-language-option:active,
+button.initial-setup-continue:active:not(:disabled),
+button.initial-setup-option:active,
+button.pause-log-btn:active,
+button.pause-menu-btn:active,
+button.settings-tab:active,
+button.settings-seg-btn:active:not(:disabled),
+button.settings-danger-btn:active,
+button.settings-confirm-btn:active,
+button.settings-back-btn:active,
+button.settings-key-bind-btn:active,
+button.settings-key-bindings-reset:active,
+button.selection-card:active,
+button.selection-event-card:active,
+button.selection-reroll-btn:active:not([aria-disabled="true"]),
+button.selection-skip-btn:active,
+button.selection-peek-handle:active,
+button.relic-card-buy-btn:active,
+button.relic-shop-back-btn:active,
+button.knowledge-upgrades-back-btn:active,
+button.knowledge-upgrades-era-tab:active,
+button.knowledge-upgrade-chip:active:not([aria-disabled="true"]),
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal:active:not([aria-disabled="true"]),
+button.knowledge-upgrade-docked-research-btn:active:not(:disabled),
+button.owned-symbols-close-btn:active,
+button.owned-symbols-type-pill:active,
+.owned-symbols-sort-controls button:active,
+button.effect-log-action-btn:active,
+button.effect-log-filter-btn:active,
+button.effect-log-row-button:active,
+a.demo-achievements-giveaway-button:active,
+button.tutorial-exit-button:active,
+button.tutorial-dialog-next:active,
+button.endgame-btn:active {
+  background: var(--game-ui-face-active) !important;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a !important;
+  transform: translateY(1px);
+}
+
+button.settings-tab.active,
+button.settings-seg-btn.active,
+button.leader-difficulty-button--selected,
+button.initial-setup-option.active,
+button.owned-symbols-type-pill--active,
+button.effect-log-filter-btn--selected,
+button.knowledge-upgrades-era-tab--active,
+button.knowledge-upgrade-chip--selected,
+button.knowledge-upgrade-chip--available,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--selected,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
+    #303030 !important;
+  color: #ffffff;
+  box-shadow: var(--game-ui-bevel-hover) !important;
+}
+
+.leader-detail-unlocks-panel,
+.leader-unlock-body,
+button.leader-progress-card {
+  position: relative;
+  isolation: isolate;
+  border: 2px solid var(--game-ui-line);
+  background: var(--game-ui-face) !important;
+  color: var(--game-ui-text);
+  box-shadow: var(--game-ui-bevel) !important;
+}
+
+.leader-detail-unlocks-panel::after,
+.leader-unlock-body::after,
+button.leader-progress-card::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--game-ui-line);
+  pointer-events: none;
+}
+
+.leader-detail-unlocks-panel > *,
+.leader-unlock-body > *,
+button.leader-progress-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+button.leader-progress-card:hover,
+button.leader-progress-card:focus-visible {
+  background: var(--game-ui-face-hover) !important;
+  color: #ffffff;
+  box-shadow: var(--game-ui-bevel-hover) !important;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+button.leader-progress-card:active {
+  background: var(--game-ui-face-active) !important;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a !important;
+  transform: translateY(1px);
+}
+
+.main-menu,
+.initial-setup-panel,
+.leader-select-shell,
+.leader-select-summary,
+.leader-progress-shell,
+.leader-detail-hero,
+.leader-detail-unlocks-panel,
+.leader-unlock-body,
+.pregame-panel,
+.pause-panel,
+.settings-panel,
+.settings-confirm-panel,
+.selection-panel,
+.knowledge-upgrades-header,
+.knowledge-upgrades-tree-panel,
+.knowledge-upgrades-points,
+.owned-symbols-panel,
+.owned-symbols-header,
+.owned-symbols-sidebar,
+.owned-symbols-toolbar,
+.effect-log-panel,
+.demo-achievements-panel,
+.demo-achievement-section,
+.demo-achievements-completion,
+.endgame-panel {
+  border: 2px solid var(--game-ui-line) !important;
+}
+
+button.main-menu-button,
+button.main-menu-settings-button,
+button.main-menu-exit-button,
+button.leader-select-back,
+button.leader-difficulty-button,
+button.leader-progress-card,
+button.initial-setup-language-trigger,
+button.initial-setup-language-option,
+button.initial-setup-continue,
+button.initial-setup-option,
+button.pause-log-btn,
+button.pause-menu-btn,
+button.settings-tab,
+button.settings-seg-btn,
+button.settings-danger-btn,
+button.settings-confirm-btn,
+button.settings-back-btn,
+button.settings-key-bind-btn,
+button.settings-key-bindings-reset,
+button.selection-card,
+button.selection-event-card,
+button.selection-reroll-btn,
+button.selection-skip-btn,
+button.selection-peek-handle,
+button.relic-card-buy-btn,
+button.relic-shop-back-btn,
+button.knowledge-upgrades-back-btn,
+button.knowledge-upgrades-era-tab,
+button.knowledge-upgrade-chip,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal,
+button.knowledge-upgrade-docked-research-btn,
+button.owned-symbols-close-btn,
+button.owned-symbols-type-pill,
+.owned-symbols-sort-controls button,
+button.effect-log-action-btn,
+button.effect-log-filter-btn,
+button.effect-log-row-button,
+a.demo-achievements-giveaway-button,
+button.tutorial-exit-button,
+button.tutorial-dialog-next,
+button.endgame-btn {
+  border: 2px solid var(--game-ui-line) !important;
+}
+
+/* Stage/layout shells should stay invisible; only actual controls/cards get the shared box style. */
+.main-menu,
+.leader-select-shell,
+.leader-progress-shell {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.main-menu::after,
+.leader-select-shell::after,
+.leader-progress-shell::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Symbol choice floats over the board with a light dimmer; the board-peek state stays clear. */
+.selection-overlay--symbol:not(.selection-overlay--peeked) {
+  background: transparent !important;
+}
+
+.selection-overlay--symbol.selection-overlay--peeked {
+  background: transparent !important;
+}
+
+.selection-overlay--symbol::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(0, 0, 0, 0.58);
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 260ms ease-out;
+}
+
+.selection-overlay--symbol.selection-overlay--peeked::before {
+  opacity: 0;
+}
+
+.selection-overlay--symbol > * {
+  position: relative;
+  z-index: 1;
+}
+
+.selection-overlay--symbol .selection-panel {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.selection-overlay--symbol .selection-panel::after {
+  content: none !important;
+  display: none !important;
+}
+
+.selection-overlay--symbol .selection-panel-wrapper {
+  will-change: transform, opacity;
+  transition:
+    transform 360ms cubic-bezier(0.2, 0.82, 0.2, 1),
+    opacity 220ms ease-out;
+}
+
+.selection-overlay--symbol button.selection-peek-handle {
+  transform: translateX(-50%) !important;
+}
+
+.selection-overlay--symbol button.selection-peek-handle:hover,
+.selection-overlay--symbol button.selection-peek-handle:focus-visible {
+  transform: translate(-50%, -2px) !important;
+}
+
+.selection-overlay--symbol button.selection-peek-handle:active {
+  transform: translate(-50%, 1px) !important;
+}
+
+/* Knowledge upgrade cards stay dimensionally stable; no left accent stripe. */
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal:hover,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal:focus-visible,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal:active,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--selected,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--locked,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable {
+  border: 2px solid var(--game-ui-line) !important;
+  border-top: 2px solid var(--game-ui-line) !important;
+  border-right: 2px solid var(--game-ui-line) !important;
+  border-bottom: 2px solid var(--game-ui-line) !important;
+  border-left: 2px solid var(--game-ui-line) !important;
+  box-sizing: border-box;
+  transform: none !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal::before {
+  content: none !important;
+  display: none !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal .knowledge-upgrade-chip-inner-frame {
+  border-color: var(--game-ui-line) !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--selected,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--selected:hover,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--selected:focus-visible,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--selected:active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #242424 !important;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a !important;
+  color: #ffffff;
+  outline: none !important;
+  transform: none !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--selected .knowledge-upgrade-chip-inner-frame {
+  border-color: #050505 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.72),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12) !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal:active:not(.knowledge-upgrade-chip--unlocked):not(.knowledge-upgrade-chip--selected) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #242424 !important;
+  box-shadow: var(--game-ui-bevel) !important;
+  color: #ffffff;
+  transform: none !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:active:not(.knowledge-upgrade-chip--unlocked):not(.knowledge-upgrade-chip--selected) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
+    #303030 !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked:active {
+  background:
+    linear-gradient(180deg, rgba(134, 239, 172, 0.085), rgba(22, 101, 52, 0.055)),
+    linear-gradient(90deg, rgba(74, 222, 128, 0.075), rgba(21, 128, 61, 0.03)),
+    #222822 !important;
+  border-color: var(--game-ui-line) !important;
+  box-shadow:
+    inset 0 2px 0 #5a5a5a,
+    inset 2px 0 0 #3a3a3a,
+    inset -2px 0 0 #121212,
+    inset 0 -2px 0 #080808,
+    inset 0 0 0 999px rgba(74, 222, 128, 0.05),
+    0 0 8px rgba(74, 222, 128, 0.06) !important;
+  color: #e0ece2;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked:hover:not(:active),
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked:focus-visible:not(:active) {
+  background:
+    linear-gradient(180deg, rgba(134, 239, 172, 0.11), rgba(22, 101, 52, 0.07)),
+    linear-gradient(90deg, rgba(74, 222, 128, 0.095), rgba(21, 128, 61, 0.04)),
+    #283027 !important;
+  box-shadow:
+    inset 0 2px 0 #6a6a6a,
+    inset 2px 0 0 #464646,
+    inset -2px 0 0 #151515,
+    inset 0 -2px 0 #080808,
+    inset 0 0 0 999px rgba(74, 222, 128, 0.06),
+    0 0 9px rgba(74, 222, 128, 0.075) !important;
+  color: #edf6ee;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowledge-upgrade-chip--selected,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowledge-upgrade-chip--selected:hover,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowledge-upgrade-chip--selected:focus-visible,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowledge-upgrade-chip--selected:active {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(255, 255, 255, 0.025)),
+    linear-gradient(180deg, rgba(134, 239, 172, 0.09), rgba(22, 101, 52, 0.055)),
+    linear-gradient(90deg, rgba(74, 222, 128, 0.08), rgba(21, 128, 61, 0.03)),
+    #202620 !important;
+  border-color: var(--game-ui-line) !important;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a,
+    inset 0 0 0 999px rgba(74, 222, 128, 0.045),
+    0 0 8px rgba(74, 222, 128, 0.06) !important;
+  color: #ffffff;
+}
+
+.pause-overlay button:hover:not(:disabled):not(:active),
+.pause-overlay button:focus-visible:not(:disabled):not(:active) {
+  border-color: var(--game-ui-line) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.015)),
+    #2e2e2e !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 2px 0 #777777,
+    inset 2px 0 0 #4f4f4f,
+    inset -2px 0 0 #151515,
+    inset 0 -2px 0 #080808,
+    0 0 0 2px rgba(255, 246, 201, 0.62),
+    0 0 0 4px rgba(255, 255, 255, 0.035) !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  filter: brightness(1.08) !important;
+}
+
+.pause-overlay button:active:not(:disabled) {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.02)),
+    #1c1c1c !important;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a !important;
+  outline: none !important;
+  filter: brightness(0.94) !important;
+}
+
+.pause-overlay button.settings-danger-btn,
+.pause-overlay button.settings-confirm-btn--danger {
+  border-color: var(--game-ui-line) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 210, 210, 0.1), rgba(255, 255, 255, 0.012)),
+    #5a1717 !important;
+  color: #ffe1e1 !important;
+  box-shadow:
+    inset 0 2px 0 #9d3737,
+    inset 2px 0 0 #762525,
+    inset -2px 0 0 #210808,
+    inset 0 -2px 0 #120303 !important;
+}
+
+.pause-overlay button.settings-danger-btn:hover:not(:disabled):not(:active),
+.pause-overlay button.settings-danger-btn:focus-visible:not(:disabled):not(:active),
+.pause-overlay button.settings-confirm-btn--danger:hover:not(:disabled):not(:active),
+.pause-overlay button.settings-confirm-btn--danger:focus-visible:not(:disabled):not(:active) {
+  border-color: var(--game-ui-line) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 225, 225, 0.14), rgba(255, 255, 255, 0.018)),
+    #7f1d1d !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 2px 0 #c05454,
+    inset 2px 0 0 #9a3636,
+    inset -2px 0 0 #2b0b0b,
+    inset 0 -2px 0 #140404,
+    0 0 0 2px rgba(255, 205, 205, 0.58),
+    0 0 0 4px rgba(255, 255, 255, 0.035) !important;
+  outline: none !important;
+  filter: brightness(1.08) !important;
+}
+
+.pause-overlay button.settings-danger-btn:active:not(:disabled),
+.pause-overlay button.settings-confirm-btn--danger:active:not(:disabled) {
+  border-color: var(--game-ui-line) !important;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(255, 210, 210, 0.018)),
+    #3d1010 !important;
+  box-shadow:
+    inset 0 2px 0 #120303,
+    inset 2px 0 0 #210808,
+    inset -2px 0 0 #762525,
+    inset 0 -2px 0 #9d3737 !important;
+  filter: brightness(0.94) !important;
+}
+
+.pause-overlay button.settings-dropdown-trigger:hover:not(:disabled):not(:active),
+.pause-overlay button.settings-dropdown-trigger:focus-visible:not(:disabled):not(:active) {
+  border-color: #606060 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 246, 201, 0.62),
+    0 0 0 4px rgba(255, 255, 255, 0.035) !important;
+  outline: none !important;
+  filter: none !important;
+}
+
+.pause-overlay button.settings-dropdown-option:hover:not(:disabled):not(:active),
+.pause-overlay button.settings-dropdown-option:focus-visible:not(:disabled):not(:active) {
+  z-index: 2;
+  border: 0 !important;
+  border-bottom: 2px solid #0e0e0e !important;
+  background: #1c1c1c !important;
+  color: #d8d8d8 !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 246, 201, 0.62) !important;
+  outline: none !important;
+  filter: none !important;
+}
+
+.pause-overlay button.settings-dropdown-option.settings-dropdown-option--selected:hover:not(:disabled):not(:active),
+.pause-overlay button.settings-dropdown-option.settings-dropdown-option--selected:focus-visible:not(:disabled):not(:active) {
+  background: #303030 !important;
+  color: #ffffff !important;
+}
+
+.pause-overlay button.settings-dropdown-option:last-child:hover:not(:disabled):not(:active),
+.pause-overlay button.settings-dropdown-option:last-child:focus-visible:not(:disabled):not(:active) {
+  border-bottom: 0 !important;
+}
+
+.pause-overlay button.settings-dropdown-trigger:active:not(:disabled) {
+  border-color: #606060 !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 246, 201, 0.62),
+    0 0 0 4px rgba(255, 255, 255, 0.035) !important;
+  filter: none !important;
+}
+
+.pause-overlay button.settings-dropdown-option:active:not(:disabled) {
+  z-index: 2;
+  border: 0 !important;
+  border-bottom: 2px solid #0e0e0e !important;
+  background: #1c1c1c !important;
+  color: #d8d8d8 !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 246, 201, 0.62) !important;
+  filter: none !important;
+}
+
+.pause-overlay button.settings-dropdown-option.settings-dropdown-option--selected:active:not(:disabled) {
+  background: #303030 !important;
+  color: #ffffff !important;
+}
+
+.pause-overlay button.settings-stepper-btn:hover:not(:disabled):not(:active),
+.pause-overlay button.settings-stepper-btn:focus-visible:not(:disabled):not(:active),
+.pause-overlay button.settings-stepper-btn:active:not(:disabled) {
+  border-color: #444444 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #d8d8d8 !important;
+  box-shadow:
+    0 0 0 2px rgba(255, 246, 201, 0.62),
+    0 0 0 4px rgba(255, 255, 255, 0.035) !important;
+  outline: none !important;
+  filter: none !important;
+}
+
+.demo-start-root button.main-menu-button:hover:not(:disabled):not(:active),
+.demo-start-root button.main-menu-button:focus-visible:not(:disabled):not(:active),
+button.main-menu-settings-button:hover:not(:disabled):not(:active),
+button.main-menu-settings-button:focus-visible:not(:disabled):not(:active),
+button.main-menu-exit-button:hover:not(:disabled):not(:active),
+button.main-menu-exit-button:focus-visible:not(:disabled):not(:active) {
+  border-color: var(--game-ui-line) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.015)),
+    #2e2e2e !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 2px 0 #777777,
+    inset 2px 0 0 #4f4f4f,
+    inset -2px 0 0 #151515,
+    inset 0 -2px 0 #080808,
+    0 0 0 2px rgba(255, 246, 201, 0.62),
+    0 0 0 4px rgba(255, 255, 255, 0.035) !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  filter: brightness(1.08) !important;
+}
+
+.demo-start-root button.main-menu-button:active:not(:disabled),
+button.main-menu-settings-button:active:not(:disabled),
+button.main-menu-exit-button:active:not(:disabled) {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.02)),
+    #1c1c1c !important;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a !important;
+  outline: none !important;
+  filter: brightness(0.94) !important;
+}
+
+/* Keep every button physically stationary; hover/press should change only the surface styling. */
+button:where(:hover, :focus-visible, :active),
+a.demo-achievements-giveaway-button:where(:hover, :focus-visible, :active) {
+  transform: none !important;
+}
+
+/* These controls are centered with transform, so preserve their baseline position in every state. */
+button.pause-log-btn,
+button.pause-log-btn:hover,
+button.pause-log-btn:focus-visible,
+button.pause-log-btn:active,
+button.selection-peek-handle,
+button.selection-peek-handle:hover,
+button.selection-peek-handle:focus-visible,
+button.selection-peek-handle:active {
+  transform: translateX(-50%) !important;
+}
+
+/* Settings content should use the same surface color as the settings panel. */
+.settings-body {
+  background: transparent !important;
+}
+
+/* Pause main screen should float directly on the dark overlay, without an extra card or title. */
+.pause-overlay:not(.pause-overlay--settings) .pause-panel {
+  min-width: 0;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.pause-overlay:not(.pause-overlay--settings) .pause-panel::after {
+  content: none !important;
+  display: none !important;
+}
+
+.pause-overlay:not(.pause-overlay--settings) .pause-title {
+  display: none !important;
+}
+
+/* Global motion pass: remove intentionally stepped/choppy UI timing across screens. */
+:root {
+  --game-ui-smooth-ease: cubic-bezier(0.2, 0.82, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  transition-timing-function: var(--game-ui-smooth-ease) !important;
+  animation-timing-function: var(--game-ui-smooth-ease) !important;
+}
+
+.game-screen-black {
+  transition: opacity 720ms ease-out !important;
+  will-change: opacity;
+}
+
+/* Symbol selection peek handle is a viewport control: keep it centered on the screen, not in panel flow. */
+.selection-overlay--symbol button.selection-peek-handle,
+.selection-overlay--symbol button.selection-peek-handle:hover,
+.selection-overlay--symbol button.selection-peek-handle:focus-visible,
+.selection-overlay--symbol button.selection-peek-handle:active {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  z-index: 520 !important;
+  transform: translateX(-50%) !important;
+}
+
+.selection-overlay--symbol.selection-overlay--peeked button.selection-peek-handle,
+.selection-overlay--symbol.selection-overlay--peeked button.selection-peek-handle:hover,
+.selection-overlay--symbol.selection-overlay--peeked button.selection-peek-handle:focus-visible,
+.selection-overlay--symbol.selection-overlay--peeked button.selection-peek-handle:active {
+  top: auto !important;
+  bottom: 0 !important;
+}
+
+/* Event-card conditions belong to the card footer, not the body copy area. */
+.selection-overlay--symbol .selection-event-card {
+  padding-bottom: 96px !important;
+}
+
+.selection-overlay--symbol .selection-event-card .selection-card-desc {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 142px;
+  overflow: hidden;
+}
+
+.selection-overlay--symbol .selection-event-card .selection-event-card-condition {
+  position: absolute !important;
+  left: 28px !important;
+  right: 28px !important;
+  bottom: 26px !important;
+  z-index: 4;
+  min-height: 42px;
+  padding: 10px 4px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+/* Knowledge research points are header text, not a boxed panel. */
+.knowledge-upgrades-points,
+.knowledge-upgrades-points.knowledge-upgrades-points--available {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 12px 0 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.knowledge-upgrades-points::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Knowledge tree should sit directly on the screen background; only the detail panel is carded. */
+.knowledge-upgrades-tree-panel {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.knowledge-upgrades-tree-panel::after {
+  content: none !important;
+  display: none !important;
+}
+
+.knowledge-upgrades-era-scroll.knowledge-upgrades-tree-scroll,
+.knowledge-upgrades-horizontal-tree {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.knowledge-upgrade-tooltip.knowledge-upgrade-tooltip--docked {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  border: 2px solid var(--game-ui-line) !important;
+  background: rgba(36, 36, 36, 0.62) !important;
+  backdrop-filter: blur(1px);
+  box-shadow: var(--game-ui-bevel) !important;
+}
+
+.knowledge-upgrade-tooltip.knowledge-upgrade-tooltip--docked::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 3;
+  box-sizing: border-box;
+  border: 2px solid var(--game-ui-line);
+  pointer-events: none;
+}
+
+/* Refine the docked upgrade detail card composition. */
+.knowledge-upgrade-tooltip.knowledge-upgrade-tooltip--docked > * {
+  position: relative;
+  z-index: 4;
+}
+
+.knowledge-upgrade-tooltip--docked .knowledge-upgrade-tooltip-scroll {
+  gap: 18px !important;
+  padding: 24px 24px 18px !important;
+}
+
+.knowledge-upgrade-detail-heading {
+  grid-template-columns: 88px minmax(0, 1fr) !important;
+  gap: 18px !important;
+  padding: 0 0 18px !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.knowledge-upgrade-detail-sprite-frame {
+  width: 88px !important;
+  height: 88px !important;
+  border: 2px solid var(--game-ui-line) !important;
+  background: #1c1c1c !important;
+  box-shadow:
+    inset 0 2px 0 #444444,
+    inset 2px 0 0 #333333,
+    inset -2px 0 0 #101010,
+    inset 0 -2px 0 #080808 !important;
+}
+
+.knowledge-upgrade-detail-sprite-frame img {
+  width: 68px !important;
+  height: 68px !important;
+}
+
+.knowledge-upgrade-tooltip--docked .symbol-tooltip-name {
+  font-size: 28px !important;
+  line-height: 1.08 !important;
+}
+
+.knowledge-upgrade-detail-heading-copy {
+  gap: 8px !important;
+}
+
+.knowledge-upgrade-detail-meta {
+  gap: 8px !important;
+}
+
+.knowledge-upgrade-tooltip--docked .symbol-tooltip-desc,
+.knowledge-upgrade-tooltip--docked .knowledge-upgrade-desc-symbols-area {
+  padding: 16px !important;
+  border: 2px solid #141414 !important;
+  background: #191919 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.knowledge-upgrade-tooltip--docked .symbol-tooltip-desc-line {
+  font-size: 18px !important;
+  line-height: 1.48 !important;
+  text-align: left;
+}
+
+.knowledge-upgrade-relations {
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+}
+
+.knowledge-upgrade-relation-group {
+  gap: 8px !important;
+}
+
+.knowledge-upgrade-relation-group > span {
+  padding-left: 2px;
+  color: #a0a0a0 !important;
+}
+
+.knowledge-upgrade-relation-chip {
+  min-height: 42px !important;
+  padding: 9px 12px !important;
+  border: 2px solid #141414 !important;
+  background: #1c1c1c !important;
+  color: #d8d8d8 !important;
+}
+
+.knowledge-upgrade-relation-chip:hover,
+.knowledge-upgrade-relation-chip:focus-visible {
+  border-color: var(--game-ui-line) !important;
+  background: #2e2e2e !important;
+  box-shadow: var(--game-ui-bevel-hover) !important;
+}
+
+.knowledge-upgrade-docked-research-btn,
+.knowledge-upgrade-researched-banner {
+  min-height: 64px !important;
+  margin: 0 24px 24px !important;
+  padding: 12px 18px !important;
+  border: 2px solid var(--game-ui-line) !important;
+  background: var(--game-ui-face) !important;
+  box-shadow: var(--game-ui-bevel) !important;
+}
+
+.knowledge-upgrade-docked-research-btn {
+  justify-content: space-between !important;
+  text-align: left !important;
+}
+
+.knowledge-upgrade-docked-research-btn::after {
+  display: block !important;
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 0;
+  border: 2px solid var(--game-ui-line);
+  pointer-events: none;
+}
+
+.knowledge-upgrade-docked-research-btn:hover:not(:disabled),
+.knowledge-upgrade-docked-research-btn:focus-visible:not(:disabled) {
+  background: var(--game-ui-face-hover) !important;
+  outline: 2px solid rgba(255, 246, 201, 0.62) !important;
+  outline-offset: 2px !important;
+  box-shadow: var(--game-ui-bevel-hover) !important;
+}
+
+.knowledge-upgrade-docked-research-btn:disabled {
+  background: #141414 !important;
+  color: #707070 !important;
+  filter: grayscale(0.4);
+}
+
+.knowledge-upgrade-researched-banner {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(134, 239, 172, 0.035)),
+    linear-gradient(90deg, rgba(74, 222, 128, 0.07), rgba(21, 128, 61, 0.025)),
+    #202620 !important;
+  color: #86efac !important;
+  box-shadow:
+    inset 0 2px 0 #080808,
+    inset 2px 0 0 #121212,
+    inset -2px 0 0 #3a3a3a,
+    inset 0 -2px 0 #5a5a5a,
+    inset 0 0 0 999px rgba(74, 222, 128, 0.035) !important;
+}
+
+.knowledge-upgrade-research-cost {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  background: rgba(96, 165, 250, 0.12);
+  color: #93c5fd !important;
+}
+
+/* Lighter medieval detail treatment: faint ornament frame and divider-only content sections. */
+.knowledge-upgrade-detail-sprite-frame {
+  border: 1px solid rgba(206, 190, 150, 0.28) !important;
+  background:
+    linear-gradient(135deg, rgba(206, 190, 150, 0.08), rgba(206, 190, 150, 0.015)),
+    transparent !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(255, 255, 255, 0.025) !important;
+}
+
+.knowledge-upgrade-tooltip--docked .symbol-tooltip-desc,
+.knowledge-upgrade-tooltip--docked .knowledge-upgrade-desc-symbols-area {
+  padding: 16px 0 0 !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(206, 190, 150, 0.16) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.knowledge-upgrade-tooltip--docked .knowledge-upgrade-desc-symbols-area {
+  margin-top: 2px !important;
+}
+
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbols {
+  margin-top: 0 !important;
+  gap: 14px !important;
+}
+
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbol-chips {
+  gap: 10px !important;
+}
+
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbol-chip {
+  padding: 3px !important;
+  border: 1px solid rgba(206, 190, 150, 0.22) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbol-chip--pool_add {
+  border-color: rgba(74, 222, 128, 0.36) !important;
+}
+
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbol-chip--effect_modify {
+  border-color: rgba(250, 204, 21, 0.38) !important;
+}
+
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbol-chip--pool_remove {
+  border-color: rgba(248, 113, 113, 0.38) !important;
+}
+
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbol-chip:hover,
+.knowledge-upgrade-tooltip--docked .upgrade-card-desc-symbol-chip:focus-visible {
+  background: rgba(255, 255, 255, 0.055) !important;
+  filter: brightness(1.08);
+}
+
+.knowledge-upgrade-tooltip--docked > .knowledge-upgrade-tooltip-scroll > .symbol-tooltip-desc {
+  padding-top: 0 !important;
+  border-top: 0 !important;
+}
+
+.knowledge-upgrade-desc-symbols-area + .knowledge-upgrade-relations {
+  margin-top: -4px;
+}
+
+.knowledge-upgrade-relations + .knowledge-upgrade-relations {
+  margin-top: -10px;
+}
+
+/* Detail card sizing: a little wider, shorter, and with more breathing room around it. */
+.knowledge-upgrades-workspace {
+  gap: 26px !important;
+  align-items: center;
+}
+
+.knowledge-upgrade-tooltip.knowledge-upgrade-tooltip--docked {
+  flex: 0 0 470px !important;
+  width: 470px !important;
+  min-width: 470px !important;
+  height: calc(100% - 52px) !important;
+  max-height: none;
+  align-self: center;
+  margin: 26px 26px 26px 0 !important;
+}
+
+/* Let the tree own the full horizontal canvas; draw the detail card over it. */
+.knowledge-upgrades-workspace {
+  position: relative !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+}
+
+.knowledge-upgrades-tree-panel {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.knowledge-upgrade-tooltip.knowledge-upgrade-tooltip--docked {
+  position: absolute !important;
+  top: 26px !important;
+  right: 26px !important;
+  bottom: 26px !important;
+  left: auto !important;
+  z-index: 12 !important;
+  height: auto !important;
+  margin: 0 !important;
+}
+
+/* Fixed opaque overlay card: the tree stays full-width underneath, but the card has its own solid surface. */
+.knowledge-upgrade-tooltip.knowledge-upgrade-tooltip--docked {
+  top: 50% !important;
+  right: 26px !important;
+  bottom: auto !important;
+  width: 470px !important;
+  min-width: 470px !important;
+  height: 880px !important;
+  max-height: none !important;
+  margin: 0 !important;
+  background: var(--game-ui-face) !important;
+  backdrop-filter: none !important;
+  transform: translateY(calc(-50% - 10px));
+}
+
+/* Relic choice: open-air shop display, with each relic card as the purchase target. */
+.selection-overlay--relic-choice .selection-panel,
+.selection-overlay--relic-choice .selection-panel::after {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.selection-overlay--relic-choice .selection-panel {
+  padding: 0 !important;
+}
+
+.selection-overlay--relic-choice .selection-title--plain {
+  color: rgba(255, 230, 178, 0.96);
+}
+
+.selection-overlay--relic-choice .relic-choice-gold {
+  border-color: #0e0e0e;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
+    #221b12;
+  color: #facc15;
+  box-shadow:
+    inset 0 2px 0 #5f5034,
+    inset 2px 0 0 #3a2d1a,
+    inset -2px 0 0 #120d08,
+    inset 0 -2px 0 #080604;
+}
+
+.selection-overlay--relic-choice .selection-cards.relic-choice-cards {
+  gap: 34px;
+}
+
+.selection-overlay--relic-choice .selection-relic-card-frame {
+  filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.28));
+}
+
+.selection-overlay--relic-choice .selection-card.relic-choice-card {
+  border: 2px solid color-mix(in srgb, var(--selection-era-color, #facc15) 56%, #0e0e0e);
+  background:
+    linear-gradient(180deg, rgba(255, 236, 179, 0.08), rgba(255, 236, 179, 0) 26%),
+    linear-gradient(90deg, rgba(250, 204, 21, 0.05), rgba(0, 0, 0, 0) 18%, rgba(250, 204, 21, 0.04)),
+    #211a13;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 238, 198, 0.2),
+    inset 2px 0 0 rgba(255, 238, 198, 0.08),
+    inset -2px 0 0 rgba(0, 0, 0, 0.6),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.72) !important;
+}
+
+.selection-overlay--relic-choice .selection-card.relic-choice-card:hover,
+.selection-overlay--relic-choice .selection-card.relic-choice-card:focus-visible {
+  border-color: color-mix(in srgb, var(--selection-era-color, #facc15) 82%, #ffffff);
+  background:
+    linear-gradient(180deg, rgba(255, 236, 179, 0.12), rgba(255, 236, 179, 0.02) 30%),
+    linear-gradient(90deg, rgba(250, 204, 21, 0.08), rgba(0, 0, 0, 0) 18%, rgba(250, 204, 21, 0.06)),
+    #2a2117;
+}
+
+.selection-overlay--relic-choice .selection-card.relic-choice-card::after {
+  border-color: rgba(215, 181, 109, 0.58);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 236, 184, 0.16),
+    inset 0 0 0 5px rgba(141, 104, 43, 0.12);
+}
+
+.selection-overlay--relic-choice .relic-choice-rarity {
+  margin-bottom: 2px;
+  font-size: 18px;
+}
+
+.selection-overlay--relic-choice .relic-choice-name {
+  color: #fff1d0;
+}
+
+.selection-overlay--relic-choice .relic-choice-desc {
+  padding-top: 10px;
+}
+
+.selection-overlay--relic-choice .relic-choice-price {
+  width: auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin-top: auto;
+  padding: 10px 0 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #facc15;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+.selection-overlay--relic-choice .relic-choice-price img {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+}
+
+.selection-overlay--relic-choice .relic-choice-original-price {
+  color: rgba(255, 244, 214, 0.46);
+  font-size: 20px;
+}
+/* === Knowledge upgrades === */
+.knowledge-tracks-overlay {
+  --knowledge-track-surface: #111111;
+  --knowledge-track-raised: #1b1b1b;
+  --knowledge-track-line: #363636;
+}
+
+.knowledge-tracks-page {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(520px, 1fr) 430px;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  overflow: hidden;
+  background: #080808;
+}
+
+.knowledge-tracks-browser,
+.knowledge-track-detail {
+  min-width: 0;
+  min-height: 0;
+  border: 2px solid #242424;
+  background: var(--knowledge-track-surface);
+}
+
+.knowledge-tracks-browser {
+  display: flex;
+  flex-direction: column;
+}
+
+.knowledge-track-grid.knowledge-upgrades-tree-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 360px);
+  grid-auto-rows: 140px;
+  align-content: start;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #080808;
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a5a #111111;
+}
+
+button.knowledge-track-card {
+  --knowledge-track-accent: #a0a0a0;
+  position: relative;
+  min-width: 0;
+  isolation: isolate;
+  height: 140px;
+  min-height: 140px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-rows: 58px;
+  column-gap: 14px;
+  align-content: center;
+  align-items: center;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid #3a3a3a;
+  border-radius: 0;
+  color: #d8d8d8;
+  background: #161616;
+  box-shadow: none;
+  text-align: left;
+  transition:
+    background 100ms steps(2, end),
+    border-color 100ms steps(2, end),
+    opacity 100ms steps(2, end);
+}
+
+button.knowledge-track-card::after {
+  display: none;
+}
+
+button.knowledge-track-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+button.knowledge-track-card:hover,
+button.knowledge-track-card:focus-visible {
+  z-index: 2;
+  border-color: #8c8a83;
+  background: #232323;
+  outline: 1px solid #d6d3c8;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+button.knowledge-track-card:active {
+  background: #101010;
+  outline: none;
+}
+
+button.knowledge-track-card--selected {
+  border-color: #e3e0d5;
+  background: #242424;
+  outline: 2px solid #e3e0d5;
+  outline-offset: 2px;
+}
+
+button.knowledge-track-card--complete {
+  border-color: #58705f;
+  background: #171b18;
+}
+
+.knowledge-track-card-icon {
+  grid-column: 1;
+  grid-row: 1;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+}
+
+.knowledge-track-card-icon img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.knowledge-track-card-copy {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.knowledge-track-card-name {
+  overflow: hidden;
+  color: #f0f0f0;
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+button.knowledge-track-card > .knowledge-track-card-progress {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  height: 5px;
+}
+
+.knowledge-track-card-progress > span {
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111111;
+}
+
+.knowledge-track-card-progress > span.is-complete {
+  background: #91ad8b;
+}
+
+.knowledge-track-detail {
+  --knowledge-track-accent: #a0a0a0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.knowledge-track-detail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a5a #111111;
+}
+
+.knowledge-track-detail-heading {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 15px;
+  border-bottom: 2px solid #242424;
+  background: #0d0d0d;
+}
+
+.knowledge-track-detail-icon {
+  width: 74px;
+  height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--knowledge-track-accent);
+  background: #080808;
+}
+
+.knowledge-track-detail-icon img {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.knowledge-track-detail-heading > div:last-child {
+  min-width: 0;
+}
+
+.knowledge-track-detail-heading span {
+  color: var(--knowledge-track-accent);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.knowledge-track-detail-heading h2 {
+  margin: 4px 0 0;
+  color: #f2f2f2;
+  font-size: 27px;
+  line-height: 1;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-track-next-stage {
+  padding: 15px;
+}
+
+.knowledge-track-next-stage-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+
+.knowledge-track-next-stage-heading > span {
+  grid-column: 1 / -1;
+  color: var(--knowledge-track-accent);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.knowledge-track-next-stage-heading strong {
+  min-width: 0;
+  color: #eeeeee;
+  font-size: 21px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-track-next-stage-heading small {
+  color: #909090;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.knowledge-track-effect-copy {
+  padding: 11px 12px;
+  border-left: 3px solid var(--knowledge-track-accent);
+  color: #d0d0d0;
+  background: #080808;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.knowledge-track-next-stage .knowledge-upgrade-desc-symbols-area {
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid #2e2e2e;
+  background: #0a0a0a;
+}
+
+.knowledge-track-detail > .knowledge-upgrade-docked-research-btn,
+.knowledge-track-detail > .knowledge-upgrade-researched-banner {
+  flex: 0 0 64px;
+  min-height: 64px;
+}
+
+@media (max-width: 1120px) {
+  .knowledge-tracks-page {
+    grid-template-columns: minmax(410px, 1fr) 370px;
+  }
+
+}
+
+@media (max-width: 760px) {
+  .knowledge-tracks-page {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(250px, 44%) minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .knowledge-track-grid.knowledge-upgrades-tree-scroll {
+    grid-template-columns: repeat(3, 360px);
+    grid-auto-rows: 140px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}
+
+/* Research availability is communicated by the detail action text, not by a brighter card skin. */
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected),
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable {
+  border-color: var(--game-ui-line) !important;
+  background: #141414 !important;
+  filter: grayscale(0.4) !important;
+  opacity: 0.84 !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected):hover:not(:active),
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected):focus-visible,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable:hover:not(:active),
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable:focus-visible {
+  border-color: var(--game-ui-line) !important;
+  background: #141414 !important;
+  filter: grayscale(0.4) !important;
+  opacity: 0.84 !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected) .knowledge-upgrade-chip-image {
+  filter: grayscale(1) saturate(0) brightness(0.86) !important;
+}
+
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected) .knowledge-upgrade-chip-name,
+button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected) .knowledge-upgrade-chip-status {
+  color: #a0a0a0 !important;
+}
+
+/* Keep the active research action visually aligned with the unavailable state. */
+.knowledge-tracks-overlay .knowledge-upgrade-docked-research-btn:not(:disabled) {
+  border-color: var(--game-ui-line) !important;
+  background: #141414 !important;
+  color: #707070 !important;
+  opacity: 0.42 !important;
+  filter: grayscale(0.55) !important;
+}
+
+.knowledge-tracks-overlay .knowledge-upgrade-docked-research-btn:hover:not(:disabled),
+.knowledge-tracks-overlay .knowledge-upgrade-docked-research-btn:focus-visible:not(:disabled) {
+  border-color: var(--game-ui-line) !important;
+  background: #141414 !important;
+  color: #707070 !important;
+  opacity: 0.42 !important;
+  filter: grayscale(0.55) !important;
+  box-shadow: var(--game-ui-bevel) !important;
+}
+
+/* Each stage segment carries its own very slight frame. */
+button.knowledge-track-card > .knowledge-track-card-progress {
+  box-sizing: border-box;
+  height: 7px;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+button.knowledge-track-card > .knowledge-track-card-progress > span {
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+button.knowledge-track-card > .knowledge-track-card-progress > span.is-complete {
+  border-color: rgba(222, 239, 215, 0.18);
 }

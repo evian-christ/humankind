@@ -133,7 +133,7 @@ const RelicSelection = () => {
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="relic-card-buy-btn relic-choice-price" aria-hidden="true">
+                                        <div className="relic-choice-price" aria-hidden="true">
                                             {discounted && <span className="relic-choice-original-price">{originalCost}</span>}
                                             <img src={GOLD_RESOURCE_ICON_URL} alt="" draggable={false} />
                                             <span>{cost}</span>

@@ -24,7 +24,7 @@ interface RelicState {
     resetRelics: () => void;
 }
 
-export const MAX_RELICS = 20;
+export const MAX_RELICS = 12;
 
 let nextId = 1;
 

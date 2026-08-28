@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { useSettingsStore, getResolutionOptions, type Language, type EffectSpeed, type SpinSpeed, type ScreenMode } from '../game/state/settingsStore';
-import { GAME_SPEED_PRESETS, getGameSpeed } from '../game/state/gameSpeed';
+import { GAME_SPEED_PRESETS, getGameSpeed, type GameSpeedPreset } from '../game/state/gameSpeed';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { usePreGameStore } from '../game/state/preGameStore';
@@ -38,6 +38,13 @@ const SPIN_SPEED_OPTIONS: { value: SpinSpeed; label: string }[] = [
     { value: '8x', label: '8x' },
 ];
 
+const GAME_SPEED_OPTIONS: { value: GameSpeedPreset; label: string }[] = GAME_SPEED_PRESETS.map((speed) => ({
+    value: speed,
+    label: speed,
+}));
+
+type GameSpeedControlValue = GameSpeedPreset | 'custom';
+
 const SCREEN_MODE_OPTIONS: { value: ScreenMode; labelKey: string }[] = [
     { value: 'windowed', labelKey: 'settings.screenMode.windowed' },
     { value: 'fullscreen', labelKey: 'settings.screenMode.fullscreen' },
@@ -58,6 +65,13 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
     const [capturingAction, setCapturingAction] = useState<KeyBindingAction | null>(null);
+    const [openSettingsDropdown, setOpenSettingsDropdown] = useState<string | null>(null);
+    const [settingsScrollMetrics, setSettingsScrollMetrics] = useState({
+        scrollTop: 0,
+        scrollHeight: 1,
+        clientHeight: 1,
+    });
+    const settingsBodyRef = useRef<HTMLDivElement>(null);
     const {
         resolutionWidth,
         resolutionHeight,
@@ -85,16 +99,23 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
         setKeyBinding,
         resetKeyBindings,
     } = useSettingsStore();
+    const currentGameSpeed = getGameSpeed(spinSpeed, effectSpeed);
+    const currentGameSpeedRef = useRef(currentGameSpeed);
+    const [isCustomSpeedMode, setIsCustomSpeedMode] = useState(currentGameSpeed === 'custom');
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
     const resetPreGameProgress = usePreGameStore((s) => s.resetPreGameProgress);
     const initializeGame = useGameStore((s) => s.initializeGame);
     const resetRelics = useRelicStore((s) => s.resetRelics);
+
+    currentGameSpeedRef.current = currentGameSpeed;
 
     useEffect(() => {
         if (isOpen) {
             setScreen(initialScreen);
             setIsResetConfirmOpen(false);
             setCapturingAction(null);
+            setOpenSettingsDropdown(null);
+            setIsCustomSpeedMode(currentGameSpeedRef.current === 'custom');
         }
     }, [initialScreen, isOpen]);
 
@@ -116,6 +137,50 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
         return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
     }, [capturingAction, isOpen, setKeyBinding]);
 
+    useEffect(() => {
+        if (!isOpen || openSettingsDropdown === null) return;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (target?.closest('.settings-dropdown-custom')) return;
+            setOpenSettingsDropdown(null);
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.code === 'Escape') {
+                setOpenSettingsDropdown(null);
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, openSettingsDropdown]);
+
+    useEffect(() => {
+        if (!isOpen || screen !== 'settings' || activeTab !== 'keyBindings') return;
+        const scrollEl = settingsBodyRef.current;
+        if (!scrollEl) return;
+
+        const syncScrollMetrics = () => {
+            setSettingsScrollMetrics({
+                scrollTop: scrollEl.scrollTop,
+                scrollHeight: Math.max(1, scrollEl.scrollHeight),
+                clientHeight: Math.max(1, scrollEl.clientHeight),
+            });
+        };
+
+        syncScrollMetrics();
+        const resizeObserver = typeof ResizeObserver !== 'undefined'
+            ? new ResizeObserver(syncScrollMetrics)
+            : null;
+        resizeObserver?.observe(scrollEl);
+        return () => resizeObserver?.disconnect();
+    }, [activeTab, isOpen, screen]);
+
     useRegisterBoardTooltipBlock('pause-menu', isOpen);
 
     if (!isOpen) return null;
@@ -124,7 +189,21 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
     const currentResOption = resOptions.find(o => o.width === resolutionWidth && o.height === resolutionHeight);
     const currentResLabel = currentResOption ? currentResOption.label : `${resolutionWidth} x ${resolutionHeight}`;
     const isFillScreenMode = screenMode !== 'windowed';
-    const gameSpeed = getGameSpeed(spinSpeed, effectSpeed);
+    const gameSpeed: GameSpeedControlValue = isCustomSpeedMode || currentGameSpeed === 'custom'
+        ? 'custom'
+        : currentGameSpeed;
+    const customSpeedControlsEnabled = gameSpeed === 'custom';
+    const keyBindingsCanScroll = settingsScrollMetrics.scrollHeight > settingsScrollMetrics.clientHeight + 1;
+    const keyBindingsScrollRange = Math.max(
+        1,
+        settingsScrollMetrics.scrollHeight - settingsScrollMetrics.clientHeight,
+    );
+    const keyBindingsScrollbarThumbHeight = keyBindingsCanScroll
+        ? Math.max(12, (settingsScrollMetrics.clientHeight / settingsScrollMetrics.scrollHeight) * 100)
+        : 100;
+    const keyBindingsScrollbarThumbTop = keyBindingsCanScroll
+        ? (settingsScrollMetrics.scrollTop / keyBindingsScrollRange) * (100 - keyBindingsScrollbarThumbHeight)
+        : 0;
 
     const handleResume = () => {
         setScreen('main');
@@ -142,6 +221,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
 
     const handleSettingsBack = () => {
         setCapturingAction(null);
+        setOpenSettingsDropdown(null);
         if (isResetConfirmOpen) {
             setIsResetConfirmOpen(false);
             return;
@@ -178,6 +258,70 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
         onClose();
     };
 
+    const handleGameSpeedChange = (speed: GameSpeedControlValue) => {
+        if (speed === 'custom') {
+            setIsCustomSpeedMode(true);
+            return;
+        }
+
+        setIsCustomSpeedMode(false);
+        setGameSpeed(speed);
+    };
+
+    const renderSettingsDropdown = <TValue extends string>(
+        id: string,
+        labelKey: string,
+        value: TValue,
+        options: { value: TValue; label: string }[],
+        onChange: (value: TValue) => void,
+        disabled = false,
+        displayValue?: string,
+    ) => {
+        const selectedLabel = displayValue ?? options.find((opt) => opt.value === value)?.label ?? value;
+        const isOpenDropdown = openSettingsDropdown === id;
+
+        return (
+            <div className="settings-row">
+                <div className="settings-row-label">{t(labelKey, language)}</div>
+                <div className="settings-row-controls">
+                    <div className={`settings-dropdown-custom ${isOpenDropdown ? 'settings-dropdown-custom--open' : ''}`}>
+                        <button
+                            type="button"
+                            className="settings-dropdown-trigger"
+                            disabled={disabled}
+                            aria-haspopup="listbox"
+                            aria-expanded={isOpenDropdown}
+                            aria-label={t(labelKey, language)}
+                            onClick={() => setOpenSettingsDropdown((current) => current === id ? null : id)}
+                        >
+                            <span className="settings-dropdown-trigger-label">{selectedLabel}</span>
+                            <span className="settings-dropdown-trigger-icon" aria-hidden="true" />
+                        </button>
+                        {isOpenDropdown && !disabled && (
+                            <div className="settings-dropdown-menu" role="listbox" aria-label={t(labelKey, language)}>
+                                {options.map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        className={`settings-dropdown-option ${opt.value === value ? 'settings-dropdown-option--selected' : ''}`}
+                                        role="option"
+                                        aria-selected={opt.value === value}
+                                        onClick={() => {
+                                            onChange(opt.value);
+                                            setOpenSettingsDropdown(null);
+                                        }}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const tabs: { key: SettingsTab; labelKey: string }[] = [
         { key: 'general', labelKey: 'settings.tab.general' },
         { key: 'gameplay', labelKey: 'settings.tab.gameplay' },
@@ -186,21 +330,129 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
         { key: 'audio', labelKey: 'settings.tab.audio' },
     ];
 
+    const changeVolumeFromPointer = (
+        event: ReactPointerEvent<HTMLDivElement>,
+        onChange: (volume: number) => void,
+    ) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const next = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+        onChange(next);
+    };
+
+    const scrollKeyBindingsFromTrack = (event: ReactPointerEvent<HTMLDivElement>) => {
+        const scrollEl = settingsBodyRef.current;
+        if (!scrollEl) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const ratio = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+        scrollEl.scrollTop = ratio * (scrollEl.scrollHeight - scrollEl.clientHeight);
+        setSettingsScrollMetrics({
+            scrollTop: scrollEl.scrollTop,
+            scrollHeight: Math.max(1, scrollEl.scrollHeight),
+            clientHeight: Math.max(1, scrollEl.clientHeight),
+        });
+    };
+
+    const syncKeyBindingsScrollMetrics = (scrollEl: HTMLDivElement) => {
+        setSettingsScrollMetrics({
+            scrollTop: scrollEl.scrollTop,
+            scrollHeight: Math.max(1, scrollEl.scrollHeight),
+            clientHeight: Math.max(1, scrollEl.clientHeight),
+        });
+    };
+
     const renderVolumeRow = (labelKey: string, value: number, onChange: (volume: number) => void) => (
         <div className="settings-row">
             <div className="settings-row-label">{t(labelKey, language)}</div>
             <div className="settings-row-controls settings-row-controls--volume">
-                <input
+                <div
                     className="settings-volume-slider"
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={Math.round(value * 100)}
-                    onChange={(e) => onChange(Number(e.target.value) / 100)}
+                    role="slider"
+                    tabIndex={0}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(value * 100)}
                     aria-label={t(labelKey, language)}
-                />
+                    style={{ '--settings-volume-fill': `${Math.round(value * 100)}%` } as CSSProperties}
+                    onPointerDown={(event) => {
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        changeVolumeFromPointer(event, onChange);
+                    }}
+                    onPointerMove={(event) => {
+                        if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+                        changeVolumeFromPointer(event, onChange);
+                    }}
+                    onPointerUp={(event) => {
+                        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                            event.currentTarget.releasePointerCapture(event.pointerId);
+                        }
+                    }}
+                    onKeyDown={(event) => {
+                        const step = event.shiftKey ? 0.1 : 0.05;
+                        if (event.code === 'ArrowLeft' || event.code === 'ArrowDown') {
+                            event.preventDefault();
+                            onChange(Math.max(0, value - step));
+                        } else if (event.code === 'ArrowRight' || event.code === 'ArrowUp') {
+                            event.preventDefault();
+                            onChange(Math.min(1, value + step));
+                        } else if (event.code === 'Home') {
+                            event.preventDefault();
+                            onChange(0);
+                        } else if (event.code === 'End') {
+                            event.preventDefault();
+                            onChange(1);
+                        }
+                    }}
+                >
+                    <div className="settings-volume-slider-track" />
+                    <div className="settings-volume-slider-fill" />
+                    <div className="settings-volume-slider-thumb" />
+                </div>
                 <div className="settings-volume-value">{Math.round(value * 100)}%</div>
+            </div>
+        </div>
+    );
+
+    const renderSpeedStepper = <TValue extends string>(
+        labelKey: string,
+        value: TValue,
+        options: { value: TValue; label: string }[],
+        onChange: (value: TValue) => void,
+        disabled = false,
+    ) => (
+        <div className="settings-row">
+            <div className="settings-row-label">{t(labelKey, language)}</div>
+            <div className="settings-row-controls">
+                <div className={`settings-stepper ${disabled ? 'settings-stepper--disabled' : ''}`}>
+                    <button
+                        type="button"
+                        className="settings-stepper-btn"
+                        disabled={disabled}
+                        onClick={() => {
+                            const currentIndex = Math.max(0, options.findIndex((opt) => opt.value === value));
+                            const nextIndex = (currentIndex - 1 + options.length) % options.length;
+                            onChange(options[nextIndex].value);
+                        }}
+                        aria-label={`${t(labelKey, language)} previous`}
+                    >
+                        {'<'}
+                    </button>
+                    <div className="settings-stepper-value">
+                        {options.find((opt) => opt.value === value)?.label ?? value}
+                    </div>
+                    <button
+                        type="button"
+                        className="settings-stepper-btn"
+                        disabled={disabled}
+                        onClick={() => {
+                            const currentIndex = Math.max(0, options.findIndex((opt) => opt.value === value));
+                            const nextIndex = (currentIndex + 1) % options.length;
+                            onChange(options[nextIndex].value);
+                        }}
+                        aria-label={`${t(labelKey, language)} next`}
+                    >
+                        {'>'}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -236,7 +488,17 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
             )}
 
             {screen === 'settings' && (
-                <div className="settings-panel">
+                <div
+                    className="settings-panel"
+                    onWheel={(event) => {
+                        if (activeTab !== 'keyBindings') return;
+                        const scrollEl = settingsBodyRef.current;
+                        if (!scrollEl || scrollEl.contains(event.target as Node)) return;
+                        if (scrollEl.scrollHeight <= scrollEl.clientHeight + 1) return;
+                        scrollEl.scrollTop += event.deltaY;
+                        syncKeyBindingsScrollMetrics(scrollEl);
+                    }}
+                >
                     <div className="settings-title">{t('settings.title', language)}</div>
 
                     {/* ── Tab Bar ── */}
@@ -248,6 +510,7 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
                                 onClick={() => {
                                     setActiveTab(tab.key);
                                     setCapturingAction(null);
+                                    setOpenSettingsDropdown(null);
                                 }}
                             >
                                 {t(tab.labelKey, language)}
@@ -256,108 +519,73 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
                     </div>
 
                     {/* ── Tab Content ── */}
-                    <div className="settings-body">
+                    <div
+                        ref={settingsBodyRef}
+                        className={`settings-body ${activeTab === 'keyBindings' ? 'settings-body--key-bindings' : ''}`}
+                        onScroll={(event) => {
+                            if (activeTab !== 'keyBindings') return;
+                            const scrollEl = event.currentTarget;
+                            syncKeyBindingsScrollMetrics(scrollEl);
+                        }}
+                    >
 
                         {/* ── Gameplay Tab ── */}
                         {activeTab === 'gameplay' && (
                             <>
-                                <div className="settings-row">
-                                    <div className="settings-row-label">{t('settings.gameSpeed', language)}</div>
-                                    <div className="settings-row-controls">
-                                        {GAME_SPEED_PRESETS.map((speed) => (
-                                            <button
-                                                key={speed}
-                                                className={`settings-seg-btn ${gameSpeed === speed ? 'active' : ''}`}
-                                                onClick={() => setGameSpeed(speed)}
-                                            >
-                                                {speed}
-                                            </button>
-                                        ))}
-                                        <button
-                                            className={`settings-seg-btn ${gameSpeed === 'custom' ? 'active' : ''}`}
-                                            disabled
-                                        >
-                                            {t('settings.gameSpeed.custom', language)}
-                                        </button>
-                                    </div>
-                                </div>
+                                {renderSpeedStepper<GameSpeedControlValue>(
+                                    'settings.gameSpeed',
+                                    gameSpeed,
+                                    [
+                                        ...GAME_SPEED_OPTIONS,
+                                        { value: 'custom', label: t('settings.gameSpeed.custom', language) },
+                                    ],
+                                    handleGameSpeedChange,
+                                )}
 
-                                <div className="settings-row">
-                                    <div className="settings-row-label">{t('settings.spinSpeed', language)}</div>
-                                    <div className="settings-row-controls">
-                                        {SPIN_SPEED_OPTIONS.map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                className={`settings-seg-btn ${spinSpeed === opt.value ? 'active' : ''}`}
-                                                onClick={() => setSpinSpeed(opt.value)}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                {renderSpeedStepper(
+                                    'settings.spinSpeed',
+                                    spinSpeed,
+                                    SPIN_SPEED_OPTIONS,
+                                    setSpinSpeed,
+                                    !customSpeedControlsEnabled,
+                                )}
 
-                                <div className="settings-row">
-                                    <div className="settings-row-label">{t('settings.effectSpeed', language)}</div>
-                                    <div className="settings-row-controls">
-                                        {EFFECT_SPEED_OPTIONS.map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                className={`settings-seg-btn ${effectSpeed === opt.value ? 'active' : ''}`}
-                                                onClick={() => setEffectSpeed(opt.value)}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                {renderSpeedStepper(
+                                    'settings.effectSpeed',
+                                    effectSpeed,
+                                    EFFECT_SPEED_OPTIONS,
+                                    setEffectSpeed,
+                                    !customSpeedControlsEnabled,
+                                )}
                             </>
                         )}
 
                         {/* ── Graphics Tab ── */}
                         {activeTab === 'graphics' && (
                             <>
-                                <div className="settings-row">
-                                    <div className="settings-row-label">{t('settings.resolution', language)}</div>
-                                    <div className="settings-row-controls">
-                                        <div className="settings-dropdown-wrap">
-                                            <select
-                                                className="settings-dropdown"
-                                                value={currentResLabel}
-                                                disabled={isFillScreenMode}
-                                                onChange={(e) => {
-                                                    const opt = resOptions.find((o) => o.label === e.target.value);
-                                                    if (opt) setResolution(opt.width, opt.height);
-                                                }}
-                                            >
-                                                {resOptions.map((opt) => (
-                                                    <option key={opt.label} value={opt.label}>
-                                                        {opt.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
+                                {renderSettingsDropdown(
+                                    'resolution',
+                                    'settings.resolution',
+                                    currentResLabel,
+                                    resOptions.map((opt) => ({ value: opt.label, label: opt.label })),
+                                    (label) => {
+                                        const opt = resOptions.find((option) => option.label === label);
+                                        if (opt) setResolution(opt.width, opt.height);
+                                    },
+                                    isFillScreenMode,
+                                    currentResLabel,
+                                )}
 
-                                <div className="settings-row">
-                                    <div className="settings-row-label">{t('settings.screenMode', language)}</div>
-                                    <div className="settings-row-controls">
-                                        <div className="settings-dropdown-wrap">
-                                            <select
-                                                className="settings-dropdown"
-                                                value={screenMode}
-                                                onChange={(e) => setScreenMode(e.target.value as ScreenMode)}
-                                            >
-                                                {SCREEN_MODE_OPTIONS.map((opt) => (
-                                                    <option key={opt.value} value={opt.value}>
-                                                        {t(opt.labelKey, language)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
+                                {renderSettingsDropdown(
+                                    'screen-mode',
+                                    'settings.screenMode',
+                                    screenMode,
+                                    SCREEN_MODE_OPTIONS.map((opt) => ({
+                                        value: opt.value,
+                                        label: t(opt.labelKey, language),
+                                    })),
+                                    setScreenMode,
+                                )}
 
                                 <div className="settings-row">
                                     <div className="settings-row-label">{t('settings.crtEffect', language)}</div>
@@ -418,24 +646,13 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
                         {/* ── General Tab ── */}
                         {activeTab === 'general' && (
                             <>
-                                <div className="settings-row">
-                                    <div className="settings-row-label">{t('settings.language', language)}</div>
-                                    <div className="settings-row-controls">
-                                        <div className="settings-dropdown-wrap">
-                                            <select
-                                                className="settings-dropdown"
-                                                value={language}
-                                                onChange={(e) => setLanguage(e.target.value as Language)}
-                                            >
-                                                {LANGUAGE_OPTIONS.map((opt) => (
-                                                    <option key={opt.value} value={opt.value}>
-                                                        {opt.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
+                                {renderSettingsDropdown(
+                                    'language',
+                                    'settings.language',
+                                    language,
+                                    LANGUAGE_OPTIONS,
+                                    setLanguage,
+                                )}
 
                                 <div className="settings-row settings-row--danger">
                                     <div className="settings-row-copy">
@@ -463,6 +680,34 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
                             </>
                         )}
                     </div>
+
+                    {activeTab === 'keyBindings' && keyBindingsCanScroll && (
+                        <div
+                            className="settings-key-bindings-scrollbar"
+                            aria-hidden="true"
+                            onPointerDown={(event) => {
+                                event.currentTarget.setPointerCapture(event.pointerId);
+                                scrollKeyBindingsFromTrack(event);
+                            }}
+                            onPointerMove={(event) => {
+                                if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+                                scrollKeyBindingsFromTrack(event);
+                            }}
+                            onPointerUp={(event) => {
+                                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                                    event.currentTarget.releasePointerCapture(event.pointerId);
+                                }
+                            }}
+                        >
+                            <div
+                                className="settings-key-bindings-scrollbar-thumb"
+                                style={{
+                                    top: `${keyBindingsScrollbarThumbTop}%`,
+                                    height: `${keyBindingsScrollbarThumbHeight}%`,
+                                }}
+                            />
+                        </div>
+                    )}
 
                     <button className="settings-back-btn" onClick={handleSettingsBack}>
                         {t('settings.back', language)}

@@ -13,8 +13,7 @@ import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
-import { MAX_RELICS, useRelicStore } from '../game/state/relicStore';
-import { isSealRelicId } from '../game/logic/relics/relicClassification';
+import { useRelicStore } from '../game/state/relicStore';
 import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const ERA_NAME_KEYS: Record<number, string> = {
@@ -56,12 +55,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const [hoveredStatus, setHoveredStatus] = useState<HoveredStatus | null>(null);
     const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
     const [hoveredHudStat, setHoveredHudStat] = useState<HoveredHudStat | null>(null);
-    const [canvasRect, setCanvasRect] = useState({
-        left: 0,
-        top: 0,
-        width: 0,
-        height: 0,
-    });
     const language = useSettingsStore((s) => s.language);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
     const level = useGameStore((s) => s.level);
@@ -102,10 +95,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             unlockedKnowledgeUpgrades: s.unlockedKnowledgeUpgrades,
         })),
     );
-    const permanentRelicCount = useRelicStore((s) =>
-        s.relics.filter((relic) => !isSealRelicId(relic.definition.id)).length,
-    );
-
     // onReady는 App에서 매 렌더마다 새 함수가 들어올 수 있으므로 ref로 고정해둠
     useEffect(() => {
         onReadyRef.current = onReady;
@@ -138,25 +127,11 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                     if (entries[0] && entries[0].contentRect) {
                         const { width, height } = entries[0].contentRect;
                         appRef.current.resize(width, height);
-                        const rect = canvasRef.current?.getBoundingClientRect();
-                        setCanvasRect({
-                            left: rect?.left ?? 0,
-                            top: rect?.top ?? 0,
-                            width,
-                            height,
-                        });
                     }
                     appRef.current.renderBoard(useGameStore.getState(), useSettingsStore.getState());
                 }
             });
             if (canvasRef.current) {
-                const rect = canvasRef.current.getBoundingClientRect();
-                setCanvasRect({
-                    left: rect.left,
-                    top: rect.top,
-                    width: rect.width,
-                    height: rect.height,
-                });
                 resizeObserver.observe(canvasRef.current);
             }
 
@@ -450,68 +425,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         );
     })();
 
-    const emptyRelicSlotDotLayer = (() => {
-        const { width, height } = canvasRect;
-        if (width <= 0 || height <= 0) return null;
-
-        const scale = Math.min(width / 1920, height / 1080);
-        const iconSize = 64 * scale;
-        const gapX = 8 * scale;
-        const gapY = 4 * scale;
-        const sideMargin = 16 * scale;
-        const panelPadding = 8 * scale;
-        const rowCount = MAX_RELICS / 2;
-        const panelWidth = iconSize * 2 + gapX + panelPadding * 2;
-        const panelHeight = iconSize * rowCount + gapY * (rowCount - 1) + panelPadding * 2;
-        const panelX = Math.round(width - panelWidth - sideMargin);
-        const panelY = Math.round((height - panelHeight) / 2);
-        const dotSize = Math.max(6, 8 * scale);
-
-        return (
-            <div
-                aria-hidden="true"
-                style={{
-                    position: 'absolute',
-                    inset: 0,
-                    pointerEvents: 'none',
-                    zIndex: 90,
-                }}
-            >
-                {Array.from(
-                    { length: Math.max(0, MAX_RELICS - permanentRelicCount) },
-                    (_, offset) => {
-                        const slotIndex = permanentRelicCount + offset;
-                        const column = Math.floor(slotIndex / rowCount);
-                        const row = slotIndex % rowCount;
-                        const centerX = panelX
-                            + panelPadding
-                            + column * (iconSize + gapX)
-                            + iconSize / 2;
-                        const centerY = panelY
-                            + panelPadding
-                            + row * (iconSize + gapY)
-                            + iconSize / 2;
-
-                        return (
-                            <span
-                                key={slotIndex}
-                                style={{
-                                    position: 'absolute',
-                                    left: centerX - dotSize / 2,
-                                    top: centerY - dotSize / 2,
-                                    width: dotSize,
-                                    height: dotSize,
-                                    borderRadius: '50%',
-                                    background: 'rgba(156, 163, 175, 0.28)',
-                                }}
-                            />
-                        );
-                    },
-                )}
-            </div>
-        );
-    })();
-
     return (
         <>
         <div ref={canvasRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -662,7 +575,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                     </div>
                 </div>
             )}
-            {emptyRelicSlotDotLayer}
         </div>
         {hudStatTooltip && typeof document !== 'undefined'
             ? createPortal(hudStatTooltip, document.body)
