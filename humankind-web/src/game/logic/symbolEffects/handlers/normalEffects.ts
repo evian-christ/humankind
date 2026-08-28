@@ -1,13 +1,9 @@
 import { S, SymbolType } from '../../../data/symbolDefinitions';
 import {
-    AGRICULTURE_UPGRADE_ID,
-    AGRICULTURAL_SURPLUS_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
     MILITARY_SCIENCE_UPGRADE_ID,
-    MODERN_AGRICULTURE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
@@ -15,7 +11,6 @@ import {
     SHIPBUILDING_UPGRADE_ID,
     TANNING_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
-    THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
 import {
     addRainforestGrowth,
@@ -52,45 +47,41 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             const grassCount = grassAdj.length;
             if (grassCount > 0) grassAdj.forEach((pos) => state.contributors.push(pos));
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
-            if (upgrades.includes(MODERN_AGRICULTURE_UPGRADE_ID)) {
-                symbolInstance.effect_counter += countOnBoard(boardGrid, S.grassland);
-            } else if (upgrades.includes(AGRICULTURAL_SURPLUS_UPGRADE_ID)) {
-                symbolInstance.effect_counter += grassCount * 2;
-            } else if (upgrades.includes(IRRIGATION_UPGRADE_ID)) {
-                symbolInstance.effect_counter += grassCount;
-            } else if (grassCount > 0) {
+            if (grassCount > 0) {
                 symbolInstance.effect_counter += 1;
             }
             if (symbolInstance.effect_counter >= 10) {
-                const baseFood = upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 15 : 10;
-                state.food += upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
-                    ? baseFood + countOnBoard(boardGrid, S.grassland)
-                    : baseFood;
+                state.food += 10;
                 symbolInstance.effect_counter -= 10;
+            }
+            return true;
+        }
+
+        case S.corn: {
+            const grassAdj = getSameRowCoordsBySymbolId(boardGrid, x, y, S.grassland);
+            const grassCount = grassAdj.length;
+            if (grassCount > 0) grassAdj.forEach((pos) => state.contributors.push(pos));
+            symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
+            if (grassCount > 0) {
+                symbolInstance.effect_counter += 1;
+            }
+            if (symbolInstance.effect_counter >= 20) {
+                state.food += 25;
+                symbolInstance.effect_counter -= 20;
             }
             return true;
         }
 
         case S.rice: {
             const grassAdj = getSameRowCoordsBySymbolId(boardGrid, x, y, S.grassland);
-            const grassCount = grassAdj.length;
-            if (grassCount > 0) grassAdj.forEach((pos) => state.contributors.push(pos));
+            if (grassAdj.length > 0) grassAdj.forEach((pos) => state.contributors.push(pos));
             symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
-            if (upgrades.includes(MODERN_AGRICULTURE_UPGRADE_ID)) {
-                symbolInstance.effect_counter += countOnBoard(boardGrid, S.grassland);
-            } else if (upgrades.includes(AGRICULTURAL_SURPLUS_UPGRADE_ID)) {
-                symbolInstance.effect_counter += grassCount * 2;
-            } else if (upgrades.includes(IRRIGATION_UPGRADE_ID)) {
-                symbolInstance.effect_counter += grassCount;
-            } else if (grassCount > 0) {
+            if (grassAdj.length > 0) {
                 symbolInstance.effect_counter += 1;
             }
-            if (symbolInstance.effect_counter >= 20) {
-                const baseFood = upgrades.includes(AGRICULTURE_UPGRADE_ID) ? 30 : 25;
-                state.food += upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
-                    ? baseFood + countOnBoard(boardGrid, S.grassland)
-                    : baseFood;
-                symbolInstance.effect_counter -= 20;
+            if (symbolInstance.effect_counter >= 40) {
+                state.food += 60;
+                symbolInstance.effect_counter -= 40;
             }
             return true;
         }

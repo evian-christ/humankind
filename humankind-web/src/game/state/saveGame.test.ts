@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { IRON_WORKING_UPGRADE_ID } from '../data/knowledgeUpgrades';
+import {
+    AGRICULTURE_UPGRADE_ID,
+    IRON_WORKING_UPGRADE_ID,
+    IRRIGATION_UPGRADE_ID,
+} from '../data/knowledgeUpgrades';
 import { SYMBOLS, S } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import type { GameState } from './gameStore';
@@ -146,6 +150,29 @@ describe('saveGameState', () => {
         const patch = loadSavedGamePatch();
         expect(patch?.playerSymbols?.[0]?.definition.id).toBe(S.warrior);
         expect(patch?.playerSymbols?.[0]?.instanceId).toBe('symbol_warrior');
+
+        vi.unstubAllGlobals();
+    });
+
+    it('derives field levels when loading a pre-field save', () => {
+        const localStorage = createLocalStorageMock();
+        vi.stubGlobal('localStorage', localStorage);
+
+        const state = createSerializableState();
+        state.unlockedKnowledgeUpgrades = [AGRICULTURE_UPGRADE_ID, IRRIGATION_UPGRADE_ID];
+        saveGameState(state);
+
+        const raw = localStorage.getItem('humankind.save.v1');
+        const saved = JSON.parse(raw!);
+        saved.version = 2;
+        delete saved.state.knowledgeUpgradeLevels;
+        localStorage.setItem('humankind.save.v1', JSON.stringify(saved));
+
+        const patch = loadSavedGamePatch();
+        expect(patch?.knowledgeUpgradeLevels?.agriculture).toBe(2);
+        expect(patch?.unlockedKnowledgeUpgrades).toEqual(
+            expect.arrayContaining([AGRICULTURE_UPGRADE_ID, IRRIGATION_UPGRADE_ID]),
+        );
 
         vi.unstubAllGlobals();
     });

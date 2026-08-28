@@ -230,6 +230,28 @@ describe('turnFlow actions', () => {
         expect(harness.get().pendingNewThreatFloats).toEqual([{ x: 0, y: 0, label: 'test' }]);
     });
 
+    it('allows spinning while research points are unspent', () => {
+        mockedPrepareTurn.mockReturnValue({
+            board: createEmptyBoard(),
+            prevBoard: createEmptyBoard(),
+            playerSymbols: [],
+            turn: 1,
+            threatState: {
+                barbarianSymbolThreat: 0,
+                barbarianCampThreat: 0,
+                naturalDisasterThreat: 0,
+            },
+            pendingNewThreatFloats: [],
+            activeStatusIds: [],
+        });
+        const harness = createHarness({ levelUpResearchPoints: 2 });
+
+        harness.actions.spinBoard();
+
+        expect(harness.get().phase).toBe('spinning');
+        expect(harness.get().levelUpResearchPoints).toBe(2);
+    });
+
     it('marks food payment pending as soon as a payment-turn spin starts', () => {
         mockedPrepareTurn.mockReturnValue({
             board: createEmptyBoard(),

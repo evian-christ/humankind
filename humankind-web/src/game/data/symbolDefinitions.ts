@@ -36,7 +36,8 @@ const SYMBOL_LIST: SymbolDefinition[] = [
 
     // Resource: grassland deck
     def('wheat', { name: "Wheat", type: SymbolType.RESOURCE, description: "Wheat: every 10 turns: 10 Food. In the same row as Grassland: +1/turn.", sprite: "009.png" }),
-    def('rice', { name: "Rice", type: SymbolType.RESOURCE, description: "Rice: every 20 turns: 25 Food. In the same row as Grassland: +1/turn.", sprite: "010.png" }),
+    def('corn', { name: "Corn", type: SymbolType.RESOURCE, description: "Corn: every 20 turns: 25 Food. In the same row as Grassland: +1/turn.", sprite: "010.png" }),
+    def('rice', { name: "Rice", type: SymbolType.RESOURCE, description: "Rice: every 40 turns: 60 Food. In the same row as Grassland: +1/turn.", sprite: "011.png" }),
 
     // Resource: plains deck
     def('cattle', {
@@ -294,7 +295,7 @@ export const isBasePool = (s: SymbolDefinition) => {
 };
 
 const FOOD_PRODUCING_KEYS: SymbolKey[] = [
-    'wheat', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
+    'wheat', 'corn', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
     'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey',
     'sheep', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition', 'heqet', 'foxtail_millet',
 ];

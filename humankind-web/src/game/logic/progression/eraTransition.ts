@@ -18,7 +18,7 @@ export function applyKnowledgeAndLevelUps(args: EraTransitionInput, getKnowledge
     let newKnowledge = args.knowledge + args.deltaKnowledge;
     let gainedResearchPicks = 0;
 
-    while (newLevel < 30) {
+    while (true) {
         const required = getKnowledgeRequiredForLevel(newLevel);
         if (newKnowledge < required) break;
         newKnowledge -= required;

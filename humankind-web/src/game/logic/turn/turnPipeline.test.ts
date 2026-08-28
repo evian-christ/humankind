@@ -344,7 +344,7 @@ describe('turnPipeline', () => {
             boardHeight: 4,
             baseTotals: { food: 1, gold: 2, knowledge: 3 },
         });
-        const effect: EffectResult = { food: 4, gold: 5, knowledge: 6, addSymbolIds: [SYMBOLS[S.rice]!.id] };
+        const effect: EffectResult = { food: 4, gold: 5, knowledge: 6, addSymbolIds: [SYMBOLS[S.corn]!.id] };
 
         applySlotEffectResult(pipeline, { x: 0, y: 0 }, effect);
 
@@ -616,7 +616,7 @@ describe('turnPipeline', () => {
         const wheat = createInstance(Sym.wheat, 'wheat');
         const earthquake = createInstance(Sym.earthquake, 'earthquake');
         const fish = createInstance(Sym.fish, 'fish');
-        const rice = createInstance(Sym.rice, 'rice');
+        const rice = createInstance(Sym.corn, 'corn');
         board[2][0] = wheat;
         board[2][1] = earthquake;
         board[2][3] = fish;
@@ -861,7 +861,7 @@ describe('turnPipeline', () => {
         const hinduism = createInstance(Sym.hinduism, 'hinduism');
         hinduBoard[0][0] = hinduism;
         hinduBoard[1][0] = createInstance(Sym.wheat, 'wheat');
-        hinduBoard[2][0] = createInstance(Sym.rice, 'rice');
+        hinduBoard[2][0] = createInstance(Sym.corn, 'corn');
         const hinduPipeline = createSlotEffectPipeline({
             board: hinduBoard,
             boardWidth: 5,
@@ -950,7 +950,7 @@ describe('turnPipeline', () => {
         const generated = applyGeneratedSymbols({
             board: cleanBoard,
             playerSymbols: [marked],
-            symbolsToSpawnOnBoard: [S.rice],
+            symbolsToSpawnOnBoard: [S.corn],
             symbolsToAdd: [],
             symbolDefinitions: SYMBOLS,
             unlockedKnowledgeUpgrades: [],
@@ -961,7 +961,7 @@ describe('turnPipeline', () => {
         const removedIds = collectRemovedSymbolInstanceIds(board, cleanBoard);
 
         expect(cleanBoard[0][0]).toBeNull();
-        expect(generated.board[0][0]?.definition.id).toBe(S.rice);
+        expect(generated.board[0][0]?.definition.id).toBe(S.corn);
         expect(removedIds.has('marked')).toBe(true);
     });
 });

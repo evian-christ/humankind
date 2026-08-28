@@ -25,6 +25,10 @@ import {
     ELECTION_SYSTEM_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
+import {
+    createEmptyKnowledgeUpgradeLevels,
+    type KnowledgeUpgradeLevels,
+} from '../data/knowledgeUpgradeTracks';
 import { createActiveStatusesForTurn, getActiveStatusIdsFromStates, getActiveStatusIdsForTurn } from '../data/statusDefinitions';
 import type { ActiveStatusState } from '../data/statusDefinitions';
 import {
@@ -118,7 +122,7 @@ export interface GameState {
     knowledge: number; // 기존 knowledge
     culture: number;
     cultureLevel: number;
-    level: number; // 0 ~ 30
+    level: number;
     era: number; // derived from level
     turn: number;
     board: (PlayerSymbolInstance | null)[][];
@@ -201,12 +205,14 @@ export interface GameState {
     religionUnlocked: boolean;
     /** 플레이어가 획득한 지식 업그레이드 ID 목록 */
     unlockedKnowledgeUpgrades: number[];
+    /** 아홉 업그레이드의 현재 레벨. 업그레이드 ID 목록은 효과 호환을 위해 함께 유지한다. */
+    knowledgeUpgradeLevels?: KnowledgeUpgradeLevels;
     /** 진시황 전용 이벤트 화폐 통일: 남은 기본 골드 생산량 2배 턴 수 */
     qinCurrencyStandardTurnsRemaining: number;
 
     /** Unused research picks shown in the UI. Kept in sync with knowledgeResearchCredits. */
     levelUpResearchPoints: number;
-    /** Research pick tickets with the upgrade tier range each unspent point can pay for. */
+    /** 연구 포인트의 획득 레벨 메타데이터. 포인트 자체는 모든 현재 연구 가능 단계에 공통으로 사용한다. */
     knowledgeResearchCredits?: KnowledgeResearchCredit[];
     /** Era upgrades grant three single-slot board expansions. */
     pendingBoardExpansions: number;
@@ -434,6 +440,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     knowledgeUpgradeFloats: [],
     religionUnlocked: false,
     unlockedKnowledgeUpgrades: [],
+    knowledgeUpgradeLevels: createEmptyKnowledgeUpgradeLevels(),
     qinCurrencyStandardTurnsRemaining: 0,
 
     levelUpResearchPoints: 0,
@@ -586,7 +593,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'culture' | 'level' | 'turn', value: number) => {
         if (stat === 'level') {
-            const L = Math.max(0, Math.min(30, Math.round(value)));
+            const L = Math.max(0, Math.round(value));
             set({ level: L, era: getEraFromLevel(L) });
             return;
         }
@@ -653,8 +660,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 knowledgeResearchCredits: nextCredits,
             });
         } else if (screen === 'levelWithResearch') {
-            const nextLevel = Math.min(30, Math.max(0, Math.round(state.level)) + 1);
-            if (nextLevel === state.level) return;
+            const nextLevel = Math.max(0, Math.round(state.level)) + 1;
 
             const nextCredits = [
                 ...normalizeKnowledgeResearchCredits(

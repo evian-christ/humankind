@@ -19,6 +19,7 @@ import {
     DRY_STORAGE_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FISHERIES_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
     HORSEMANSHIP_UPGRADE_ID,
     HUNTING_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
@@ -180,9 +181,10 @@ export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' |
         if (sym.id === S.library && upgrades.includes(WRITING_SYSTEM_UPGRADE_ID)) isUnlocked = true; // Writing -> Library
         if (sym.id === S.merchant && upgrades.includes(CURRENCY_UPGRADE_ID)) isUnlocked = true; // Currency -> Merchant
         if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
-        if (sym.id === S.rice && upgrades.includes(AGRICULTURE_UPGRADE_ID)) isUnlocked = true; // Agriculture -> Rice
+        if (sym.id === S.corn && upgrades.includes(AGRICULTURE_UPGRADE_ID)) isUnlocked = true; // Agriculture -> Corn
         if (sym.id === S.sheep && upgrades.includes(PASTORALISM_UPGRADE_ID)) isUnlocked = true; // Pastoralism -> Sheep
         if (sym.id === S.pearl && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Pearl
+        if (sym.id === S.date && upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) isUnlocked = true; // Foreign Trade -> Date
         if (sym.id === S.compass && upgrades.includes(COMPASS_UPGRADE_ID)) isUnlocked = true; // Compass -> Compass
         if (sym.id === S.expedition && upgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID)) isUnlocked = true; // Jungle Expedition -> Expedition
         if (sym.id === S.cassava && upgrades.includes(TROPICAL_AGRICULTURE_UPGRADE_ID)) isUnlocked = true; // Tropical Agriculture -> Cassava

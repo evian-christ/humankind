@@ -6,12 +6,9 @@ import type { SymbolEffectHandler } from '../core';
 import { SEAL_RELIC_IDS } from '../../relics/relicClassification';
 import {
     DESERT_STORAGE_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     OASIS_RECOVERY_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    THREE_FIELD_SYSTEM_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
 
@@ -24,9 +21,7 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.grassland:
-            state.food += upgrades.includes(THREE_FIELD_SYSTEM_UPGRADE_ID)
-                ? 5
-                : upgrades.includes(IRRIGATION_UPGRADE_ID) ? 3 : 2;
+            state.food += 2;
             return true;
 
         case S.oasis: {
@@ -130,11 +125,9 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             }
 
             // 기본 사막은 산출 없이 무작위 인접 자원/시대 심볼 1개를 파괴만 한다.
-            if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.gold += 1;
             if (adjacentValidTargets.length > 0) {
                 const randomTarget = adjacentValidTargets[Math.floor(Math.random() * adjacentValidTargets.length)];
-                const destroyed = destroyTargets([randomTarget]);
-                if (upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) state.food += destroyed * 10;
+                destroyTargets([randomTarget]);
             }
             return true;
         }

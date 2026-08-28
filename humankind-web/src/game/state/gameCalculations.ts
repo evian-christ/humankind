@@ -252,6 +252,7 @@ export const getKnowledgeResearchLockedThroughLevel = (level: number, unspentRes
 
 export interface KnowledgeResearchCredit {
     grantLevel: number;
+    /** Legacy save metadata. Research points are now fungible regardless of this range. */
     minLevel: number;
     maxLevel: number;
 }
@@ -264,7 +265,7 @@ const getKnowledgeResearchEraStartLevel = (level: number): number => {
 };
 
 export const createKnowledgeResearchCreditForLevel = (level: number): KnowledgeResearchCredit => {
-    const grantLevel = Math.max(1, Math.min(30, Math.floor(level)));
+    const grantLevel = Math.max(1, Math.floor(level));
     return {
         grantLevel,
         minLevel: getKnowledgeResearchEraStartLevel(grantLevel),
@@ -277,7 +278,7 @@ export const createKnowledgeResearchCreditsForLevelGain = (
     nextLevel: number,
 ): KnowledgeResearchCredit[] => {
     const from = Math.max(1, Math.floor(previousLevel) + 1);
-    const to = Math.max(0, Math.min(30, Math.floor(nextLevel)));
+    const to = Math.max(0, Math.floor(nextLevel));
     const credits: KnowledgeResearchCredit[] = [];
     for (let level = from; level <= to; level += 1) {
         credits.push(createKnowledgeResearchCreditForLevel(level));
@@ -290,13 +291,13 @@ export const normalizeKnowledgeResearchCredits = (
     unspentResearchPoints: number,
     credits?: readonly KnowledgeResearchCredit[] | null,
 ): KnowledgeResearchCredit[] => {
-    const normalizedLevel = Math.max(0, Math.min(30, Math.floor(level)));
+    const normalizedLevel = Math.max(0, Math.floor(level));
     const normalizedUnspent = Math.max(0, Math.floor(unspentResearchPoints));
     const normalizedCredits = (credits ?? [])
         .map((credit) => ({
-            grantLevel: Math.max(1, Math.min(30, Math.floor(credit.grantLevel))),
-            minLevel: Math.max(1, Math.min(30, Math.floor(credit.minLevel))),
-            maxLevel: Math.max(1, Math.min(30, Math.floor(credit.maxLevel))),
+            grantLevel: Math.max(1, Math.floor(credit.grantLevel)),
+            minLevel: Math.max(1, Math.floor(credit.minLevel)),
+            maxLevel: Math.max(1, Math.floor(credit.maxLevel)),
         }))
         .filter((credit) => credit.minLevel <= credit.maxLevel)
         .sort((a, b) => a.grantLevel - b.grantLevel || a.minLevel - b.minLevel || a.maxLevel - b.maxLevel);
@@ -323,39 +324,17 @@ export const normalizeKnowledgeResearchCredits = (
 };
 
 export const isKnowledgeUpgradeCoveredByResearchCredits = (
-    upgradeId: number,
+    _upgradeId: number,
     credits: readonly KnowledgeResearchCredit[],
-): boolean => {
-    const unlockLevel = getKnowledgeUpgradeUnlockLevel(upgradeId);
-    if (unlockLevel == null) return false;
-    return credits.some((credit) => unlockLevel >= credit.minLevel && unlockLevel <= credit.maxLevel);
-};
+): boolean => credits.length > 0;
 
 export const consumeKnowledgeResearchCreditForUpgrade = (
-    upgradeId: number,
+    _upgradeId: number,
     credits: readonly KnowledgeResearchCredit[],
-): KnowledgeResearchCredit[] => {
-    const unlockLevel = getKnowledgeUpgradeUnlockLevel(upgradeId);
-    if (unlockLevel == null) return [...credits];
-
-    let consumeIndex = -1;
-    let bestSpan = Infinity;
-    let bestMaxLevel = Infinity;
-    credits.forEach((credit, index) => {
-        if (unlockLevel < credit.minLevel || unlockLevel > credit.maxLevel) return;
-        const span = credit.maxLevel - credit.minLevel;
-        if (span < bestSpan || (span === bestSpan && credit.maxLevel < bestMaxLevel)) {
-            consumeIndex = index;
-            bestSpan = span;
-            bestMaxLevel = credit.maxLevel;
-        }
-    });
-
-    return credits.filter((_, index) => index !== consumeIndex);
-};
+): KnowledgeResearchCredit[] => credits.slice(1);
 
 export const getKnowledgeRequiredForLevel = (currentLevel: number): number => {
-    const level = Math.max(0, Math.min(29, Math.floor(currentLevel)));
+    const level = Math.max(0, Math.floor(currentLevel));
     return KNOWLEDGE_LEVELUP_BASE + level * KNOWLEDGE_LEVELUP_STEP;
 };
 
@@ -476,6 +455,8 @@ export function isUpgradeLegalForKnowledgePick(
     const upgrade = KNOWLEDGE_UPGRADES[uid];
     if (!upgrade) return false;
     if (have.has(uid)) return false;
+    const unlockLevel = getKnowledgeUpgradeUnlockLevel(uid);
+    if (unlockLevel == null || level < unlockLevel) return false;
     if (typeof researchGate !== 'number') {
         if (!isKnowledgeUpgradeCoveredByResearchCredits(uid, researchGate)) return false;
     } else if (isKnowledgeUpgradeLockedByResearchCutoff(uid, researchGate)) return false;

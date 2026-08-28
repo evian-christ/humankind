@@ -7,6 +7,7 @@ import {
     DRY_STORAGE_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
     MECHANICS_UPGRADE_ID,
@@ -112,6 +113,17 @@ describe('selectionLogic', () => {
         });
 
         expect(pool.some((sym) => sym.id === S.cassava)).toBe(true);
+    });
+
+    it('includes Date in the pool once Foreign Trade is unlocked', () => {
+        const pool = buildFlatPool({
+            era: 1,
+            religionUnlocked: false,
+            upgrades: [FOREIGN_TRADE_UPGRADE_ID],
+            ownedRelicDefIds: [],
+        });
+
+        expect(pool.some((sym) => sym.id === S.date)).toBe(true);
     });
 
     it('includes Banana in the base pool without any upgrade', () => {

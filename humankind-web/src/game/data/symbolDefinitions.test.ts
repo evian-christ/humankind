@@ -45,6 +45,16 @@ describe('symbolDefinitions', () => {
         expect(SYMBOLS[54]?.key).toBe('royal_colony');
     });
 
+    it('uses corn at ID 10 and rice at ID 11', () => {
+        expect(SYMBOLS[S.corn]?.id).toBe(10);
+        expect(SYMBOLS[S.corn]?.key).toBe('corn');
+        expect(SYMBOLS[S.corn]?.sprite).toBe('010.png');
+        expect(SYMBOLS[S.rice]?.id).toBe(11);
+        expect(SYMBOLS[S.rice]?.key).toBe('rice');
+        expect(SYMBOLS[S.rice]?.sprite).toBe('011.png');
+        expect(SYMBOLS[S.rice]?.description).toContain('every 40 turns: 60 Food');
+    });
+
     it.each(enemySpritePairs)('uses the expected sprite for enemy symbol %i', (enemyId, sprite) => {
         expect(SYMBOLS[enemyId]?.sprite).toBe(sprite);
     });

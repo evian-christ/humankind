@@ -16,6 +16,7 @@ import { useRelicStore } from '../relicStore';
 import { clearSavedGame } from '../saveGame';
 import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { beginGameLifecycle } from '../gameLifecycleRun';
+import { createEmptyKnowledgeUpgradeLevels } from '../../data/knowledgeUpgradeTracks';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 
@@ -36,7 +37,7 @@ const createTutorialBoard = () =>
         .map(() => Array(4).fill(null));
 
 const isTutorialCrop = (symbol: ReturnType<typeof import('../gameStoreHelpers').createInstance>) =>
-    symbol.definition.id === S.wheat || symbol.definition.id === S.rice;
+    symbol.definition.id === S.wheat || symbol.definition.id === S.corn;
 
 const createCommonResetPatch = () => ({
     phase: 'idle' as const,
@@ -67,6 +68,7 @@ const createCommonResetPatch = () => ({
     cultureLevel: 0,
     religionUnlocked: false,
     unlockedKnowledgeUpgrades: [],
+    knowledgeUpgradeLevels: createEmptyKnowledgeUpgradeLevels(),
     qinCurrencyStandardTurnsRemaining: 0,
     levelUpResearchPoints: 0,
     knowledgeResearchCredits: [],
@@ -205,10 +207,10 @@ export const createGameLifecycleActions = ({
 
     setupTutorialCornStep: () => {
         const wheat = SYMBOLS[S.wheat];
-        const rice = SYMBOLS[S.rice];
-        if (!wheat || !rice) return;
+        const corn = SYMBOLS[S.corn];
+        if (!wheat || !corn) return;
         const cropA = createInstance(wheat);
-        const cropB = createInstance(rice);
+        const cropB = createInstance(corn);
         const board = createTutorialBoard();
         board[1][1] = cropA;
         board[3][1] = cropB;
@@ -341,12 +343,12 @@ export const createGameLifecycleActions = ({
         const state = get();
         if (!state.isTutorialMode || state.tutorialSpinStep !== 'corn_done' || state.phase !== 'idle') return;
         const monument = SYMBOLS[S.monument];
-        const rice = SYMBOLS[S.rice];
+        const corn = SYMBOLS[S.corn];
         const mountain = SYMBOLS[S.mountain];
-        if (!monument || !rice || !mountain) return;
+        if (!monument || !corn || !mountain) return;
         set({
             phase: 'selection',
-            symbolChoices: [monument, rice, mountain],
+            symbolChoices: [monument, corn, mountain],
             symbolSelectionRelicSourceId: null,
             rerollsThisTurn: 0,
         });

@@ -106,7 +106,7 @@ describe('gameStoreHelpers starting layout', () => {
     it('creates Oral Tradition board destroy culture from adjacent symbols', () => {
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
         const wheat = createInstance(SYMBOLS[S.wheat]!, []);
-        const rice = createInstance(SYMBOLS[S.rice]!, []);
+        const rice = createInstance(SYMBOLS[S.corn]!, []);
         const board = Array(5).fill(null).map(() => Array(4).fill(null));
         board[2][1] = oral;
         board[1][1] = wheat;

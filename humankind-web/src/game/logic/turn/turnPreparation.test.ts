@@ -63,7 +63,7 @@ describe('prepareTurn', () => {
     it('keeps Oral Tradition fixed at the center on the first turn', () => {
         const createInstance = createInstanceFactory();
         const oral = createInstance(SYMBOLS[S.oral_tradition]!);
-        const playerSymbols = [createInstance(Sym.wheat), oral, createInstance(Sym.rice)];
+        const playerSymbols = [createInstance(Sym.wheat), oral, createInstance(Sym.corn)];
 
         const result = prepareTurn({
             board: createEmptyBoard(3, 2),

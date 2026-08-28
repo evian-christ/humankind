@@ -116,7 +116,8 @@ function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolE
     const def = symbol.definition;
     if (def.id === S.flood || def.id === S.drought || def.id === S.heatwave) return { anchor: 'bottom-right', mode: 'direct-countdown' };
     if (def.id === S.wheat) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 10 };
-    if (def.id === S.rice) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 20 };
+    if (def.id === S.corn) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 20 };
+    if (def.id === S.rice) return { anchor: 'bottom-right', mode: 'direct-progress', wrapThreshold: 40 };
     if (def.id === S.banana) {
         return {
             anchor: 'bottom-right',

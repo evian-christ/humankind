@@ -556,7 +556,7 @@ describe('gameStore board interactions', () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
         const cropA = createInstance(Sym.wheat, 'tutorial-wheat');
-        const cropB = createInstance(Sym.rice, 'tutorial-rice');
+        const cropB = createInstance(Sym.corn, 'tutorial-rice');
         const monument = createInstance(Sym.monument, 'tutorial-monument');
 
         useGameStore.setState({
@@ -571,7 +571,7 @@ describe('gameStore board interactions', () => {
         const prepared = useGameStore.getState();
         expect(prepared.playerSymbols.map((symbol) => symbol.definition.id)).toEqual([
             Sym.wheat.id,
-            Sym.rice.id,
+            Sym.corn.id,
             Sym.monument.id,
             Sym.sea.id,
             Sym.pearl.id,
@@ -591,7 +591,7 @@ describe('gameStore board interactions', () => {
             spun.board[3][2]?.definition.id,
         ]).toEqual([
             Sym.wheat.id,
-            Sym.rice.id,
+            Sym.corn.id,
             Sym.monument.id,
             Sym.pearl.id,
         ]);

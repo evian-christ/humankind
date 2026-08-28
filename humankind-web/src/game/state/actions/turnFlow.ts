@@ -301,7 +301,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         const state = get();
         const currentBoardWidth = state.board.length;
         const currentBoardHeight = Math.max(0, ...state.board.map((col) => col.length));
-        if ((state.levelUpResearchPoints ?? 0) > 0) return;
         if (state.pendingBoardExpansions > 0) return;
         if (state.phase !== 'idle') return;
         turnRuns.cancelCurrent();

@@ -70,6 +70,11 @@ import type { PlayerSymbolInstance } from '../../types';
 import type { BoardEffectDelta } from '../../logic/turn/turnTypes';
 import { getCultureLevel } from '../../data/cultureProgression';
 import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
+import {
+    getKnowledgeUpgradeTrackStage,
+    getUnlockedUpgradeIdsForKnowledgeLevels,
+    normalizeKnowledgeUpgradeLevels,
+} from '../../data/knowledgeUpgradeTracks';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -622,6 +627,13 @@ export const createSelectionFlowActions = ({
         const uid = Number(upgradeId);
         const unlockedNorm = (state.unlockedKnowledgeUpgrades || []).map((x) => Number(x));
         if (!KNOWLEDGE_UPGRADES[uid]) return;
+        const trackStage = getKnowledgeUpgradeTrackStage(uid);
+        if (!trackStage) return;
+        const knowledgeUpgradeLevels = normalizeKnowledgeUpgradeLevels(
+            unlockedNorm,
+            state.knowledgeUpgradeLevels,
+        );
+        if (knowledgeUpgradeLevels[trackStage.trackId] !== trackStage.stageIndex) return;
         if (!isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel, researchCredits)) return;
 
         const nextResearchCredits = consumeKnowledgeResearchCreditForUpgrade(uid, researchCredits);
@@ -639,7 +651,14 @@ export const createSelectionFlowActions = ({
             });
         };
 
-        const newUnlocked = [...unlockedNorm, uid];
+        const nextKnowledgeUpgradeLevels = {
+            ...knowledgeUpgradeLevels,
+            [trackStage.trackId]: trackStage.stageIndex + 1,
+        };
+        const newUnlocked = getUnlockedUpgradeIdsForKnowledgeLevels(
+            nextKnowledgeUpgradeLevels,
+            [...unlockedNorm, uid],
+        );
         const mouseionRelic = useRelicStore
             .getState()
             .relics.find((r) => r.definition.id === RELIC_ID.ALEXANDRIA_MOUSEION_INSCRIPTION);
@@ -716,6 +735,7 @@ export const createSelectionFlowActions = ({
 
         const baseUnlock = {
             unlockedKnowledgeUpgrades: newUnlocked,
+            knowledgeUpgradeLevels: nextKnowledgeUpgradeLevels,
             religionUnlocked,
             board: newBoard,
             playerSymbols: newPlayerSymbols,

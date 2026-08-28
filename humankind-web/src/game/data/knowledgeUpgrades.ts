@@ -153,9 +153,16 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: AGRICULTURE_UPGRADE_ID,
         name: 'Agriculture',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Rice.',
+        description: 'Unlocks Corn.',
         sprite: '005.png',
-        descSymbols: [{ symbolKey: 'rice', relation: 'pool_add' }],
+        descSymbols: [{ symbolKey: 'corn', relation: 'pool_add' }],
+    },
+    [IRRIGATION_UPGRADE_ID]: {
+        id: IRRIGATION_UPGRADE_ID,
+        name: 'Irrigation',
+        type: SymbolType.ANCIENT,
+        description: 'No current effect.',
+        sprite: '016.png',
     },
     [PASTORALISM_UPGRADE_ID]: {
         id: PASTORALISM_UPGRADE_ID,
@@ -180,6 +187,14 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'Unlocks Deer.',
         sprite: '002.png',
         descSymbols: [{ symbolKey: 'deer', relation: 'pool_add' }],
+    },
+    [FOREIGN_TRADE_UPGRADE_ID]: {
+        id: FOREIGN_TRADE_UPGRADE_ID,
+        name: 'Foreign Trade',
+        type: SymbolType.ANCIENT,
+        description: 'Unlocks Date.',
+        sprite: '007.png',
+        descSymbols: [{ symbolKey: 'date', relation: 'pool_add' }],
     },
     [TROPICAL_AGRICULTURE_UPGRADE_ID]: {
         id: TROPICAL_AGRICULTURE_UPGRADE_ID,
@@ -272,6 +287,27 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         sprite: '037.png',
         descSymbols: [{ symbolKey: 'merchant', relation: 'effect_modify' }],
     },
+    [THREE_FIELD_SYSTEM_UPGRADE_ID]: {
+        id: THREE_FIELD_SYSTEM_UPGRADE_ID,
+        name: 'Three-field System',
+        type: SymbolType.MEDIEVAL,
+        description: 'No current effect.',
+        sprite: '028.png',
+    },
+    [AGRICULTURAL_SURPLUS_UPGRADE_ID]: {
+        id: AGRICULTURAL_SURPLUS_UPGRADE_ID,
+        name: 'Agricultural Surplus',
+        type: SymbolType.MEDIEVAL,
+        description: 'No current effect.',
+        sprite: '043.png',
+    },
+    [MODERN_AGRICULTURE_UPGRADE_ID]: {
+        id: MODERN_AGRICULTURE_UPGRADE_ID,
+        name: 'Modern Agriculture',
+        type: SymbolType.MODERN,
+        description: 'No current effect.',
+        sprite: '056.png',
+    },
     [SCIENTIFIC_THEORY_UPGRADE_ID]: {
         id: SCIENTIFIC_THEORY_UPGRADE_ID,
         name: 'Scientific Theory',
@@ -298,13 +334,16 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
     },
 };
 
-/**
- * 지형축·공통층 업그레이드를 트리에서 걷어내면서 해당 선행조건도 함께 제거했다.
- * 재도입 시 `removedTerrainAxisUpgrades.ts`, `removedGeneralUpgrades.ts`를 참고해 다시 채운다.
- */
+/** 같은 업그레이드 안에서는 직전 레벨만 선행조건으로 사용한다. */
 export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> = {
+    [IRRIGATION_UPGRADE_ID]: [AGRICULTURE_UPGRADE_ID],
+    [THREE_FIELD_SYSTEM_UPGRADE_ID]: [IRRIGATION_UPGRADE_ID],
+    [AGRICULTURAL_SURPLUS_UPGRADE_ID]: [THREE_FIELD_SYSTEM_UPGRADE_ID],
+    [MODERN_AGRICULTURE_UPGRADE_ID]: [AGRICULTURAL_SURPLUS_UPGRADE_ID],
+
     [EDUCATION_UPGRADE_ID]: [WRITING_SYSTEM_UPGRADE_ID],
     [THEOCRACY_UPGRADE_ID]: [THEOLOGY_UPGRADE_ID],
+    [CURRENCY_UPGRADE_ID]: [FOREIGN_TRADE_UPGRADE_ID],
     [GUILD_UPGRADE_ID]: [CURRENCY_UPGRADE_ID],
     [SCIENTIFIC_THEORY_UPGRADE_ID]: [EDUCATION_UPGRADE_ID],
 

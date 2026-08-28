@@ -19,7 +19,8 @@ export const SYMBOL_NUMERIC_ID = {
     // ── Resource / Luxury / Special (9–38): 메인 덱 축 + 공통 운영층 기준 ──
     // 초원축
     wheat: 9,
-    rice: 10,
+    corn: 10,
+    rice: 11,
 
     // 평원축
     cattle: 12,

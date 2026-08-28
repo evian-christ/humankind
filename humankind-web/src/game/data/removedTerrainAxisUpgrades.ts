@@ -50,12 +50,12 @@ export const REMOVED_TERRAIN_AXIS_UPGRADES: Readonly<
         { constantName: 'PASTURE_MANAGEMENT_UPGRADE_ID', id: 47, name: 'Pasture Management', formerDescription: 'Upgrades Plains.', sprite: '047.png' },
     ],
 
-    /** 초원축 — 밀·쌀·초원을 강화하던 라인 */
+    /** 초원축 — 밀·옥수수·초원을 강화하던 라인 */
     grassland: [
-        { constantName: 'IRRIGATION_UPGRADE_ID', id: 16, name: 'Irrigation', formerDescription: 'Upgrades Wheat, Rice, and Grassland.', sprite: '016.png' },
-        { constantName: 'THREE_FIELD_SYSTEM_UPGRADE_ID', id: 28, name: 'Three-field System', formerDescription: 'Upgrades Wheat, Rice, and Grassland.', sprite: '028.png' },
-        { constantName: 'AGRICULTURAL_SURPLUS_UPGRADE_ID', id: 43, name: 'Agricultural Surplus', formerDescription: 'Upgrades Wheat and Rice.', sprite: '043.png' },
-        { constantName: 'MODERN_AGRICULTURE_UPGRADE_ID', id: 56, name: 'Modern Agriculture', formerDescription: 'Upgrades Wheat and Rice.', sprite: '056.png' },
+        { constantName: 'IRRIGATION_UPGRADE_ID', id: 16, name: 'Irrigation', formerDescription: 'Upgrades Wheat, Corn, and Grassland.', sprite: '016.png' },
+        { constantName: 'THREE_FIELD_SYSTEM_UPGRADE_ID', id: 28, name: 'Three-field System', formerDescription: 'Upgrades Wheat, Corn, and Grassland.', sprite: '028.png' },
+        { constantName: 'AGRICULTURAL_SURPLUS_UPGRADE_ID', id: 43, name: 'Agricultural Surplus', formerDescription: 'Upgrades Wheat and Corn.', sprite: '043.png' },
+        { constantName: 'MODERN_AGRICULTURE_UPGRADE_ID', id: 56, name: 'Modern Agriculture', formerDescription: 'Upgrades Wheat and Corn.', sprite: '056.png' },
     ],
 
     /**
@@ -72,9 +72,8 @@ export const REMOVED_TERRAIN_AXIS_UPGRADES: Readonly<
         { constantName: 'OCEANIC_ROUTES_UPGRADE_ID', id: 52, name: 'Oceanic Routes', formerDescription: 'Upgrades Fish, Crab, Pearl, and Sea.', sprite: '052.png' },
     ],
 
-    /** 사막축 — 대외무역에서 시작해 염료·파피루스·카라반사라이로 이어지던 라인 */
+    /** 사막축 — 대외무역은 대추 해금 카드로 재도입했고, 나머지는 보관 중 */
     desert: [
-        { constantName: 'FOREIGN_TRADE_UPGRADE_ID', id: 7, name: 'Foreign Trade', formerDescription: 'Upgrades Desert.', sprite: '007.png' },
         { constantName: 'DRY_STORAGE_UPGRADE_ID', id: 19, name: 'Trade Goods Exchange', formerDescription: 'Dye and Papyrus are added to the symbol selection pool.', sprite: '019.png' },
         { constantName: 'DESERT_STORAGE_UPGRADE_ID', id: 32, name: 'Dry Storage', formerDescription: 'Upgrades Desert, Oasis, and Date.', sprite: '032.png' },
         { constantName: 'CARAVANSERAI_UPGRADE_ID', id: 45, name: 'Caravanserai', formerDescription: 'Unlocks Caravanserai. Upgrades Dye and Papyrus.', sprite: '045.png' },

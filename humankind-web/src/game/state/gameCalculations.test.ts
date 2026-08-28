@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CURRENCY_UPGRADE_ID,
     ELECTRICITY_UPGRADE_ID,
@@ -28,6 +27,7 @@ import {
     getInflatedGoldCost,
     getInflationAdjustedGoldReward,
     getEraFromLevel,
+    getKnowledgeRequiredForLevel,
     formatTimelineYear,
     createKnowledgeResearchCreditsForLevelGain,
     consumeKnowledgeResearchCreditForUpgrade,
@@ -38,6 +38,7 @@ import {
     getTrojanGoldLootReward,
     isUpgradeLegalForKnowledgePick,
     normalizeKnowledgeResearchCredits,
+    resolveKnowledgeProgression,
 } from './gameCalculations';
 
 describe('food payment costs', () => {
@@ -111,6 +112,33 @@ describe('getEraFromLevel', () => {
     });
 });
 
+describe('knowledge level progression', () => {
+    it('continues the existing knowledge requirement curve beyond level 30', () => {
+        expect(getKnowledgeRequiredForLevel(29)).toBe(195);
+        expect(getKnowledgeRequiredForLevel(30)).toBe(200);
+        expect(getKnowledgeRequiredForLevel(31)).toBe(205);
+        expect(getKnowledgeRequiredForLevel(100)).toBe(550);
+    });
+
+    it('continues leveling and granting research credits beyond level 30', () => {
+        expect(resolveKnowledgeProgression({
+            level: 30,
+            knowledge: 0,
+            levelUpResearchPoints: 0,
+            knowledgeResearchCredits: [],
+        }, 405)).toEqual({
+            knowledge: 0,
+            level: 32,
+            era: 4,
+            levelUpResearchPoints: 2,
+            knowledgeResearchCredits: [
+                { grantLevel: 31, minLevel: 30, maxLevel: 31 },
+                { grantLevel: 32, minLevel: 30, maxLevel: 32 },
+            ],
+        });
+    });
+});
+
 describe('timeline year display', () => {
     it('maps turn anchors from the full 0-100 fiction timeline', () => {
         expect(getTimelineYearForTurn(0)).toBe(-10000);
@@ -178,7 +206,7 @@ describe('knowledge research credits', () => {
         )).toBe(true);
     });
 
-    it('tracks pre-transition and transition picks separately', () => {
+    it('treats saved research points as fungible after an era transition', () => {
         const credits = createKnowledgeResearchCreditsForLevelGain(8, 10);
 
         expect(isUpgradeLegalForKnowledgePick(
@@ -196,12 +224,7 @@ describe('knowledge research credits', () => {
             10,
             remaining,
         )).toBe(true);
-        expect(isUpgradeLegalForKnowledgePick(
-            FEUDALISM_UPGRADE_ID,
-            [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
-            10,
-            remaining,
-        )).toBe(false);
+        expect(remaining).toHaveLength(1);
     });
 });
 
@@ -227,24 +250,21 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('does not require Ancient Era for upgrades that only depend on their visible prerequisite line', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            AGI_PROJECT_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
-            30,
-        )).toBe(true);
-    });
+    /**
+     * AGI 프로젝트는 단순화된 업그레이드 카드 구조에서 제외했다.
+     * 승리 심볼 로직은 유지하지만, 연구 카드로 다시 넣을 때 이 검증을 복원한다.
+     */
 
     it('requires Writing System before Education', () => {
         expect(isUpgradeLegalForKnowledgePick(
             EDUCATION_UPGRADE_ID,
             [],
-            14,
+            15,
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             EDUCATION_UPGRADE_ID,
             [FEUDALISM_UPGRADE_ID, WRITING_SYSTEM_UPGRADE_ID],
-            14,
+            15,
         )).toBe(true);
     });
 
@@ -270,7 +290,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         expect(isUpgradeLegalForKnowledgePick(
             THEOCRACY_UPGRADE_ID,
             [FEUDALISM_UPGRADE_ID, THEOLOGY_UPGRADE_ID],
-            15,
+            16,
         )).toBe(true);
     });
 
@@ -314,23 +334,10 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('requires Modern Age and level 30 for AGI Project', () => {
-        expect(isUpgradeLegalForKnowledgePick(
-            AGI_PROJECT_UPGRADE_ID,
-            [],
-            30,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            AGI_PROJECT_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
-            29,
-        )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            AGI_PROJECT_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
-            30,
-        )).toBe(true);
-    });
+    /**
+     * AGI 프로젝트는 단순화된 업그레이드 카드 구조에서 제외했다.
+     * 승리 심볼 로직은 유지하지만, 연구 카드로 다시 넣을 때 이 검증을 복원한다.
+     */
 
     /**
      * 레거시 군사 카드(궁술·철제기술·기계장치·등자·탄도학·교체식 부품)를 트리에서
@@ -388,12 +395,6 @@ describe('isUpgradeLegalForKnowledgePick', () => {
             30,
             29,
         )).toBe(false);
-        expect(isUpgradeLegalForKnowledgePick(
-            AGI_PROJECT_UPGRADE_ID,
-            [MODERN_AGE_UPGRADE_ID],
-            30,
-            29,
-        )).toBe(true);
     });
 
     /**

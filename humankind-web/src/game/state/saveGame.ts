@@ -10,10 +10,16 @@ import { createEmptyBoard, isBoardSlotActive } from './gameStoreHelpers';
 import { normalizeKnowledgeResearchCredits, type KnowledgeResearchCredit } from './gameCalculations';
 import { useRelicStore, type RelicInstance } from './relicStore';
 import { remapLegacyRelicId } from '../logic/relics/relicIds';
+import {
+    getUnlockedUpgradeIdsForKnowledgeLevels,
+    normalizeKnowledgeUpgradeLevels,
+    type KnowledgeUpgradeLevels,
+} from '../data/knowledgeUpgradeTracks';
 
 const SAVE_KEY = 'humankind.save.v1';
 const LEGACY_SAVE_VERSION = 1;
-const SAVE_VERSION = 2;
+const PREVIOUS_SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const MAX_SAVED_EVENT_LOG = 400;
 
 type SerializedBoard = (string | null | false)[][];
@@ -66,6 +72,7 @@ interface SavedGame {
         prevBoard: SerializedBoard;
         religionUnlocked: boolean;
         unlockedKnowledgeUpgrades: number[];
+        knowledgeUpgradeLevels?: Partial<KnowledgeUpgradeLevels>;
         qinCurrencyStandardTurnsRemaining?: number;
         levelUpResearchPoints: number;
         knowledgeResearchCredits?: KnowledgeResearchCredit[];
@@ -202,7 +209,11 @@ export function hasSavedGame(): boolean {
     if (!raw) return false;
     try {
         const save = JSON.parse(raw) as Partial<SavedGame>;
-        return (save.version === SAVE_VERSION || save.version === LEGACY_SAVE_VERSION)
+        return (
+            save.version === SAVE_VERSION ||
+            save.version === PREVIOUS_SAVE_VERSION ||
+            save.version === LEGACY_SAVE_VERSION
+        )
             && save.state != null
             && save.state.phase !== 'game_over'
             && save.state.phase !== 'victory';
@@ -253,6 +264,7 @@ export function saveGameState(state: GameState): void {
             prevBoard: serializeBoard(state.prevBoard),
             religionUnlocked: state.religionUnlocked,
             unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
+            knowledgeUpgradeLevels: state.knowledgeUpgradeLevels,
             qinCurrencyStandardTurnsRemaining: state.qinCurrencyStandardTurnsRemaining,
             levelUpResearchPoints: state.levelUpResearchPoints,
             knowledgeResearchCredits: state.knowledgeResearchCredits ?? [],
@@ -287,15 +299,27 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
 
     try {
         const save = JSON.parse(raw) as SavedGame;
-        if (save.version !== SAVE_VERSION && save.version !== LEGACY_SAVE_VERSION) return null;
+        if (
+            save.version !== SAVE_VERSION &&
+            save.version !== PREVIOUS_SAVE_VERSION &&
+            save.version !== LEGACY_SAVE_VERSION
+        ) return null;
         const hasLegacyRelicIds = save.version === LEGACY_SAVE_VERSION;
         if (save.state.phase === 'game_over' || save.state.phase === 'victory') {
             clearSavedGame();
             return null;
         }
 
+        const knowledgeUpgradeLevels = normalizeKnowledgeUpgradeLevels(
+            save.state.unlockedKnowledgeUpgrades,
+            save.state.knowledgeUpgradeLevels,
+        );
+        const unlockedKnowledgeUpgrades = getUnlockedUpgradeIdsForKnowledgeLevels(
+            knowledgeUpgradeLevels,
+            save.state.unlockedKnowledgeUpgrades,
+        );
         const playerSymbols = save.state.playerSymbols
-            .map((symbol) => deserializeSymbol(symbol, save.state.unlockedKnowledgeUpgrades))
+            .map((symbol) => deserializeSymbol(symbol, unlockedKnowledgeUpgrades))
             .filter((symbol): symbol is PlayerSymbolInstance => symbol != null);
         const symbolByInstanceId = new Map(playerSymbols.map((symbol) => [symbol.instanceId, symbol]));
         const relics = save.relics
@@ -327,7 +351,7 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             phase: save.state.phase,
             board: deserializeBoard(save.state.board, symbolByInstanceId),
             playerSymbols,
-            symbolChoices: mapSelectionChoices(save.state.symbolChoices, save.state.unlockedKnowledgeUpgrades),
+            symbolChoices: mapSelectionChoices(save.state.symbolChoices, unlockedKnowledgeUpgrades),
             symbolSelectionRelicSourceId:
                 hasLegacyRelicIds && save.state.symbolSelectionRelicSourceId != null
                     ? remapLegacyRelicId(save.state.symbolSelectionRelicSourceId)
@@ -371,7 +395,8 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             relicFloats: [],
             knowledgeUpgradeFloats: [],
             religionUnlocked: save.state.religionUnlocked,
-            unlockedKnowledgeUpgrades: save.state.unlockedKnowledgeUpgrades,
+            unlockedKnowledgeUpgrades,
+            knowledgeUpgradeLevels,
             qinCurrencyStandardTurnsRemaining: save.state.qinCurrencyStandardTurnsRemaining ?? 0,
             levelUpResearchPoints: knowledgeResearchCredits.length,
             knowledgeResearchCredits,

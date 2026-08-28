@@ -7,10 +7,10 @@ import { RELIC_ID } from '../../logic/relics/relicIds';
 import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import {
-    AGI_PROJECT_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CURRENCY_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
@@ -35,7 +35,7 @@ const makeState = (): GameState => {
         board,
         playerSymbols: [oral],
         phase: 'selection',
-        symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.honey]!],
+        symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.corn]!, SYMBOLS[S.honey]!],
         symbolSelectionRelicSourceId: null,
         relicChoices: [null, null, null],
         relicHalfPriceRelicId: null,
@@ -339,7 +339,7 @@ describe('selectionFlow actions', () => {
             createInstance(SYMBOLS[S.oral_tradition]!, []),
             createInstance(SYMBOLS[S.wild_seeds]!, []),
             createInstance(SYMBOLS[S.wheat]!, []),
-            createInstance(SYMBOLS[S.rice]!, []),
+            createInstance(SYMBOLS[S.corn]!, []),
             createInstance(SYMBOLS[S.honey]!, []),
         ];
         const board = createEmptyBoard();
@@ -438,6 +438,7 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().phase).toBe('selection');
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID);
+        expect(harness.get().knowledgeUpgradeLevels?.era).toBe(1);
         expect(harness.get().levelUpResearchPoints).toBe(0);
         expect(harness.get().pendingBoardExpansions).toBe(3);
     });
@@ -491,7 +492,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().pendingBoardExpansions).toBe(3);
     });
 
-    it('locks upgrades at or below the remaining research point cutoff', () => {
+    it('lets a saved point research any eligible field at the current level', () => {
         const lockedHarness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
@@ -505,8 +506,8 @@ describe('selectionFlow actions', () => {
 
         lockedHarness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
 
-        expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(THEOLOGY_UPGRADE_ID);
-        expect(lockedHarness.get().levelUpResearchPoints).toBe(1);
+        expect(lockedHarness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
+        expect(lockedHarness.get().levelUpResearchPoints).toBe(0);
 
         const availableHarness = createHarness({
             phase: 'idle',
@@ -521,32 +522,26 @@ describe('selectionFlow actions', () => {
         expect(availableHarness.get().levelUpResearchPoints).toBe(0);
     });
 
-    it('does not lock earlier Ancient upgrades before an era transition', () => {
+    it('advances Trade one stage at a time', () => {
         const harness = createHarness({
             phase: 'idle',
-            levelUpResearchPoints: 1,
+            levelUpResearchPoints: 2,
             level: 4,
         });
 
+        harness.actions.selectUpgrade(FOREIGN_TRADE_UPGRADE_ID);
         harness.actions.selectUpgrade(CURRENCY_UPGRADE_ID);
 
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(FOREIGN_TRADE_UPGRADE_ID);
         expect(harness.get().unlockedKnowledgeUpgrades).toContain(CURRENCY_UPGRADE_ID);
+        expect(harness.get().knowledgeUpgradeLevels?.trade).toBe(2);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 
-    it('keeps modern upgrades researchable after jumping to level 30 with unspent points', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 5,
-            level: 30,
-            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(AGI_PROJECT_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(AGI_PROJECT_UPGRADE_ID);
-        expect(harness.get().levelUpResearchPoints).toBe(4);
-    });
+    /**
+     * AGI 프로젝트는 단순화된 업그레이드 카드 구조에서 제외했다.
+     * 승리 심볼 로직은 유지하지만, 연구 카드로 다시 넣을 때 테스트도 함께 복원한다.
+     */
 
     /**
      * 선거제도(무료 리롤) 카드를 트리에서 걷어내면서 해당 검증도 제거했다.
@@ -554,7 +549,7 @@ describe('selectionFlow actions', () => {
      */
 
     it('blocks rerolls for tribal village symbol selections', () => {
-        const originalChoices = [SYMBOLS[S.wheat]!, SYMBOLS[S.rice]!, SYMBOLS[S.honey]!];
+        const originalChoices = [SYMBOLS[S.wheat]!, SYMBOLS[S.corn]!, SYMBOLS[S.honey]!];
         const harness = createHarness({
             symbolSelectionSymbolSourceId: S.tribal_village,
             gold: 7,
@@ -582,9 +577,9 @@ describe('selectionFlow actions', () => {
             level: 3,
         });
 
-        otherHarness.actions.selectUpgrade(CURRENCY_UPGRADE_ID);
+        otherHarness.actions.selectUpgrade(FOREIGN_TRADE_UPGRADE_ID);
 
-        expect(otherHarness.get().unlockedKnowledgeUpgrades).toContain(CURRENCY_UPGRADE_ID);
+        expect(otherHarness.get().unlockedKnowledgeUpgrades).toContain(FOREIGN_TRADE_UPGRADE_ID);
         expect(otherHarness.get().religionUnlocked).toBe(false);
 
         const theologyHarness = createHarness({
@@ -634,21 +629,10 @@ describe('selectionFlow actions', () => {
         expect(harness.get().pendingOblivionFurnaceRelicId).toBeNull();
     });
 
-    it('unlocks AGI Project without immediately granting AGI Core', () => {
-        const harness = createHarness({
-            phase: 'idle',
-            levelUpResearchPoints: 1,
-            level: 30,
-            era: 3,
-            unlockedKnowledgeUpgrades: [MODERN_AGE_UPGRADE_ID],
-        });
-
-        harness.actions.selectUpgrade(AGI_PROJECT_UPGRADE_ID);
-
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(AGI_PROJECT_UPGRADE_ID);
-        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.agi_core)).toBe(false);
-        expect(harness.get().levelUpResearchPoints).toBe(0);
-    });
+    /**
+     * AGI 프로젝트는 단순화된 업그레이드 카드 구조에서 제외했다.
+     * 승리 심볼 로직은 유지하지만, 연구 카드로 다시 넣을 때 테스트도 함께 복원한다.
+     */
 
     it('blocks rerolls when MILITARY_LEVY selection is active', () => {
         const harness = createHarness({

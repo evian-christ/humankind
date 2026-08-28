@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { SEAL_RELIC_IDS } from '../relics/relicClassification';
 import {
-    AGRICULTURE_UPGRADE_ID,
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
     CASTLE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
@@ -321,7 +320,7 @@ describe('symbolEffectResolution', () => {
         vi.mocked(Math.random).mockRestore();
     });
 
-    it('upgrades Desert destruction rewards with Foreign Trade', () => {
+    it('keeps Desert production unchanged with Foreign Trade', () => {
         const board = createEmptyBoard();
         const desert = createInstance(Sym.desert, 'desert');
         const wheat = createInstance(Sym.wheat, 'wheat');
@@ -337,7 +336,7 @@ describe('symbolEffectResolution', () => {
             { upgrades: [FOREIGN_TRADE_UPGRADE_ID] },
         );
 
-        expect(result).toMatchObject({ food: 10, gold: 1, knowledge: 0 });
+        expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 0 });
         expect(wheat.is_marked_for_destruction).toBe(true);
         vi.mocked(Math.random).mockRestore();
     });
@@ -430,7 +429,7 @@ describe('symbolEffectResolution', () => {
         const christianityBoard = createEmptyBoard();
         christianityBoard[1][1] = createInstance(Sym.christianity, 'christianity');
         christianityBoard[2][1] = createInstance(Sym.wheat, 'wheat');
-        christianityBoard[4][3] = createInstance(Sym.rice, 'rice');
+        christianityBoard[4][3] = createInstance(Sym.corn, 'corn');
 
         const christianityResult = computeReligionDeferredEffects({
             board: christianityBoard,
@@ -459,7 +458,7 @@ describe('symbolEffectResolution', () => {
         const hinduismBoard = createEmptyBoard();
         hinduismBoard[0][0] = createInstance(Sym.hinduism, 'hinduism');
         hinduismBoard[1][0] = createInstance(Sym.wheat, 'wheat');
-        hinduismBoard[2][0] = createInstance(Sym.rice, 'rice');
+        hinduismBoard[2][0] = createInstance(Sym.corn, 'corn');
         const hinduismResult = computeReligionDeferredEffects({
             board: hinduismBoard,
             religionSlots: [{ x: 0, y: 0, id: S.hinduism }],
@@ -588,7 +587,7 @@ describe('symbolEffectResolution', () => {
         merchant.stored_gold = 1;
         board[1][1] = merchant;
         board[0][1] = createInstance(Sym.wheat, 'left');
-        board[2][1] = createInstance(Sym.rice, 'right');
+        board[2][1] = createInstance(Sym.corn, 'right');
         board[4][3] = createInstance(Sym.honey, 'distant');
 
         const foodBySlotKey = buildFoodBySlotKey([
@@ -619,7 +618,7 @@ describe('symbolEffectResolution', () => {
         merchant.merchant_store_pending = true;
         board[1][1] = merchant;
         board[0][1] = createInstance(Sym.wheat, 'left');
-        board[2][1] = createInstance(Sym.rice, 'right');
+        board[2][1] = createInstance(Sym.corn, 'right');
         board[4][3] = createInstance(Sym.honey, 'distant');
 
         const result = computeMerchantDeferredEffects({
@@ -655,7 +654,7 @@ describe('symbolEffectResolution', () => {
         expect(upgradedResult.gold).toBe(4);
     });
 
-    it('adds board grassland count to wheat payout with Three-field System', () => {
+    it('keeps Three-field System as a no-op placeholder for wheat payout', () => {
         const board = createEmptyBoard();
         const wheat = createInstance(Sym.wheat, 'wheat');
         wheat.effect_counter = 9;
@@ -672,7 +671,7 @@ describe('symbolEffectResolution', () => {
             { upgrades: [THREE_FIELD_SYSTEM_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(13);
+        expect(result.food).toBe(10);
         expect(wheat.effect_counter).toBe(0);
     });
 
@@ -770,43 +769,56 @@ describe('symbolEffectResolution', () => {
         expect(result.gold).toBe(7);
     });
 
-    it('adds board grassland count on top of upgraded crop payout', () => {
+    it('keeps Three-field System as a no-op placeholder for corn payout', () => {
         const board = createEmptyBoard();
-        const rice = createInstance(Sym.rice, 'rice');
-        rice.effect_counter = 19;
-        board[0][0] = rice;
+        const corn = createInstance(Sym.corn, 'corn');
+        corn.effect_counter = 19;
+        board[0][0] = corn;
         board[2][3] = createInstance(Sym.grassland, 'grassland_1');
         board[3][3] = createInstance(Sym.grassland, 'grassland_2');
 
         const result = processSingleSymbolEffects(
-            rice,
+            corn,
             board,
             0,
             0,
-            { upgrades: [AGRICULTURE_UPGRADE_ID, THREE_FIELD_SYSTEM_UPGRADE_ID] },
+            { upgrades: [THREE_FIELD_SYSTEM_UPGRADE_ID] },
         );
 
-        expect(result.food).toBe(32);
-        expect(rice.effect_counter).toBe(0);
+        expect(result.food).toBe(25);
+        expect(corn.effect_counter).toBe(0);
     });
 
-    it('doubles same-row grassland counter gain with Agricultural Surplus', () => {
+    it('keeps Agricultural Surplus as a no-op placeholder for crop counter gain', () => {
         const board = createEmptyBoard();
         const wheat = createInstance(Sym.wheat, 'wheat');
-        const rice = createInstance(Sym.rice, 'rice');
+        const corn = createInstance(Sym.corn, 'corn');
         board[0][0] = wheat;
         board[1][0] = createInstance(Sym.grassland, 'grassland_wheat');
+        board[4][3] = corn;
+        board[0][3] = createInstance(Sym.grassland, 'grassland_corn');
+
+        processSingleSymbolEffects(wheat, board, 0, 0, { upgrades: [AGRICULTURAL_SURPLUS_UPGRADE_ID] });
+        processSingleSymbolEffects(corn, board, 4, 3, { upgrades: [AGRICULTURAL_SURPLUS_UPGRADE_ID] });
+
+        expect(wheat.effect_counter).toBe(2);
+        expect(corn.effect_counter).toBe(2);
+    });
+
+    it('produces 60 food from rice every 40 turns and accelerates once in the same row as grassland', () => {
+        const board = createEmptyBoard();
+        const rice = createInstance(Sym.rice, 'rice');
+        rice.effect_counter = 38;
         board[4][3] = rice;
         board[0][3] = createInstance(Sym.grassland, 'grassland_rice');
 
-        processSingleSymbolEffects(wheat, board, 0, 0, { upgrades: [AGRICULTURAL_SURPLUS_UPGRADE_ID] });
-        processSingleSymbolEffects(rice, board, 4, 3, { upgrades: [AGRICULTURAL_SURPLUS_UPGRADE_ID] });
+        const result = processSingleSymbolEffects(rice, board, 4, 3, { upgrades: [] });
 
-        expect(wheat.effect_counter).toBe(3);
-        expect(rice.effect_counter).toBe(3);
+        expect(result.food).toBe(60);
+        expect(rice.effect_counter).toBe(0);
     });
 
-    it('uses board grassland count for crop counter gain with Modern Agriculture', () => {
+    it('keeps Modern Agriculture as a no-op placeholder for crop counter gain', () => {
         const board = createEmptyBoard();
         const wheat = createInstance(Sym.wheat, 'wheat');
         board[0][0] = wheat;
@@ -815,10 +827,10 @@ describe('symbolEffectResolution', () => {
 
         processSingleSymbolEffects(wheat, board, 0, 0, { upgrades: [MODERN_AGRICULTURE_UPGRADE_ID] });
 
-        expect(wheat.effect_counter).toBe(3);
+        expect(wheat.effect_counter).toBe(1);
     });
 
-    it('produces more grassland food with Irrigation and Three-field System', () => {
+    it('keeps Irrigation and Three-field System as no-op placeholders for grassland food', () => {
         const board = createEmptyBoard();
         const grassland = createInstance(Sym.grassland, 'grassland');
         board[0][0] = grassland;
@@ -828,8 +840,8 @@ describe('symbolEffectResolution', () => {
         const threeFieldResult = processSingleSymbolEffects(grassland, board, 0, 0, { upgrades: [THREE_FIELD_SYSTEM_UPGRADE_ID] });
 
         expect(baseResult.food).toBe(2);
-        expect(irrigationResult.food).toBe(3);
-        expect(threeFieldResult.food).toBe(5);
+        expect(irrigationResult.food).toBe(2);
+        expect(threeFieldResult.food).toBe(2);
     });
 
     it('adds plains counter to plains food production', () => {
@@ -875,7 +887,7 @@ describe('symbolEffectResolution', () => {
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
         board[0][1] = createInstance(Sym.wheat, 'occupied_1');
-        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+        board[1][0] = createInstance(Sym.corn, 'occupied_2');
 
         const result = processSingleSymbolEffects(
             oasis,
@@ -893,7 +905,7 @@ describe('symbolEffectResolution', () => {
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
         board[0][1] = createInstance(Sym.wheat, 'occupied_1');
-        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+        board[1][0] = createInstance(Sym.corn, 'occupied_2');
         board[2][1] = createInstance(Sym.wheat, 'occupied_3');
 
         const result = processSingleSymbolEffects(
@@ -913,7 +925,7 @@ describe('symbolEffectResolution', () => {
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
         board[0][1] = createInstance(Sym.wheat, 'occupied_1');
-        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+        board[1][0] = createInstance(Sym.corn, 'occupied_2');
 
         const result = processSingleSymbolEffects(
             oasis,
@@ -931,7 +943,7 @@ describe('symbolEffectResolution', () => {
         const oasis = createInstance(Sym.oasis, 'oasis');
         board[1][1] = oasis;
         board[0][1] = createInstance(Sym.wheat, 'occupied_1');
-        board[1][0] = createInstance(Sym.rice, 'occupied_2');
+        board[1][0] = createInstance(Sym.corn, 'occupied_2');
 
         const result = processSingleSymbolEffects(
             oasis,
@@ -1027,7 +1039,7 @@ describe('symbolEffectResolution', () => {
         const library = createInstance(Sym.library, 'library');
         board[1][1] = library;
         board[0][1] = createInstance(Sym.wheat, 'wheat');
-        board[1][0] = createInstance(Sym.rice, 'rice');
+        board[1][0] = createInstance(Sym.corn, 'corn');
         board[2][2] = createInstance(Sym.honey, 'honey');
 
         const baseResult = processSingleSymbolEffects(library, board, 1, 1, { upgrades: [] });
@@ -1044,7 +1056,7 @@ describe('symbolEffectResolution', () => {
         const library = createInstance(Sym.library, 'library');
         board[1][1] = library;
         board[0][1] = createInstance(Sym.wheat, 'wheat');
-        board[1][0] = createInstance(Sym.rice, 'rice');
+        board[1][0] = createInstance(Sym.corn, 'corn');
         board[2][2] = createInstance(Sym.honey, 'honey');
         board[4][3] = createInstance(Sym.fish, 'fish');
 
@@ -1255,7 +1267,7 @@ describe('symbolEffectResolution', () => {
         board[1][0] = createInstance(Sym.sea, 'sea');
         board[2][1] = createInstance(Sym.sea, 'sea_2');
         board[0][1] = createInstance(Sym.wheat, 'wheat');
-        board[1][1] = createInstance(Sym.rice, 'rice');
+        board[1][1] = createInstance(Sym.corn, 'corn');
         board[2][0] = createInstance(Sym.honey, 'honey');
 
         const pearlResult = processSingleSymbolEffects(
@@ -1301,7 +1313,7 @@ describe('symbolEffectResolution', () => {
         board[4][3] = createInstance(Sym.sea, 'sea_2');
         board[4][2] = createInstance(Sym.sea, 'sea_3');
         board[2][1] = createInstance(Sym.wheat, 'wheat');
-        board[3][1] = createInstance(Sym.rice, 'rice');
+        board[3][1] = createInstance(Sym.corn, 'corn');
 
         const upgrades = [SEAFARING_UPGRADE_ID, FISHERY_GUILD_UPGRADE_ID, CELESTIAL_NAVIGATION_UPGRADE_ID, MARITIME_TRADE_UPGRADE_ID, OCEANIC_ROUTES_UPGRADE_ID];
         const crabResult = processSingleSymbolEffects(crab, board, 1, 0, { upgrades });

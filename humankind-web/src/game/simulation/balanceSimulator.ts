@@ -174,7 +174,7 @@ const COMMON_PROGRESS_UPGRADE_IDS: number[] = [
 const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     grassland_axis: {
         primaryTerrainIds: [S.grassland],
-        coreSymbolIds: [S.wheat, S.rice],
+        coreSymbolIds: [S.wheat, S.corn],
         bridgeSymbolIds: [S.honey, S.spices, S.salt],
         upgradeIds: [
             AGRICULTURE_UPGRADE_ID,

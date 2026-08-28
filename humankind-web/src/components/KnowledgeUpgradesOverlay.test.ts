@@ -1,145 +1,87 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-    KNOWLEDGE_UPGRADES,
-    getKnowledgeUpgradeDirectDependents,
-    getKnowledgeUpgradeDirectPrerequisites,
+    KNOWLEDGE_UPGRADE_TRACK_IDS,
+    KNOWLEDGE_UPGRADE_TRACKS,
+    deriveKnowledgeUpgradeLevels,
+    getNextKnowledgeUpgradeTrackStage,
+    getUnlockedUpgradeIdsForKnowledgeLevels,
+} from '../game/data/knowledgeUpgradeTracks';
+import {
+    AGRICULTURE_UPGRADE_ID,
+    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+    CURRENCY_UPGRADE_ID,
+    FEUDALISM_UPGRADE_ID,
+    FOREIGN_TRADE_UPGRADE_ID,
+    IRRIGATION_UPGRADE_ID,
+    MODERN_AGE_UPGRADE_ID,
 } from '../game/data/knowledgeUpgrades';
 
-let buildBranchTierRows: typeof import('./KnowledgeUpgradesOverlay').buildBranchTierRows;
-let buildHorizontalEraNodes: typeof import('./KnowledgeUpgradesOverlay').buildHorizontalEraNodes;
-let getKnowledgeEraResearchAvailability:
-    typeof import('./KnowledgeUpgradesOverlay').getKnowledgeEraResearchAvailability;
-
-beforeAll(async () => {
-    vi.stubGlobal('window', {
-        screen: { width: 1920, height: 1080 },
-        innerWidth: 1920,
-        innerHeight: 1080,
-        addEventListener: vi.fn(),
+describe('knowledge upgrades', () => {
+    it('exposes exactly the nine fixed upgrades in product order', () => {
+        expect(KNOWLEDGE_UPGRADE_TRACK_IDS).toEqual([
+            'era',
+            'hunting',
+            'pastoralism',
+            'agriculture',
+            'fisheries',
+            'trade',
+            'tropicalAgriculture',
+            'scholarship',
+            'faith',
+        ]);
+        expect(KNOWLEDGE_UPGRADE_TRACKS).toHaveLength(9);
     });
-    vi.stubGlobal('document', {
-        fullscreenElement: null,
-        addEventListener: vi.fn(),
-        getElementById: vi.fn(() => null),
-        documentElement: {
-            setAttribute: vi.fn(),
-        },
+
+    it('renders Era as exactly three upgrade stages', () => {
+        expect(KNOWLEDGE_UPGRADE_TRACKS.find((track) => track.id === 'era')?.stages.map((stage) => stage.upgradeId))
+            .toEqual([
+                ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+                FEUDALISM_UPGRADE_ID,
+                MODERN_AGE_UPGRADE_ID,
+            ]);
     });
-    ({
-        buildBranchTierRows,
-        buildHorizontalEraNodes,
-        getKnowledgeEraResearchAvailability,
-    } = await import('./KnowledgeUpgradesOverlay'));
-});
 
-function getColumnByUpgradeId(): Map<number, number> {
-    return new Map(
-        buildBranchTierRows().flatMap((tier) =>
-            tier.ids.flatMap((upgradeId, col) => upgradeId == null ? [] : [[upgradeId, col] as const]),
-        ),
-    );
-}
+    it('assigns every active effect stage to one upgrade only', () => {
+        const stageIds = KNOWLEDGE_UPGRADE_TRACKS.flatMap((track) =>
+            track.stages.map((stage) => stage.upgradeId),
+        );
+        expect(new Set(stageIds).size).toBe(stageIds.length);
+    });
 
-describe('knowledge upgrade tree layout', () => {
-    it('keeps upgrades on the same level separated by at least one empty column', () => {
-        for (const tier of buildBranchTierRows()) {
-            const occupiedCols = tier.ids.flatMap((upgradeId, col) => upgradeId == null ? [] : [col]);
-            for (let idx = 1; idx < occupiedCols.length; idx += 1) {
-                expect(occupiedCols[idx]! - occupiedCols[idx - 1]!, `level ${tier.level}`).toBeGreaterThanOrEqual(2);
+    it('keeps level requirements increasing inside every upgrade', () => {
+        for (const track of KNOWLEDGE_UPGRADE_TRACKS) {
+            for (let index = 1; index < track.stages.length; index += 1) {
+                expect(
+                    track.stages[index]!.requiredLevel,
+                    `${track.id} stage ${index + 1}`,
+                ).toBeGreaterThan(track.stages[index - 1]!.requiredLevel);
             }
         }
     });
 
-    it('keeps unbranched prerequisite chains in the same or a neighboring column', () => {
-        const columns = getColumnByUpgradeId();
+    it('derives upgrade levels from legacy unlocked upgrade IDs', () => {
+        const levels = deriveKnowledgeUpgradeLevels([
+            ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
+            AGRICULTURE_UPGRADE_ID,
+            IRRIGATION_UPGRADE_ID,
+            CURRENCY_UPGRADE_ID,
+        ]);
 
-        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
-            const prereqs = getKnowledgeUpgradeDirectPrerequisites(upgrade.id);
-            if (prereqs.length !== 1) continue;
-
-            const prereqId = prereqs[0]!;
-            if (getKnowledgeUpgradeDirectDependents(prereqId).length !== 1) continue;
-
-            const upgradeCol = columns.get(upgrade.id);
-            const prereqCol = columns.get(prereqId);
-            expect(upgradeCol, upgrade.name).toBeDefined();
-            expect(prereqCol, upgrade.name).toBeDefined();
-            expect(Math.abs(upgradeCol! - prereqCol!), upgrade.name).toBeLessThanOrEqual(1);
-        }
+        expect(levels.era).toBe(1);
+        expect(levels.agriculture).toBe(2);
+        expect(levels.trade).toBe(2);
+        expect(levels.faith).toBe(0);
     });
 
-    it('places upgrades from the same branching prerequisite in different columns', () => {
-        const columns = getColumnByUpgradeId();
-
-        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
-            const dependents = getKnowledgeUpgradeDirectDependents(upgrade.id);
-            if (dependents.length <= 1) continue;
-
-            const dependentCols = dependents.map((dependentId) => columns.get(dependentId));
-            expect(new Set(dependentCols).size, upgrade.name).toBe(dependentCols.length);
-        }
+    it('returns only the next effect stage of an upgrade', () => {
+        const levels = deriveKnowledgeUpgradeLevels([FOREIGN_TRADE_UPGRADE_ID]);
+        expect(getNextKnowledgeUpgradeTrackStage('trade', levels)?.upgradeId).toBe(CURRENCY_UPGRADE_ID);
     });
 
-    /**
-     * 지형축 제거로 한 선행조건에서 여러 갈래가 뻗는 구간이 사라져,
-     * 분기 팬아웃은 남아 있는 트리 전체 기준으로 검증한다.
-     * 축 재도입 시 구체적인 분기 케이스를 다시 추가한다.
-     */
-    it('fans shared-prerequisite branches into separate horizontal rows', () => {
-        const rows = new Map(
-            buildHorizontalEraNodes(1, 30).map((node) => [node.id, node.row]),
+    it('rebuilds all previous effect IDs from an upgrade level', () => {
+        const levels = deriveKnowledgeUpgradeLevels([IRRIGATION_UPGRADE_ID]);
+        expect(getUnlockedUpgradeIdsForKnowledgeLevels(levels)).toEqual(
+            expect.arrayContaining([AGRICULTURE_UPGRADE_ID, IRRIGATION_UPGRADE_ID]),
         );
-
-        for (const upgrade of Object.values(KNOWLEDGE_UPGRADES)) {
-            const dependents = getKnowledgeUpgradeDirectDependents(upgrade.id);
-            if (dependents.length <= 1) continue;
-
-            const dependentRows = dependents.map((dependentId) => rows.get(dependentId));
-            expect(new Set(dependentRows).size, upgrade.name).toBe(dependentRows.length);
-        }
-    });
-
-    it('places era-page upgrades in unique level and soft-row slots', () => {
-        for (const [minLevel, maxLevel] of [[0, 9], [10, 19], [20, 30]] as const) {
-            const nodes = buildHorizontalEraNodes(minLevel, maxLevel);
-            const slots = nodes.map((node) => `${node.level}:${node.row}`);
-            expect(new Set(slots).size).toBe(slots.length);
-            expect(nodes.every((node) => node.level >= minLevel && node.level <= maxLevel)).toBe(true);
-            expect(nodes.every((node) => node.row >= 0 && node.row < 9)).toBe(true);
-        }
-    });
-
-    it('keeps every upgrade represented across the three era pages', () => {
-        const horizontalIds = [
-            ...buildHorizontalEraNodes(0, 9),
-            ...buildHorizontalEraNodes(10, 19),
-            ...buildHorizontalEraNodes(20, 30),
-        ].map((node) => node.id);
-
-        expect(new Set(horizontalIds)).toEqual(new Set(Object.keys(KNOWLEDGE_UPGRADES).map(Number)));
-    });
-});
-
-describe('knowledge era research availability', () => {
-    it('counts researched upgrades in the requested era', () => {
-        expect(getKnowledgeEraResearchAvailability([1, 2, 26, 51], 1, 9)).toEqual({
-            available: 2,
-            total: 9,
-        });
-        expect(getKnowledgeEraResearchAvailability([1, 2, 26, 51], 10, 19)).toEqual({
-            available: 1,
-            total: 10,
-        });
-        expect(getKnowledgeEraResearchAvailability([1, 2, 26, 51], 20, 29)).toEqual({
-            available: 1,
-            total: 10,
-        });
-    });
-
-    it('does not include the level 30 AGI project in modern research progress', () => {
-        expect(getKnowledgeEraResearchAvailability([63], 20, 29)).toEqual({
-            available: 0,
-            total: 10,
-        });
     });
 });
