@@ -140,19 +140,6 @@ const makeState = (): GameState => {
     };
 };
 
-const getAdjacentCoords = (x: number, y: number) => {
-    const adj: { x: number; y: number }[] = [];
-    for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (nx >= 0 && nx < 5 && ny >= 0 && ny < 4) adj.push({ x: nx, y: ny });
-        }
-    }
-    return adj;
-};
-
 const createHarness = (
     overrides: Partial<GameState> = {},
     deps: {

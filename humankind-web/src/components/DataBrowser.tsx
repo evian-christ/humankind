@@ -93,8 +93,6 @@ const DataBrowser = () => {
     const { devAddSymbol } = useGameStore();
     const era = useGameStore((s) => s.era);
     const level = useGameStore((s) => s.level);
-    const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades || []);
-
     // Per-tab sort state
     const [symbolSort, setSymbolSort] = useState<SortState | null>(null);
     const [relicSort, setRelicSort] = useState<SortState | null>(null);

@@ -22,8 +22,6 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
     const ux = (px: number) => px * sx;
     const uy = (px: number) => px * sy;
     const fs = Math.max(18, Math.round(27 * sx));
-    const fsIcon = Math.max(22, Math.round(34 * sx));
-
     // 열대우림은 좌하단에 누적된 영구 생산량 보너스, 우하단에 성장치를 표시한다.
     const growthBonusTotal =
         def.id === S.rainforest

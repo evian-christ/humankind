@@ -1,8 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-    NOMADIC_TRADITION_UPGRADE_ID,
-    PASTURE_MANAGEMENT_UPGRADE_ID,
-} from '../data/knowledgeUpgrades';
 import { RELICS } from '../data/relicDefinitions';
 import { isGameEventDefinition } from '../data/eventDefinitions';
 import { RELIC_ID } from '../logic/relics/relicIds';
