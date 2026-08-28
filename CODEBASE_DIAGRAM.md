@@ -64,7 +64,7 @@ flowchart TB
 
                 subgraph data["data/"]
                     symbols["symbolDefinitions / symbolIdRegistry / symbolTypes / symbolSpritePaths"]
-                    upgrades["knowledgeUpgrades / knowledgeUpgradeTiers / unitUpgrades"]
+                    upgrades["knowledgeUpgradeTracks / knowledgeUpgrades / knowledgeUpgradeTiers / unitUpgrades"]
                     relics["relicDefinitions"]
                     events["eventDefinitions / rewardDefinitions"]
                     threats["enemyPools / statusDefinitions"]
@@ -359,7 +359,7 @@ flowchart TB
 |---|---|---|
 | 심볼 정의 | `data/symbolDefinitions.ts`, `symbolIdRegistry.ts`, `symbolTypes.ts`, `symbolSpritePaths.ts` | 심볼 ID/키/타입/전투 스탯/스프라이트 경로 |
 | 유물 | `data/relicDefinitions.ts`, `logic/relics/*` | 유물 정의, ID 상수, 상점 분류 |
-| 지식 업그레이드 | `data/knowledgeUpgrades.ts`, `knowledgeUpgradeTiers.ts`, `unitUpgrades.ts` | 연구 트리, 레벨별 해금, 유닛 강화 |
+| 지식 업그레이드 | `data/knowledgeUpgradeTracks.ts`, `knowledgeUpgrades.ts`, `knowledgeUpgradeTiers.ts`, `unitUpgrades.ts` | 아홉 업그레이드 카드, 카드별 레벨, 효과 ID 호환, 유닛 강화 |
 | 이벤트/보상 | `data/eventDefinitions.ts`, `rewardDefinitions.ts` | 선택 이벤트, 전리품 보상 |
 | 위협/상태 | `data/enemyPools.ts`, `statusDefinitions.ts` | 레벨별 적 풀, 야만인/재해 확률과 상태 배지 |
 | 리더/데모 진행 | `data/leaders.ts`, `demoAchievements.ts` | 리더 선택, 성장 보상, 데모 업적 |
@@ -434,7 +434,7 @@ erDiagram
 | 스타일 | `index.css`, `App.css`, `crt.css`, `settingsKeyBindings.css` | 전체 UI, 오버레이, CRT, 키 설정 스타일 |
 | 캔버스 브릿지 | `components/GameCanvas.tsx` | React와 PixiGameApp 연결, hover tooltip 포털 |
 | Pixi 앱/렌더러 | `components/canvas/*`, `components/canvas/renderers/*` | Pixi 생명주기, 보드/HUD/유물/업그레이드/플로팅/전투/상태 렌더링 |
-| 본게임 오버레이 | `SymbolSelection.tsx`, `RelicSelection.tsx`, `KnowledgeUpgradesOverlay.tsx`, `BoardExpansionOverlay.tsx` | 선택, 상점, 연구 트리, 보드 확장 |
+| 본게임 오버레이 | `SymbolSelection.tsx`, `RelicSelection.tsx`, `KnowledgeUpgradesOverlay.tsx`, `BoardExpansionOverlay.tsx` | 선택, 상점, 업그레이드, 보드 확장 |
 | 보드 상호작용 UI | `LootRewardSelection.tsx`, `OblivionFurnaceBoardOverlay.tsx`, `SymbolCellBoardOverlays.tsx` | 전리품 보상, 보드 대상 선택, 셀 오버레이 |
 | 도구/모달 | `DataBrowser.tsx`, `DevOverlay.tsx`, `EffectLogOverlay.tsx`, `BalanceSimulatorOverlay.tsx`, `OwnedSymbolsModal.tsx`, `SymbolPoolModal.tsx`, `PauseMenu.tsx` | 데이터 확인, 디버그, 로그, 시뮬레이션, 메뉴 |
 | 프리게임/리더 | `DemoStartScreen.tsx`, `LeaderSelectScreen.tsx`, `LeaderProgressScreen.tsx`, `InitialSetupScreen.tsx` | 데모 시작, 리더 선택/진행, 초기 설정 |
