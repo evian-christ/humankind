@@ -43,11 +43,7 @@ describe('prepareTurn', () => {
             boardWidth: 3,
             boardHeight: 2,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng: makeRng(),
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
@@ -74,11 +70,7 @@ describe('prepareTurn', () => {
             boardWidth: 3,
             boardHeight: 2,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng: makeRng(),
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
@@ -100,16 +92,12 @@ describe('prepareTurn', () => {
             boardWidth: 5,
             boardHeight: 4,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng: makeRng(),
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
         });
-        expect(firstPreparedTurn.activeStatusIds).toEqual([STATUS_ID.CLAN_FORMATION]);
+        expect(firstPreparedTurn.activeStatusIds).toEqual([]);
 
         const lastGracePreparedTurn = prepareTurn({
             board: createEmptyBoard(),
@@ -120,19 +108,12 @@ describe('prepareTurn', () => {
             boardWidth: 5,
             boardHeight: 4,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng: makeRng(),
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
         });
-        expect(lastGracePreparedTurn.activeStatusIds).toEqual([
-            STATUS_ID.CLAN_FORMATION,
-            STATUS_ID.DISASTER_OMEN,
-        ]);
+        expect(lastGracePreparedTurn.activeStatusIds).toEqual([STATUS_ID.DISASTER_OMEN]);
 
         const expiredPreparedTurn = prepareTurn({
             board: createEmptyBoard(),
@@ -143,19 +124,12 @@ describe('prepareTurn', () => {
             boardWidth: 5,
             boardHeight: 4,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng: makeRng(),
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
         });
-        expect(expiredPreparedTurn.activeStatusIds).toEqual([
-            STATUS_ID.BARBARIAN_STIRRING,
-            STATUS_ID.DISASTER_OMEN,
-        ]);
+        expect(expiredPreparedTurn.activeStatusIds).toEqual([STATUS_ID.DISASTER_OMEN]);
     });
 
     it('does not drop a symbol displaced by first-turn Oral Tradition anchoring', () => {
@@ -198,11 +172,7 @@ describe('prepareTurn', () => {
             boardWidth: 3,
             boardHeight: 2,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng,
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
@@ -238,11 +208,7 @@ describe('prepareTurn', () => {
             boardWidth: 5,
             boardHeight: 4,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng: threatRng,
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
@@ -254,11 +220,7 @@ describe('prepareTurn', () => {
             S.wild_seeds,
         ]);
         expect(result.pendingNewThreatFloats).toEqual([]);
-        expect(result.threatState).toEqual({
-            barbarianSymbolThreat: 0,
-            barbarianCampThreat: 0,
-            naturalDisasterThreat: 3,
-        });
+        expect(result.threatState).toEqual({ naturalDisasterThreat: 3 });
     });
 
     it('forces a selected natural disaster on the next prepared turn', () => {
@@ -273,11 +235,7 @@ describe('prepareTurn', () => {
             boardWidth: 5,
             boardHeight: 4,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng: makeRng(),
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,
@@ -312,11 +270,7 @@ describe('prepareTurn', () => {
             boardWidth: 5,
             boardHeight: 4,
             unlockedKnowledgeUpgrades: [],
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             rng,
             createSymbolInstance: createInstance,
             getThreatLabel: (key) => key,

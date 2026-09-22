@@ -6,8 +6,6 @@ export enum SymbolType {
     MODERN = 3,
     TERRAIN = 4,
     ANCIENT = 5,
-    UNIT = 6,
-    ENEMY = 7,
     DISASTER = 8,
     SPECIAL = 9,
     LUXURY = 10

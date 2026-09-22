@@ -13,8 +13,6 @@ export interface ResourceDelta {
     food: number;
     gold: number;
     knowledge: number;
-    culture?: number;
-    military?: number;
 }
 
 export type BoardCounterFloatAnchor = 'bottom-right' | 'bottom-left';
@@ -26,13 +24,10 @@ export interface BoardEffectDelta extends BoardCoord, ResourceDelta {
 }
 
 export interface TurnThreatState {
-    barbarianSymbolThreat: number;
-    barbarianCampThreat: number;
     naturalDisasterThreat: number;
 }
 
 export type ThreatLabelKey =
-    | 'threat.barbarian_invasion'
     | 'threat.flood'
     | 'threat.earthquake'
     | 'threat.drought'

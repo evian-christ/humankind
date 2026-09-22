@@ -1,8 +1,5 @@
 import type { PlayerSymbolInstance } from '../game/types';
-import {
-    SymbolType,
-    S,
-} from '../game/data/symbolDefinitions';
+import { S } from '../game/data/symbolDefinitions';
 import { BOARD_CELL_HEIGHT_PX, BOARD_CELL_WIDTH_PX } from '../game/state/gameStore';
 
 type Props = {
@@ -12,7 +9,7 @@ type Props = {
 };
 
 /**
- * 메인 보드(PixiGameApp)와 동일 규칙의 카운터·야만 주둔지 턴 표시.
+ * 메인 보드(PixiGameApp)와 동일 규칙의 카운터 표시.
  * 부모는 `position: 'relative'` 셀 안에 스프라이트와 함께 둡니다.
  */
 export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
@@ -37,8 +34,7 @@ export function SymbolCellBoardOverlays({ sym, cellWidth, cellHeight }: Props) {
             : null;
     const showCounter =
         !usesGrowthDisplay &&
-        sym.effect_counter > 0 &&
-        def.type !== SymbolType.ENEMY;
+        sym.effect_counter > 0;
     const font = { fontFamily: 'var(--game-font-family), sans-serif' as const, lineHeight: 1 as const };
     const statShadow =
         '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';

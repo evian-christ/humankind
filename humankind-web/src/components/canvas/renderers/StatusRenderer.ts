@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { getActiveStatusIdsForTurn, getNextBarbarianInvasionChance, STATUSES } from '../../../game/data/statusDefinitions';
+import { getActiveStatusIdsForTurn, STATUSES } from '../../../game/data/statusDefinitions';
 import type { StatusDefinition } from '../../../game/data/statusDefinitions';
 import type { GameState } from '../../../game/state/gameStore';
 import type { HoveredStatus } from '../types';
@@ -153,9 +153,6 @@ export class StatusRenderer {
     ) {
         const badgeText = (() => {
             if (status.badge === 'remainingTurns') return remainingTurns > 0 ? String(remainingTurns) : '';
-            if (status.badge === 'barbarianInvasionChance') {
-                return `${getNextBarbarianInvasionChance(state.barbarianSymbolThreat)}%`;
-            }
             if (status.badge === 'naturalDisasterChance') return `${state.naturalDisasterThreat}%`;
             return '';
         })();

@@ -29,8 +29,7 @@ export function getProductionAmount(delta: Partial<ResourceDelta>) {
     return (
         Math.max(0, delta.food ?? 0) +
         Math.max(0, delta.gold ?? 0) +
-        Math.max(0, delta.knowledge ?? 0) +
-        Math.max(0, delta.military ?? 0)
+        Math.max(0, delta.knowledge ?? 0)
     );
 }
 

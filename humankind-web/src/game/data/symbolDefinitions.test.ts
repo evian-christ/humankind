@@ -1,30 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { S, SYMBOLS } from './symbolDefinitions';
 
-const enemySpritePairs = [
-    [S.enemy_warrior, '069.png'],
-    [S.enemy_cavalry, '070.png'],
-    [S.enemy_infantry, '071.png'],
-    [S.enemy_archer, '072.png'],
-    [S.enemy_crossbowman, '073.png'],
-    [S.enemy_cannon, '074.png'],
-] as const;
-
 const disasterSpritePairs = [
     [S.plague, '078.png'],
     [S.heatwave, '079.png'],
 ] as const;
 
 describe('symbolDefinitions', () => {
-    it('uses the requested IDs for the first new unit symbols', () => {
-        expect(SYMBOLS[63]?.key).toBe('militia');
-        expect(SYMBOLS[64]?.key).toBe('warrior');
-        expect(SYMBOLS[65]?.key).toBe('archer');
-        expect(SYMBOLS[66]?.key).toBe('horseman');
-        expect(SYMBOLS[67]?.key).toBe('mercenary');
-        expect(SYMBOLS[68]).toBeUndefined();
-    });
-
     it('includes the newly added plague symbol at ID 78', () => {
         expect(SYMBOLS[78]).toBeDefined();
         expect(SYMBOLS[78]?.key).toBe('plague');
@@ -53,10 +35,6 @@ describe('symbolDefinitions', () => {
         expect(SYMBOLS[S.rice]?.key).toBe('rice');
         expect(SYMBOLS[S.rice]?.sprite).toBe('011.png');
         expect(SYMBOLS[S.rice]?.description).toContain('every 40 turns: 60 Food');
-    });
-
-    it.each(enemySpritePairs)('uses the expected sprite for enemy symbol %i', (enemyId, sprite) => {
-        expect(SYMBOLS[enemyId]?.sprite).toBe(sprite);
     });
 
     it.each(disasterSpritePairs)('uses the expected sprite for disaster symbol %i', (disasterId, sprite) => {

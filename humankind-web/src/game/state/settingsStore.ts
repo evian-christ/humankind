@@ -26,14 +26,6 @@ export const EFFECT_SPEED_DELAY: Record<EffectSpeed, number> = {
     '8x': 19,
 };
 
-/** 전투 바운스 애니메이션 지속시간(ms) — 효과 속도에 비례 */
-export const COMBAT_BOUNCE_DURATION: Record<EffectSpeed, number> = {
-    '1x': 150,
-    '2x': 75,
-    '4x': 38,
-    '8x': 19,
-};
-
 /** 스핀 속도 설정: { speed 배수, stopInterval(ms) } */
 export const SPIN_SPEED_CONFIG: Record<SpinSpeed, { speedMul: number; stopInterval: number }> = {
     '1x': { speedMul: 6, stopInterval: 50 },

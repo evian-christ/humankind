@@ -103,7 +103,7 @@ describe('gameStoreHelpers starting layout', () => {
         expect(result.food).toBe(24);
     });
 
-    it('creates Oral Tradition board destroy culture from adjacent symbols', () => {
+    it('creates Oral Tradition board destroy knowledge from adjacent symbols', () => {
         const oral = createInstance(SYMBOLS[S.oral_tradition]!, []);
         const wheat = createInstance(SYMBOLS[S.wheat]!, []);
         const rice = createInstance(SYMBOLS[S.corn]!, []);
@@ -114,7 +114,7 @@ describe('gameStoreHelpers starting layout', () => {
 
         const effects = createStoredFoodDestroyEffects([oral], board);
 
-        expect(effects).toEqual([{ x: 2, y: 1, food: 0, gold: 0, knowledge: 0, culture: 20 }]);
+        expect(effects).toEqual([{ x: 2, y: 1, food: 0, gold: 0, knowledge: 20 }]);
     });
 
     it('detects a desert-only terrain collection for the extra board expansion', () => {

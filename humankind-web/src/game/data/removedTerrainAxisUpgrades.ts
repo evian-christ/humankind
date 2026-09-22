@@ -46,7 +46,6 @@ export const REMOVED_TERRAIN_AXIS_UPGRADES: Readonly<
     plains: [
         { constantName: 'HORSEMANSHIP_UPGRADE_ID', id: 13, name: 'Horsemanship', formerDescription: 'Adds Horse to the selection pool.', sprite: '013.png' },
         { constantName: 'NOMADIC_TRADITION_UPGRADE_ID', id: 24, name: 'Nomadic Tradition', formerDescription: 'Upgrades Cattle and Sheep.', sprite: '024.png' },
-        { constantName: 'MILITARY_SCIENCE_UPGRADE_ID', id: 35, name: 'Military Science', formerDescription: 'Horse produces +3 Food and +4 Gold.', sprite: '035.png' },
         { constantName: 'PASTURE_MANAGEMENT_UPGRADE_ID', id: 47, name: 'Pasture Management', formerDescription: 'Upgrades Plains.', sprite: '047.png' },
     ],
 
