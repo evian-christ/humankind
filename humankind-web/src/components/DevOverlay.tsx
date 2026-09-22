@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../game/state/gameStore';
-import { useRelicStore } from '../game/state/relicStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SYMBOLS, S } from '../game/data/symbolDefinitions';
-import { RELIC_LIST } from '../game/data/relicDefinitions';
 import { t } from '../i18n';
 
 const allSymbolsList = Object.values(SYMBOLS).sort((a, b) => a.type - b.type || a.id - b.id);
@@ -76,9 +74,7 @@ const StatRow = ({
 const DevOverlay = () => {
     const [open, setOpen] = useState(false);
     const [selectedSymbolId, setSelectedSymbolId] = useState(allSymbolsList[0]?.id ?? 1);
-    const [selectedRelicId, setSelectedRelicId] = useState<number>(RELIC_LIST[0]?.id ?? 0);
-    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devAddBoardExpansion, devForceScreen, devTriggerNaturalDisaster, barbarianSymbolThreat, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
-    const { relics, addRelic, removeRelic } = useRelicStore();
+    const { food, gold, knowledge, level, turn, playerSymbols, devAddSymbol, devRemoveSymbol, devSetStat, devAddBoardExpansion, devForceScreen, devTriggerNaturalDisaster, naturalDisasterThreat, pendingDevNaturalDisasterId } = useGameStore();
     const language = useSettingsStore(s => s.language);
 
     useEffect(() => {
@@ -160,27 +156,7 @@ const DevOverlay = () => {
                         <span>심볼 선택</span>
                     </button>
                     <button
-                        onClick={() => devForceScreen('upgrade')}
-                        style={{
-                            flex: '1',
-                            minWidth: '140px',
-                            background: '#065f46',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '7px 4px',
-                            fontSize: '12px',
-                            borderRadius: 0,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '3px',
-                        }}
-                    >
-                        <span style={{ fontSize: '18px' }}>📚</span>
-                        <span>연구 포인트 +1</span>
-                    </button>
-                    <button
-                        onClick={() => devForceScreen('levelWithResearch')}
+                        onClick={() => devForceScreen('level')}
                         style={{
                             flex: '1',
                             minWidth: '140px',
@@ -198,7 +174,6 @@ const DevOverlay = () => {
                     >
                         <span style={{ fontSize: '18px' }}>Lv</span>
                         <span>레벨 +1</span>
-                        <span style={{ fontSize: '10px', opacity: 0.85 }}>(연구 포인트 +1)</span>
                     </button>
                     <button
                         onClick={devAddBoardExpansion}
@@ -267,10 +242,6 @@ const DevOverlay = () => {
                 <div style={{ marginTop: '10px' }}>
                     <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>THREAT LEVELS</div>
                     <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span>야만인 유닛</span>
-                        <span>{barbarianSymbolThreat}%</span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#e0e0e0', display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                         <span>자연재해</span>
                         <span>{naturalDisasterThreat}%</span>
                     </div>
@@ -333,75 +304,6 @@ const DevOverlay = () => {
                         fontSize: '13px',
                     }}
                 >+</button>
-            </div>
-
-            {/* Relic Section */}
-            <div style={{
-                padding: '10px 14px',
-                borderBottom: '1px solid #333',
-            }}>
-                <div style={{ color: '#888', fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>
-                    {t('dataBrowser.relics', language).toUpperCase()}
-                </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
-                    <select
-                        value={selectedRelicId}
-                        onChange={e => setSelectedRelicId(Number(e.target.value))}
-                        style={{
-                            flex: 1,
-                            background: '#222',
-                            color: '#e0e0e0',
-                            border: '1px solid #555',
-                            padding: '4px 6px',
-                            fontSize: '13px',
-                        }}
-                    >
-                        {RELIC_LIST.map(r => (
-                            <option key={r.id} value={r.id}>
-                                #{r.id} {t(`relic.${r.id}.name`, language)}
-                            </option>
-                        ))}
-                    </select>
-                    <button
-                        onClick={() => {
-                            const def = RELIC_LIST.find(r => r.id === selectedRelicId);
-                            if (def) addRelic(def);
-                        }}
-                        style={{
-                            background: '#2563eb',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '4px 12px',
-                            fontSize: '13px',
-                        }}
-                    >+</button>
-                </div>
-                {relics.map(r => (
-                    <div
-                        key={r.instanceId}
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '3px 6px',
-                            borderBottom: '1px solid #2a2a2a',
-                        }}
-                    >
-                        <span style={{ fontSize: '13px' }}>
-                            #{r.definition.id} {t(`relic.${r.definition.id}.name`, language)}
-                        </span>
-                        <button
-                            onClick={() => removeRelic(r.instanceId)}
-                            style={{
-                                background: '#7f1d1d',
-                                color: '#fca5a5',
-                                border: 'none',
-                                padding: '2px 8px',
-                                fontSize: '12px',
-                            }}
-                        >-</button>
-                    </div>
-                ))}
             </div>
 
             {/* Symbol Count */}

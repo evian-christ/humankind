@@ -1,13 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { SYMBOLS } from '../../game/data/symbolDefinitions';
-import { RELICS } from '../../game/data/relicDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../../game/data/knowledgeUpgrades';
 import { STATUSES } from '../../game/data/statusDefinitions';
 import {
     FOOD_RESOURCE_ICON_URL,
     GOLD_RESOURCE_ICON_URL,
     KNOWLEDGE_RESOURCE_ICON_URL,
-    RELIC_PANEL_TITLE_ICON_URL,
 } from '../../uiAssetUrls';
 import { hasUpgradeSprite, resolveUpgradeSpriteFile } from '../knowledgeUpgradeSprites';
 import { getSymbolSpriteUrl } from '../../game/data/symbolSpritePaths';
@@ -33,9 +31,6 @@ export const loadGameAssets = async () => {
     const symbolPaths = Object.values(SYMBOLS)
         .map(getSymbolSpriteUrl)
         .filter(Boolean) as string[];
-    const relicPaths = Object.values(RELICS)
-        .filter(r => r.sprite && r.sprite !== '-' && r.sprite !== '-.png')
-        .map(r => `${ASSET_BASE_URL}assets/relics/${r.sprite}`);
     const statusPaths = Object.values(STATUSES)
         .filter(s => s.sprite && s.sprite !== '-' && s.sprite !== '-.png')
         .map(s => `${ASSET_BASE_URL}assets/status/${s.sprite}`);
@@ -47,11 +42,9 @@ export const loadGameAssets = async () => {
         FOOD_RESOURCE_ICON_URL,
         GOLD_RESOURCE_ICON_URL,
         KNOWLEDGE_RESOURCE_ICON_URL,
-        RELIC_PANEL_TITLE_ICON_URL,
         `${ASSET_BASE_URL}assets/ui/buttons/menu0.png`,
         `${ASSET_BASE_URL}assets/ui/buttons/menu1.png`,
         ...symbolPaths,
-        ...relicPaths,
         ...statusPaths,
         ...upgradePaths,
     ];

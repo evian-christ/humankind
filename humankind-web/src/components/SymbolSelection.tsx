@@ -5,14 +5,12 @@ import { isPlagueBlockingSelection } from '../game/state/actions/selectionFlow';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { SYMBOLS, S, SymbolType, getSymbolColorHex, type SymbolDefinition } from '../game/data/symbolDefinitions';
 import { isGameEventDefinition, type GameEventDefinition } from '../game/data/eventDefinitions';
-import { useRelicStore } from '../game/state/relicStore';
 import { getBoardSymbolTooltipDesc, getEventDescription, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { audioManager } from '../audio/audioManager';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 import { getActionForKeyCode } from '../game/input/keyBindings';
-import { RELIC_ID } from '../game/logic/relics/relicIds';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -23,12 +21,9 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
-    [SymbolType.UNIT]: 'era.unit',
-    [SymbolType.ENEMY]: 'era.enemy',
     [SymbolType.DISASTER]: 'era.disaster',
 };
 
-/** gameStore RELIC_ID: 고대 유물 잔해 / 고대 부족 합류 — 심볼 선택 UI 전용 표시·리롤 숨김 */
 const SymbolCard = ({
     symbol,
     unlockedKnowledgeUpgrades,
@@ -160,13 +155,11 @@ const SymbolSelection = () => {
         selectEvent,
         skipSelection,
         rerollSymbols,
-        symbolSelectionRelicSourceId,
         symbolSelectionSymbolSourceId,
         isTurnSymbolSelection,
         board,
     } = useGameStore();
     const language = useSettingsStore((s) => s.language);
-    const relics = useRelicStore((s) => s.relics);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
     const [isPeeked, setIsPeeked] = useState(false);
     const prevPhaseRef = useRef(phase);
@@ -182,32 +175,16 @@ const SymbolSelection = () => {
         prevPhaseRef.current = phase;
     }, [phase]);
 
-    // ID 2: 리디아의 호박금 주화 — 리롤 비용 50% 할인, 턴당 최대 3회
-    const hasLydia = relics.some(r => r.definition.id === RELIC_ID.LYDIA_COIN);
-    const rerollCost = getRerollCost(level, hasLydia ? 0.5 : 1, rerollsThisTurn);
-    const maxRerolls = hasLydia ? 3 : Infinity;
-    const rerollsLeft = hasLydia ? maxRerolls - rerollsThisTurn : null;
+    const rerollCost = getRerollCost(level, 1, rerollsThisTurn);
     const hasFreeReroll = (freeSelectionRerolls ?? 0) > 0;
     const visibleRerollCost = hasFreeReroll ? 0 : rerollCost;
     const isSelectionBlockedByPlague = isPlagueBlockingSelection({ board, isTurnSymbolSelection });
-    const canReroll = !isSelectionBlockedByPlague && (hasFreeReroll || gold >= rerollCost) && (rerollsLeft === null || rerollsLeft > 0);
+    const canReroll = !isSelectionBlockedByPlague && (hasFreeReroll || gold >= rerollCost);
 
-    const hideRerollFromRelicSource =
-        symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_RELIC_DEBRIS ||
-        symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_TRIBE_JOIN ||
-        symbolSelectionRelicSourceId === RELIC_ID.MILITARY_LEVY ||
-        symbolSelectionRelicSourceId === RELIC_ID.PROPHECY_DIE;
     const hideRerollFromSymbolSource = symbolSelectionSymbolSourceId === S.tribal_village;
-    const canUseReroll = canReroll && !hideRerollFromRelicSource && !hideRerollFromSymbolSource;
+    const canUseReroll = canReroll && !hideRerollFromSymbolSource;
     const symbolSource = symbolSelectionSymbolSourceId == null ? null : SYMBOLS[symbolSelectionSymbolSourceId] ?? null;
-    const relicSourceLabelKey =
-        hideRerollFromRelicSource && symbolSelectionRelicSourceId != null
-            ? (`relic.${symbolSelectionRelicSourceId}.name` as const)
-            : null;
-    const sourceLabelKey =
-        symbolSource != null
-            ? (`symbol.${symbolSource.key}.name` as const)
-            : relicSourceLabelKey;
+    const sourceLabelKey = symbolSource == null ? null : (`symbol.${symbolSource.key}.name` as const);
 
     const handleCardClick = useCallback((symbolId: number) => {
         void audioManager.play('symbol_choice_chose');
@@ -301,7 +278,7 @@ const SymbolSelection = () => {
             <div className="selection-panel-wrapper">
                 <div className="selection-panel">
                     {sourceLabelKey && (
-                        <div className="selection-relic-source-banner">{t(sourceLabelKey, language)}</div>
+                        <div className="selection-source-banner">{t(sourceLabelKey, language)}</div>
                     )}
                     <div className="selection-title selection-title--plain">
                         {t(isSelectionBlockedByPlague ? 'game.plagueOutbreak' : 'game.chooseSymbol', language)}
@@ -338,7 +315,7 @@ const SymbolSelection = () => {
                         )}
                     </div>
                     <div className="selection-actions">
-                        {!hideRerollFromRelicSource && !hideRerollFromSymbolSource && (
+                        {!hideRerollFromSymbolSource && (
                             <button
                                 type="button"
                                 className="selection-reroll-btn"
@@ -349,11 +326,6 @@ const SymbolSelection = () => {
                                 <span>{t('game.reroll', language)}</span>
                                 <span className="selection-reroll-cost-dot" aria-hidden="true">&#9679;</span>
                                 <span className="selection-reroll-cost">{visibleRerollCost}</span>
-                                {rerollsLeft !== null && (
-                                    <span className="selection-reroll-count">
-                                        {rerollsLeft}/{maxRerolls}
-                                    </span>
-                                )}
                             </button>
                         )}
                         <button type="button" className="selection-skip-btn" onClick={skipSelection}>

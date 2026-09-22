@@ -6,15 +6,11 @@ import {
 } from '../game/state/gameStore';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType, type SymbolDefinition } from '../game/data/symbolDefinitions';
-import { RELICS, getRelicRarityColorHex, type RelicRarity } from '../game/data/relicDefinitions';
-import { SEAL_RELIC_IDS } from '../game/logic/relics/relicClassification';
-import { useRelicStore, type RelicInstance } from '../game/state/relicStore';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 import { SymbolCellBoardOverlays } from './SymbolCellBoardOverlays';
 import { EffectText } from './EffectText';
-import { CLICKABLE_RELIC_IDS } from './canvas/renderers/rendererShared';
 
 const OWNED_SYMBOL_CELL_SCALE = 0.56;
 const OWNED_SYMBOL_CELL_WIDTH = BOARD_CELL_WIDTH_PX * OWNED_SYMBOL_CELL_SCALE;
@@ -22,19 +18,16 @@ const OWNED_SYMBOL_CELL_HEIGHT = BOARD_CELL_HEIGHT_PX * OWNED_SYMBOL_CELL_SCALE;
 const TOOLTIP_W = 280;
 const TOOLTIP_H = 180;
 const TOOLTIP_MARGIN = 12;
-const RELIC_ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 const SYMBOL_TYPE_ORDER = [
     SymbolType.TERRAIN,
     SymbolType.RESOURCE,
     SymbolType.LUXURY,
     SymbolType.ANCIENT,
-    SymbolType.UNIT,
     SymbolType.MEDIEVAL,
     SymbolType.MODERN,
     SymbolType.RELIGION,
     SymbolType.SPECIAL,
-    SymbolType.ENEMY,
     SymbolType.DISASTER,
 ];
 
@@ -47,17 +40,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
-    [SymbolType.UNIT]: 'era.unit',
-    [SymbolType.ENEMY]: 'era.enemy',
     [SymbolType.DISASTER]: 'era.disaster',
-};
-
-const RELIC_RARITY_NAME_KEYS: Record<RelicRarity, string> = {
-    common: 'rarity.common',
-    uncommon: 'rarity.uncommon',
-    rare: 'rarity.rare',
-    epic: 'rarity.epic',
-    legendary: 'rarity.legendary',
 };
 
 type Props = {
@@ -68,36 +51,11 @@ type Props = {
 type OwnedSymbolSort = 'acquired' | 'type' | 'name' | 'count';
 
 type HoveredOwnedSymbol = {
-    kind: 'symbol';
     definition: SymbolDefinition;
     left: number;
     right: number;
     top: number;
 };
-
-type HoveredInventoryRelic = {
-    kind: 'relic';
-    relic: RelicInstance;
-    count: number;
-    left: number;
-    right: number;
-    top: number;
-};
-
-type HoveredInventoryItem = HoveredOwnedSymbol | HoveredInventoryRelic | null;
-
-type InventorySealEntry = {
-    relicId: number;
-    relic: RelicInstance;
-    activeRelic: RelicInstance | null;
-    count: number;
-};
-
-function getRelicSpriteSrc(relic: RelicInstance) {
-    const { sprite } = relic.definition;
-    if (!sprite || sprite === '-' || sprite === '-.png') return null;
-    return `${RELIC_ASSET_BASE_URL}assets/relics/${sprite}`;
-}
 
 const uiText = (language: string, ko: string, en: string, zh: string, ru?: string) => (
     language === 'ko' ? ko : language === 'zh' ? zh : language === 'ru' ? (ru ?? en) : en
@@ -106,14 +64,11 @@ const uiText = (language: string, ko: string, en: string, zh: string, ru?: strin
 const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     const playerSymbols = useGameStore((state) => state.playerSymbols);
     const unlockedKnowledgeUpgrades = useGameStore((state) => state.unlockedKnowledgeUpgrades ?? []);
-    const activateClickableRelic = useGameStore((state) => state.activateClickableRelic);
-    const phase = useGameStore((state) => state.phase);
-    const relics = useRelicStore((state) => state.relics);
     const language = useSettingsStore((state) => state.language);
     const panelRef = useRef<HTMLDivElement | null>(null);
     const [sortBy, setSortBy] = useState<OwnedSymbolSort>('acquired');
     const [sortDescending, setSortDescending] = useState(false);
-    const [hoveredItem, setHoveredItem] = useState<HoveredInventoryItem>(null);
+    const [hoveredItem, setHoveredItem] = useState<HoveredOwnedSymbol | null>(null);
     const [panelSize, setPanelSize] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
@@ -181,33 +136,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
         return symbols.map(({ symbol }) => symbol);
     }, [language, ownedSymbolCounts, playerSymbols, sortBy, sortDescending]);
 
-    const sealEntries = useMemo<InventorySealEntry[]>(() => (
-        SEAL_RELIC_IDS.map((relicId) => {
-            const matchingRelics = relics.filter((relic) => relic.definition.id === relicId);
-            const definition = RELICS[relicId];
-            const activeRelic = matchingRelics[0] ?? null;
-            const relic = activeRelic ?? {
-                instanceId: `inventory-empty-seal-${relicId}`,
-                definition,
-                effect_counter: 0,
-                bonus_stacks: 0,
-            };
-            return {
-                relicId,
-                relic,
-                activeRelic,
-                count: matchingRelics.length,
-            };
-        })
-    ), [relics]);
-
-    const sealTotal = useMemo(
-        () => sealEntries.reduce((total, entry) => total + entry.count, 0),
-        [sealEntries],
-    );
-
-    const canActivateSeal = phase === 'idle' || phase === 'food_payment';
-
     const getPanelRelativeBounds = useCallback((element: HTMLElement) => {
         const panel = panelRef.current;
         if (!panel) return null;
@@ -232,34 +160,12 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
         if (!bounds) return;
 
         setHoveredItem({
-            kind: 'symbol',
             definition,
             ...bounds,
         });
     }, [getPanelRelativeBounds]);
 
-    const updateHoveredRelic = useCallback((
-        entry: InventorySealEntry,
-        event: React.SyntheticEvent<HTMLElement>,
-    ) => {
-        const bounds = getPanelRelativeBounds(event.currentTarget);
-        if (!bounds) return;
-
-        setHoveredItem({
-            kind: 'relic',
-            relic: entry.relic,
-            count: entry.count,
-            ...bounds,
-        });
-    }, [getPanelRelativeBounds]);
-
-    const handleSealClick = useCallback((entry: InventorySealEntry) => {
-        if (!entry.activeRelic || !canActivateSeal || !CLICKABLE_RELIC_IDS.has(entry.relicId)) return;
-        activateClickableRelic(entry.activeRelic.instanceId);
-        onClose();
-    }, [activateClickableRelic, canActivateSeal, onClose]);
-
-    const getTooltipStyle = (hoveredItem: HoveredInventoryItem): React.CSSProperties => {
+    const getTooltipStyle = (hoveredItem: HoveredOwnedSymbol | null): React.CSSProperties => {
         if (!hoveredItem || panelSize.width <= 0 || panelSize.height <= 0) return { display: 'none' };
 
         let left = hoveredItem.right + TOOLTIP_MARGIN;
@@ -281,10 +187,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
     if (!open) return null;
 
     const inventoryLabel = uiText(language, '인벤토리', 'Inventory', '库存', 'Инвентарь');
-    const sealLabel = uiText(language, '인장', 'Seals', '印章', 'Печати');
     const symbolLabel = uiText(language, '심볼', 'Symbols', '符号', 'Символы');
-    const emptySealLabel = uiText(language, '미보유', 'None', '未拥有', 'Нет');
-    const useSealLabel = uiText(language, '사용', 'Use', '使用', 'Использовать');
 
     return (
         <div className="owned-symbols-modal" onClick={onClose}>
@@ -301,7 +204,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                         {inventoryLabel}
                         <span className="owned-symbols-title-counts">
                             <strong>{symbolLabel} {playerSymbols.length}</strong>
-                            <strong>{sealLabel} {sealTotal}</strong>
                         </span>
                     </div>
 
@@ -342,53 +244,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                     className="owned-symbols-scroll owned-symbols-scroll--simple"
                     onScroll={() => setHoveredItem(null)}
                 >
-                    <section className="inventory-section inventory-seal-section" aria-label={sealLabel}>
-                        <div className="inventory-section-header">
-                            <span>{sealLabel}</span>
-                            <strong>{sealTotal}</strong>
-                        </div>
-                        <div className="inventory-seal-list">
-                            {sealEntries.map((entry) => {
-                                const relicName = t(`relic.${entry.relicId}.name`, language);
-                                const spriteUrl = getRelicSpriteSrc(entry.relic);
-                                const isUsable = entry.count > 0 && canActivateSeal && CLICKABLE_RELIC_IDS.has(entry.relicId);
-
-                                return (
-                                    <button
-                                        key={entry.relicId}
-                                        type="button"
-                                        className={isUsable
-                                            ? 'inventory-seal-card inventory-seal-card--usable'
-                                            : 'inventory-seal-card'}
-                                        onClick={() => handleSealClick(entry)}
-                                        onMouseEnter={(event) => updateHoveredRelic(entry, event)}
-                                        onMouseMove={(event) => updateHoveredRelic(entry, event)}
-                                        onMouseLeave={() => setHoveredItem(null)}
-                                        onFocus={(event) => updateHoveredRelic(entry, event)}
-                                        onBlur={() => setHoveredItem(null)}
-                                        aria-disabled={!isUsable}
-                                        aria-label={`${relicName} ${entry.count}`}
-                                    >
-                                        <span className="inventory-seal-icon">
-                                            {spriteUrl ? (
-                                                <img src={spriteUrl} alt="" draggable={false} />
-                                            ) : (
-                                                <span className="owned-symbol-missing-sprite">?</span>
-                                            )}
-                                        </span>
-                                        <span className="inventory-seal-copy">
-                                            <span className="inventory-seal-name">{relicName}</span>
-                                            <span className="inventory-seal-state">
-                                                {entry.count > 0 ? useSealLabel : emptySealLabel}
-                                            </span>
-                                        </span>
-                                        <strong className="inventory-seal-count">{entry.count}</strong>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </section>
-
                     <section className="inventory-section inventory-symbol-section" aria-label={symbolLabel}>
                         <div className="inventory-section-header">
                             <span>{symbolLabel}</span>
@@ -439,7 +294,7 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                     </section>
                 </div>
 
-                {hoveredItem?.kind === 'symbol' && (
+                {hoveredItem && (
                     <div className="symbol-tooltip" style={getTooltipStyle(hoveredItem)}>
                         <div className="symbol-tooltip-name">
                             {t(`symbol.${hoveredItem.definition.key}.name`, language)}
@@ -472,38 +327,6 @@ const OwnedSymbolsModal = ({ open, onClose }: Props) => {
                     </div>
                 )}
 
-                {hoveredItem?.kind === 'relic' && (() => {
-                    const rarityColor = getRelicRarityColorHex(hoveredItem.relic.definition.rarity);
-                    return (
-                        <div className="symbol-tooltip inventory-relic-tooltip" style={getTooltipStyle(hoveredItem)}>
-                            <div className="symbol-tooltip-name" style={{ color: '#dcfce7' }}>
-                                {t(`relic.${hoveredItem.relic.definition.id}.name`, language)}
-                            </div>
-                            <div
-                                className="symbol-tooltip-rarity"
-                                style={{
-                                    color: rarityColor,
-                                    borderColor: rarityColor,
-                                    textShadow: `0 0 8px ${rarityColor}88`,
-                                }}
-                            >
-                                {t(RELIC_RARITY_NAME_KEYS[hoveredItem.relic.definition.rarity], language)}
-                            </div>
-                            <div className="symbol-tooltip-desc">
-                                {t(`relic.${hoveredItem.relic.definition.id}.desc`, language)
-                                    .split('\n')
-                                    .map((line, index) => (
-                                        <div key={index} className="symbol-tooltip-desc-line">
-                                            <EffectText text={line} />
-                                        </div>
-                                    ))}
-                            </div>
-                            <div className="symbol-tooltip-effect inventory-relic-tooltip-count">
-                                {sealLabel}: {hoveredItem.count}
-                            </div>
-                        </div>
-                    );
-                })()}
             </div>
         </div>
     );

@@ -7,13 +7,11 @@ import type { SettingsState } from '../../game/state/settingsStore';
 import { t } from '../../i18n';
 import { getSymbolColor, SymbolType, S } from '../../game/data/symbolDefinitions';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
-import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat, CellLayout, ReelState } from './types';
+import type { HoveredSymbol, HoveredStatus, HoveredUpgrade, HoveredHudStat, CellLayout, ReelState } from './types';
 import { loadGameAssets } from './AssetLoader';
 import { BOARD_FRAME_CLEARANCE, BoardRenderer } from './renderers/BoardRenderer';
-import { CombatRenderer } from './renderers/CombatRenderer';
 import { FloatingTextRenderer } from './renderers/FloatingTextRenderer';
 import { HudRenderer } from './renderers/HudRenderer';
-import { RelicRenderer } from './renderers/RelicRenderer';
 import { StatusRenderer } from './renderers/StatusRenderer';
 import { UpgradeRenderer } from './renderers/UpgradeRenderer';
 import { audioManager, type AudioPlaybackHandle } from '../../audio/audioManager';
@@ -189,14 +187,11 @@ export class PixiGameApp {
 
     // Containers
     private crtSceneContainer = new PIXI.Container();
-    private flatRelicSceneContainer = new PIXI.Container();
-    private flatRelicContainer = new PIXI.Container();
-    private flatRelicFloatContainer = new PIXI.Container();
-    private flatRelicHitContainer = new PIXI.Container();
+    private flatUiSceneContainer = new PIXI.Container();
+    private flatUiContainer = new PIXI.Container();
     private bgContainer = new PIXI.Container();
     private boardContainer = new PIXI.Container();
     private spinContainer = new PIXI.Container();
-    private combatContainer = new PIXI.Container();
     private effectsContainer = new PIXI.Container();
     private floatContainer = new PIXI.Container();
     private hitContainer = new PIXI.Container();
@@ -204,9 +199,7 @@ export class PixiGameApp {
 
     private boardRenderer: BoardRenderer;
     private floatingTextRenderer: FloatingTextRenderer;
-    private combatRenderer: CombatRenderer;
     private hudRenderer: HudRenderer;
-    private relicRenderer: RelicRenderer;
     private statusRenderer: StatusRenderer;
     private upgradeRenderer: UpgradeRenderer;
 
@@ -530,7 +523,6 @@ export class PixiGameApp {
     constructor(
         canvas: HTMLDivElement,
         onHoverSymbol: (symbol: HoveredSymbol | null) => void,
-        onHoverRelic: (relic: HoveredRelic | null) => void,
         onHoverStatus: (status: HoveredStatus | null) => void,
         onHoverUpgrade: (upgrade: HoveredUpgrade | null) => void,
         onHoverHudStat: (stat: HoveredHudStat | null) => void
@@ -547,23 +539,14 @@ export class PixiGameApp {
         };
         this.onHoverHudStat = onHoverHudStat;
         this.hitContainer.eventMode = 'static';
-        this.flatRelicHitContainer.eventMode = 'static';
         this.boardRenderer = new BoardRenderer({
             bgContainer: this.bgContainer,
             boardContainer: this.boardContainer,
         });
         this.floatingTextRenderer = new FloatingTextRenderer(this.floatContainer);
-        this.combatRenderer = new CombatRenderer(this.combatContainer, this.floatingTextRenderer);
         this.hudRenderer = new HudRenderer(this.hudTopContainer);
-        this.relicRenderer = new RelicRenderer({
-            displayContainer: this.flatRelicContainer,
-            floatContainer: this.flatRelicFloatContainer,
-            hitContainer: this.flatRelicHitContainer,
-            floatingTextRenderer: this.floatingTextRenderer,
-            onHoverRelic,
-        });
         this.statusRenderer = new StatusRenderer({
-            bgContainer: this.flatRelicContainer,
+            bgContainer: this.flatUiContainer,
             onHoverStatus,
         });
         this.upgradeRenderer = new UpgradeRenderer((upgrade) => {
@@ -611,20 +594,17 @@ export class PixiGameApp {
         this.crtSceneContainer.addChild(this.bgContainer);
         this.crtSceneContainer.addChild(this.boardContainer);
         this.crtSceneContainer.addChild(this.spinContainer);
-        this.crtSceneContainer.addChild(this.combatContainer);
         this.crtSceneContainer.addChild(this.effectsContainer);
         this.crtSceneContainer.addChild(this.floatContainer);
         this.crtSceneContainer.addChild(this.hitContainer);
         this.crtSceneContainer.addChild(this.hudTopContainer);
-        this.flatRelicSceneContainer.addChild(this.flatRelicContainer);
-        this.flatRelicSceneContainer.addChild(this.flatRelicFloatContainer);
-        this.flatRelicSceneContainer.addChild(this.flatRelicHitContainer);
+        this.flatUiSceneContainer.addChild(this.flatUiContainer);
         this.app.stage.addChild(this.crtSceneContainer);
-        this.app.stage.addChild(this.flatRelicSceneContainer);
+        this.app.stage.addChild(this.flatUiSceneContainer);
         this.crtFilter = createCrtScreenFilter();
         this.flatCrtFilter = createCrtScreenFilter(0);
         this.crtSceneContainer.filters = [this.crtFilter];
-        this.flatRelicSceneContainer.filters = [this.flatCrtFilter];
+        this.flatUiSceneContainer.filters = [this.flatCrtFilter];
         this.updateCrtFilterArea();
         this.installCrtPointerMapping();
 
@@ -674,7 +654,7 @@ export class PixiGameApp {
             this.app.screen.height,
         );
         this.crtSceneContainer.filterArea = filterArea;
-        this.flatRelicSceneContainer.filterArea = filterArea;
+        this.flatUiSceneContainer.filterArea = filterArea;
     }
 
     private installCrtPointerMapping() {
@@ -684,8 +664,7 @@ export class PixiGameApp {
             mapPositionToPoint(point, clientX, clientY);
             if (!this.crtEnabled) return;
             if (
-                this.relicRenderer.containsScreenPoint(point.x, point.y)
-                || this.statusRenderer.containsScreenPoint(point.x, point.y)
+                this.statusRenderer.containsScreenPoint(point.x, point.y)
             ) return;
             const mapped = mapCrtOutputToSource(
                 point.x,
@@ -709,7 +688,7 @@ export class PixiGameApp {
         if (this.crtEnabled === enabled) return;
         this.crtEnabled = enabled;
         this.crtSceneContainer.filters = enabled && this.crtFilter ? [this.crtFilter] : [];
-        this.flatRelicSceneContainer.filters = enabled && this.flatCrtFilter ? [this.flatCrtFilter] : [];
+        this.flatUiSceneContainer.filters = enabled && this.flatCrtFilter ? [this.flatCrtFilter] : [];
     }
 
     /** 오버레이 열림 등으로 보드 툴팁을 끌 때 HUD 스냅샷도 초기화 */
@@ -723,7 +702,6 @@ export class PixiGameApp {
             this.symbolHoverCell = null;
             this.onHoverSymbol(null);
         }
-        this.relicRenderer.clearHover();
         this.statusRenderer.clearHover();
         this.upgradeRenderer.clearHover();
         this.clearHudHover();
@@ -751,7 +729,6 @@ export class PixiGameApp {
             }
         }
 
-        this.relicRenderer.validateHover(pointer?.output ?? null);
         this.statusRenderer.syncHover(pointer?.output ?? null);
     }
 
@@ -760,7 +737,6 @@ export class PixiGameApp {
 
         this.boardRenderer.tick(dt);
         this.floatingTextRenderer.tick(dt);
-        const combatBounceFinished = this.combatRenderer.tick(dt);
         this.hudRenderer.tickFoodDemandShake();
 
         // Contributor wobble: phase 2일 때만 타이머 증가·렌더 (phase 3 진입 시 두 번째 wobble 방지)
@@ -768,7 +744,6 @@ export class PixiGameApp {
         this.syncActiveSlotMotion(state);
         this.syncProductionScaleMotions(state, useSettingsStore.getState());
         let needsTransientRender = false;
-        let forceTransientRender = false;
         if (
             state.phase === 'processing' &&
             !!state.activeSlot &&
@@ -804,19 +779,9 @@ export class PixiGameApp {
             this.contributorWobbleSoundCount = 0;
         }
 
-        // Pre-combat shake (e.g., Clovis relic): 흔들림은 시간 기반이므로 매 프레임 렌더가 필요
-        if (state.preCombatShakeTarget || state.preCombatShakeRelicDefId) {
-            needsTransientRender = true;
-        }
-
-        if (combatBounceFinished) {
-            needsTransientRender = true;
-            forceTransientRender = true;
-        }
-
         if (needsTransientRender) {
             this.transientRenderElapsedMs += dt;
-            if (forceTransientRender || this.transientRenderElapsedMs >= 33) {
+            if (this.transientRenderElapsedMs >= 33) {
                 this.transientRenderElapsedMs = 0;
                 this.renderBoard(state, useSettingsStore.getState());
             }
@@ -918,7 +883,6 @@ export class PixiGameApp {
         this.syncProductionScaleMotions(state, settings);
         const w = this.app.screen?.width || 1920;
 
-        this.combatRenderer.setShaking(state.combatShaking);
         this.floatingTextRenderer.resetThreatGateIfNeeded(state.phase);
 
         clearPixiContainer(this.boardContainer);
@@ -926,11 +890,8 @@ export class PixiGameApp {
         clearPixiContainer(this.hitContainer);
         clearPixiContainer(this.bgContainer);
         clearPixiContainer(this.hudTopContainer);
-        clearPixiContainer(this.flatRelicContainer);
-        clearPixiContainer(this.flatRelicHitContainer);
+        clearPixiContainer(this.flatUiContainer);
         this.floatingTextRenderer.clearThreats();
-
-        this.combatRenderer.clearIfNoAnimation(!!state.combatAnimation);
 
         const frame = this.boardRenderer.beginFrame(
             this.app,
@@ -957,7 +918,7 @@ export class PixiGameApp {
         const boardWidth = frame.boardWidth;
         const boardHeight = frame.boardHeight;
 
-        // (식량 납부 / 야만인 알림은 NotificationPanel React 컴포넌트가 처리)
+        // 식량 납부 알림은 NotificationPanel React 컴포넌트가 처리한다.
 
         this.cellLayout = this.boardRenderer.toCellLayout(frame);
 
@@ -1061,8 +1022,6 @@ export class PixiGameApp {
                 const symbol = state.board[x][y];
                 if (!symbol) continue;
 
-                if (this.combatRenderer.isAnimatingAttacker(x, y)) continue;
-
                 const lm = state.lootMergeFx;
                 const lootMergeFlying =
                     lm &&
@@ -1084,19 +1043,9 @@ export class PixiGameApp {
                     continue;
                 }
 
-                const isShakingDeath = state.combatShaking && symbol.is_marked_for_destruction;
-                const drawTarget = isShakingDeath ? this.combatContainer : this.boardContainer;
-
-                const isPreCombatShakeTarget =
-                    !!state.preCombatShakeTarget &&
-                    state.preCombatShakeTarget.x === x &&
-                    state.preCombatShakeTarget.y === y;
-                const preShakeX = isPreCombatShakeTarget
-                    ? Math.sin(Date.now() / 22) * 5 * BOARD_DISPLAY_SCALE
-                    : 0;
-                const preShakeY = isPreCombatShakeTarget
-                    ? Math.cos(Date.now() / 18) * 4 * BOARD_DISPLAY_SCALE
-                    : 0;
+                const drawTarget = this.boardContainer;
+                const preShakeX = 0;
+                const preShakeY = 0;
 
                 const symDef = symbol.definition;
                 const canUseBoardSymbolAction =
@@ -1133,7 +1082,7 @@ export class PixiGameApp {
                     // 명시적 hitArea — 자식 bounds 계산에 의존하지 않음
                     cellRoot.hitArea = new PIXI.Rectangle(0, 0, cellWidth, cellHeight);
 
-                    // OblivionFurnaceBoardOverlay «제거» 버튼과 동일 스타일
+                    // 보드 파괴 선택 오버레이의 제거 버튼과 동일 스타일
                     const btnFs = Math.max(12, 18 * scale);
                     const btnPadY = Math.max(6.4, 10 * scale);
                     const btnPadX = Math.max(14.4, 22 * scale);
@@ -1230,8 +1179,8 @@ export class PixiGameApp {
                 const isProcessing = state.phase === 'processing';
                 const isActive = isProcessing && !!(state.activeSlot && state.activeSlot.x === x && state.activeSlot.y === y);
                 const isDestroyBlockedInBoardPick =
-                    state.phase === 'oblivion_furnace_board' &&
-                    (symDef.type === SymbolType.ENEMY || symDef.type === SymbolType.DISASTER);
+                    state.phase === 'board_destroy_selection' &&
+                    symDef.type === SymbolType.DISASTER;
                 const earthquakeFx = state.earthquakeFx;
                 const isEarthquakeShaking =
                     state.phase === 'processing' &&
@@ -1441,8 +1390,7 @@ export class PixiGameApp {
                 }
                 // 우하단 카운터: 바나나는 열대우림 인접 카운터만 숫자로 표시
                 const genericCounterText =
-                    symbol.effect_counter > 0 &&
-                    symDef.type !== SymbolType.ENEMY
+                    symbol.effect_counter > 0
                         ? String(symbol.effect_counter)
                         : '';
                 const boardCounterOverlay = counterOverride
@@ -1516,7 +1464,6 @@ export class PixiGameApp {
 
         const floatLayout = { ...this.cellLayout!, scale, fontFamily };
         this.floatingTextRenderer.renderBoardEffectFloats(state, floatLayout);
-        this.floatingTextRenderer.renderCombatFloats(state, floatLayout);
         this.floatingTextRenderer.renderThreatFloats(state, floatLayout);
         this.floatingTextRenderer.resetKnowledgeUpgradeFloatCountIfEmpty(state);
 
@@ -1528,7 +1475,6 @@ export class PixiGameApp {
             startY + gridOffsetY + cellHeight * boardHeight + BOARD_FRAME_CLEARANCE,
             fontFamily,
         );
-        this.relicRenderer.render(state, viewScale, w, frame.height, fontFamily);
         this.syncHoverTooltipsAfterBoardRebuild(state, startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap, rowGap);
     }
 
@@ -1551,7 +1497,7 @@ export class PixiGameApp {
         } else if (this.symbolHoverCell && this.onHoverSymbol) {
             const { x, y } = this.symbolHoverCell;
             const symbol = state.board[x]?.[y];
-            if (!symbol || (state.combatAnimation && state.combatAnimation.ax === x && state.combatAnimation.ay === y)) {
+            if (!symbol) {
                 this.symbolHoverCell = null;
                 this.onHoverSymbol(null);
             } else {
@@ -1565,7 +1511,6 @@ export class PixiGameApp {
             }
         }
 
-        this.relicRenderer.syncHoverAfterRebuild(this.pointerPosition?.output ?? null);
         this.statusRenderer.syncHover(this.pointerPosition?.output ?? null);
         this.upgradeRenderer.syncHoverAfterRebuild();
 
@@ -1574,8 +1519,4 @@ export class PixiGameApp {
         }
     }
 
-    public triggerCombatAnimation(anim: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number }) {
-        this.combatRenderer.trigger(anim, this.cellLayout);
-        this.renderBoard(useGameStore.getState(), useSettingsStore.getState());
-    }
 }

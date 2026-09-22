@@ -13,9 +13,7 @@ const TYPE_META: Record<number, { labelKey: string; color: string }> = {
     [SymbolType.MODERN]: { labelKey: 'era.modern', color: '#60a5fa' },
     [SymbolType.TERRAIN]: { labelKey: 'era.terrain', color: '#4ade80' },
     [SymbolType.ANCIENT]: { labelKey: 'era.ancient', color: '#fbbf24' },
-    [SymbolType.UNIT]: { labelKey: 'era.unit', color: '#38bdf8' },
     [SymbolType.SPECIAL]: { labelKey: 'era.specialSymbol', color: '#c084fc' },
-    [SymbolType.ENEMY]: { labelKey: 'era.enemy', color: '#ef4444' },
     [SymbolType.DISASTER]: { labelKey: 'era.disaster', color: '#a855f7' },
 };
 
@@ -24,12 +22,10 @@ const typeOrder = [
     SymbolType.RESOURCE,
     SymbolType.LUXURY,
     SymbolType.ANCIENT,
-    SymbolType.UNIT,
     SymbolType.SPECIAL,
     SymbolType.MEDIEVAL,
     SymbolType.MODERN,
     SymbolType.TERRAIN,
-    SymbolType.ENEMY,
     SymbolType.DISASTER,
 ];
 
@@ -42,7 +38,7 @@ const replaceParams = (template: string, params: Record<string, string | number>
 
 const SymbolPoolModal = () => {
     const [open, setOpen] = useState(false);
-    const { era, religionUnlocked } = useGameStore();
+    const { era, religionUnlocked, symbolSetId, symbolSetIds } = useGameStore();
     const language = useSettingsStore((s) => s.language);
 
     useRegisterBoardTooltipBlock('symbol-pool-modal', open);
@@ -61,8 +57,8 @@ const SymbolPoolModal = () => {
 
     const probabilities = useMemo(() => {
         if (!open) return [];
-        return getSymbolPoolProbabilities(era, religionUnlocked);
-    }, [open, era, religionUnlocked]);
+        return getSymbolPoolProbabilities(era, religionUnlocked, symbolSetIds, symbolSetId);
+    }, [open, era, religionUnlocked, symbolSetId, symbolSetIds]);
 
     const totalPool = probabilities.length;
     const probPerSymbol = totalPool > 0 ? (100 / totalPool).toFixed(2) : '0.00';
@@ -78,11 +74,17 @@ const SymbolPoolModal = () => {
 
     if (!open) return null;
 
-    const subtitle = replaceParams(t('symbolPool.subtitle', language), {
-        era,
-        religion: t(religionUnlocked ? 'symbolPool.religionUnlocked' : 'symbolPool.religionLocked', language),
-        total: totalPool,
-    });
+    const activeSetCount = symbolSetIds?.length || (symbolSetId ? 1 : 0);
+    const subtitle = activeSetCount > 0
+        ? replaceParams(t('symbolPool.setSubtitle', language), {
+            count: activeSetCount,
+            total: totalPool,
+        })
+        : replaceParams(t('symbolPool.subtitle', language), {
+            era,
+            religion: t(religionUnlocked ? 'symbolPool.religionUnlocked' : 'symbolPool.religionLocked', language),
+            total: totalPool,
+        });
     const probabilityLabel = replaceParams(t('symbolPool.probPerSymbol', language), {
         probability: probPerSymbol,
     });
@@ -274,7 +276,7 @@ const SymbolPoolModal = () => {
                     background: '#1f2937',
                     flexShrink: 0,
                 }}>
-                    {t('symbolPool.footer', language)}
+                    {t(activeSetCount > 0 ? 'symbolPool.setFooter' : 'symbolPool.footer', language)}
                 </div>
             </div>
         </div>

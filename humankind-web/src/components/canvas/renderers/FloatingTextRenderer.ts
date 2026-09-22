@@ -8,8 +8,6 @@ import {
     FOOD_RESOURCE_ICON_URL,
     GOLD_RESOURCE_ICON_URL,
     KNOWLEDGE_RESOURCE_ICON_URL,
-    CULTURE_RESOURCE_ICON_URL,
-    MILITARY_RESOURCE_ICON_URL,
 } from '../../../uiAssetUrls';
 import type { CellLayout, FloatingEffect } from '../types';
 import { getProductionHighlightScaleForDelta } from '../productionHighlightScale';
@@ -26,7 +24,7 @@ const RESOURCE_FLOAT_LOSS_COLOR = '#ef4444';
 const RESOURCE_FLOAT_ICON_VERTICAL_NUDGE = 0.08;
 const RESOURCE_FLOAT_FONT_SCALE = 0.8;
 
-type ResourceFloatKind = 'food' | 'gold' | 'knowledge' | 'culture' | 'military';
+type ResourceFloatKind = 'food' | 'gold' | 'knowledge';
 type FloatingItem = PIXI.Container & { _baseOffsetY?: number };
 
 const THREAT_FLOAT_DRIFT_MS = 220;
@@ -42,8 +40,6 @@ interface BoardFloatLayout extends CellLayout {
 function getResourceIconUrl(kind: ResourceFloatKind): string {
     if (kind === 'food') return FOOD_RESOURCE_ICON_URL;
     if (kind === 'gold') return GOLD_RESOURCE_ICON_URL;
-    if (kind === 'military') return MILITARY_RESOURCE_ICON_URL;
-    if (kind === 'culture') return CULTURE_RESOURCE_ICON_URL;
     return KNOWLEDGE_RESOURCE_ICON_URL;
 }
 
@@ -90,8 +86,6 @@ export class FloatingTextRenderer {
     private threatFloatingEffects: { texts: PIXI.Container[]; startX: number; startY: number; elapsed: number }[] = [];
     private prevEffectCount = 0;
     private renderedBoardEffects = new WeakSet<BoardEffectDelta>();
-    private prevCombatFloatCount = 0;
-    private prevRelicFloatCount = 0;
     private prevKnowledgeUpgradeFloatCount = 0;
     private pendingNewThreatFloatsShown = false;
 
@@ -168,8 +162,6 @@ export class FloatingTextRenderer {
             if (effect.food !== 0) lines.push({ kind: 'food', value: effect.food });
             if (effect.gold !== 0) lines.push({ kind: 'gold', value: effect.gold });
             if (effect.knowledge !== 0) lines.push({ kind: 'knowledge', value: effect.knowledge });
-            if ((effect.culture ?? 0) !== 0) lines.push({ kind: 'culture', value: effect.culture ?? 0 });
-            if ((effect.military ?? 0) !== 0) lines.push({ kind: 'military', value: effect.military ?? 0 });
 
             if (lines.length > 0) {
                 const gapText = 6 * scale * resourceFloatScale;
@@ -229,40 +221,6 @@ export class FloatingTextRenderer {
         }
     }
 
-    public renderCombatFloats(state: GameState, layout: BoardFloatLayout) {
-        if (!state.combatFloats || state.combatFloats.length === 0) {
-            this.prevCombatFloatCount = 0;
-            return;
-        }
-        if (state.combatFloats.length <= this.prevCombatFloatCount) return;
-
-        const newFloats = state.combatFloats.slice(this.prevCombatFloatCount);
-        this.prevCombatFloatCount = state.combatFloats.length;
-        const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = layout;
-        const rowGap = 0;
-        const fontSize = Math.max(28, cellHeight * 0.28);
-
-        for (const f of newFloats) {
-            const fx = startX + gridOffsetX + f.x * (cellWidth + colGap) + cellWidth / 2;
-            const fy = startY + gridOffsetY + f.y * (cellHeight + rowGap) + cellHeight * 0.25;
-            const txt = new PIXI.Text({
-                text: f.text,
-                style: new PIXI.TextStyle({
-                    fill: f.color ?? '#ef4444',
-                    fontSize,
-                    fontWeight: 'bold',
-                    fontFamily: layout.fontFamily,
-                    stroke: { color: '#000000', width: 4 },
-                }),
-            });
-            txt.anchor.set(0.5, 0);
-            txt.x = fx;
-            txt.y = fy;
-            (txt as unknown as FloatingItem)._baseOffsetY = 0;
-            this.addText(txt, fy);
-        }
-    }
-
     public renderThreatFloats(state: GameState, layout: BoardFloatLayout) {
         if (state.phase !== 'showing_new_threats' || !state.pendingNewThreatFloats?.length || this.pendingNewThreatFloatsShown) {
             return;
@@ -272,11 +230,6 @@ export class FloatingTextRenderer {
         const { startX, startY, cellWidth, cellHeight, gridOffsetX, gridOffsetY, colGap } = layout;
         const rowGap = 0;
         const threatFloatFontSize = Math.max(28, cellHeight * 0.24);
-
-        const hasBarbarianInvasion = state.pendingNewThreatFloats.some((threat) => threat.key === 'threat.barbarian_invasion');
-        if (hasBarbarianInvasion) {
-            void audioManager.play('enemy_invade');
-        }
 
         for (const { x, y, label } of state.pendingNewThreatFloats) {
             const cx = startX + gridOffsetX + x * (cellWidth + colGap) + cellWidth / 2;
@@ -303,44 +256,6 @@ export class FloatingTextRenderer {
             () => useGameStore.getState().continueProcessingAfterNewThreatFloats(),
             THREAT_FLOAT_TOTAL_MS + 200,
         );
-    }
-
-    public renderRelicFloats(
-        state: GameState,
-        relicCenterByInstanceId: Map<string, { x: number; y: number }>,
-        iconSize: number,
-        fontFamily: string,
-        targetContainer = this.container,
-    ) {
-        if (!state.relicFloats || state.relicFloats.length === 0) {
-            this.prevRelicFloatCount = 0;
-            return;
-        }
-        if (state.relicFloats.length <= this.prevRelicFloatCount) return;
-
-        const newFloats = state.relicFloats.slice(this.prevRelicFloatCount);
-        this.prevRelicFloatCount = state.relicFloats.length;
-        const fontSize = Math.max(26, iconSize * 0.32);
-
-        for (const f of newFloats) {
-            const c = relicCenterByInstanceId.get(f.relicInstanceId);
-            if (!c) continue;
-            const txt = new PIXI.Text({
-                text: f.text,
-                style: new PIXI.TextStyle({
-                    fill: f.color ?? '#ffffff',
-                    fontSize,
-                    fontWeight: 'bold',
-                    fontFamily,
-                    stroke: { color: '#000000', width: 4 },
-                }),
-            });
-            txt.anchor.set(0.5, 0.5);
-            txt.x = c.x;
-            txt.y = c.y - iconSize * 0.15;
-            (txt as unknown as FloatingItem)._baseOffsetY = 0;
-            this.addText(txt, txt.y, false, targetContainer);
-        }
     }
 
     public resetKnowledgeUpgradeFloatCountIfEmpty(state: GameState) {

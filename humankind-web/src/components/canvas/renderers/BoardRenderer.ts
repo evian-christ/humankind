@@ -184,7 +184,7 @@ export class BoardRenderer {
                 if (isBoardSlotActive(state.board, x, y)) activeSlots.push({ x, y });
             }
         }
-        const isDestroyPick = state.phase === 'oblivion_furnace_board';
+        const isDestroyPick = state.phase === 'board_destroy_selection';
         const wasDestroyAuraActive = this.isDestroyAuraActive;
         if (isDestroyPick && !wasDestroyAuraActive && this.destroyAuraElapsedMs <= 0) {
             this.destroyAuraElapsedMs = 0;

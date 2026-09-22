@@ -2,19 +2,15 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../game/state/gameStore';
-import { getHudTurnStartPassiveTotals, getTrojanGoldLootReward } from '../game/state/gameCalculations';
+import { getHudTurnStartPassiveTotals } from '../game/state/gameCalculations';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { getSymbolColorHex, SymbolType } from '../game/data/symbolDefinitions';
-import { getRelicRarityColorHex, type RelicRarity } from '../game/data/relicDefinitions';
-import { RELIC_ID } from '../game/logic/relics/relicIds';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
-import { getNextBarbarianInvasionChance } from '../game/data/statusDefinitions';
 import { getBoardSymbolTooltipDesc, t } from '../i18n';
-import type { HoveredSymbol, HoveredRelic, HoveredStatus, HoveredUpgrade, HoveredHudStat } from './canvas/types';
+import type { HoveredSymbol, HoveredStatus, HoveredUpgrade, HoveredHudStat } from './canvas/types';
 import { PixiGameApp } from './canvas/PixiGameApp';
 import { EffectText } from './EffectText';
-import { useRelicStore } from '../game/state/relicStore';
-import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL } from '../uiAssetUrls';
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.RELIGION]: 'era.special',
@@ -25,17 +21,7 @@ const ERA_NAME_KEYS: Record<number, string> = {
     [SymbolType.MODERN]: 'era.modern',
     [SymbolType.TERRAIN]: 'era.terrain',
     [SymbolType.SPECIAL]: 'era.specialSymbol',
-    [SymbolType.UNIT]: 'era.unit',
-    [SymbolType.ENEMY]: 'era.enemy',
     [SymbolType.DISASTER]: 'era.disaster',
-};
-
-const RELIC_RARITY_NAME_KEYS: Record<RelicRarity, string> = {
-    common: 'rarity.common',
-    uncommon: 'rarity.uncommon',
-    rare: 'rarity.rare',
-    epic: 'rarity.epic',
-    legendary: 'rarity.legendary',
 };
 
 interface GameCanvasProps {
@@ -51,14 +37,11 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const onReadyRef = useRef<GameCanvasProps['onReady']>(onReady);
     const suppressBoardTooltipsRef = useRef(suppressBoardTooltips);
     const [hoveredSymbol, setHoveredSymbol] = useState<HoveredSymbol | null>(null);
-    const [hoveredRelic, setHoveredRelic] = useState<HoveredRelic | null>(null);
     const [hoveredStatus, setHoveredStatus] = useState<HoveredStatus | null>(null);
     const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgrade | null>(null);
     const [hoveredHudStat, setHoveredHudStat] = useState<HoveredHudStat | null>(null);
     const language = useSettingsStore((s) => s.language);
     const unlockedKnowledgeUpgrades = useGameStore((s) => s.unlockedKnowledgeUpgrades ?? []);
-    const level = useGameStore((s) => s.level);
-    const barbarianInvasionChance = useGameStore((s) => s.barbarianSymbolThreat);
     const naturalDisasterChance = useGameStore((s) => s.naturalDisasterThreat);
 
     suppressBoardTooltipsRef.current = suppressBoardTooltips;
@@ -66,11 +49,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
     const setHoveredSymbolStable = useCallback((val: HoveredSymbol | null) => {
         if (suppressBoardTooltipsRef.current) return;
         setHoveredSymbol(val);
-    }, []);
-
-    const setHoveredRelicStable = useCallback((val: HoveredRelic | null) => {
-        if (suppressBoardTooltipsRef.current) return;
-        setHoveredRelic(val);
     }, []);
 
     const setHoveredStatusStable = useCallback((val: HoveredStatus | null) => {
@@ -88,7 +66,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         setHoveredHudStat(val);
     }, []);
 
-    /** HUD 기본 생산 툴팁: 보드·업그레이드·유물 개수 변화 시 갱신 */
+    /** HUD 기본 생산 툴팁: 보드·업그레이드 변화 시 갱신 */
     useGameStore(
         useShallow((s) => ({
             board: s.board,
@@ -108,7 +86,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         const app = new PixiGameApp(
             canvasRef.current,
             setHoveredSymbolStable,
-            setHoveredRelicStable,
             setHoveredStatusStable,
             setHoveredUpgradeStable,
             setHoveredHudStatStable,
@@ -153,12 +130,11 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 appRef.current = null;
             }
         };
-    }, [setHoveredSymbolStable, setHoveredRelicStable, setHoveredStatusStable, setHoveredUpgradeStable, setHoveredHudStatStable]);
+    }, [setHoveredSymbolStable, setHoveredStatusStable, setHoveredUpgradeStable, setHoveredHudStatStable]);
 
     useEffect(() => {
         if (!suppressBoardTooltips) return;
         setHoveredSymbol(null);
-        setHoveredRelic(null);
         setHoveredStatus(null);
         setHoveredUpgrade(null);
         setHoveredHudStat(null);
@@ -187,11 +163,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
             effectPhase3ReachedThisRun: initial.effectPhase3ReachedThisRun,
             runningTotals: initial.runningTotals,
             lastEffects: initial.lastEffects,
-            combatAnimation: initial.combatAnimation,
-            combatShaking: initial.combatShaking,
             pendingNewThreatFloats: initial.pendingNewThreatFloats,
             unlockedKnowledgeUpgrades: initial.unlockedKnowledgeUpgrades,
-            barbarianSymbolThreat: initial.barbarianSymbolThreat,
             naturalDisasterThreat: initial.naturalDisasterThreat,
             activeStatusIds: initial.activeStatusIds,
             activeStatuses: initial.activeStatuses,
@@ -216,11 +189,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 state.effectPhase3ReachedThisRun !== prev.effectPhase3ReachedThisRun ||
                 state.runningTotals !== prev.runningTotals ||
                 state.lastEffects !== prev.lastEffects ||
-                state.combatAnimation !== prev.combatAnimation ||
-                state.combatShaking !== prev.combatShaking ||
                 state.pendingNewThreatFloats !== prev.pendingNewThreatFloats ||
                 state.unlockedKnowledgeUpgrades !== prev.unlockedKnowledgeUpgrades ||
-                state.barbarianSymbolThreat !== prev.barbarianSymbolThreat ||
                 state.naturalDisasterThreat !== prev.naturalDisasterThreat ||
                 state.activeStatusIds !== prev.activeStatusIds ||
                 state.activeStatuses !== prev.activeStatuses;
@@ -243,11 +213,8 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 effectPhase3ReachedThisRun: state.effectPhase3ReachedThisRun,
                 runningTotals: state.runningTotals,
                 lastEffects: state.lastEffects,
-                combatAnimation: state.combatAnimation,
-                combatShaking: state.combatShaking,
                 pendingNewThreatFloats: state.pendingNewThreatFloats,
                 unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
-                barbarianSymbolThreat: state.barbarianSymbolThreat,
                 naturalDisasterThreat: state.naturalDisasterThreat,
                 activeStatusIds: state.activeStatusIds,
                 activeStatuses: state.activeStatuses,
@@ -260,31 +227,10 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 appRef.current.renderBoard(useGameStore.getState(), settings);
             }
         });
-        const unsub3 = useRelicStore.subscribe(() => {
-            if (appRef.current) {
-                appRef.current.renderBoard(useGameStore.getState(), useSettingsStore.getState());
-            }
-        });
-
         return () => {
             unsub1();
             unsub2();
-            unsub3();
         };
-    }, []);
-
-    // 3. Combat animation
-    useEffect(() => {
-        let prev = useGameStore.getState().combatAnimation;
-        const unsub = useGameStore.subscribe((state) => {
-            if (state.combatAnimation !== prev) {
-                prev = state.combatAnimation;
-                if (state.combatAnimation && appRef.current) {
-                    appRef.current.triggerCombatAnimation(state.combatAnimation);
-                }
-            }
-        });
-        return () => unsub();
     }, []);
 
     // 5. Tooltip positioning
@@ -297,34 +243,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
         let left = hoveredItem.screenX + TOOLTIP_MARGIN;
         let top = hoveredItem.screenY;
         if (left + TOOLTIP_W > 1920) left = hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN;
-        if (top + TOOLTIP_H > 1080) top = 1080 - TOOLTIP_H - TOOLTIP_MARGIN;
-        if (top < 0) top = 0;
-        return { left: `${left}px`, top: `${top}px` };
-    };
-
-    /** 유물 툴팁: 기본은 아이콘 우측, 화면 경계를 넘으면 좌측에 표시 */
-    const getRelicTooltipStyle = (
-        hoveredItem: { screenX: number; screenY: number; placement?: 'left' | 'side' | 'above' } | null,
-    ): React.CSSProperties => {
-        if (!hoveredItem) return { display: 'none' };
-        if (hoveredItem.placement === 'above') {
-            let left = hoveredItem.screenX - TOOLTIP_W / 2;
-            if (left < TOOLTIP_MARGIN) left = TOOLTIP_MARGIN;
-            if (left + TOOLTIP_W > 1920 - TOOLTIP_MARGIN) {
-                left = 1920 - TOOLTIP_W - TOOLTIP_MARGIN;
-            }
-            return {
-                left: `${left}px`,
-                top: `${hoveredItem.screenY - TOOLTIP_MARGIN}px`,
-                transform: 'translateY(-100%)',
-            };
-        }
-        let left = hoveredItem.placement === 'left'
-            ? hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN
-            : hoveredItem.screenX + TOOLTIP_MARGIN;
-        if (left + TOOLTIP_W > 1920) left = hoveredItem.screenX - TOOLTIP_W - TOOLTIP_MARGIN;
-        if (left < TOOLTIP_MARGIN) left = hoveredItem.screenX + TOOLTIP_MARGIN;
-        let top = hoveredItem.screenY;
         if (top + TOOLTIP_H > 1080) top = 1080 - TOOLTIP_H - TOOLTIP_MARGIN;
         if (top < 0) top = 0;
         return { left: `${left}px`, top: `${top}px` };
@@ -367,11 +285,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
 
     const showBoardTooltips = !suppressBoardTooltips;
 
-    const getDisplayedRelicDesc = (relicId: number, desc: string) => {
-        if (relicId !== RELIC_ID.TROY_GOLD_LOOT) return desc;
-        return desc.replace('{gold}', String(getTrojanGoldLootReward(level)));
-    };
-
     const hudPassiveTotals = hoveredHudStat ? getHudTurnStartPassiveTotals(useGameStore.getState()) : null;
     const hudStatTooltip = showBoardTooltips && hoveredHudStat && hudPassiveTotals && (() => {
         const n =
@@ -379,9 +292,7 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 ? hudPassiveTotals.knowledge
                 : hoveredHudStat.kind === 'food'
                   ? hudPassiveTotals.food
-                  : hoveredHudStat.kind === 'gold'
-                    ? hudPassiveTotals.gold
-                    : hudPassiveTotals.military ?? 0;
+                  : hudPassiveTotals.gold;
         const line = t('game.hudBaseProductionShort', language).replace('{n}', String(n));
         return (
             <div className="hud-stat-tooltip" style={getHudStatTooltipStyle(hoveredHudStat)}>
@@ -397,14 +308,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                     ) : hoveredHudStat.kind === 'gold' ? (
                         <img
                             src={GOLD_RESOURCE_ICON_URL}
-                            alt=""
-                            width={40}
-                            height={40}
-                            style={{ imageRendering: 'pixelated', flexShrink: 0 }}
-                        />
-                    ) : hoveredHudStat.kind === 'military' ? (
-                        <img
-                            src={MILITARY_RESOURCE_ICON_URL}
                             alt=""
                             width={40}
                             height={40}
@@ -452,50 +355,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                 </div>
             )}
 
-            {showBoardTooltips && hoveredRelic && (() => {
-                const info = hoveredRelic.relicInfo;
-                const counterMax = (
-                    info.definition.id === RELIC_ID.UR_WHEEL ||
-                    info.definition.id === RELIC_ID.NILE_SILT
-                ) ? 5 : 0;
-                const rarityColor = getRelicRarityColorHex(info.definition.rarity);
-                return (
-                    <div className="symbol-tooltip" style={{ ...getRelicTooltipStyle(hoveredRelic), display: 'flex', flexDirection: 'column' }}>
-                        <div className="symbol-tooltip-name" style={{ color: '#dcfce7' }}>{t(`relic.${info.definition.id}.name`, language)}</div>
-                        <div style={{
-                            alignSelf: 'flex-start',
-                            padding: '2px 7px',
-                            border: `1px solid ${rarityColor}`,
-                            color: rarityColor,
-                            background: 'rgba(15, 23, 42, 0.55)',
-                            fontSize: '14px',
-                            letterSpacing: '1px',
-                            textShadow: `0 0 8px ${rarityColor}88`,
-                        }}>
-                            {t(RELIC_RARITY_NAME_KEYS[info.definition.rarity], language)}
-                        </div>
-                        <div className="symbol-tooltip-desc">
-                            {getDisplayedRelicDesc(
-                                info.definition.id,
-                                t(`relic.${info.definition.id}.desc`, language),
-                            ).split('\n').map((line: string, i: number) => (
-                                <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
-                            ))}
-                        </div>
-                        {counterMax > 0 && (
-                            <div className="symbol-tooltip-effect" style={{ marginTop: '8px', color: '#f5bd56' }}>
-                                {info.effect_counter} / {counterMax}
-                            </div>
-                        )}
-                        {info.bonus_stacks > 0 && (
-                            <div className="symbol-tooltip-effect" style={{ marginTop: '8px', color: '#4ade80' }}>
-                                +{info.bonus_stacks} Bonus
-                            </div>
-                        )}
-                    </div>
-                );
-            })()}
-
             {showBoardTooltips && hoveredStatus && (
                 <div className="symbol-tooltip" style={{ ...getStatusTooltipStyle(hoveredStatus), display: 'flex', flexDirection: 'column' }}>
                     <div className="symbol-tooltip-name" style={{ color: '#fde68a' }}>
@@ -507,14 +366,6 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                             .map((line: string, i: number) => (
                                 <div key={i} className="symbol-tooltip-desc-line"><EffectText text={line} /></div>
                             ))}
-                        {hoveredStatus.status.badge === 'barbarianInvasionChance' && (
-                            <div className="symbol-tooltip-desc-line">
-                                {t('status.currentChance', language).replace(
-                                    '{chance}',
-                                    String(getNextBarbarianInvasionChance(barbarianInvasionChance)),
-                                )}
-                            </div>
-                        )}
                         {hoveredStatus.status.badge === 'naturalDisasterChance' && (
                             <div className="symbol-tooltip-desc-line">
                                 {t('status.currentChance', language).replace('{chance}', String(naturalDisasterChance))}
@@ -531,40 +382,20 @@ const GameCanvas = ({ onReady, suppressBoardTooltips = false }: GameCanvasProps)
                         const def = KNOWLEDGE_UPGRADES[hoveredUpgrade.upgrade.id];
                         if (!def) return null;
 
-                        if (typeof def.type === 'number') {
-                            const eraLabel = t(ERA_NAME_KEYS[def.type as SymbolType] ?? 'era.ancient', language);
-                            const eraColor = getSymbolColorHex(def.type as SymbolType);
-                            return (
-                                <div
-                                    className="symbol-tooltip-effect"
-                                    style={{
-                                        marginTop: '8px',
-                                        color: eraColor,
-                                        fontWeight: 'bold',
-                                        fontSize: '15px',
-                                        textShadow: `0 0 6px ${eraColor}80`,
-                                    }}
-                                >
-                                    [{eraLabel}]
-                                </div>
-                            );
-                        }
-
-                        const leaderLabel = t(`leader.${def.type}.name`, language);
-                        const leaderColor =
-                            def.type === 'ramesses' ? '#f59e0b' : def.type === 'shihuang' ? '#dc2626' : '#60a5fa';
+                        const eraLabel = t(ERA_NAME_KEYS[def.type] ?? 'era.ancient', language);
+                        const eraColor = getSymbolColorHex(def.type);
                         return (
                             <div
                                 className="symbol-tooltip-effect"
                                 style={{
                                     marginTop: '8px',
-                                    color: leaderColor,
+                                    color: eraColor,
                                     fontWeight: 'bold',
                                     fontSize: '15px',
-                                    textShadow: `0 0 6px ${leaderColor}80`,
+                                    textShadow: `0 0 6px ${eraColor}80`,
                                 }}
                             >
-                                [{leaderLabel}]
+                                [{eraLabel}]
                             </div>
                         );
                     })()}

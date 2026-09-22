@@ -1,0 +1,423 @@
+/* Pixel UI inspired by Crop Rotation's clear board / rails / goal hierarchy.
+   Palette, labels, icons, and interactions remain Humankind's own. */
+:root {
+  --pixel-bg: #0d1110;
+  --pixel-panel: #1b2220;
+  --pixel-panel-deep: #121816;
+  --pixel-control: #111615;
+  --pixel-control-hover: #303a37;
+  --pixel-paper: #f0eddc;
+  --pixel-edge: #d6d5c6;
+  --pixel-muted: #b2baaf;
+  --pixel-rule: #737e76;
+  --game-font-family: 'MiniPixel', 'Mulmaru', 'ZLabsPixel CN';
+  --game-ui-bg: var(--pixel-bg);
+  --game-ui-panel: var(--pixel-panel);
+  --game-ui-panel-deep: var(--pixel-panel-deep);
+  --game-ui-panel-darker: var(--pixel-bg);
+  --game-ui-line: var(--pixel-edge);
+  --game-ui-line-soft: var(--pixel-rule);
+  --game-ui-text: var(--pixel-paper);
+  --game-ui-text-muted: var(--pixel-muted);
+  --game-ui-face: var(--pixel-panel);
+  --game-ui-face-hover: var(--pixel-control-hover);
+  --game-ui-bevel: none;
+  --game-ui-bevel-hover: none;
+  --accent: var(--pixel-paper);
+  --accent-bright: #fff;
+}
+
+body, #root, .crt-display, .game-screen, .game-area,
+.demo-start-root, .initial-setup-root, .difficulty-select-root {
+  background: var(--pixel-bg) !important;
+  color: var(--pixel-paper);
+}
+
+/* Keep the image pixels; remove screen glass and soft light. */
+.crt-display { box-shadow: none; }
+.crt-overlay { display: none; }
+.custom-mouse-cursor { display: none !important; }
+*, *::before, *::after { cursor: auto !important; }
+button, a, [role='button'] { cursor: pointer !important; }
+img { image-rendering: pixelated; }
+
+/* Flat, solid controls with deliberate pixel-sized edges. */
+button {
+  border: 2px solid var(--pixel-edge) !important;
+  border-radius: 0 !important;
+  background: var(--pixel-control) !important;
+  color: var(--pixel-paper) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+button:hover:not(:disabled):not([aria-disabled='true']) {
+  border-color: #fff !important;
+  background: var(--pixel-control-hover) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+button:focus-visible {
+  outline: 2px dashed #fff !important;
+  outline-offset: 4px;
+}
+button:active:not(:disabled) { transform: none !important; }
+button:disabled, button[aria-disabled='true'] { opacity: .42; cursor: default !important; }
+
+:where(.main-menu, .initial-setup-panel, .difficulty-select-shell,
+  .difficulty-select-panel, .pregame-panel, .pause-panel,
+  .settings-panel, .settings-confirm-panel, .selection-panel,
+  .knowledge-upgrades-header, .knowledge-upgrades-tree-panel,
+  .knowledge-upgrades-points, .owned-symbols-panel, .owned-symbols-header,
+  .owned-symbols-sidebar, .owned-symbols-toolbar, .effect-log-panel,
+  .demo-achievements-panel, .demo-achievement-section,
+  .demo-achievements-completion, .endgame-panel) {
+  border: 3px solid var(--pixel-edge) !important;
+  border-radius: 0 !important;
+  background: var(--pixel-panel) !important;
+  color: var(--pixel-paper);
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+:where(.main-menu, .initial-setup-panel, .difficulty-select-shell,
+  .difficulty-select-panel, .pregame-panel, .pause-panel,
+  .settings-panel, .selection-panel, .knowledge-upgrades-header,
+  .knowledge-upgrades-tree-panel, .owned-symbols-panel,
+  .effect-log-panel, .endgame-panel, .demo-achievements-panel)::after {
+  display: none !important;
+}
+
+/* Main menu: the game mark and the action list share one readable panel. */
+.demo-start-root { align-items: center; justify-content: center; }
+.main-menu {
+  width: min(900px, 100%);
+  min-height: 400px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 310px);
+  align-items: center;
+  gap: 46px;
+  padding: 42px 48px;
+}
+.demo-start-root .main-menu { border: 0 !important; background: transparent !important; }
+.main-menu-title { justify-self: center; }
+.main-menu-title-sprite {
+  width: min(100%, 460px);
+  filter: none;
+  animation: none !important;
+}
+.main-menu-actions { width: 100%; margin: 0; gap: 9px; align-items: stretch; }
+.main-menu-play-row, .main-menu-actions .main-menu-button { width: 100%; }
+.main-menu-button { min-height: 56px; font-size: 23px; letter-spacing: .04em; }
+.main-menu-button::after { display: none !important; }
+.main-menu-play-options { gap: 8px; }
+.main-menu-option-button { min-height: 48px; font-size: 18px; }
+.main-menu-version, .main-menu-proof-code { color: var(--pixel-muted) !important; opacity: .7; }
+
+/* The board keeps the visual centre. Side rails end before the board's footprint. */
+.game-screen { --game-screen-edge-gap: 28px; --game-side-section-width: 260px; }
+.game-left-section, .game-right-section {
+  top: 100px;
+  bottom: auto;
+  width: 260px;
+  padding: 0;
+  gap: 0;
+  border: 3px solid var(--pixel-edge) !important;
+  background: var(--pixel-panel) !important;
+  box-shadow: none !important;
+}
+.game-left-section { left: 28px; }
+.game-right-section { right: 28px; }
+.game-left-section::after, .game-right-section::after { display: none; }
+.game-rail-caption {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 45px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  border-bottom: 3px solid var(--pixel-edge);
+  background: var(--pixel-panel-deep);
+  color: var(--pixel-paper);
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: .08em;
+  pointer-events: none;
+}
+.game-right-section .game-rail-caption { order: -2; }
+
+.hud-top-left {
+  width: 100%;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.hud-top-left::after { display: none; }
+.hud-top-left .resource-group {
+  width: 100%;
+  min-height: 77px;
+  display: flex;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 0;
+  background: transparent;
+}
+.hud-top-left .resource-group + .resource-group {
+  margin: 0;
+  border-top: 2px solid var(--pixel-rule);
+}
+.resource-icon { width: 34px; height: 34px; }
+.resource-label { flex: 1; min-width: 0; color: var(--pixel-paper); font-size: 20px; }
+.resource-value { color: #fff; font-size: 29px; font-variant-numeric: tabular-nums; }
+.hud-top-left .hud-stat-tooltip { left: calc(100% + 16px) !important; }
+
+.game-left-section button.game-left-owned-symbols-btn {
+  width: calc(100% - 24px);
+  height: 66px;
+  min-height: 66px;
+  flex: 0 0 66px;
+  margin: 14px 12px 12px;
+  padding: 8px 14px;
+  gap: 10px;
+  justify-content: flex-start;
+  border: 2px solid var(--pixel-edge) !important;
+  background: var(--pixel-control) !important;
+  box-shadow: none !important;
+}
+.game-left-section button.game-left-owned-symbols-btn .game-action-btn-icon-layer,
+.game-left-section button.game-left-owned-symbols-btn .game-action-btn-icon-layer img { width: 38px; height: 38px; flex-basis: 38px; }
+.game-left-owned-symbols-label { display: block; color: var(--pixel-paper); font-size: 18px; }
+
+.game-right-section .hud-top-center {
+  position: fixed;
+  top: 22px;
+  left: 50%;
+  width: auto;
+  transform: translateX(-50%);
+}
+.food-demand-mini {
+  min-width: 450px;
+  padding: 12px 24px;
+  border: 3px solid var(--pixel-edge);
+  background: var(--pixel-panel-deep);
+  color: var(--pixel-paper) !important;
+  font-size: 22px !important;
+  font-weight: 700;
+  text-align: center;
+  animation: none !important;
+}
+.food-demand-mini:is(.warning-mid, .warning-3, .warning-2, .warning-1, .warning-0) {
+  color: #fff !important;
+  border-color: #fff;
+  animation: none !important;
+  transform: none !important;
+}
+.food-demand-tooltip, .hud-stat-tooltip, .bottom-action-hud-tooltip,
+.symbol-tooltip, .knowledge-upgrade-tooltip {
+  border: 2px solid var(--pixel-edge) !important;
+  background: var(--pixel-panel-deep) !important;
+  color: var(--pixel-paper);
+  box-shadow: none !important;
+}
+
+.game-right-status-panel {
+  order: -1;
+  width: 100%;
+  min-height: 95px;
+  padding: 12px;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  gap: 8px;
+  border: 0;
+  border-bottom: 2px solid var(--pixel-rule);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.game-right-status-panel::after { display: none; }
+.game-right-status-panel .turn-year-mini { gap: 6px; }
+.game-right-status-panel .turn-year-mini-turn { color: #fff; font-size: 25px; }
+.game-right-status-panel .turn-year-mini-year { color: var(--pixel-muted); font-size: 17px; }
+.game-right-status-panel button.pause-btn-top {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  border: 2px solid var(--pixel-edge) !important;
+  background: var(--pixel-control) !important;
+  box-shadow: none !important;
+}
+.game-right-status-panel .pause-btn-top::after { display: none; }
+
+.game-right-section .progress-hud-panels { order: 0; width: 100%; padding: 14px 12px; gap: 0; }
+.game-right-section .progress-hud-panels button.game-action-btn--knowledge {
+  width: 100%;
+  height: 114px;
+  flex: 0 0 114px;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--pixel-edge) !important;
+  background: var(--pixel-control) !important;
+  box-shadow: none !important;
+}
+button.knowledge-progress-display:disabled {
+  opacity: 1 !important;
+  filter: none !important;
+  cursor: default !important;
+}
+.game-right-action-icon, .game-right-action-icon img { width: 38px; height: 38px; flex-basis: 38px; }
+.game-right-action-copy { gap: 8px; }
+.game-right-action-label { display: block; font-size: 19px; color: var(--pixel-paper); }
+.game-right-action-meta { font-size: 16px; color: var(--pixel-muted); }
+.game-right-action-bar { height: 17px; border: 2px solid var(--pixel-edge); background: #0b0f0e; box-shadow: none; }
+.game-right-action-bar-fill--knowledge { background: var(--pixel-paper); }
+.game-right-action-bar-value { color: #fff; font-size: 11px; text-shadow: 0 1px #000, 1px 0 #000, -1px 0 #000, 0 -1px #000; }
+
+.game-right-section .spin-area {
+  position: fixed;
+  order: 2;
+  top: auto;
+  right: 28px;
+  bottom: 26px;
+  left: auto;
+  width: 260px;
+  height: 74px;
+  flex: 0 0 74px;
+  margin: 0;
+  transform: none;
+  align-items: stretch;
+}
+.game-right-section button.spin-btn,
+.game-right-section button.spin-btn.spin-btn--food-payment,
+.game-right-section button.spin-btn.spin-btn--board-expansion {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 74px;
+  min-height: 74px;
+  max-height: 74px;
+  flex: 1 1 auto;
+  padding: 10px;
+  border: 3px solid #fff !important;
+  background: var(--pixel-control) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.game-right-section button.spin-btn > span { color: #fff; font-size: 30px; font-weight: 800; letter-spacing: .04em; }
+.game-right-section button.spin-btn:hover:not(:disabled) > span { color: #fff !important; }
+button.spin-btn::after, button.game-action-btn::after, button.pause-btn-top::after { display: none !important; }
+
+/* Drafting screen: three readable pixel cards and a compact decision row. */
+.selection-overlay--symbol { background: rgba(5, 8, 7, .87) !important; }
+.selection-title--plain { margin: 0 0 22px; color: #fff; font-size: 38px; }
+.selection-cards { gap: 20px; margin-bottom: 22px; }
+.selection-card-frame { width: 330px; height: 490px; }
+.selection-card-frame:hover { transform: none; }
+.selection-overlay--symbol .selection-card,
+.selection-overlay--symbol .selection-event-card {
+  width: 330px;
+  height: 490px;
+  gap: 11px;
+  padding: 24px 20px;
+  border: 3px solid var(--pixel-edge) !important;
+  background: var(--pixel-panel) !important;
+  color: var(--pixel-paper) !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+.selection-overlay--symbol .selection-card:hover,
+.selection-overlay--symbol .selection-card:focus-visible {
+  border-color: #fff !important;
+  background: var(--pixel-control-hover) !important;
+  transform: none !important;
+}
+.selection-overlay--symbol .selection-card::after,
+.selection-reroll-btn::after, .selection-skip-btn::after { display: none !important; }
+.selection-card-sprite {
+  width: 132px;
+  height: 132px;
+  padding: 8px;
+  border: 2px solid var(--pixel-rule);
+  background: #28312d;
+  filter: none;
+}
+.selection-card-name {
+  padding: 6px 8px;
+  border: 2px solid var(--pixel-edge);
+  background: var(--pixel-paper);
+  color: var(--pixel-bg);
+  font-size: 26px;
+}
+.selection-card-desc { border-top: 2px solid var(--pixel-rule); padding-top: 16px; text-align: left; }
+.selection-card-desc-line { color: var(--pixel-paper); font-size: 18px; }
+.selection-actions { width: 1030px; gap: 16px; }
+.selection-reroll-btn, .selection-skip-btn {
+  min-height: 62px;
+  padding: 10px 20px;
+  border: 2px solid var(--pixel-edge) !important;
+  background: var(--pixel-control) !important;
+  color: var(--pixel-paper) !important;
+  font-size: 22px;
+  box-shadow: none !important;
+}
+.selection-peek-handle { border: 2px solid var(--pixel-edge) !important; background: var(--pixel-panel-deep) !important; box-shadow: none !important; }
+
+/* Reuse the same material in setup, research, inventory and pause screens. */
+.initial-setup-panel, .difficulty-select-shell, .difficulty-select-panel,
+.symbol-set-deck, .symbol-set-preview, .symbol-set-collection-rail,
+.knowledge-upgrades-page, .knowledge-upgrades-horizontal-tree,
+.owned-symbols-collection, .effect-log-list, .settings-body {
+  background: var(--pixel-panel) !important;
+  box-shadow: none !important;
+}
+.symbol-set-deck, .symbol-set-card, .symbol-set-preview { border-color: var(--pixel-edge) !important; box-shadow: none !important; }
+.symbol-set-card { background: var(--pixel-control) !important; }
+.symbol-set-card::before { display: none; }
+.symbol-set-card--deck:hover, .symbol-set-card--deck:focus-visible { transform: none; filter: brightness(1.15); }
+.exp-bar-mini-fill, .game-right-action-bar-fill--knowledge,
+.knowledge-upgrade-progress-fill, .demo-achievement-progress-fill { background: var(--pixel-paper) !important; }
+
+@media (max-width: 1120px) {
+  .main-menu { width: min(720px, 100%); grid-template-columns: 1fr; gap: 18px; padding: 30px; }
+  .main-menu-title-sprite { width: min(100%, 360px); }
+  .game-screen { --game-side-section-width: 210px; }
+  .game-left-section, .game-right-section { top: 82px; bottom: 16px; width: 210px; }
+  .game-left-section { left: 12px; }
+  .game-right-section { right: 12px; }
+  .game-right-section .spin-area { right: 12px; bottom: 16px; width: 210px; }
+  .resource-label { font-size: 16px; }
+  .resource-value { font-size: 23px; }
+  .food-demand-mini { min-width: 350px; font-size: 18px !important; }
+}
+
+@media (max-width: 720px) {
+  .game-left-section, .game-right-section { top: 70px; bottom: auto; width: 160px; }
+  .game-left-section { left: 6px; }
+  .game-right-section { right: 6px; }
+  .game-right-section .spin-area { right: 6px; bottom: 12px; width: 160px; }
+  .game-rail-caption { height: 36px; flex-basis: 36px; font-size: 13px; }
+  .hud-top-left .resource-group { min-height: 54px; padding: 6px; }
+  .resource-icon { width: 25px; height: 25px; }
+  .resource-label { font-size: 12px; }
+  .resource-value { font-size: 17px; }
+  .food-demand-mini { min-width: 0; font-size: 13px !important; padding: 7px 10px; }
+  .game-right-status-panel { min-height: 70px; padding: 6px; grid-template-columns: 1fr 34px; }
+  .game-right-status-panel .turn-year-mini-turn { font-size: 16px; }
+  .game-right-status-panel .turn-year-mini-year { font-size: 11px; }
+  .game-right-status-panel button.pause-btn-top { width: 34px; height: 34px; min-width: 34px; min-height: 34px; }
+  .game-right-section .progress-hud-panels button.game-action-btn--knowledge { height: 90px; flex-basis: 90px; padding: 6px; }
+  .game-right-action-icon, .game-right-action-icon img { width: 26px; height: 26px; flex-basis: 26px; }
+  .game-right-action-label { font-size: 13px; }
+  .game-right-action-meta { font-size: 10px; }
+  .game-left-section button.game-left-owned-symbols-btn, .game-right-section .spin-area,
+  .game-right-section button.spin-btn { height: 50px; min-height: 50px; flex-basis: 50px; }
+  .game-left-owned-symbols-label { font-size: 13px; }
+  .game-right-section button.spin-btn > span { font-size: 18px; }
+  .selection-cards { gap: 8px; }
+  .selection-card-frame, .selection-overlay--symbol .selection-card { width: 190px; height: 320px; }
+  .selection-actions { width: 590px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

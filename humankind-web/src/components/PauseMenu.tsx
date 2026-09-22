@@ -5,9 +5,7 @@ import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 import { usePreGameStore } from '../game/state/preGameStore';
 import { useGameStore } from '../game/state/gameStore';
-import { useRelicStore } from '../game/state/relicStore';
 import { clearSavedGame } from '../game/state/saveGame';
-import { clearLeaderProgress } from '../game/data/leaders';
 import { clearDemoAchievementProgress } from '../game/data/demoAchievements';
 import {
     KEY_BINDING_ACTIONS,
@@ -105,7 +103,6 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
     const returnToIntro = usePreGameStore((s) => s.returnToIntro);
     const resetPreGameProgress = usePreGameStore((s) => s.resetPreGameProgress);
     const initializeGame = useGameStore((s) => s.initializeGame);
-    const resetRelics = useRelicStore((s) => s.resetRelics);
 
     currentGameSpeedRef.current = currentGameSpeed;
 
@@ -236,7 +233,6 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
     const handleMainMenu = () => {
         // 게임 상태 초기화 후, 프리게임 튜토리얼(데모 시작) 화면으로 복귀
         initializeGame();
-        resetRelics();
         returnToIntro();
         setScreen('main');
         onClose();
@@ -248,10 +244,8 @@ const PauseMenu = ({ isOpen, onClose, initialScreen = 'main', onOpenLog }: Pause
 
     const handleConfirmResetGameData = () => {
         clearSavedGame();
-        clearLeaderProgress();
         clearDemoAchievementProgress();
         initializeGame();
-        resetRelics();
         resetPreGameProgress();
         setIsResetConfirmOpen(false);
         setScreen('main');

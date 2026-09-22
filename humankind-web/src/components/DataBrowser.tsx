@@ -1,10 +1,8 @@
-import { useState, useMemo, useCallback, useEffect, Fragment } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { SYMBOLS, SymbolType, getSymbolColorHex, isBasePool } from '../game/data/symbolDefinitions';
-import { getRelicRarityColorHex, RELICS, type RelicRarity } from '../game/data/relicDefinitions';
 
 import { GAME_EVENT_CATEGORY_ORDER, GAME_EVENTS } from '../game/data/eventDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
-import { LEADERS } from '../game/data/leaders';
 import { STATUSES } from '../game/data/statusDefinitions';
 import {
     REWARDS,
@@ -16,14 +14,11 @@ import {
 } from '../game/data/rewardDefinitions';
 import { useSettingsStore } from '../game/state/settingsStore';
 import { useGameStore } from '../game/state/gameStore';
-import { getTrojanGoldLootReward } from '../game/state/gameCalculations';
-import { RELIC_ID } from '../game/logic/relics/relicIds';
-import { isSealRelicId } from '../game/logic/relics/relicClassification';
 import { getEventDescription, getEventDescriptionAllEras, t } from '../i18n';
 import { EffectText } from './EffectText';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
 
-type Tab = 'symbols' | 'relics' | 'knowledgeUpgrades' | 'events' | 'leaders' | 'rewards' | 'statuses';
+type Tab = 'symbols' | 'knowledgeUpgrades' | 'events' | 'rewards' | 'statuses';
 type SortDir = 'asc' | 'desc';
 interface SortState { column: string; dir: SortDir; }
 
@@ -35,29 +30,13 @@ const ERA_KEYS: Record<number, string> = {
     [SymbolType.MEDIEVAL]: 'medieval',
     [SymbolType.MODERN]: 'modern',
     [SymbolType.TERRAIN]: 'terrain',
-    [SymbolType.UNIT]: 'unit',
-    [SymbolType.ENEMY]: 'enemy',
     [SymbolType.DISASTER]: 'disaster',
     [SymbolType.SPECIAL]: 'specialSymbol',
 };
 
-const RELIC_RARITY_KEYS: Record<RelicRarity, string> = {
-    common: 'common',
-    uncommon: 'uncommon',
-    rare: 'rare',
-    epic: 'epic',
-    legendary: 'legendary',
-};
-
-const RELIC_RARITY_ORDER: RelicRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-
-
-
-const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.RESOURCE, SymbolType.LUXURY, SymbolType.TERRAIN, SymbolType.UNIT, SymbolType.ENEMY, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION, SymbolType.SPECIAL];
-const SYMBOL_BROWSER_ERA_ORDER = ERA_ORDER.filter((type) => type !== SymbolType.ENEMY);
-const isHiddenSymbolType = (type: SymbolType): boolean => type === SymbolType.ENEMY;
-
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
+const ERA_ORDER = [SymbolType.ANCIENT, SymbolType.RESOURCE, SymbolType.LUXURY, SymbolType.TERRAIN, SymbolType.DISASTER, SymbolType.MEDIEVAL, SymbolType.MODERN, SymbolType.RELIGION, SymbolType.SPECIAL];
+const SYMBOL_BROWSER_ERA_ORDER = ERA_ORDER;
+const isHiddenSymbolType = (_type: SymbolType): boolean => false;
 
 /** Sortable column header */
 const SortTh = ({ column, label, sort, onSort, className }: {
@@ -92,14 +71,11 @@ const DataBrowser = () => {
     const language = useSettingsStore((s) => s.language);
     const { devAddSymbol } = useGameStore();
     const era = useGameStore((s) => s.era);
-    const level = useGameStore((s) => s.level);
     // Per-tab sort state
     const [symbolSort, setSymbolSort] = useState<SortState | null>(null);
-    const [relicSort, setRelicSort] = useState<SortState | null>(null);
     const [knowledgeUpgradeSort, setKnowledgeUpgradeSort] = useState<SortState | null>(null);
     const [eventSort, setEventSort] = useState<SortState | null>(null);
 
-    const [leaderSort, setLeaderSort] = useState<SortState | null>(null);
     const [rewardSort, setRewardSort] = useState<SortState | null>(null);
     const [statusSort, setStatusSort] = useState<SortState | null>(null);
 
@@ -119,12 +95,6 @@ const DataBrowser = () => {
         if (category === 'threat') return language === 'ko' ? '위협' : language === 'ru' ? 'Угроза' : 'Threat';
         return category;
     }, [language]);
-
-    const getDisplayedRelicDesc = useCallback((relicId: number) => {
-        const desc = t(`relic.${relicId}.desc`, language);
-        if (relicId !== RELIC_ID.TROY_GOLD_LOOT) return desc;
-        return desc.replace('{gold}', String(getTrojanGoldLootReward(level)));
-    }, [language, level]);
 
     const toggleSort = useCallback((setter: React.Dispatch<React.SetStateAction<SortState | null>>) =>
         (col: string) => {
@@ -194,45 +164,6 @@ const DataBrowser = () => {
 
         return list;
     }, [eraFilter, search, language, symbolSort]);
-
-    // 유물 목록
-    const filteredRelics = useMemo(() => {
-        let list = Object.values(RELICS).filter(r => {
-            const name = t(`relic.${r.id}.name`, language).toLowerCase();
-            const desc = getDisplayedRelicDesc(r.id).toLowerCase();
-            const consumptionType = t(
-                isSealRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
-                language,
-            ).toLowerCase();
-            const q = search.toLowerCase();
-            return search === '' ||
-                name.includes(q) ||
-                desc.includes(q) ||
-                consumptionType.includes(q) ||
-                String(r.id).includes(q);
-        });
-        if (relicSort) {
-            const { column, dir } = relicSort;
-            list = [...list].sort((a, b) => {
-                let va: unknown, vb: unknown;
-                switch (column) {
-                    case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = t(`relic.${a.id}.name`, language); vb = t(`relic.${b.id}.name`, language); break;
-                    case 'era': va = RELIC_RARITY_ORDER.indexOf(a.rarity); vb = RELIC_RARITY_ORDER.indexOf(b.rarity); break;
-                    case 'consumptionType': va = isSealRelicId(a.id) ? 1 : 0; vb = isSealRelicId(b.id) ? 1 : 0; break;
-                    case 'cost': va = a.cost; vb = b.cost; break;
-                    case 'desc': va = getDisplayedRelicDesc(a.id); vb = getDisplayedRelicDesc(b.id); break;
-                    case 'sprite': va = a.sprite || ''; vb = b.sprite || ''; break;
-                    default: va = a.id; vb = b.id;
-                }
-                return genericCompare(va, vb, dir);
-            });
-        } else {
-            list.sort((a, b) => a.id - b.id);
-        }
-        return list;
-    }, [search, relicSort, language, getDisplayedRelicDesc]);
-
 
     // 지식 업그레이드 목록
     const filteredKnowledgeUpgrades = useMemo(() => {
@@ -313,40 +244,6 @@ const DataBrowser = () => {
 
         return list;
     }, [search, eventSort, language, tl, era]);
-
-    // 지도자 목록
-    const filteredLeaders = useMemo(() => {
-        let list = Object.values(LEADERS);
-
-        if (search.trim()) {
-            const q = search.toLowerCase();
-            list = list.filter(l => {
-                const name = t(l.nameKey, language).toLowerCase();
-                const desc = t(l.descriptionKey, language).toLowerCase();
-                return name.includes(q) || desc.includes(q) || l.id.includes(q);
-            });
-        }
-
-        if (leaderSort) {
-            const { column, dir } = leaderSort;
-            list = [...list].sort((a, b) => {
-                let va: unknown, vb: unknown;
-                const aSprite = a.id === 'ramesses' ? '001.png' : a.id === 'shihuang' ? '002.png' : '-';
-                const bSprite = b.id === 'ramesses' ? '001.png' : b.id === 'shihuang' ? '002.png' : '-';
-
-                switch (column) {
-                    case 'id': va = a.id; vb = b.id; break;
-                    case 'name': va = t(a.nameKey, language); vb = t(b.nameKey, language); break;
-                    case 'desc': va = t(a.descriptionKey, language); vb = t(b.descriptionKey, language); break;
-                    case 'sprite': va = aSprite; vb = bSprite; break;
-                    default: va = a.id; vb = b.id;
-                }
-                return genericCompare(va, vb, dir);
-            });
-        }
-
-        return list;
-    }, [search, leaderSort, language]);
 
     // 보상 목록
     const filteredRewards = useMemo(() => {
@@ -434,11 +331,9 @@ const DataBrowser = () => {
     if (!open) return null;
 
     const symSortHandler = toggleSort(setSymbolSort);
-    const relSortHandler = toggleSort(setRelicSort);
     const kuSortHandler = toggleSort(setKnowledgeUpgradeSort);
     const eventSortHandler = toggleSort(setEventSort);
 
-    const leaderSortHandler = toggleSort(setLeaderSort);
     const rewardSortHandler = toggleSort(setRewardSort);
     const statusSortHandler = toggleSort(setStatusSort);
 
@@ -462,12 +357,6 @@ const DataBrowser = () => {
                     {t('dataBrowser.symbols', language)} ({Object.values(SYMBOLS).filter((s) => !isHiddenSymbolType(s.type)).length})
                 </button>
                 <button
-                    className={`databrowser-tab ${tab === 'relics' ? 'databrowser-tab--active' : ''}`}
-                    onClick={() => setTab('relics')}
-                >
-                    {t('dataBrowser.relics', language)} ({Object.keys(RELICS).length})
-                </button>
-                <button
                     className={`databrowser-tab ${tab === 'knowledgeUpgrades' ? 'databrowser-tab--active' : ''}`}
                     onClick={() => setTab('knowledgeUpgrades')}
                 >
@@ -478,12 +367,6 @@ const DataBrowser = () => {
                     onClick={() => setTab('events')}
                 >
                     {t('dataBrowser.events', language)} ({Object.keys(GAME_EVENTS).length})
-                </button>
-                <button
-                    className={`databrowser-tab ${tab === 'leaders' ? 'databrowser-tab--active' : ''}`}
-                    onClick={() => setTab('leaders')}
-                >
-                    {t('mainMenu.leaders', language)} ({Object.keys(LEADERS).length})
                 </button>
                 <button
                     className={`databrowser-tab ${tab === 'statuses' ? 'databrowser-tab--active' : ''}`}
@@ -633,121 +516,6 @@ const DataBrowser = () => {
                     </table>
                 )}
 
-                {tab === 'relics' && (
-                    <table className="databrowser-table">
-                        <thead>
-                            <tr>
-                                <SortTh column="id" label="ID" sort={relicSort} onSort={relSortHandler} className="databrowser-th--id" />
-                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--name" />
-                                <SortTh column="era" label={t('dataBrowser.colRarity', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--era" />
-                                <SortTh column="consumptionType" label={t('dataBrowser.colConsumptionType', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--type" />
-                                <SortTh column="cost" label={t('dataBrowser.colCost', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--cost" />
-                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--desc" />
-                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={relicSort} onSort={relSortHandler} className="databrowser-th--sprite" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredRelics.map(r => (
-                                <tr key={r.id} className="databrowser-row">
-                                    <td className="databrowser-cell--id">{r.id}</td>
-                                    <td className="databrowser-cell--name">{t(`relic.${r.id}.name`, language)}</td>
-                                    <td className="databrowser-cell--era">
-                                        <span style={{
-                                            color: getRelicRarityColorHex(r.rarity),
-                                            fontWeight: 'bold',
-                                            fontSize: '15px',
-                                            letterSpacing: '1px',
-                                            textShadow: `0 0 6px ${getRelicRarityColorHex(r.rarity)}80`
-                                        }}>
-                                            [{t(`rarity.${RELIC_RARITY_KEYS[r.rarity]}`, language)}]
-                                        </span>
-                                    </td>
-                                    <td className="databrowser-cell--type">
-                                        {t(
-                                            isSealRelicId(r.id) ? 'dataBrowser.consumable' : 'dataBrowser.nonConsumable',
-                                            language,
-                                        )}
-                                    </td>
-                                    <td className="databrowser-cell--cost">{r.cost}g</td>
-                                    <td className="databrowser-cell--desc"><EffectText text={getDisplayedRelicDesc(r.id)} /></td>
-                                    <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        {r.sprite && r.sprite !== '-' && r.sprite !== '-.png' ? (
-                                            <>
-                                                <img src={`${ASSET_BASE_URL}assets/relics/${r.sprite}`} alt={t(`relic.${r.id}.name`, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'contain' }} />
-                                                <span style={{ fontSize: '11px', color: '#888' }}>{r.sprite}</span>
-                                            </>
-                                        ) : '-'}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-
-
-
-                {tab === 'leaders' && (
-                    <table className="databrowser-table">
-                        <thead>
-                            <tr>
-                                <SortTh column="id" label="ID" sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--id" />
-                                <SortTh column="name" label={t('dataBrowser.colName', language)} sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--name" />
-                                <SortTh column="desc" label={t('dataBrowser.colDesc', language)} sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--desc" />
-                                <th className="databrowser-th--stat" style={{ textAlign: 'center' }}>시작 식량</th>
-                                <th className="databrowser-th--stat" style={{ textAlign: 'center' }}>시작 골드</th>
-                                <SortTh column="sprite" label={t('dataBrowser.colSprite', language)} sort={leaderSort} onSort={leaderSortHandler} className="databrowser-th--sprite" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredLeaders.map(l => {
-                                const sprite = l.id === 'ramesses' ? '001.png' : l.id === 'shihuang' ? '002.png' : '-';
-                                return (
-                                <Fragment key={l.id}>
-                                    <tr className="databrowser-row" style={l.enabled ? {} : { opacity: 0.4 }}>
-                                        <td className="databrowser-cell--id">{l.id}</td>
-                                        <td className="databrowser-cell--name">{t(l.nameKey, language)} {!l.enabled && <span style={{fontSize: '11px', color: '#999', marginLeft: '4px'}}>(Locked)</span>}</td>
-                                        <td className="databrowser-cell--desc">
-                                            <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>
-                                                <EffectText text={t(l.descriptionKey, language)} />
-                                            </span>
-                                        </td>
-                                        <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{l.startingFood}</td>
-                                        <td className="databrowser-cell--stat" style={{ textAlign: 'center' }}>{l.startingGold}</td>
-                                        <td className="databrowser-cell--sprite" style={{ color: '#555', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {sprite !== '-' ? (
-                                                <>
-                                                    <img src={`${ASSET_BASE_URL}assets/leaders/${sprite}`} alt={t(l.nameKey, language)} style={{ width: '28px', height: '28px', imageRendering: 'pixelated', objectFit: 'cover', borderRadius: 0 }} />
-                                                    <span style={{ fontSize: '11px', color: '#888' }}>{sprite}</span>
-                                                </>
-                                            ) : '-'}
-                                        </td>
-                                    </tr>
-                                    <tr className="databrowser-row" style={l.enabled ? {} : { opacity: 0.4 }}>
-                                        <td colSpan={2} style={{ borderTop: 'none', background: 'rgba(0,0,0,0.1)' }}></td>
-                                        <td colSpan={4} className="databrowser-cell--desc" style={{ borderTop: 'none', background: 'rgba(0,0,0,0.1)', paddingBottom: '12px' }}>
-                                            {l.enabled ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <div>
-                                                        <strong style={{ color: '#6ee7b7' }}>[{t(l.mainEffectNameKey, language)}]</strong>{' '}
-                                                        <EffectText text={t(l.mainEffectDescKey, language)} />
-                                                    </div>
-                                                    <div>
-                                                        <strong style={{ color: '#93c5fd' }}>[{t(l.subEffectNameKey, language)}]</strong>{' '}
-                                                        <EffectText text={t(l.subEffectDescKey, language)} />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div style={{ color: '#555', fontStyle: 'italic' }}>효과 없음</div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                </Fragment>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                )}
-
                 {tab === 'events' && (
                     <table className="databrowser-table">
                         <thead>
@@ -814,22 +582,11 @@ const DataBrowser = () => {
                                     <td className="databrowser-cell--name">{tl(`knowledgeUpgrade.${u.id}.name`, u.name)}</td>
                                     <td>
                                         {(() => {
-                                            if (typeof u.type === 'number') {
-                                                const typeHex = getSymbolColorHex(u.type as SymbolType);
-                                                const eraKey = ERA_KEYS[u.type as SymbolType];
-                                                return (
-                                                    <span style={{ color: typeHex, fontWeight: 'bold' }}>
-                                                        [{t(`era.${eraKey}`, language)}]
-                                                    </span>
-                                                );
-                                            }
-
-                                            const leaderName = t(`leader.${u.type}.name`, language);
-                                            const leaderColor =
-                                                u.type === 'ramesses' ? '#f59e0b' : u.type === 'shihuang' ? '#dc2626' : '#60a5fa';
+                                            const typeHex = getSymbolColorHex(u.type);
+                                            const eraKey = ERA_KEYS[u.type];
                                             return (
-                                                <span style={{ color: leaderColor, fontWeight: 'bold' }}>
-                                                    [{leaderName}]
+                                                <span style={{ color: typeHex, fontWeight: 'bold' }}>
+                                                    [{t(`era.${eraKey}`, language)}]
                                                 </span>
                                             );
                                         })()}
@@ -907,7 +664,6 @@ const DataBrowser = () => {
                 )}
 
                 {((tab === 'symbols' && filteredSymbols.length === 0) ||
-                    (tab === 'relics' && filteredRelics.length === 0) ||
                     (tab === 'knowledgeUpgrades' && filteredKnowledgeUpgrades.length === 0) ||
                     (tab === 'events' && filteredEvents.length === 0) ||
                     (tab === 'statuses' && filteredStatuses.length === 0) ||

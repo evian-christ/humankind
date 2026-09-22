@@ -21,7 +21,7 @@
   transform: translateX(-50%);
 }
 
-.crt-display :is(.demo-start-root, .leader-select-root, .leader-progress-root) {
+.crt-display :is(.demo-start-root, .difficulty-select-root) {
   transform: none;
 }
 
@@ -30,7 +30,7 @@
 }
 
 .crt-display.crt-disabled .hud-top,
-.crt-display.crt-disabled :is(.demo-start-root, .leader-select-root, .leader-progress-root) {
+.crt-display.crt-disabled :is(.demo-start-root, .difficulty-select-root) {
   transform: none;
 }
 

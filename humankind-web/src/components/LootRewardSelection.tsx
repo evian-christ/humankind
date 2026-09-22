@@ -10,12 +10,9 @@ import {
 } from '../game/data/rewardDefinitions';
 import { SYMBOLS } from '../game/data/symbolDefinitions';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
-import { RELICS } from '../game/data/relicDefinitions';
 import { EffectText } from './EffectText';
 import { t } from '../i18n';
 import type { Language } from '../game/state/settingsStore';
-
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
 const RewardCard = ({
     reward,
@@ -33,15 +30,8 @@ const RewardCard = ({
     const rarityColor = REWARD_RARITY_COLOR[reward.rarity];
     const desc = getRewardDescription(reward, era, language);
     const rewardName = getRewardName(reward, language);
-    const grantedRelic = reward.grantedRelicIds?.length
-        ? RELICS[reward.grantedRelicIds[0]!]
-        : null;
     const lootSymbol = lootSymbolId == null ? null : SYMBOLS[lootSymbolId];
-    const spriteUrl = grantedRelic?.sprite && grantedRelic.sprite !== '-' && grantedRelic.sprite !== '-.png'
-        ? `${ASSET_BASE_URL}assets/relics/${grantedRelic.sprite}`
-        : lootSymbol
-        ? getSymbolSpriteUrl(lootSymbol)
-        : null;
+    const spriteUrl = lootSymbol ? getSymbolSpriteUrl(lootSymbol) : null;
 
     return (
         <div

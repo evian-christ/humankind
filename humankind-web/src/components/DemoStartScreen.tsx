@@ -193,7 +193,7 @@ function DemoAchievementsPage({ onBack }: { onBack: () => void }) {
     <div className="demo-start-root demo-achievements-page">
       <button
         type="button"
-        className="leader-select-back demo-achievements-back"
+        className="menu-back-button demo-achievements-back"
         onClick={onBack}
         aria-label={t('game.back', language)}
       >
@@ -214,8 +214,7 @@ function DemoMainMenu({
   onOpenAchievements: () => void;
 }) {
   const language = useSettingsStore((s) => s.language);
-  const proceedToLeaderSelect = usePreGameStore((s) => s.proceedToLeaderSelect);
-  const proceedToLeaderProgress = usePreGameStore((s) => s.proceedToLeaderProgress);
+  const proceedToDifficultySelect = usePreGameStore((s) => s.proceedToDifficultySelect);
   const skipIntroToDefaults = usePreGameStore((s) => s.skipIntroToDefaults);
   const continueSavedGame = usePreGameStore((s) => s.continueSavedGame);
   const hasSavedGame = usePreGameStore((s) => s.hasSavedGame);
@@ -317,7 +316,7 @@ function DemoMainMenu({
               <button
                 type="button"
                 className="main-menu-button main-menu-option-button"
-                onClick={proceedToLeaderSelect}
+                onClick={proceedToDifficultySelect}
                 disabled={!canStartGame}
                 aria-disabled={!canStartGame}
                 tabIndex={playOptionsOpen ? 0 : -1}
@@ -338,14 +337,6 @@ function DemoMainMenu({
               </button>
             </div>
           </div>
-          <button
-            type="button"
-            className="main-menu-button"
-            onClick={() => proceedToLeaderProgress()}
-            aria-label={t('mainMenu.leaders', language)}
-          >
-            {t('mainMenu.leaders', language)}
-          </button>
           <button
             type="button"
             className="main-menu-button"

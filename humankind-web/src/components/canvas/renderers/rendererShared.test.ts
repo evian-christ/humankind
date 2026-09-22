@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RELIC_ID } from '../../../game/logic/relics/relicIds';
 
-describe('relic renderer shared state', () => {
-    it('treats selection relics as clickable', async () => {
+describe('renderer shared state', () => {
+    it('selects the configured font family for each language', async () => {
         vi.stubGlobal('window', {
             screen: { width: 1920, height: 1080 },
             innerWidth: 1920,
@@ -19,14 +18,11 @@ describe('relic renderer shared state', () => {
         });
 
         const {
-            CLICKABLE_RELIC_IDS,
             DEFAULT_GAME_FONT_FAMILY,
             ZH_GAME_FONT_FAMILY,
             getGameFontFamily,
         } = await import('./rendererShared');
 
-        expect(CLICKABLE_RELIC_IDS.has(RELIC_ID.MILITARY_LEVY)).toBe(true);
-        expect(CLICKABLE_RELIC_IDS.has(RELIC_ID.PROPHECY_DIE)).toBe(true);
         expect(getGameFontFamily('en')).toBe(DEFAULT_GAME_FONT_FAMILY);
         expect(getGameFontFamily('zh')).toBe(ZH_GAME_FONT_FAMILY);
         expect(ZH_GAME_FONT_FAMILY).toBe('ZLabsPixel CN');

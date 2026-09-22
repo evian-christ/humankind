@@ -2,34 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore, type GameEventLogEntry, type GameEventLogKind } from '../game/state/gameStore';
 import { useSettingsStore, type Language } from '../game/state/settingsStore';
 import { SYMBOLS } from '../game/data/symbolDefinitions';
-import { RELICS } from '../game/data/relicDefinitions';
 import { GAME_EVENTS } from '../game/data/eventDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
 import { getSymbolSpriteUrl } from '../game/data/symbolSpritePaths';
 import { t } from '../i18n';
 import { useRegisterBoardTooltipBlock } from '../hooks/useRegisterBoardTooltipBlock';
-import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL, MILITARY_RESOURCE_ICON_URL } from '../uiAssetUrls';
-
-const ASSET_BASE_URL = import.meta.env.BASE_URL;
+import { FOOD_RESOURCE_ICON_URL, GOLD_RESOURCE_ICON_URL, KNOWLEDGE_RESOURCE_ICON_URL } from '../uiAssetUrls';
 
 const C_FOOD = '#4ade80';
 const C_GOLD = '#fbbf24';
 const C_KNOW = '#60a5fa';
-const C_MILITARY = '#fb923c';
 const C_BAD = '#fb7185';
 
-type HistoryFilter = 'all' | 'resources' | 'choices' | 'symbol' | 'relic' | 'combat' | 'threat' | 'growth' | 'shop' | 'board';
+type HistoryFilter = 'all' | 'resources' | 'choices' | 'symbol' | 'threat' | 'growth' | 'board';
 
 const FILTERS: Array<{ id: HistoryFilter; ko: string; en: string }> = [
     { id: 'all', ko: '전체', en: 'All' },
     { id: 'resources', ko: '자원 변화', en: 'Resources' },
     { id: 'choices', ko: '내 선택', en: 'Choices' },
     { id: 'symbol', ko: '심볼', en: 'Symbols' },
-    { id: 'relic', ko: '유물', en: 'Relics' },
-    { id: 'combat', ko: '전투', en: 'Combat' },
     { id: 'threat', ko: '위협', en: 'Threats' },
     { id: 'growth', ko: '연구', en: 'Research' },
-    { id: 'shop', ko: '상점', en: 'Shop' },
     { id: 'board', ko: '보드 변화', en: 'Board' },
 ];
 
@@ -39,11 +32,8 @@ const KIND_COLORS: Record<GameEventLogKind, string> = {
     symbol_effect: '#9ca3af',
     processing_end: '#8aa78f',
     turn_end: '#7894bd',
-    combat: '#ff4b4b',
-    relic: '#a855f7',
     selection: '#4b5563',
     research: '#3b82f6',
-    shop: '#ffd400',
     threat: '#9f4a3a',
     board_action: '#82b994',
     system: '#aeb6bf',
@@ -55,11 +45,8 @@ const KIND_LABELS: Record<GameEventLogKind, { ko: string; en: string }> = {
     symbol_effect: { ko: '심볼 효과', en: 'Symbol' },
     processing_end: { ko: '처리 완료', en: 'Finish' },
     turn_end: { ko: '턴 종료', en: 'End' },
-    combat: { ko: '전투', en: 'Combat' },
-    relic: { ko: '유물', en: 'Relic' },
     selection: { ko: '선택', en: 'Choice' },
     research: { ko: '연구', en: 'Research' },
-    shop: { ko: '상점', en: 'Shop' },
     threat: { ko: '위협', en: 'Threat' },
     board_action: { ko: '보드', en: 'Board' },
     system: { ko: '시스템', en: 'System' },
@@ -81,18 +68,14 @@ const RU_TEXT: Record<string, string> = {
     Resources: 'Ресурсы',
     Choices: 'Выбор',
     Symbols: 'Символы',
-    Relics: 'Реликвии',
-    Combat: 'Бой',
     Threats: 'Угрозы',
     Research: 'Исследования',
-    Shop: 'Лавка',
     Board: 'Поле',
     Turn: 'Ход',
     Start: 'Старт',
     Symbol: 'Символ',
     Finish: 'Финиш',
     End: 'Конец',
-    Relic: 'Реликвия',
     Choice: 'Выбор',
     Threat: 'Угроза',
     System: 'Система',
@@ -103,8 +86,6 @@ const RU_TEXT: Record<string, string> = {
     'Rerolled choices': 'Варианты переброшены',
     'Skipped symbol choice': 'Выбор символа пропущен',
     'Player action': 'Действие игрока',
-    'Shop action': 'Действие лавки',
-    'Relic event': 'Событие реликвии',
     'Symbols destroyed': 'Символы уничтожены',
     'Opened loot': 'Добыча открыта',
     'Loot reward': 'Награда добычи',
@@ -131,13 +112,6 @@ const symbolName = (symbolId: number | null | undefined, language: Language) => 
     if (symbolId == null) return '';
     const key = SYMBOLS[symbolId]?.key;
     return key ? t(`symbol.${key}.name`, language) : `Symbol ${symbolId}`;
-};
-
-const relicName = (relicId: number | null | undefined, language: Language) => {
-    if (relicId == null) return '';
-    const translated = t(`relic.${relicId}.name`, language);
-    if (translated !== `relic.${relicId}.name`) return translated;
-    return RELICS[relicId]?.name ?? `Relic ${relicId}`;
 };
 
 const eventName = (eventId: number | null | undefined, language: Language) => {
@@ -219,11 +193,8 @@ const matchesFilter = (entry: GameEventLogEntry, filter: HistoryFilter) => {
     if (filter === 'resources') return hasDelta(entry);
     if (filter === 'choices') return entry.kind === 'selection';
     if (filter === 'symbol') return entry.kind === 'symbol_effect';
-    if (filter === 'relic') return entry.kind === 'relic';
-    if (filter === 'combat') return entry.kind === 'combat';
     if (filter === 'threat') return entry.kind === 'threat';
     if (filter === 'growth') return entry.kind === 'research';
-    if (filter === 'shop') return entry.kind === 'shop';
     if (filter === 'board') return entry.kind === 'board_action' || entry.kind === 'turn_start' || entry.kind === 'turn_end';
     return true;
 };
@@ -231,17 +202,10 @@ const matchesFilter = (entry: GameEventLogEntry, filter: HistoryFilter) => {
 const getKindLabel = (kind: GameEventLogKind, language: Language) =>
     text(language, KIND_LABELS[kind].ko, KIND_LABELS[kind].en);
 
-const getEntryRelicId = (entry: GameEventLogEntry) => {
-    const meta = isRecord(entry.meta) ? entry.meta : {};
-    return asNumber(meta.relicId) ?? asNumber(meta.sourceRelicId);
-};
-
 const getEntryFallbackMark = (entry: GameEventLogEntry) => {
     const meta = isRecord(entry.meta) ? entry.meta : {};
     if (entry.kind === 'selection' && asString(meta.action) === 'select_event') return '!';
-    if (entry.kind === 'combat') return '!';
     if (entry.kind === 'threat') return '!';
-    if (entry.kind === 'relic' || entry.kind === 'shop') return '*';
     if (entry.kind === 'research') return '+';
     if (entry.kind === 'selection') return '?';
     if (entry.kind === 'board_action') return '#';
@@ -255,16 +219,6 @@ const EntryVisual = ({ entry, language }: { entry: GameEventLogEntry; language: 
         return (
             <span className="effect-history-entry-visual effect-history-entry-visual--fallback" aria-hidden="true">
                 !
-            </span>
-        );
-    }
-
-    const relicId = getEntryRelicId(entry);
-    const relic = relicId == null ? null : RELICS[relicId];
-    if (relic?.sprite && relic.sprite !== '-' && relic.sprite !== '-.png') {
-        return (
-            <span className="effect-history-entry-visual effect-history-entry-visual--relic" aria-label={relicName(relicId, language)}>
-                <img src={`${ASSET_BASE_URL}assets/relics/${relic.sprite}`} alt="" draggable={false} />
             </span>
         );
     }
@@ -394,14 +348,6 @@ const getEntryTitle = (entry: GameEventLogEntry, language: Language) => {
         return formatAction(action) || text(language, '플레이어 선택', 'Player action');
     }
 
-    if (entry.kind === 'shop') {
-        if (action === 'buy_relic') {
-            const name = relicName(asNumber(meta.relicId), language);
-            return text(language, `${name} 구매`, `Bought ${name}`);
-        }
-        return formatAction(action) || text(language, '상점 이용', 'Shop action');
-    }
-
     if (entry.kind === 'research') {
         const name = upgradeName(asNumber(meta.upgradeId), language);
         return text(language, `${name} 연구 완료`, `Researched ${name}`);
@@ -409,18 +355,6 @@ const getEntryTitle = (entry: GameEventLogEntry, language: Language) => {
 
     if (entry.kind === 'symbol_effect') {
         return text(language, `${subject} 효과 발동`, `${slotLabel(entry.slot, language)} ${subject} resolved`);
-    }
-
-    if (entry.kind === 'combat') {
-        const targetSlot = isRecord(meta.targetSlot) ? meta.targetSlot as { x: number; y: number } : undefined;
-        return text(language, `${subject} 공격`, `${slotLabel(entry.slot, language)} ${subject} attacked ${slotLabel(targetSlot, language)}`);
-    }
-
-    if (entry.kind === 'relic') {
-        const name = relicName(asNumber(meta.relicId), language);
-        return name
-            ? text(language, `${name} 유물 효과`, `${name}: ${formatAction(action) || 'activated'}`)
-            : formatAction(action) || text(language, '유물 효과', 'Relic event');
     }
 
     if (entry.kind === 'board_action') {
@@ -452,15 +386,6 @@ const getEntrySubtitle = (entry: GameEventLogEntry, language: Language) => {
         parts.push(text(language, `상호작용: ${names}`, `Interacts with ${names}`));
     }
 
-    if (entry.kind === 'combat') {
-        const targetSlot = isRecord(meta.targetSlot) ? meta.targetSlot as { x: number; y: number } : undefined;
-        const targetSymbolId = asNumber(meta.targetSymbolId);
-        const damage = asNumber(meta.damage);
-        const target = `${slotLabel(targetSlot, language)} ${symbolName(targetSymbolId, language)}`.trim();
-        if (target) parts.push(text(language, `대상: ${target}`, `Target: ${target}`));
-        if (damage) parts.push(text(language, `피해 ${damage}`, `${damage} damage`));
-    }
-
     const addSymbols = summarizeGenerated(meta.addSymbolIds, language);
     if (addSymbols) parts.push(text(language, `획득: ${addSymbols}`, `Adds ${addSymbols}`));
 
@@ -482,9 +407,6 @@ const getEntrySubtitle = (entry: GameEventLogEntry, language: Language) => {
         .filter(Boolean)
         .join(', ');
     if (destroyedSymbols) parts.push(text(language, `파괴: ${destroyedSymbols}`, `Destroyed: ${destroyedSymbols}`));
-
-    const sourceRelicId = asNumber(meta.sourceRelicId);
-    if (sourceRelicId) parts.push(text(language, `출처: ${relicName(sourceRelicId, language)}`, `From ${relicName(sourceRelicId, language)}`));
 
     const sourceSymbolId = asNumber(meta.sourceSymbolId);
     if (sourceSymbolId) parts.push(text(language, `출처: ${symbolName(sourceSymbolId, language)}`, `From ${symbolName(sourceSymbolId, language)}`));
@@ -520,13 +442,12 @@ const getEntryDetailLines = (entry: GameEventLogEntry, language: Language) => {
     return [...new Set(lines)];
 };
 
-const formatDeltaText = (delta?: { food: number; gold: number; knowledge: number; military?: number }) => {
+const formatDeltaText = (delta?: { food: number; gold: number; knowledge: number }) => {
     if (!delta) return '';
     const parts: string[] = [];
     if (delta.food) parts.push(`food ${delta.food > 0 ? '+' : ''}${delta.food}`);
     if (delta.gold) parts.push(`gold ${delta.gold > 0 ? '+' : ''}${delta.gold}`);
     if (delta.knowledge) parts.push(`knowledge ${delta.knowledge > 0 ? '+' : ''}${delta.knowledge}`);
-    if (delta.military) parts.push(`military power ${delta.military > 0 ? '+' : ''}${delta.military}`);
     return parts.join(' ');
 };
 
@@ -547,20 +468,19 @@ const getSearchText = (entry: GameEventLogEntry, language: Language) => {
 };
 
 const addDelta = (
-    total: { food: number; gold: number; knowledge: number; military?: number },
-    delta?: { food: number; gold: number; knowledge: number; military?: number },
+    total: { food: number; gold: number; knowledge: number },
+    delta?: { food: number; gold: number; knowledge: number },
 ) => {
     if (!delta) return total;
     return {
         food: total.food + delta.food,
         gold: total.gold + delta.gold,
         knowledge: total.knowledge + delta.knowledge,
-        military: (total.military ?? 0) + (delta.military ?? 0),
     };
 };
 
-const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold: number; knowledge: number; military?: number }; compact?: boolean }) => {
-    if (!delta || (delta.food === 0 && delta.gold === 0 && delta.knowledge === 0 && (delta.military ?? 0) === 0)) return null;
+const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold: number; knowledge: number }; compact?: boolean }) => {
+    if (!delta || (delta.food === 0 && delta.gold === 0 && delta.knowledge === 0)) return null;
 
     const badge = (value: number, icon: string, color: string, label: string) => {
         if (value === 0) return null;
@@ -578,7 +498,6 @@ const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold:
             {badge(delta.food, FOOD_RESOURCE_ICON_URL, C_FOOD, 'Food')}
             {badge(delta.gold, GOLD_RESOURCE_ICON_URL, C_GOLD, 'Gold')}
             {badge(delta.knowledge, KNOWLEDGE_RESOURCE_ICON_URL, C_KNOW, 'Knowledge')}
-            {badge(delta.military ?? 0, MILITARY_RESOURCE_ICON_URL, C_MILITARY, 'Military Power')}
         </div>
     );
 };
@@ -586,7 +505,7 @@ const DeltaBadges = ({ delta, compact = false }: { delta?: { food: number; gold:
 type TurnGroup = {
     turn: number;
     entries: GameEventLogEntry[];
-    totals: { food: number; gold: number; knowledge: number; military?: number };
+    totals: { food: number; gold: number; knowledge: number };
 };
 
 const buildTurnGroups = (entries: GameEventLogEntry[], newestFirst: boolean): TurnGroup[] => {
@@ -596,7 +515,7 @@ const buildTurnGroups = (entries: GameEventLogEntry[], newestFirst: boolean): Tu
         const group = map.get(entry.turn) ?? {
             turn: entry.turn,
             entries: [],
-            totals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+            totals: { food: 0, gold: 0, knowledge: 0 },
         };
         group.entries.push(entry);
         group.totals = addDelta(group.totals, entry.delta);
@@ -715,9 +634,9 @@ const EffectLogOverlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder={text(
                             language,
-                            '심볼, 유물, 자원, 턴 번호로 찾기...',
-                            'Search symbol, relic, resource, or turn...',
-                            'Поиск по символу, реликвии, ресурсу или номеру хода...',
+                            '심볼, 자원, 턴 번호로 찾기...',
+                            'Search symbol, resource, or turn...',
+                            'Поиск по символу, ресурсу или номеру хода...',
                         )}
                     />
                     <div className="effect-history-filter-row">

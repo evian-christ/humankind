@@ -2,7 +2,6 @@ import * as PIXI from 'pixi.js';
 import type { Language } from '../../../game/state/settingsStore';
 import { S, SymbolType } from '../../../game/data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../../game/types';
-import { RELIC_ID } from '../../../game/logic/relics/relicIds';
 
 export const ASSET_BASE_URL = import.meta.env.BASE_URL;
 
@@ -47,17 +46,6 @@ export function getSealSpriteSize(viewScale: number): number {
     return steps * SYMBOL_SPRITE_NATIVE_PX;
 }
 
-export const CLICKABLE_RELIC_IDS = new Set<number>([
-    RELIC_ID.ANCIENT_RELIC_DEBRIS,
-    RELIC_ID.OBLIVION_FURNACE,
-    RELIC_ID.ANCIENT_TRIBE_JOIN,
-    RELIC_ID.MILITARY_LEVY,
-    RELIC_ID.PROPHECY_DIE,
-    RELIC_ID.JOMON_POTTERY,
-    RELIC_ID.TROY_GOLD_LOOT,
-    RELIC_ID.EGYPTIAN_GRANARY_MODEL,
-]);
-
 export function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance | null)[][], x: number, y: number): boolean {
     for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
@@ -75,7 +63,6 @@ export function boardHasDestroyableAdjacentSymbol(board: (PlayerSymbolInstance |
             if (
                 candidate &&
                 !candidate.is_marked_for_destruction &&
-                candidate.definition.type !== SymbolType.ENEMY &&
                 candidate.definition.type !== SymbolType.DISASTER
             ) return true;
         }

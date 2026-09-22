@@ -1,19 +1,11 @@
 import * as PIXI from 'pixi.js';
 import type { SymbolDefinition } from '../../game/data/symbolDefinitions';
 import type { StatusDefinition } from '../../game/data/statusDefinitions';
-import type { RelicInstance } from '../../game/state/relicStore';
 
 export interface HoveredSymbol {
     definition: SymbolDefinition;
     screenX: number;
     screenY: number;
-}
-
-export interface HoveredRelic {
-    relicInfo: RelicInstance;
-    screenX: number;
-    screenY: number;
-    placement?: 'left' | 'side' | 'above';
 }
 
 export interface HoveredStatus {
@@ -28,7 +20,7 @@ export interface HoveredUpgrade {
     screenY: number;
 }
 
-export type HoveredHudStatKind = 'knowledge' | 'food' | 'gold' | 'military';
+export type HoveredHudStatKind = 'knowledge' | 'food' | 'gold';
 
 /** clientX/clientY: 브라우저 뷰포트 기준(고정 위치 툴팁용) */
 export interface HoveredHudStat {
@@ -44,19 +36,6 @@ export interface FloatingEffect {
     persistUntilProcessingEnd?: boolean;
     exitElapsed?: number;
     exitStartOffsetY?: number;
-}
-
-export interface CombatBounce {
-    sprite: PIXI.Container;
-    attackerX: number;
-    attackerY: number;
-    fromX: number; fromY: number;
-    toX: number; toY: number;
-    elapsed: number;
-    duration: number;
-    hitSpawned: boolean;
-    atkDmg: number;
-    targetHpX: number; targetHpY: number;
 }
 
 export interface CellLayout {

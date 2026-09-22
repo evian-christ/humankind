@@ -622,12 +622,9 @@ body {
 }
 
 /* ===== Bottom board sections: place panels flush with the centered game screen. ===== */
-/* Frame sizing: include recommended canvas ratio and 10px lower 3D pillar.
-   - Relics / owned symbols: 164x110 | shop: 560x110 (@0.5 scale: 82x55 / 280x55) */
 .bottom-action-bar {
   --bottom-action-button-size: 97px;
   --bottom-action-knowledge-width: 286px;
-  --bottom-action-culture-width: 250px;
   --bottom-action-spin-width: 360px;
   --bottom-action-gap: 18px;
   position: fixed;
@@ -656,9 +653,6 @@ body {
   flex-direction: column;
   align-items: stretch;
 }
-
-
-/* Relics: attach to the left edge of the shop. */
 .bottom-action-bar-left {
   position: fixed;
   top: 0;
@@ -830,60 +824,6 @@ button.spin-btn:disabled:active {
   transition: background 0.45s steps(2, end);
 }
 
-.selection-overlay--relic {
-  background:
-    linear-gradient(rgba(128, 128, 128, 0), rgba(128, 128, 128, 0)),
-    linear-gradient(rgba(14, 14, 14, 0.96), rgba(14, 14, 14, 0.96)),
-    #0e0e0e;
-  overflow: hidden;
-}
-
-.selection-overlay--relic::before,
-.selection-overlay--relic::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.selection-overlay--relic::before {
-  background:
-    linear-gradient(rgba(255, 218, 142, 0.04), rgba(255, 218, 142, 0.04)),
-    linear-gradient(rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.018));
-  opacity: 0.82;
-}
-
-.selection-overlay--relic::after {
-  background: linear-gradient(rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.36));
-}
-
-@keyframes relic-shop-page-slide-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes relic-shop-page-slide-out-right {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
-
-.selection-overlay--relic {
-  animation: relic-shop-page-slide-in 160ms ease both;
-}
-
-.selection-overlay--relic-closing {
-  pointer-events: none;
-  animation: relic-shop-page-slide-out-right 160ms ease both;
-}
-
 /* Knowledge upgrade card fallback. */
 .selection-overlay--upgrade .selection-cards.upgrade-cards {
   margin-top: 24px;
@@ -991,102 +931,6 @@ button.spin-btn:disabled:active {
   align-items: center;
 }
 
-/* Relic shop: unify top header, inner container, back button, and title styling. */
-.relic-shop-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 501;
-  padding-top: max(32px, calc(22px + env(safe-area-inset-top, 0px)));
-  padding-left: max(36px, calc(26px + env(safe-area-inset-left, 0px)));
-  padding-right: max(36px, calc(26px + env(safe-area-inset-right, 0px)));
-  padding-bottom: 28px;
-  pointer-events: none;
-  background: none;
-}
-
-.relic-shop-header-main {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: stretch;
-  column-gap: 12px;
-  min-height: 60px;
-}
-
-.relic-shop-header-start {
-  display: flex;
-  align-items: stretch;
-  justify-content: flex-start;
-  min-width: 0;
-  pointer-events: auto;
-}
-
-.relic-shop-header-end {
-  grid-column: 3;
-  display: flex;
-  align-items: stretch;
-  justify-content: flex-end;
-  min-width: 0;
-  pointer-events: auto;
-}
-
-.relic-selection-gold--header {
-  margin-bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  box-sizing: border-box;
-  min-height: 60px;
-  max-height: 60px;
-  padding: 0 26px;
-  font-family: var(--game-font-family), sans-serif;
-  color: rgba(255, 225, 152, 0.96);
-  background: rgba(14, 14, 14, 0.72);
-  border: 2px solid rgba(128, 128, 128, 0.54);
-  box-shadow: none;
-}
-
-.relic-shop-header-main .relic-shop-back-btn,
-.relic-shop-header-main .selection-title--relic-shop {
-  box-sizing: border-box;
-  height: 100%;
-  min-height: 60px;
-  max-height: 60px;
-  padding: 0 26px;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  font-family: var(--game-font-family), sans-serif;
-  font-size: 23px;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: 0.04em;
-}
-
-.relic-shop-header-main .relic-shop-back-btn {
-  justify-content: flex-start;
-  gap: 10px;
-  width: fit-content;
-  max-width: 100%;
-}
-
-.relic-shop-header-main .selection-title--relic-shop {
-  justify-content: center;
-  text-align: center;
-  color: rgba(255, 225, 152, 0.94);
-  min-width: 0;
-  transform: scaleX(1.2);
-  transform-origin: center;
-  text-shadow: none;
-}
-
-.selection-overlay--relic .relic-shop-header-start,
-.selection-overlay--relic .selection-title--relic-shop {
-  display: none;
-}
-
 .knowledge-upgrades-overlay > div:first-of-type > h1 {
   display: none !important;
 }
@@ -1109,92 +953,8 @@ button.spin-btn:disabled:active {
 }
 
 /* Fixed header: keep content from hiding under padding and back-button height. */
-.selection-panel-wrapper--relic-shop {
-  padding-top: calc(max(32px, calc(22px + env(safe-area-inset-top, 0px))) + 88px);
-  position: relative;
-  z-index: 1;
-}
 
-.relic-shop-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 26px;
-  margin: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  color: rgba(255, 225, 152, 0.82);
-  font-family: var(--game-font-family), sans-serif;
-  font-size: 23px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  transition: color 0.15s steps(2, end), background 0.15s steps(2, end);
-  -webkit-tap-highlight-color: transparent;
-}
-
-.relic-shop-back-icon {
-  display: inline-block;
-  font-size: 28px;
-  line-height: 1;
-  opacity: 0.85;
-  transform: translateY(-0.5px);
-}
-
-.relic-shop-back-label {
-  line-height: 1.2;
-}
-
-.relic-shop-back-btn:hover {
-  color: rgba(255, 242, 202, 0.96);
-  background: rgba(255, 213, 128, 0.12);
-}
-
-.relic-shop-back-btn:active {
-  color: rgba(255, 232, 177, 0.88);
-  background: rgba(255, 213, 128, 0.08);
-}
-
-.relic-shop-restock-indicator {
-  position: fixed;
-  top: max(26px, calc(18px + env(safe-area-inset-top, 0px)));
-  left: max(30px, calc(22px + env(safe-area-inset-left, 0px)));
-  z-index: 503;
-  display: inline-grid;
-  grid-template-columns: auto auto auto;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-  box-sizing: border-box;
-  padding: 0 18px;
-  pointer-events: none;
-  font-family: var(--game-font-family), sans-serif;
-  color: rgba(255, 235, 186, 0.95);
-  background:
-    linear-gradient(rgba(14, 14, 14, 0.94), rgba(14, 14, 14, 0.94));
-  border: 2px solid rgba(128, 128, 128, 0.68);
-  box-shadow: none;
-  text-shadow: none;
-}
-
-.relic-shop-restock-label,
-.relic-shop-restock-unit {
-  font-size: 18px;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  opacity: 0.86;
-}
-
-.relic-shop-restock-count {
-  min-width: 24px;
-  color: #fbbf24;
-  font-size: 30px;
-  font-weight: 900;
-  line-height: 1;
-  text-align: center;
-}
-
-.selection-relic-source-banner {
+.selection-source-banner {
   box-sizing: border-box;
   min-height: 42px;
   padding: 9px 24px;
@@ -1725,554 +1485,19 @@ button.spin-btn:disabled:active {
   font-size: 0.72em;
 }
 
-/* ===== RELIC MUSEUM SHOP ===== */
-.relic-museum-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 990px;
-  height: 720px;
-  overflow: visible;
-  filter: drop-shadow(0 26px 0 rgba(0, 0, 0, 0.48));
-}
-
-.relic-museum-bg {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 40px;
-  overflow: visible;
-  /* Manually tuned so the left and right columns center exactly over the glass cases */
-}
-
-/* Push side relics outward to narrow the center gap. */
-.relic-museum-slot:first-child {
-  transform: translateX(-135px);
-}
-
-.relic-museum-slot:last-child {
-  transform: translateX(135px);
-}
-
-.relic-museum-info-slot:first-child {
-  transform: translateX(-148px);
-}
-
-.relic-museum-info-slot:last-child {
-  transform: translateX(154px);
-}
-
 /* Buy button root: fixed to bottom over frame/background/text blocks. */
-.relic-museum-buy-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: max(32px, calc(22px + env(safe-area-inset-bottom, 0px)));
-  z-index: 502;
-  display: flex;
-  justify-content: center;
-  pointer-events: auto;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  isolation: isolate;
-  will-change: transform;
-  background: none;
-}
-
-.relic-museum-buy-bar-inner {
-  width: 990px;
-  max-width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 15px;
-  pointer-events: auto;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-.relic-museum-buy-slot {
-  width: 310px;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
-  padding: 0 6px;
-  pointer-events: auto;
-  backface-visibility: hidden;
-}
-
-.relic-museum-buy-slot:first-child {
-  transform: translateX(-148px);
-}
-
-.relic-museum-buy-slot:last-child {
-  transform: translateX(154px);
-}
-
-.relic-museum-buy-slot .relic-card-buy-btn {
-  pointer-events: auto;
-}
-
-.relic-museum-bg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: #0e0e0e;
-  border: 2px solid #606060;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.relic-museum-slot {
-  width: 275px;
-  height: 100%;
-  position: relative;
-  z-index: 1;
-}
-
-.relic-sprite-in-case {
-  position: absolute;
-  top: 63px;
-  /* Moved slightly down to rest better on the miniature pedestal */
-  left: 50%;
-  width: 120px;
-  height: 120px;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-}
 
 /* Side slots: shift only frame and border slightly toward center to reduce gaps. */
-.relic-museum-slot:first-child .relic-sprite-in-case {
-  transform: translateX(calc(-50% + 20px));
-}
-
-.relic-museum-slot:last-child .relic-sprite-in-case {
-  transform: translateX(calc(-50% - 20px));
-}
 
 /* Museum stage spotlight: narrow source at top, widening cone downward. */
-.relic-spotlight {
-  position: absolute;
-  top: -500px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 400px;
-  height: 800px;
-  /* Cone: narrow at top (light source), wide at bottom (relic) */
-  clip-path: polygon(46% 0%, 54% 0%, 80% 100%, 20% 100%);
-  pointer-events: none;
-  z-index: 0;
-  overflow: visible;
-}
 
 /* Side lights: anchor at 50% of slot, then move toward screen center. */
-.relic-museum-slot:first-child .relic-spotlight {
-  transform: translateX(calc(-50% + 28px));
-}
-
-.relic-museum-slot:last-child .relic-spotlight {
-  transform: translateX(calc(-50% - 28px));
-}
 
 /* Main volumetric beam */
-.relic-spotlight::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(rgba(255, 194, 93, 0.07), rgba(255, 194, 93, 0.07));
-  filter: none;
-  mix-blend-mode: screen;
-}
 
 /* Soft outer haze for volumetric depth */
-.relic-spotlight::after {
-  content: '';
-  position: absolute;
-  inset: -20px;
-  background: linear-gradient(rgba(255, 199, 101, 0.045), rgba(255, 199, 101, 0.045));
-  filter: none;
-  mix-blend-mode: screen;
-}
-
-@keyframes floatRelicSprite {
-  0% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-14px);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
-}
-
-@keyframes floatRelicShadow {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 0) scale(0.65);
-  }
-
-  50% {
-    opacity: 0.5;
-    transform: translate(-50%, 20px) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-50%, 0) scale(0.65);
-  }
-}
-
-.relic-sprite-shadow {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  width: 120px;
-  height: 120px;
-  border-radius: 0;
-  background: linear-gradient(rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.16));
-  pointer-events: none;
-  z-index: 0;
-  animation: floatRelicShadow 4s infinite ease-in-out;
-  will-change: transform, opacity;
-}
-
-.relic-sprite-in-case img {
-  position: relative;
-  z-index: 1;
-  width: 120px;
-  height: 120px;
-  object-fit: contain;
-  image-rendering: pixelated;
-  animation: floatRelicSprite 4s infinite ease-in-out;
-  will-change: transform;
-}
-
-.relic-sprite-in-case .placeholder {
-  position: relative;
-  z-index: 1;
-  width: 120px;
-  height: 120px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 120px;
-  line-height: 1;
-  animation: floatRelicSprite 4s infinite ease-in-out;
-  transform-origin: center;
-  will-change: transform;
-}
-
-.relic-museum-info-row {
-  position: absolute;
-  z-index: 2;
-  bottom: 50px;
-  /* Moved text higher up onto the pedestals */
-  left: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  width: 100%;
-  height: 310px;
-  overflow: visible;
-  /* Overlaps perfectly on top of the tall grey pedestal section */
-  padding: 15px 15px 0 15px;
-  /* Slightly wider spread for text */
-}
-
-.relic-museum-info-slot {
-  width: 310px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 6px;
-  position: relative;
-  overflow: visible;
-}
-
-.relic-museum-details {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-}
-
-.relic-card-era {
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: 2px;
-  display: inline-block;
-  transform: scaleX(1.4);
-  transform-origin: center;
-  -webkit-text-stroke: 0.5px rgba(192, 192, 192, 0.8);
-  margin-top: -26px;
-}
-
-.relic-card-name {
-  font-size: 30px;
-  letter-spacing: 1px;
-  margin-top: 4px;
-}
-
-.relic-card-desc {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: center;
-  margin-top: 14px;
-  flex-grow: 1;
-  width: 100%;
-}
-
-.relic-card-desc-line {
-  font-size: 22px;
-  line-height: 1.3;
-}
-
-/* Match buy bar width to the relic museum slot width. */
-.relic-card-buy-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  height: 82px;
-  min-height: 82px;
-  max-height: 82px;
-  padding: 0 16px;
-  background: #0e0e0e;
-  border: 2px solid #0e0e0e;
-  color: #ffffff;
-  font-family: var(--game-font-family), sans-serif;
-  font-size: inherit;
-  letter-spacing: 0.04em;
-  cursor: var(--app-cursor-pointer);
-  border-radius: 0;
-  transition:
-    transform 140ms steps(2, end),
-    border-color 140ms steps(2, end),
-    background-color 140ms steps(2, end),
-    box-shadow 140ms steps(2, end),
-    color 140ms steps(2, end);
-  overflow: hidden;
-  opacity: 1;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  box-shadow: none;
-  will-change: transform, background-color, border-color, color;
-}
-
-.relic-card-buy-btn:hover {
-  color: #ffffff;
-  background: #0e0e0e;
-  transform: translateY(-2px);
-  box-shadow: none;
-}
-
-.relic-card-buy-btn:active {
-  transform: translateY(0);
-  background: #0e0e0e;
-  box-shadow: none;
-}
-
-.selection-overlay--relic .relic-card-buy-btn {
-  color: rgba(224, 224, 224, 0.92);
-  background: #444444;
-  border: 2px solid #2e2e2e;
-  box-shadow: none;
-}
-
-.selection-overlay--relic .relic-card-buy-btn:hover {
-  color: rgba(246, 252, 251, 0.96);
-  background: #444444;
-  box-shadow: none;
-}
-
-.selection-overlay--relic .relic-card-buy-btn:active {
-  color: rgba(224, 224, 224, 0.88);
-  background: #2e2e2e;
-  box-shadow: none;
-}
-
-.selection-overlay--relic .relic-card-buy-price-was {
-  color: rgba(255, 248, 223, 0.54);
-}
-
-.relic-card-buy-price {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  color: inherit;
-  font-weight: 900;
-  font-size: 38px;
-  letter-spacing: 0.02em;
-  transform: scaleX(1);
-  transform-origin: center;
-  white-space: nowrap;
-  line-height: 1;
-  opacity: 1;
-  backface-visibility: hidden;
-}
-
-.relic-card-buy-price-icon {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transform: translateY(1px);
-  transform-origin: center;
-}
-
-.relic-card-buy-price-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.28));
-}
-
-.relic-card-buy-price-num {
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-.relic-card-buy-price--discount {
-  gap: 10px;
-  justify-content: center;
-}
-
-.relic-card-buy-price-was,
-.relic-card-buy-price-now {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  line-height: 1;
-}
-
-.relic-card-buy-price-was {
-  font-size: 26px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.48);
-}
-
-.relic-card-buy-price-num--struck {
-  text-decoration: line-through;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-}
-
-.relic-card-buy-price-icon--was {
-  width: 24px;
-  height: 24px;
-  opacity: 0.45;
-}
-
-.relic-card-buy-price-now {
-  font-size: 38px;
-  font-weight: 900;
-}
-
-.relic-card-buy-gold {
-  font-size: 28px;
-  line-height: 1;
-}
-
-.relic-card-buy-cost {
-  letter-spacing: 1px;
-}
-
-.relic-sold-out {
-  width: 90%;
-  padding: 60px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 0;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 24px;
-  font-family: var(--game-font-family), sans-serif;
-  box-sizing: border-box;
-}
-
-/* Show owned gold during relic selection. */
-.relic-selection-gold {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 24px;
-  font-family: var(--game-font-family), sans-serif;
-}
-
-.relic-selection-gold-icon {
-  font-size: 24px;
-  color: #fbbf24;
-  line-height: 1;
-  transform: translateY(1px);
-}
-
-.relic-selection-gold-val {
-  font-size: 28px;
-  color: #fbbf24;
-  font-weight: 900;
-  text-shadow: none;
-}
 
 /* Neon violet background box effect. */
-.relic-bg-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 200vw;
-  height: 50vh;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(rgba(167, 139, 250, 0.7), rgba(167, 139, 250, 0.7));
-  pointer-events: none;
-  z-index: 0;
-  animation: relicPulseEffect 4s infinite ease-in-out;
-  filter: none;
-}
-
-@keyframes relicPulseEffect {
-  0% {
-    transform: translate(-50%, -50%) scaleY(0.8);
-    opacity: 0.6;
-  }
-
-  50% {
-    transform: translate(-50%, -50%) scaleY(1.4);
-    opacity: 1;
-    filter: brightness(1.4);
-  }
-
-  100% {
-    transform: translate(-50%, -50%) scaleY(0.8);
-    opacity: 0.6;
-  }
-}
 
 /* ===== UPGRADE SELECTION CARDS ===== */
 
@@ -2569,7 +1794,7 @@ button.spin-btn:disabled:active {
 }
 
 
-/* ===== PRE-GAME (Stage / Leader / Draft) ===== */
+/* ===== PRE-GAME (Intro / Difficulty / Draft) ===== */
 .pregame-overlay {
   /* Fill the #root virtual-resolution space. */
   position: absolute;
@@ -3709,31 +2934,6 @@ button.spin-btn:disabled:active {
   padding-top: 108px;
 }
 
-.tutorial-dialog-overlay--relic-shop-button {
-  padding: 0;
-}
-
-.tutorial-dialog-overlay--relic-shop-button .tutorial-dialog-text {
-  position: absolute;
-  left: calc(50% - 453px);
-  bottom: 137px;
-  transform: translateX(-50%);
-}
-
-.tutorial-dialog-overlay--relics {
-  z-index: 650;
-  background: transparent;
-  align-items: flex-start;
-  padding-top: 128px;
-}
-
-.tutorial-dialog-overlay--relic-buy {
-  z-index: 650;
-  background: transparent;
-  align-items: flex-end;
-  padding-bottom: 156px;
-}
-
 .tutorial-dialog-overlay--finish {
   z-index: 650;
   background: rgba(0, 0, 0, 0.86);
@@ -3760,10 +2960,7 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-knowledge-button .tutorial-dialog-overlay,
 .tutorial-highlight-ancient-research .tutorial-dialog-overlay,
 .tutorial-highlight-knowledge-back .tutorial-dialog-overlay,
-.tutorial-highlight-agi-project .tutorial-dialog-overlay,
-.tutorial-highlight-relic-shop-button .tutorial-dialog-overlay,
-.tutorial-highlight-relics .tutorial-dialog-overlay,
-.tutorial-highlight-relic-buy .tutorial-dialog-overlay {
+.tutorial-highlight-agi-project .tutorial-dialog-overlay {
   background: transparent;
 }
 
@@ -4055,12 +3252,12 @@ button.spin-btn:disabled:active {
   z-index: 640;
 }
 
-.tutorial-highlight-owned-symbols-button .relic-shop-btn:not(.relic-shop-btn--owned-symbols),
+.tutorial-highlight-owned-symbols-button .game-action-btn:not(.game-action-btn--owned-symbols),
 .tutorial-highlight-owned-symbols-button .spin-area {
   opacity: 0.32;
 }
 
-.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols {
+.tutorial-highlight-owned-symbols-button .game-action-btn--owned-symbols {
   position: relative;
   z-index: 1;
   outline: 3px solid rgba(255, 246, 201, 0.96);
@@ -4123,7 +3320,7 @@ button.spin-btn:disabled:active {
   opacity: 1;
 }
 
-.tutorial-highlight-knowledge-button .relic-shop-btn,
+.tutorial-highlight-knowledge-button .game-action-btn,
 .tutorial-highlight-knowledge-button .spin-area {
   opacity: 0.32;
 }
@@ -4143,68 +3340,6 @@ button.spin-btn:disabled:active {
   overflow: visible !important;
   z-index: 10;
   outline: 3px solid rgba(255, 246, 201, 0.96);
-  outline-offset: 8px;
-  box-shadow: none;
-}
-
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone {
-  z-index: 640;
-}
-
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone::before,
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone .edge-hotzone-label {
-  opacity: 1;
-}
-
-.tutorial-highlight-relic-shop-button .relic-shop-btn,
-.tutorial-highlight-relic-shop-button .spin-area {
-  opacity: 0.32;
-}
-
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone {
-  outline: 3px solid rgba(255, 246, 201, 0.96);
-  outline-offset: -8px;
-  box-shadow: none;
-}
-
-.tutorial-highlight-relics .selection-overlay--relic,
-.tutorial-highlight-relic-buy .selection-overlay--relic {
-  background: #000000;
-}
-
-.tutorial-highlight-relics .relic-shop-header,
-.tutorial-highlight-relics .relic-museum-buy-bar {
-  opacity: 0.34;
-}
-
-.tutorial-highlight-relics .relic-museum-wrapper {
-  opacity: 1;
-}
-
-.tutorial-relic-display-highlight {
-  position: fixed;
-  z-index: 641;
-  pointer-events: none;
-  box-sizing: border-box;
-  outline: 3px solid rgba(255, 246, 201, 0.96);
-  outline-offset: 0;
-  box-shadow: none;
-}
-
-.tutorial-highlight-relic-buy .relic-shop-header,
-.tutorial-highlight-relic-buy .selection-panel-wrapper--relic-shop {
-  opacity: 1;
-  filter: brightness(0.34) saturate(0.8);
-}
-
-.tutorial-highlight-relic-buy .relic-museum-buy-bar {
-  z-index: 640;
-}
-
-.tutorial-highlight-relic-buy .relic-card-buy-btn {
-  position: relative;
-  z-index: 1;
-  outline: 3px solid rgba(255, 246, 201, 0.95);
   outline-offset: 8px;
   box-shadow: none;
 }
@@ -4280,14 +3415,11 @@ button.spin-btn:disabled:active {
 .tutorial-highlight-spin-button .spin-btn,
 .tutorial-highlight-selection-cards .selection-cards,
 .tutorial-highlight-monument-card .selection-card-frame:first-child,
-.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+.tutorial-highlight-owned-symbols-button .game-action-btn--owned-symbols,
 .tutorial-highlight-owned-monument .owned-symbol-item--monument,
 .tutorial-highlight-owned-close .owned-symbols-close-btn,
 .tutorial-highlight-knowledge-status .level-info-mini,
 .tutorial-highlight-knowledge-button .knowledge-edge-hotzone,
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone,
-.tutorial-relic-display-highlight,
-.tutorial-highlight-relic-buy .relic-card-buy-btn,
 .tutorial-board-highlight-cell {
   transform-origin: center;
   animation: tutorial-highlight-focus-in 460ms cubic-bezier(0.2, 0.82, 0.25, 1) both;
@@ -4310,14 +3442,11 @@ button.spin-btn:disabled:active {
   .tutorial-highlight-spin-button .spin-btn,
   .tutorial-highlight-selection-cards .selection-cards,
   .tutorial-highlight-monument-card .selection-card-frame:first-child,
-  .tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+  .tutorial-highlight-owned-symbols-button .game-action-btn--owned-symbols,
   .tutorial-highlight-owned-monument .owned-symbol-item--monument,
   .tutorial-highlight-owned-close .owned-symbols-close-btn,
   .tutorial-highlight-knowledge-status .level-info-mini,
   .tutorial-highlight-knowledge-button .knowledge-edge-hotzone,
-  .tutorial-highlight-relic-shop-button .relic-edge-hotzone,
-  .tutorial-relic-display-highlight,
-  .tutorial-highlight-relic-buy .relic-card-buy-btn,
   .tutorial-board-highlight-cell,
   .tutorial-highlight-ancient-chip .knowledge-upgrade-chip--ancient-era,
   .tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area,
@@ -4337,70 +3466,22 @@ button.spin-btn:disabled:active {
 }
 
 
-/* Demo start panel button styles. */
-.leader-portrait-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  box-sizing: border-box;
-  background: rgba(28, 28, 28, 0.95);
-  pointer-events: none;
-  user-select: none;
-  font-family: var(--game-font-family), sans-serif;
-  text-align: center;
-  padding: 4px;
-}
-
-.leader-portrait-placeholder--q {
-  font-size: clamp(36px, 28%, 72px);
-  font-weight: 700;
-  line-height: 1;
-  color: rgba(192, 192, 192, 0.45);
-  text-shadow: none;
-}
-
-.leader-portrait-placeholder--soon {
-  flex-direction: column;
-  gap: 2px;
-  font-size: clamp(18px, 18%, 30px);
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: 0.04em;
-  color: rgba(160, 160, 160, 0.55);
-  text-shadow: none;
-}
-
-.leader-portrait-placeholder__soon-line {
-  display: block;
-  white-space: nowrap;
-}
-
-/* Leader select: main-menu-like black stage and outline UI. */
-.leader-select-root {
+/* Difficulty selection */
+.difficulty-select-root {
   position: absolute;
   inset: 0;
   z-index: 550;
   box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
   justify-content: center;
-  min-height: 100%;
-  max-height: 100%;
-  overflow: hidden;
   padding: 50px 56px 48px;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
   font-family: var(--game-font-family), sans-serif;
-  background-color: #000000;
-  background-image: none;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: #ffffff;
 }
 
-.leader-select-back {
+.menu-back-button {
   position: absolute;
   top: 30px;
   left: 34px;
@@ -4418,1494 +3499,157 @@ button.spin-btn:disabled:active {
   font-size: 42px;
   line-height: 1;
   cursor: pointer;
-  text-shadow: none;
-  transition:
-    color 140ms steps(2, end),
-    filter 140ms steps(2, end);
 }
 
-.leader-select-back:hover,
-.leader-select-back:focus-visible {
-  color: #ffffff;
+.menu-back-button:hover,
+.menu-back-button:focus-visible {
+  color: #fff;
   filter: brightness(1.16);
   outline: none;
 }
 
-.leader-select-shell {
-  width: min(100%, 1680px);
-  height: 100%;
+.difficulty-select-shell {
+  width: min(100%, 980px);
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-sizing: border-box;
 }
 
-.leader-select-title {
+.difficulty-select-title {
   width: 100%;
   margin: 0;
 }
 
-.leader-select-title-main {
+.difficulty-select-title-main {
   font-size: 48px;
   line-height: 1;
-  overflow-wrap: anywhere;
 }
 
-.leader-select-content {
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: clamp(24px, 3vw, 44px);
-  align-items: stretch;
-  margin-top: 56px;
-}
-
-.leader-select-roster {
-  min-width: 0;
-  min-height: 0;
+.difficulty-select-panel {
+  width: min(100%, 760px);
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  align-content: flex-start;
-  padding: 0 clamp(10px, 3vw, 48px) 8px;
-  isolation: isolate;
+  flex-direction: column;
+  gap: 28px;
+  margin: auto 0;
 }
 
-.leader-card.main-menu-button {
+.difficulty-selector {
+  width: 100%;
+}
+
+.difficulty-buttons {
+  --difficulty-index: 0;
+  --difficulty-color: #4ade80;
+  --difficulty-color-soft: rgba(74, 222, 128, 0.2);
+  --difficulty-color-border: rgba(74, 222, 128, 0.82);
   position: relative;
-  width: clamp(230px, 24vw, 390px);
-  height: min(100%, 690px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: 64px;
+  padding: 4px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.difficulty-buttons--hard {
+  --difficulty-color: #facc15;
+  --difficulty-color-soft: rgba(250, 204, 21, 0.2);
+  --difficulty-color-border: rgba(250, 204, 21, 0.86);
+}
+
+.difficulty-buttons--pro {
+  --difficulty-color: #ef4444;
+  --difficulty-color-soft: rgba(239, 68, 68, 0.22);
+  --difficulty-color-border: rgba(239, 68, 68, 0.86);
+}
+
+.difficulty-thumb {
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  z-index: 0;
+  width: calc((100% - 8px) / 3);
+  background: var(--difficulty-color-soft);
+  border: 2px solid var(--difficulty-color-border);
+  transform: translateX(calc(var(--difficulty-index) * 100%));
+  transition: transform 180ms steps(2, end);
+  pointer-events: none;
+}
+
+.difficulty-button {
+  position: relative;
+  z-index: 1;
   min-width: 0;
-  min-height: 0;
-  aspect-ratio: 4 / 5;
-  justify-content: center;
-  align-items: center;
-  padding: 0;
-  font-size: 0;
-  overflow: visible;
+  min-height: 54px;
+  padding: 0 10px;
   border: 0;
   background: transparent;
-  box-shadow: none;
-  transform-origin: 50% 100%;
-}
-
-/* Leader portraits are selectable cards, but should not inherit the menu's square inner frame. */
-.leader-card.main-menu-button::after {
-  display: none;
-}
-
-.leader-card.main-menu-button + .leader-card.main-menu-button {
-  margin-left: clamp(-100px, -6.4vw, -48px);
-}
-
-.leader-card.main-menu-button:hover,
-.leader-card.main-menu-button:focus-visible,
-.leader-card.main-menu-button:active {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-.leader-card--selected.main-menu-button,
-.leader-card--selected.main-menu-button:hover,
-.leader-card--selected.main-menu-button:focus-visible {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-.leader-card--locked.main-menu-button {
-  filter: grayscale(1) brightness(0.34);
-}
-
-.leader-card-portrait {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
-  border: none;
-  background: transparent;
-  filter:
-    grayscale(1)
-    brightness(0.46)
-    drop-shadow(0 20px 0 rgba(0, 0, 0, 0.54));
-  transition: none;
-}
-
-.leader-card-portrait img,
-.leader-profile-portrait img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-  transition: none;
-  opacity: 1;
-}
-
-.leader-card--muted .leader-card-portrait {
-  filter:
-    grayscale(1)
-    brightness(0.46)
-    drop-shadow(0 18px 0 rgba(0, 0, 0, 0.52));
-}
-
-.leader-card--hovered .leader-card-portrait {
-  filter:
-    grayscale(1)
-    brightness(0.72)
-    drop-shadow(0 20px 0 rgba(0, 0, 0, 0.54));
-}
-
-.leader-card--selected .leader-card-portrait {
-  filter:
-    grayscale(0)
-    brightness(1)
-    drop-shadow(0 26px 0 rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 0 rgba(255, 255, 255, 0.16));
-}
-
-.leader-card--selected.leader-card--hovered .leader-card-portrait {
-  filter:
-    grayscale(0)
-    brightness(1.12)
-    drop-shadow(0 26px 0 rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 0 rgba(255, 255, 255, 0.16));
-}
-
-.leader-card--selected .leader-card-portrait img {
-  filter: grayscale(0) brightness(1);
-}
-
-.leader-select-summary {
-  width: min(100%, 980px);
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px 28px;
-  align-items: end;
-  justify-self: center;
-}
-
-.leader-select-summary-copy {
-  min-width: 0;
-}
-
-.leader-select-summary-name {
-  color: #ffffff;
-  font-size: clamp(34px, 4vw, 54px);
-  font-weight: 900;
-  line-height: 1.04;
-  overflow-wrap: anywhere;
-  text-shadow: none;
-}
-
-.leader-select-summary-subtitle {
-  margin-top: 10px;
   color: rgba(255, 255, 255, 0.68);
-  font-size: clamp(17px, 1.7vw, 24px);
-  font-weight: 500;
-  line-height: 1.18;
-  overflow-wrap: anywhere;
-}
-
-.leader-select-summary-level {
-  color: #fff1a8;
-  font-size: clamp(30px, 3vw, 44px);
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-  text-shadow: none;
-}
-
-.leader-select-side {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-self: stretch;
-}
-
-.leader-select-profile {
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  padding: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: none;
-}
-
-.leader-profile-hero {
-  display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.leader-profile-portrait {
-  width: 74px;
-  height: 74px;
-  display: block;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.leader-profile-heading {
-  min-width: 0;
-}
-
-.leader-profile-name {
-  font-size: 36px;
-  font-weight: 900;
-  line-height: 1.08;
-  color: #ffffff;
-  overflow-wrap: anywhere;
-  text-shadow: none;
-}
-
-.leader-profile-subtitle {
-  margin-top: 10px;
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 1.2;
-  color: rgba(255, 255, 255, 0.68);
-  overflow-wrap: anywhere;
-}
-
-.leader-select-progress {
-  flex-shrink: 0;
-  margin-top: 22px;
-  padding-top: 20px;
-  border-top: 2px solid rgba(255, 255, 255, 0.38);
-}
-
-.leader-select-progress-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  color: rgba(255, 255, 255, 0.86);
+  font-family: var(--game-font-family), sans-serif;
   font-size: 18px;
   font-weight: 900;
-  line-height: 1;
+  cursor: pointer;
 }
 
-.leader-select-xpbar {
-  height: 12px;
-  margin-top: 11px;
+.difficulty-button:hover,
+.difficulty-button:focus-visible {
+  color: #fff;
+  outline: none;
 }
 
-.leader-profile-effects {
-  flex: 1 1 auto;
-  min-height: 0;
+.difficulty-button--selected,
+.difficulty-button--selected:hover,
+.difficulty-button--selected:focus-visible {
+  color: var(--difficulty-color);
+}
+
+.difficulty-button:disabled,
+.difficulty-button--disabled,
+.difficulty-button--disabled:hover,
+.difficulty-button--disabled:focus-visible {
+  cursor: default;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.difficulty-button--disabled::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.difficulty-select-actions {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 18px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  justify-content: center;
 }
 
-.leader-profile-effects::-webkit-scrollbar {
-  display: none;
-}
-
-.leader-profile-effect {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  padding: 12px 14px;
-  border: 2px solid rgba(96, 96, 96, 0.9);
-  border-radius: 0;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.leader-profile-effect--unlocked {
-  border-color: rgba(134, 239, 172, 0.56);
-  background: rgba(134, 239, 172, 0.11);
-}
-
-.leader-profile-effect--locked {
-  color: rgba(255, 255, 255, 0.46);
-}
-
-.leader-profile-effect-main {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.leader-profile-effect-mark {
-  width: 36px;
-  height: 36px;
-  flex-basis: 36px;
-}
-
-.leader-profile-effect-copy {
-  min-width: 0;
-}
-
-.leader-profile-effect-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: rgba(255, 241, 168, 0.74);
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1.1;
-}
-
-.leader-profile-effect--unlocked .leader-profile-effect-meta {
-  color: #86efac;
-}
-
-.leader-profile-effect--locked .leader-profile-effect-meta {
-  color: rgba(255, 255, 255, 0.44);
-}
-
-.leader-profile-effect-title {
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1.12;
-  color: #ffffff;
-  overflow-wrap: anywhere;
-}
-
-.leader-profile-effect--locked .leader-profile-effect-title {
-  color: rgba(255, 255, 255, 0.62);
-}
-
-.leader-profile-effect-desc {
-  margin-top: 6px;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.34;
-  color: rgba(255, 255, 255, 0.78);
-  overflow-wrap: anywhere;
-}
-
-.leader-profile-effect--locked .leader-profile-effect-desc {
-  color: rgba(255, 255, 255, 0.48);
-}
-
-.leader-select-actions {
-  flex-shrink: 0;
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  justify-content: stretch;
-  margin-top: 0;
-}
-
-.leader-select-play.main-menu-button,
-.leader-select-details.main-menu-button {
-  width: 100%;
+.difficulty-select-play.main-menu-button {
+  width: min(100%, 360px);
   min-height: 62px;
   padding: 0 18px;
   font-size: 24px;
 }
 
-.leader-difficulty {
-  grid-column: 1 / -1;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.leader-difficulty-label {
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.1;
-  color: rgba(255, 255, 255, 0.68);
-}
-
-.leader-difficulty-buttons {
-  --leader-difficulty-index: 0;
-  --leader-difficulty-color: #4ade80;
-  --leader-difficulty-color-soft: rgba(74, 222, 128, 0.2);
-  --leader-difficulty-color-border: rgba(74, 222, 128, 0.82);
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  min-height: 56px;
-  padding: 4px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.54);
-  border-radius: 0;
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: none;
-}
-
-
-.leader-difficulty-buttons--hard {
-  --leader-difficulty-color: #facc15;
-  --leader-difficulty-color-soft: rgba(250, 204, 21, 0.2);
-  --leader-difficulty-color-border: rgba(250, 204, 21, 0.86);
-}
-
-.leader-difficulty-buttons--pro {
-  --leader-difficulty-color: #ef4444;
-  --leader-difficulty-color-soft: rgba(239, 68, 68, 0.22);
-  --leader-difficulty-color-border: rgba(239, 68, 68, 0.86);
-}
-
-.leader-difficulty-thumb {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  z-index: 0;
-  width: calc((100% - 8px) / 3);
-  border-radius: 0;
-  background: var(--leader-difficulty-color-soft);
-  border: 2px solid var(--leader-difficulty-color-border);
-  box-shadow: none;
-  transform: translateX(calc(var(--leader-difficulty-index) * 100%));
-  transition: transform 180ms steps(2, end);
-  pointer-events: none;
-}
-
-.leader-difficulty-button {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  min-height: 48px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.68);
-  font-family: var(--game-font-family), sans-serif;
-  font-size: 17px;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    color 140ms steps(2, end),
-    filter 140ms steps(2, end);
-}
-
-.leader-difficulty-button:hover,
-.leader-difficulty-button:focus-visible {
-  color: #ffffff;
-  filter: brightness(1.12);
-  outline: none;
-}
-
-.leader-difficulty-button--selected,
-.leader-difficulty-button--selected:hover,
-.leader-difficulty-button--selected:focus-visible {
-  color: var(--leader-difficulty-color);
-  filter: none;
-}
-
-.leader-difficulty-button:disabled,
-.leader-difficulty-button--disabled,
-.leader-difficulty-button--disabled:hover,
-.leader-difficulty-button--disabled:focus-visible {
-  cursor: default;
-  color: rgba(255, 255, 255, 0.34);
-  filter: none;
-}
-
-.leader-difficulty-button--disabled::after {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 0;
-  background: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08));
-  opacity: 0.45;
-  pointer-events: none;
-}
-
-.leader-card-portrait .leader-portrait-placeholder,
-.leader-profile-portrait .leader-portrait-placeholder {
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.leader-card-portrait .leader-portrait-placeholder--soon {
-  gap: 1px;
-  padding: 3px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.56);
-}
-
-.leader-profile-portrait .leader-portrait-placeholder--soon {
-  font-size: 24px;
-  color: rgba(255, 255, 255, 0.56);
-}
-
-.leader-progress-root {
-  position: absolute;
-  inset: 0;
-  z-index: 550;
-  box-sizing: border-box;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  padding: 50px 56px 56px;
-  font-family: var(--game-font-family), sans-serif;
-  background-color: #000000;
-  background-image: none;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: #ffffff;
-}
-
-.leader-progress-shell {
-  width: min(100%, 1440px);
-  height: 100%;
-  min-height: 0;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-sizing: border-box;
-}
-
-.leader-progress-title {
-  width: 100%;
-  margin: 0;
-}
-
-.leader-progress-title-main {
-  font-size: 48px;
-  line-height: 1;
-  overflow-wrap: anywhere;
-}
-
-.leader-progress-grid {
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-content: center;
-  flex-wrap: wrap;
-  gap: clamp(18px, 3vw, 46px);
-  margin-top: 34px;
-  padding: 0 clamp(10px, 3vw, 48px) clamp(34px, 5vh, 68px);
-  isolation: isolate;
-}
-
-.leader-progress-card {
-  position: relative;
-  width: clamp(230px, 24vw, 390px);
-  height: min(100%, 690px);
-  min-width: 0;
-  min-height: 0;
-  aspect-ratio: 4 / 5;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  padding: 0;
-  overflow: visible;
-  isolation: isolate;
-  border: 0;
-  background: transparent;
-  color: #ffffff;
-  font-family: var(--game-font-family), sans-serif;
-  cursor: pointer;
-  box-shadow: none;
-  transform-origin: 50% 100%;
-  transition:
-    transform 140ms steps(2, end),
-    filter 140ms steps(2, end);
-}
-
-.leader-progress-card + .leader-progress-card {
-  margin-left: 0;
-}
-
-.leader-progress-card:hover,
-.leader-progress-card:focus-visible {
-  z-index: 10;
-  transform: none;
-  outline: none;
-}
-
-.leader-progress-card:active {
-  transform: translateY(0);
-}
-
-.leader-progress-card--locked {
-  filter: grayscale(1) brightness(0.52);
-  cursor: default;
-}
-
-.leader-progress-card--locked .leader-progress-card-shade {
-  display: none;
-}
-
-.leader-progress-card--locked .leader-progress-portrait {
-  padding: 0;
-}
-
-.leader-progress-portrait {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: transparent;
-  filter:
-    grayscale(0.18)
-    brightness(0.84)
-    drop-shadow(0 20px 0 rgba(0, 0, 0, 0.54));
-  transition: filter 140ms steps(2, end);
-}
-
-.leader-progress-card:hover .leader-progress-portrait,
-.leader-progress-card:focus-visible .leader-progress-portrait {
-  filter:
-    grayscale(0)
-    brightness(1.08)
-    drop-shadow(0 26px 0 rgba(0, 0, 0, 0.62))
-    drop-shadow(0 0 0 rgba(255, 255, 255, 0.16));
-}
-
-.leader-progress-portrait img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-.leader-progress-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  border: 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.56);
-  font-size: clamp(72px, 9vw, 132px);
-  font-weight: 900;
-  line-height: 1;
-}
-
-.leader-progress-card-shade {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  background: linear-gradient(rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.58));
-  mask-image: var(--leader-progress-portrait-mask);
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
-  -webkit-mask-image: var(--leader-progress-portrait-mask);
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  pointer-events: none;
-}
-
-.leader-detail-portrait .leader-progress-card-shade {
-  display: none;
-}
-
-.leader-progress-info {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: clamp(58px, 8vw, 92px);
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  pointer-events: none;
-}
-
-.leader-progress-name {
-  min-height: 0;
-  display: block;
-  box-sizing: border-box;
-  padding: 0 4px;
-  color: #ffffff;
-  font-size: clamp(28px, 3vw, 46px);
-  font-weight: 900;
-  line-height: 1.02;
-  text-align: center;
-  overflow-wrap: anywhere;
-  text-shadow: none;
-}
-
-.leader-detail-shell {
-  align-items: stretch;
-  min-height: 0;
-}
-
-.leader-detail-hero {
-  --leader-detail-name-size: clamp(24px, 2.5vw, 36px);
-  width: min(100%, 1120px);
-  display: block;
-  flex: 0 0 auto;
-  align-self: center;
-  margin-top: 10px;
-}
-
-.leader-detail-portrait {
-  position: absolute;
-  top: 0;
-  right: 44px;
-  bottom: 0;
-  z-index: 0;
-  width: 220px;
-  overflow: hidden;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  pointer-events: none;
-}
-
-.leader-detail-portrait::after {
-  content: none;
-}
-
-.leader-detail-portrait .leader-progress-portrait {
-  z-index: 0;
-  padding: 0;
-  opacity: 0.2;
-  filter:
-    grayscale(0)
-    brightness(1.15)
-    drop-shadow(0 18px 0 rgba(0, 0, 0, 0.64));
-}
-
-.leader-detail-portrait .leader-progress-portrait img {
-  object-fit: cover;
-}
-
-.leader-detail-status {
-  position: relative;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-sizing: border-box;
-  min-height: 220px;
-  padding: 26px 28px;
-  overflow: hidden;
-  border: 2px solid #0e0e0e;
-  border-radius: 0;
-  background: #0e0e0e;
-  box-shadow: none;
-}
-.leader-detail-topline {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 22px;
-}
-
-.leader-detail-heading {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.leader-detail-title {
-  margin: 0;
-  text-align: left;
-}
-
-.leader-detail-title-main {
-  font-size: var(--leader-detail-name-size);
-  line-height: 1;
-}
-
-.leader-detail-level {
-  flex: 0 0 auto;
-  margin-top: 0;
-  color: #fff1a8;
-  font-size: var(--leader-detail-name-size);
-  font-weight: 900;
-  line-height: 1;
-  text-align: right;
-  white-space: nowrap;
-  text-shadow: none;
-}
-
-.leader-detail-xp {
-  position: relative;
-  z-index: 1;
-  margin-top: 16px;
-}
-
-.leader-detail-xp-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 18px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.leader-detail-xpbar {
-  box-sizing: border-box;
-  width: calc(100% + 10px);
-  height: 14px;
-  margin-top: 12px;
-  margin-left: -5px;
-  overflow: hidden;
-  padding: 2px;
-  border: 2px solid #2e2e2e;
-  border-radius: 0;
-  background: #0e0e0e;
-  box-shadow: none;
-}
-
-.leader-detail-xpbar span {
-  display: block;
-  height: 100%;
-  border-radius: 0;
-  background: #fff1a8;
-}
-
-.leader-detail-unlocks-panel {
-  width: min(100%, 1120px);
-  flex: 1 1 auto;
-  min-height: 0;
-  align-self: center;
-  box-sizing: border-box;
-  margin-top: 22px;
-  overflow: hidden;
-  border: 0;
-  background: transparent;
-}
-
-.leader-detail-unlocks-scroll {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.leader-detail-unlocks-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.leader-detail-unlocks {
-  --leader-unlock-rail-x: 96px;
-  --leader-unlock-step-height: 96px;
-  --leader-unlock-line-offset: 58px;
-  --leader-unlock-bar-width: 18px;
-  --leader-unlock-connector-start: 58px;
-  --leader-unlock-connector-overrun: calc(var(--leader-unlock-rail-x) - var(--leader-unlock-connector-start));
-  width: 100%;
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
-  padding: 16px 0;
-}
-
-.leader-detail-unlocks::before,
-.leader-detail-unlocks::after {
-  content: none;
-}
-
-.leader-unlock-progress-track {
-  position: absolute;
-  top: var(--leader-unlock-line-offset);
-  bottom: var(--leader-unlock-line-offset);
-  left: var(--leader-unlock-rail-x);
-  z-index: 0;
-  width: var(--leader-unlock-bar-width);
-  overflow: hidden;
-  border: 2px solid #2e2e2e;
-  border-radius: 0;
-  background: #0e0e0e;
-  transform: translateX(-50%);
-  pointer-events: none;
-  box-shadow: none;
-}
-
-.leader-unlock-progress-track span {
-  margin-top: -2px;
-  display: block;
-  width: 100%;
-  min-height: 0;
-  border-radius: 0;
-  background: linear-gradient(#1f6b32, #1f6b32);
-  box-shadow: none;
-}
-.leader-unlock-step {
-  position: relative;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 136px minmax(0, 1fr);
-  gap: 22px;
-  align-items: center;
-  box-sizing: border-box;
-  height: var(--leader-unlock-step-height);
-  padding: 0;
-  color: rgba(255, 255, 255, 0.58);
-}
-
-.leader-unlock-step--filled::after {
-  content: none;
-}
-.leader-unlock-step--filled {
-  color: rgba(255, 255, 255, 0.58);
-}
-
-.leader-unlock-rail {
-  position: relative;
-  height: 100%;
-  display: flex;
-  align-items: center;
-}
-
-.leader-unlock-step--next .leader-unlock-rail::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: var(--leader-unlock-connector-start);
-  width: calc(var(--leader-unlock-rail-x) - var(--leader-unlock-connector-start) + var(--leader-unlock-connector-overrun));
-  height: 1px;
-  background: rgba(255, 232, 158, 0.34);
-  box-shadow: none;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.leader-unlock-level {
-  width: 72px;
-  color: rgba(255, 232, 158, 0.46);
-  font-size: 18px;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-  transition: color 140ms steps(2, end);
-}
-
-.leader-unlock-step--filled .leader-unlock-level {
-  color: rgba(255, 232, 158, 0.46);
-}
-
-.leader-unlock-point {
-  display: none;
-}
-.leader-unlock-body {
-  position: relative;
-  z-index: 1;
-  justify-self: stretch;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 13px 18px 14px;
-  border: 3px solid #444444;
-  border-radius: 0;
-  background:
-    linear-gradient(rgba(68, 68, 68, 0.22), rgba(68, 68, 68, 0.22)),
-    linear-gradient(rgba(46, 46, 46, 0.18), rgba(46, 46, 46, 0.18)),
-    linear-gradient(rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.24)),
-    linear-gradient(rgba(68, 68, 68, 0.12), rgba(68, 68, 68, 0.12)),
-    linear-gradient(rgba(68, 68, 68, 0.06), rgba(68, 68, 68, 0.06)),
-    linear-gradient(rgba(192, 192, 192, 0.95), rgba(192, 192, 192, 0.95));
-  box-shadow: none;
-  color: #2e2e2e;
-  isolation: isolate;
-  overflow: visible;
-}
-
-.leader-unlock-body::before,
-.leader-unlock-body::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  transform: translateY(-50%);
-}
-
-.leader-unlock-body::before {
-  left: -20px;
-  z-index: -2;
-  border-top: 2px solid transparent;
-  border-bottom: 2px solid transparent;
-  border-right: 2px solid #444444;
-}
-
-.leader-unlock-body::after {
-  left: -15px;
-  z-index: -1;
-  border-top: 2px solid transparent;
-  border-bottom: 2px solid transparent;
-  border-right: 2px solid #c0c0c0;
-}
-
-.leader-unlock-step--unlocked .leader-unlock-body {
-  border-color: #5f6f2f;
-  background:
-    linear-gradient(rgba(68, 68, 68, 0.2), rgba(68, 68, 68, 0.2)),
-    linear-gradient(rgba(68, 68, 68, 0.18), rgba(68, 68, 68, 0.18)),
-    linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.22)),
-    linear-gradient(rgba(68, 68, 68, 0.12), rgba(68, 68, 68, 0.12)),
-    linear-gradient(rgba(68, 68, 68, 0.06), rgba(68, 68, 68, 0.06)),
-    linear-gradient(rgba(192, 192, 192, 0.95), rgba(192, 192, 192, 0.95));
-}
-
-.leader-unlock-step--unlocked .leader-unlock-body::before {
-  border-right-color: #5f6f2f;
-}
-
-.leader-unlock-step--unlocked .leader-unlock-body::after {
-  border-right-color: #c0c0c0;
-}
-
-.leader-unlock-body--locked {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border-color: #444444;
-  background:
-    linear-gradient(rgba(28, 28, 28, 0.18), rgba(28, 28, 28, 0.18)),
-    linear-gradient(rgba(46, 46, 46, 0.34), rgba(46, 46, 46, 0.34)),
-    linear-gradient(rgba(46, 46, 46, 0.28), rgba(46, 46, 46, 0.28)),
-    linear-gradient(rgba(46, 46, 46, 0.1), rgba(46, 46, 46, 0.1)),
-    linear-gradient(rgba(96, 96, 96, 0.94), rgba(96, 96, 96, 0.94));
-  box-shadow: none;
-}
-
-.leader-unlock-body--locked::before {
-  border-right-color: #444444;
-}
-
-.leader-unlock-body--locked::after {
-  border-right-color: #606060;
-}
-
-.leader-unlock-body--locked .leader-unlock-event-mark,
-.leader-unlock-body--locked .leader-unlock-symbol-mark,
-.leader-unlock-body--locked .leader-unlock-copy {
-  filter: saturate(0.45);
-  opacity: 0.58;
-}
-
-.leader-unlock-body--locked .leader-unlock-name {
-  color: rgba(28, 28, 28, 0.78);
-}
-
-.leader-unlock-body--locked .leader-unlock-desc {
-  color: rgba(28, 28, 28, 0.64);
-}
-
-.leader-unlock-lock-mark {
-  flex: 0 0 auto;
-  margin-left: auto;
-  padding: 7px 10px 6px;
-  border: 2px solid rgba(46, 46, 46, 0.78);
-  border-radius: 0;
-  background:
-    linear-gradient(rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.16)),
-    rgba(28, 28, 28, 0.26);
-  color: rgba(255, 229, 154, 0.9);
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-  text-shadow: none;
-  box-shadow: none;
-}
-
-.leader-unlock-body--empty {
-  width: auto;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.leader-unlock-body--empty::before,
-.leader-unlock-body--empty::after {
-  content: none;
-}
-
-.leader-unlock-body--event {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.leader-unlock-body--symbol {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.leader-unlock-event-mark {
-  width: 42px;
-  height: 42px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 42px;
-  border: 2px dashed rgba(253, 230, 138, 0.5);
-  background: rgba(251, 191, 36, 0.08);
-  color: #fde68a;
-  font-size: 30px;
-  font-weight: 900;
-  line-height: 1;
-  text-shadow: none;
-}
-
-.leader-unlock-event-mark span {
-  transform: translateY(-1px);
-}
-
-.leader-unlock-symbol-mark {
-  width: 42px;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 42px;
-}
-
-.leader-unlock-symbol-mark img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-.leader-unlock-copy {
-  min-width: 0;
-}
-
-.leader-unlock-name {
-  color: #1c1c1c;
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-}
-
-.leader-unlock-desc {
-  margin-top: 6px;
-  color: rgba(46, 46, 46, 0.78);
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 1.32;
-  overflow-wrap: anywhere;
-}
-
-@media (max-height: 840px) {
-  .leader-select-root {
-    padding-top: 42px;
-    padding-bottom: 34px;
+@media (max-width: 720px) {
+  .difficulty-select-root {
+    padding: 38px 20px 28px;
   }
 
-  .leader-select-back {
-    top: 24px;
-    left: 28px;
-    width: 48px;
-    height: 48px;
-    font-size: 38px;
+  .menu-back-button {
+    top: 14px;
+    left: 14px;
   }
 
-  .leader-select-title-main {
-    font-size: 42px;
-  }
-
-  .leader-select-content {
-    margin-top: 34px;
-  }
-
-  .leader-select-profile {
-    padding: 20px;
-  }
-
-  .leader-profile-name {
-    font-size: 32px;
-  }
-
-  .leader-profile-effects {
-    gap: 18px;
-    margin-top: 20px;
-    padding-top: 20px;
-  }
-
-  .leader-profile-effect-title {
-    font-size: 23px;
-  }
-
-  .leader-profile-effect-desc {
-    font-size: 18px;
-    line-height: 1.45;
-  }
-}
-
-@media (max-width: 1040px) {
-  .leader-progress-root {
-    padding: 98px 36px 40px;
-  }
-
-  .leader-progress-grid {
-    gap: clamp(16px, 4vw, 34px);
-    margin-top: 30px;
-    padding-inline: clamp(14px, 6vw, 42px);
-    padding-bottom: clamp(28px, 4vh, 54px);
-  }
-
-  .leader-progress-card {
-    width: clamp(190px, 34vw, 300px);
-  }
-
-  .leader-progress-card + .leader-progress-card {
-    margin-left: 0;
-  }
-
-  .leader-select-root {
-    padding: 98px 36px 34px;
-    overflow-y: auto;
-  }
-
-  .leader-select-back {
-    top: 28px;
-    left: 28px;
-  }
-
-  .leader-select-shell {
-    height: auto;
-    min-height: 100%;
-  }
-
-  .leader-select-content {
-    grid-template-rows: minmax(0, 1fr) auto;
-    margin-top: 44px;
-  }
-
-  .leader-select-roster {
-    padding-inline: clamp(14px, 6vw, 42px);
-  }
-
-  .leader-card.main-menu-button {
-    width: clamp(190px, 34vw, 300px);
-  }
-
-  .leader-card.main-menu-button + .leader-card.main-menu-button {
-    margin-left: clamp(-82px, -10vw, -42px);
-  }
-
-  .leader-select-profile {
-    }
-
-  .leader-select-side {
-    }
-
-  .leader-select-summary {
-    width: min(100%, 720px);
-  }
-
-  .leader-detail-hero {
-    width: min(100%, 720px);
-  }
-
-  .leader-detail-title {
-    text-align: left;
-  }
-
-  .leader-detail-unlocks-panel {
-    width: min(100%, 720px);
-  }
-}
-
-@media (max-width: 700px) {
-  .leader-progress-root {
-    padding: 94px 22px 30px;
-  }
-
-  .leader-progress-title-main {
+  .difficulty-select-title-main {
     font-size: 34px;
   }
 
-  .leader-progress-grid {
-    gap: 14px;
-    padding: 0 6px 26px;
+  .difficulty-button {
+    font-size: 14px;
   }
-
-  .leader-progress-name {
-    font-size: 24px;
-  }
-
-  .leader-progress-info {
-    bottom: 50px;
-  }
-
-
-  .leader-progress-card {
-    width: clamp(144px, 42vw, 216px);
-  }
-
-  .leader-progress-card + .leader-progress-card {
-    margin-left: 0;
-  }
-
-  .leader-detail-status {
-    padding: 18px;
-  }
-
-  .leader-detail-topline {
-    gap: 14px;
-  }
-  .leader-detail-hero {
-    --leader-detail-name-size: 20px;
-  }
-
-  .leader-detail-portrait {
-    right: 28px;
-    width: 164px;
-  }
-
-  .leader-detail-title-main {
-    font-size: var(--leader-detail-name-size);
-  }
-
-  .leader-detail-level {
-    font-size: var(--leader-detail-name-size);
-  }
-
-  .leader-detail-xp-head {
-    font-size: 13px;
-  }
-
-  .leader-detail-xpbar {
-    height: 12px;
-    margin-top: 9px;
-  }
-
-  .leader-detail-unlocks {
-    --leader-unlock-rail-x: 74px;
-    --leader-unlock-step-height: 86px;
-    --leader-unlock-line-offset: 50px;
-    --leader-unlock-connector-start: 44px;
-    --leader-unlock-connector-overrun: calc(var(--leader-unlock-rail-x) - var(--leader-unlock-connector-start));
-    padding: 12px 0;
-  }
-
-  .leader-unlock-step {
-    grid-template-columns: 104px minmax(0, 1fr);
-    gap: 14px;
-  }
-
-  .leader-unlock-level {
-    width: 54px;
-    font-size: 15px;
-  }
-
-
-  .leader-unlock-body {
-    padding: 10px 12px;
-  }
-
-  .leader-select-root {
-    padding: 94px 22px 28px;
-  }
-
-  .leader-select-back {
-    top: 24px;
-    left: 22px;
-    width: 46px;
-    height: 46px;
-    font-size: 36px;
-  }
-
-  .leader-select-title-main {
-    font-size: 34px;
-  }
-
-  .leader-select-roster {
-    padding: 10px 6px 8px;
-  }
-
-  .leader-card.main-menu-button {
-    width: clamp(154px, 47vw, 216px);
-  }
-
-  .leader-card.main-menu-button + .leader-card.main-menu-button {
-    margin-left: clamp(-62px, -16vw, -30px);
-  }
-
-  .leader-select-summary {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    text-align: center;
-  }
-
-  .leader-select-summary-level {
-    justify-self: center;
-  }
-
-  .leader-select-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .leader-profile-hero {
-    grid-template-columns: 62px minmax(0, 1fr);
-    gap: 16px;
-  }
-
-  .leader-profile-portrait {
-    width: 62px;
-    height: 62px;
-  }
-
-  .leader-profile-name {
-    font-size: 28px;
-  }
-
-  .leader-profile-subtitle {
-    font-size: 18px;
-  }
-
 }
 
 .pregame-title {
@@ -5921,11 +3665,6 @@ button.spin-btn:disabled:active {
   flex-wrap: wrap;
   gap: 20px;
   justify-content: center;
-}
-
-.pregame-cards--leaders {
-  flex-direction: column;
-  align-items: stretch;
 }
 
 .pregame-card {
@@ -5999,12 +3738,6 @@ button.spin-btn:disabled:active {
   font-size: 14px;
   color: rgba(192, 192, 192, 0.85);
   text-align: center;
-}
-
-.pregame-card--leader {
-  min-width: 320px;
-  text-align: left;
-  align-items: flex-start;
 }
 
 .pregame-card-desc {
@@ -6091,8 +3824,7 @@ button.spin-btn:disabled:active {
   pointer-events: none;
 }
 
-.knowledge-edge-hotzone,
-.relic-edge-hotzone {
+.knowledge-edge-hotzone {
   position: fixed;
   top: 50%;
   bottom: auto;
@@ -6112,12 +3844,7 @@ button.spin-btn:disabled:active {
   left: 0;
 }
 
-.relic-edge-hotzone {
-  right: 0;
-}
-
-.knowledge-edge-hotzone::before,
-.relic-edge-hotzone::before {
+.knowledge-edge-hotzone::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -6142,12 +3869,6 @@ button.spin-btn:disabled:active {
   left: -52px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-}
-
-.relic-edge-hotzone::before {
-  right: -52px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 .edge-hotzone-label {
@@ -6233,36 +3954,24 @@ button.spin-btn:disabled:active {
   transform: translate(-50%, -50%);
 }
 
-.relic-edge-hotzone .edge-hotzone-label {
-  right: 48px;
-  transform: translate(50%, -50%);
-}
-
 .knowledge-edge-hotzone:hover,
-.knowledge-edge-hotzone:focus-visible,
-.relic-edge-hotzone:hover,
-.relic-edge-hotzone:focus-visible {
+.knowledge-edge-hotzone:focus-visible {
   outline: none;
 }
 
 .knowledge-edge-hotzone:hover::before,
-.knowledge-edge-hotzone:focus-visible::before,
-.relic-edge-hotzone:hover::before,
-.relic-edge-hotzone:focus-visible::before {
+.knowledge-edge-hotzone:focus-visible::before {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
   box-shadow: none;
 }
 
 .knowledge-edge-hotzone:hover .edge-hotzone-label,
-.knowledge-edge-hotzone:focus-visible .edge-hotzone-label,
-.relic-edge-hotzone:hover .edge-hotzone-label,
-.relic-edge-hotzone:focus-visible .edge-hotzone-label {
+.knowledge-edge-hotzone:focus-visible .edge-hotzone-label {
   opacity: 1;
 }
 
-.knowledge-edge-hotzone:disabled,
-.relic-edge-hotzone:disabled {
+.knowledge-edge-hotzone:disabled {
   pointer-events: none;
 }
 
@@ -6291,16 +4000,7 @@ button.spin-btn:disabled:active {
   }
 }
 
-body.screen-return-from-relic .game-screen > .hud-top,
-body.screen-return-from-relic .game-screen > .game-area,
-body.screen-return-from-relic .game-screen > .bottom-action-bar,
-body.screen-return-from-relic .game-screen > .knowledge-edge-hotzone,
-body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
-  animation: game-page-slide-in-from-left 160ms ease both;
-}
-
-.tutorial-highlight-knowledge-button .knowledge-edge-hotzone,
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone {
+.tutorial-highlight-knowledge-button .knowledge-edge-hotzone {
   position: fixed;
   top: 50%;
   bottom: auto;
@@ -6312,12 +4012,7 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
   left: 0;
 }
 
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone {
-  right: 0;
-}
-
 .tutorial-highlight-knowledge-button .knowledge-edge-hotzone::after,
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone::after,
 .tutorial-highlight-knowledge-back .knowledge-return-hotzone::after {
   content: "";
   position: absolute;
@@ -6434,114 +4129,6 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
   letter-spacing: 1px;
 }
 
-.endgame-progress-reveal {
-  width: min(1120px, 92vw);
-  margin-top: 0;
-}
-
-.endgame-progress-xp {
-  padding-top: 30px;
-}
-
-.endgame-progress-xp .leader-detail-xpbar span {
-  transition: width 80ms linear;
-  box-shadow: none;
-}
-.endgame-progress-xp .leader-detail-xpbar--level-up {
-  position: relative;
-  overflow: visible;
-  animation: endgame-xpbar-level-up-shell 560ms ease-out;
-}
-
-.endgame-progress-xp .leader-detail-xpbar--level-up::before {
-  content: "";
-  position: absolute;
-  inset: -18px -24px;
-  z-index: -1;
-  border-radius: 0;
-  background:
-    linear-gradient(rgba(250, 204, 21, 0.46), rgba(250, 204, 21, 0.46));
-  filter: none;
-  pointer-events: none;
-  animation: endgame-xpbar-level-up-aura 560ms ease-out forwards;
-}
-
-.endgame-progress-xp .leader-detail-xpbar--level-up span {
-  box-shadow: none;
-  animation: endgame-xpbar-level-up-fill 560ms ease-out;
-}
-
-@keyframes endgame-xpbar-level-up-shell {
-  0% { transform: scale(1); }
-  34% { transform: scale(1.035); }
-  100% { transform: scale(1); }
-}
-
-@keyframes endgame-xpbar-level-up-aura {
-  0% { opacity: 0; transform: scaleX(0.9) scaleY(0.72); }
-  24% { opacity: 1; transform: scaleX(1.05) scaleY(1); }
-  100% { opacity: 0; transform: scaleX(1.22) scaleY(1.36); }
-}
-
-@keyframes endgame-xpbar-level-up-fill {
-  0% { filter: brightness(1); }
-  22% { filter: brightness(1.75); }
-  100% { filter: brightness(1); }
-}
-
-.endgame-xp-gain {
-  position: absolute;
-  top: 0;
-  right: 0;
-  color: #fff1a8;
-  font-family: var(--game-font-family), sans-serif;
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 1;
-  white-space: nowrap;
-  text-shadow: none;
-}
-
-.endgame-level-gained {
-  position: relative;
-  z-index: 1;
-  margin-top: 14px;
-  color: #facc15;
-  font-family: var(--game-font-family), sans-serif;
-  font-size: 24px;
-  text-align: right;
-  text-shadow: none;
-}
-
-.endgame-leader-xp {
-  min-width: 320px;
-  padding: 14px 22px;
-  border: 2px solid rgba(234, 179, 8, 0.55);
-  background: rgba(15, 23, 42, 0.72);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px 20px;
-  align-items: baseline;
-  font-family: var(--game-font-family), sans-serif;
-  color: #f8fafc;
-}
-
-.endgame-leader-xp span {
-  font-size: 24px;
-  color: #e0e0e0;
-}
-
-.endgame-leader-xp strong {
-  font-size: 34px;
-  color: #facc15;
-  font-weight: 400;
-}
-
-.endgame-leader-xp small {
-  grid-column: 1 / -1;
-  font-size: 20px;
-  color: #a0a0a0;
-}
 
 .endgame-btn {
   width: auto;
@@ -8399,20 +5986,14 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
 .tutorial-highlight-spin-button .spin-btn,
 .tutorial-highlight-selection-cards .selection-cards,
 .tutorial-highlight-monument-card .selection-card-frame:first-child,
-.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+.tutorial-highlight-owned-symbols-button .game-action-btn--owned-symbols,
 .tutorial-highlight-owned-monument .owned-symbol-item--monument,
 .tutorial-highlight-owned-close .owned-symbols-close-btn,
 .tutorial-highlight-knowledge-status .level-info-mini,
 .tutorial-highlight-knowledge-button .knowledge-edge-hotzone,
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone,
-.tutorial-highlight-relic-buy .relic-card-buy-btn,
 .tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area,
 .tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era,
 .tutorial-highlight-knowledge-back .knowledge-return-hotzone {
-  box-shadow: none;
-}
-
-.tutorial-relic-display-highlight {
   box-shadow: none;
 }
 
@@ -8435,13 +6016,11 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
 .tutorial-highlight-spin-button .spin-btn,
 .tutorial-highlight-selection-cards .selection-cards,
 .tutorial-highlight-monument-card .selection-card-frame:first-child,
-.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols,
+.tutorial-highlight-owned-symbols-button .game-action-btn--owned-symbols,
 .tutorial-highlight-owned-monument .owned-symbol-item--monument,
 .tutorial-highlight-owned-close .owned-symbols-close-btn,
 .tutorial-highlight-knowledge-status .level-info-mini,
 .tutorial-highlight-knowledge-button .knowledge-edge-hotzone,
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone,
-.tutorial-highlight-relic-buy .relic-card-buy-btn,
 .tutorial-highlight-ancient-detail .knowledge-upgrade-desc-symbols-area,
 .tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era,
 .tutorial-highlight-knowledge-back .knowledge-return-hotzone {
@@ -8454,13 +6033,11 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
 .tutorial-highlight-food-demand .food-demand-mini::after,
 .tutorial-highlight-food-resource .resource-group--food::after,
 .tutorial-highlight-spin-button .spin-btn::after,
-.tutorial-highlight-owned-symbols-button .relic-shop-btn--owned-symbols::after,
+.tutorial-highlight-owned-symbols-button .game-action-btn--owned-symbols::after,
 .tutorial-highlight-owned-monument .owned-symbol-item--monument::after,
 .tutorial-highlight-owned-close .owned-symbols-close-btn::after,
 .tutorial-highlight-knowledge-status .level-info-mini::after,
 .tutorial-highlight-knowledge-button .knowledge-edge-hotzone::after,
-.tutorial-highlight-relic-shop-button .relic-edge-hotzone::after,
-.tutorial-highlight-relic-buy .relic-card-buy-btn::after,
 .tutorial-highlight-ancient-research .knowledge-upgrade-chip--ancient-era::after,
 .tutorial-highlight-knowledge-back .knowledge-return-hotzone::after {
   content: "";
@@ -8507,10 +6084,6 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
     drop-shadow(0 0 0 rgba(255, 211, 92, 0.2));
 }
 
-.tutorial-relic-display-highlight {
-  box-shadow: none;
-}
-
 .tutorial-board-highlight-cell {
   box-shadow: none;
 }
@@ -8529,8 +6102,6 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
   background: #0e0e0e;
   box-shadow: none;
 }
-
-/* ===== Top button group: menu layer above relics and other UI. ===== */
 .menu-btn {
   width: 100px;
   height: 100px;
@@ -8561,9 +6132,7 @@ body.screen-return-from-relic .game-screen > .relic-edge-hotzone {
   transform: translateY(8px);
   box-shadow: none;
 }
-
-/* ===== Top side buttons: relic shop, knowledge upgrades, and owned symbols. ===== */
-button.relic-shop-btn {
+button.game-action-btn {
   width: var(--bottom-action-button-size);
   height: var(--bottom-action-button-size);
   flex-shrink: 0;
@@ -8588,7 +6157,7 @@ button.relic-shop-btn {
   box-shadow: none;
 }
 
-button.relic-shop-btn .relic-shop-btn-icon-layer {
+button.game-action-btn .game-action-btn-icon-layer {
   position: absolute;
   inset: 12px;
   display: flex;
@@ -8601,42 +6170,42 @@ button.relic-shop-btn .relic-shop-btn-icon-layer {
   filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.28));
 }
 
-.bottom-action-bar-left button.relic-shop-btn:first-child {
+.bottom-action-bar-left button.game-action-btn:first-child {
   z-index: 2;
 }
 
-.bottom-action-bar-left button.relic-shop-btn--knowledge {
+.bottom-action-bar-left button.game-action-btn--knowledge {
   z-index: 1;
 }
 
-button.relic-shop-btn:hover:not(:active) {
+button.game-action-btn:hover:not(:active) {
   background: rgba(255, 255, 255, 0.1);
   border-color: #1c1c1c;
   color: #ffffff;
   box-shadow: none;
 }
 
-button.relic-shop-btn:hover:not(:active) .relic-shop-btn-icon-layer {
+button.game-action-btn:hover:not(:active) .game-action-btn-icon-layer {
   filter:
     drop-shadow(0 5px 0 rgba(0, 0, 0, 0.28))
     drop-shadow(0 0 0 rgba(255, 255, 255, 0.22));
 }
 
-button.relic-shop-btn:active {
+button.game-action-btn:active {
   transform: translateY(0);
   background: #0e0e0e;
   box-shadow: none;
   box-shadow: none;
 }
 
-button.relic-shop-btn:active .relic-shop-btn-icon-layer {
+button.game-action-btn:active .game-action-btn-icon-layer {
   transform: translateY(1px);
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
 }
 
 /* Bottom action buttons share the symbol-choice card bevel. */
 button.spin-btn,
-button.relic-shop-btn,
+button.game-action-btn,
 button.pause-btn-top,
 button.endgame-btn {
   border: var(--spin-frame-border-width) solid #0e0e0e;
@@ -8647,7 +6216,7 @@ button.endgame-btn {
 }
 
 button.spin-btn:hover:not(:disabled):not(:active),
-button.relic-shop-btn:hover:not(:active),
+button.game-action-btn:hover:not(:active),
 button.pause-btn-top:hover:not(:active),
 button.endgame-btn:hover:not(:active) {
   background: #0e0e0e;
@@ -8656,7 +6225,7 @@ button.endgame-btn:hover:not(:active) {
 }
 
 button.spin-btn:active:not(:disabled),
-button.relic-shop-btn:active,
+button.game-action-btn:active,
 button.pause-btn-top:active,
 button.endgame-btn:active {
   background: #0e0e0e;
@@ -8674,12 +6243,12 @@ button.spin-btn:disabled:active {
   box-shadow: none;
 }
 
-button.relic-shop-btn .relic-shop-btn-icon-layer,
-button.relic-shop-btn:hover:not(:active) .relic-shop-btn-icon-layer {
+button.game-action-btn .game-action-btn-icon-layer,
+button.game-action-btn:hover:not(:active) .game-action-btn-icon-layer {
   filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.28));
 }
 
-button.relic-shop-btn:active .relic-shop-btn-icon-layer {
+button.game-action-btn:active .game-action-btn-icon-layer {
   filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3));
 }
 @keyframes knowledge-hud-attention {
@@ -8694,11 +6263,11 @@ button.relic-shop-btn:active .relic-shop-btn-icon-layer {
   }
 }
 
-button.relic-shop-btn--knowledge-attention {
+button.game-action-btn--knowledge-attention {
   animation: knowledge-hud-attention 560ms ease-out;
 }
 
-button.relic-shop-btn img {
+button.game-action-btn img {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -8732,8 +6301,8 @@ button.relic-shop-btn img {
   white-space: normal;
 }
 
-button.relic-shop-btn:hover .bottom-action-hud-tooltip,
-button.relic-shop-btn:focus-visible .bottom-action-hud-tooltip {
+button.game-action-btn:hover .bottom-action-hud-tooltip,
+button.game-action-btn:focus-visible .bottom-action-hud-tooltip {
   opacity: 1;
   transform: translateX(calc(-50% + var(--bottom-hud-tooltip-shift))) translateY(0);
 }
@@ -8827,7 +6396,6 @@ button.knowledge-upgrade-chip--available:hover:not([aria-disabled="true"]):not(:
 
 button.knowledge-upgrade-chip--locked {
   background: #0e0e0e;
-  filter: grayscale(0.7) brightness(0.76);
   box-shadow: none;
 }
 
@@ -9260,8 +6828,6 @@ button.knowledge-upgrade-chip--available .knowledge-upgrade-chip-name {
   background: rgba(37, 99, 235, 0.42);
   border-color: #bfdbfe;
 }
-
-/* Full-width tab above relic / knowledge HUD buttons (NEW stock / research) */
 .hud-new-stock-tab {
   position: absolute;
   left: 0;
@@ -9296,7 +6862,7 @@ button.knowledge-upgrade-chip--available .knowledge-upgrade-chip-name {
   pointer-events: none;
 }
 
-button.relic-shop-btn--knowledge {
+button.game-action-btn--knowledge {
   overflow: visible;
 }
 
@@ -10453,54 +8019,15 @@ button.settings-dropdown-option--selected {
 
 
 /* Shared chrome typography follows the active language font. */
-:where(
-  .main-menu-title,
-  .main-menu-title-main,
-  .main-menu-title-sub,
-  .main-menu-title-demo,
-  .main-menu-button,
-  .main-menu-exit-button,
-  .main-menu-version,
-  .leader-select-back,
-  .relic-shop-back-btn,
-  .relic-shop-back-label,
-  .settings-back-btn,
-  .knowledge-return-hotzone,
-  .selection-peek-handle,
-  .selection-peek-handle-label,
-  .tutorial-exit-button,
-  .pause-title,
-  .pause-menu-btn,
-  .settings-title,
-  .settings-tab,
-  .settings-seg-btn,
-  .settings-danger-btn,
-  .settings-confirm-btn,
-  .endgame-title,
-  .endgame-btn
-) {
-  font-family: var(--game-font-family), sans-serif;
-}
 
 
-/* Leader titles are localized text, so they follow the active language font. */
-:where(
-  .leader-select-title,
-  .leader-select-title-main,
-  .leader-progress-title,
-  .leader-progress-title-main,
-  .leader-detail-title,
-  .leader-detail-title-main
-) {
-  font-family: var(--game-font-family), sans-serif;
-}
 
 /* Keep the black beveled buttons flush with the screen; only their inner bevel remains. */
 .main-menu-button,
 .main-menu-settings-button,
 .main-menu-exit-button,
 button.spin-btn,
-button.relic-shop-btn,
+button.game-action-btn,
 button.pause-btn-top,
 button.endgame-btn {
   box-shadow: none;
@@ -10513,7 +8040,7 @@ button.endgame-btn {
 .main-menu-exit-button:hover,
 .main-menu-exit-button:focus-visible,
 button.spin-btn:hover:not(:disabled):not(:active),
-button.relic-shop-btn:hover:not(:active),
+button.game-action-btn:hover:not(:active),
 button.pause-btn-top:hover:not(:active),
 button.endgame-btn:hover:not(:active) {
   box-shadow: none;
@@ -10523,7 +8050,7 @@ button.endgame-btn:hover:not(:active) {
 .main-menu-settings-button:active,
 .main-menu-exit-button:active,
 button.spin-btn:active:not(:disabled),
-button.relic-shop-btn:active,
+button.game-action-btn:active,
 button.pause-btn-top:active,
 button.endgame-btn:active {
   box-shadow: none;
@@ -10550,10 +8077,6 @@ button.knowledge-upgrade-chip--selected {
   box-shadow: none;
 }
 
-button.knowledge-upgrade-chip--unavailable {
-  filter: grayscale(0.7) brightness(0.76);
-}
-
 button.knowledge-upgrade-chip--unlocked::before {
   display: none;
 }
@@ -10562,7 +8085,7 @@ button.knowledge-upgrade-chip--unlocked::before {
 .main-menu-settings-button,
 .main-menu-exit-button,
 button.spin-btn,
-button.relic-shop-btn,
+button.game-action-btn,
 button.pause-btn-top,
 button.endgame-btn,
 button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked) {
@@ -10577,7 +8100,7 @@ button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked) {
 .main-menu-exit-button:hover,
 .main-menu-exit-button:focus-visible,
 button.spin-btn:hover:not(:disabled):not(:active),
-button.relic-shop-btn:hover:not(:active),
+button.game-action-btn:hover:not(:active),
 button.pause-btn-top:hover:not(:active),
 button.endgame-btn:hover:not(:active),
 button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked):hover:not([aria-disabled="true"]):not(:active) {
@@ -10589,7 +8112,7 @@ button.knowledge-upgrade-chip--horizontal:not(.knowledge-upgrade-chip--locked):h
 .main-menu-settings-button:active,
 .main-menu-exit-button:active,
 button.spin-btn:active:not(:disabled),
-button.relic-shop-btn:active,
+button.game-action-btn:active,
 button.pause-btn-top:active,
 button.endgame-btn:active,
 button.knowledge-upgrade-chip:active:not([aria-disabled="true"]),
@@ -10600,7 +8123,7 @@ button.knowledge-upgrade-chip--selected:active:not([aria-disabled="true"]) {
 
 /* Use the main-menu wood treatment for game-screen action buttons as well. */
 button.spin-btn,
-button.relic-shop-btn,
+button.game-action-btn,
 button.pause-btn-top,
 button.endgame-btn,
 .pause-menu-btn {
@@ -10611,7 +8134,7 @@ button.endgame-btn,
 }
 
 button.spin-btn::after,
-button.relic-shop-btn::after,
+button.game-action-btn::after,
 button.pause-btn-top::after,
 button.endgame-btn::after,
 .pause-menu-btn::after {
@@ -10626,7 +8149,7 @@ button.endgame-btn::after,
 }
 
 button.spin-btn > span,
-button.relic-shop-btn .relic-shop-btn-icon-layer,
+button.game-action-btn .game-action-btn-icon-layer,
 button.pause-btn-top .pause-btn-top-icon {
   position: relative;
   z-index: 1;
@@ -10665,162 +8188,6 @@ button.spin-btn .spin-btn__board-expansion-label {
   line-height: 1.1;
   letter-spacing: 1px;
   white-space: nowrap;
-}
-
-button.spin-btn.spin-btn--relic-shop,
-button.spin-btn.spin-btn--relic-shop:hover:not(:disabled),
-button.spin-btn.spin-btn--relic-shop:active:not(:disabled) {
-  flex: 0 0 var(--bottom-action-button-size);
-  width: 100%;
-  min-width: 100%;
-  max-width: 100%;
-  height: var(--bottom-action-button-size);
-  min-height: var(--bottom-action-button-size);
-  max-height: var(--bottom-action-button-size);
-  border-color: #facc15;
-}
-
-button.spin-btn .spin-btn__relic-shop-label {
-  transform: none;
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: 1px;
-  white-space: nowrap;
-}
-
-.relic-choice-heading {
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.relic-choice-gold {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 110px;
-  padding: 10px 16px;
-  transform: translateY(-50%);
-  border: 2px solid #444444;
-  background: #1c1c1c;
-  color: #facc15;
-  font-size: 24px;
-  font-weight: 900;
-}
-
-.relic-choice-gold img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-.selection-overlay--relic-choice .selection-card {
-  position: relative;
-  isolation: isolate;
-  border: 2px solid #0e0e0e;
-  background: #1c1c1c;
-}
-
-.selection-overlay--relic-choice .selection-card:hover,
-.selection-overlay--relic-choice .selection-card:focus-visible {
-  border-color: #0e0e0e;
-  background: #2e2e2e;
-}
-
-.selection-overlay--relic-choice .selection-card::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  z-index: 0;
-  box-sizing: border-box;
-  border: 2px solid #0e0e0e;
-  pointer-events: none;
-}
-
-.selection-overlay--relic-choice .selection-card > * {
-  position: relative;
-  z-index: 1;
-}
-
-.relic-choice-rarity {
-  margin-bottom: 4px;
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: 3px;
-}
-
-.selection-overlay--relic-choice .relic-choice-sprite-wrap {
-  position: relative;
-  top: auto;
-  left: auto;
-  width: 150px;
-  height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 150px;
-  margin: 0 auto;
-  transform: none;
-}
-
-.selection-overlay--relic-choice .relic-choice-sprite-wrap .relic-choice-sprite {
-  position: relative;
-  width: 132px;
-  height: 132px;
-  margin: 0;
-  transform: none;
-  animation: none;
-  will-change: auto;
-}
-
-.relic-choice-name {
-  font-size: 28px;
-}
-
-.relic-choice-desc {
-  flex: 1 1 auto;
-  padding-top: 14px;
-}
-
-.relic-choice-desc .selection-card-desc-line {
-  font-size: 20px;
-  line-height: 1.3;
-}
-
-.relic-choice-card .relic-choice-price {
-  width: 100%;
-  height: 64px;
-  min-height: 64px;
-  max-height: 64px;
-  margin-top: auto;
-  border-color: #444444;
-  background: #0e0e0e;
-  font-size: 30px;
-  pointer-events: none;
-}
-
-.relic-choice-price img {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-.relic-choice-original-price {
-  color: #808080;
-  font-size: 20px;
-  text-decoration: line-through;
-}
-
-.relic-choice-card--unavailable {
-  filter: grayscale(0.75) brightness(0.7);
 }
 
 button.spin-btn .spin-btn__food-payment-label {
@@ -10887,12 +8254,12 @@ html {
 }
 
 /* Keep 15px/16px pixel icons on whole-number scales inside matching action buttons. */
-button.relic-shop-btn--knowledge .relic-shop-btn-icon-layer img {
+button.game-action-btn--knowledge .game-action-btn-icon-layer img {
   width: 64px;
   height: 64px;
 }
 
-button.relic-shop-btn--owned-symbols .relic-shop-btn-icon-layer img {
+button.game-action-btn--owned-symbols .game-action-btn-icon-layer img {
   width: 60px;
   height: 60px;
 }
@@ -10934,12 +8301,12 @@ button.relic-shop-btn--owned-symbols .relic-shop-btn-icon-layer img {
   z-index: 3;
 }
 /* The shared icon layer is centered by the button flex layout; don't retain the old relative inset offset. */
-button.relic-shop-btn .relic-shop-btn-icon-layer {
+button.game-action-btn .game-action-btn-icon-layer {
   inset: auto;
 }
 
 /* The knowledge tree entry also carries the progression HUD beside SPIN. */
-.bottom-action-bar-left button.relic-shop-btn--knowledge {
+.bottom-action-bar-left button.game-action-btn--knowledge {
   position: fixed;
   top: 16px;
   left: 16px;
@@ -10951,75 +8318,6 @@ button.relic-shop-btn .relic-shop-btn-icon-layer {
   align-items: stretch;
   justify-content: center;
   overflow: visible;
-}
-
-.bottom-action-bar-left .relic-shop-btn--culture {
-  position: fixed;
-  top: 16px;
-  left: calc(16px + var(--bottom-action-knowledge-width) + var(--bottom-action-gap));
-  z-index: 2;
-  width: var(--bottom-action-culture-width);
-  height: 123px;
-  flex: 0 0 var(--bottom-action-culture-width);
-  box-sizing: border-box;
-  padding: 16px 18px;
-  border: 2px solid #0e0e0e;
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
-  display: flex;
-  align-items: stretch;
-  font-family: var(--game-font-family), sans-serif;
-}
-
-.culture-level-progress-fill { background: #c026d3; }
-
-.relic-shop-btn--culture .knowledge-upgrade-progress-value img {
-  width: 24px;
-  height: 24px;
-  image-rendering: pixelated;
-}
-
-.culture-level-tooltip {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 12px);
-  z-index: 30;
-  width: 230px;
-  padding: 12px 14px;
-  border: 2px solid #86198f;
-  background: rgba(15, 7, 18, 0.97);
-  transform: translateX(-50%);
-  display: grid;
-  gap: 6px;
-  color: #e5e5e5;
-  font-size: 14px;
-  pointer-events: none;
-}
-
-.culture-level-tooltip strong {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  color: #f5d0fe;
-  letter-spacing: 1px;
-}
-
-.culture-level-tooltip strong small {
-  color: #d8b4fe;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-
-.culture-level-tooltip-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.culture-level-tooltip-row b {
-  white-space: nowrap;
 }
 
 .knowledge-upgrade-progress {
@@ -11099,7 +8397,7 @@ button.relic-shop-btn .relic-shop-btn-icon-layer {
   line-height: 1;
 }
 
-button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
+button.game-action-btn--knowledge .knowledge-upgrade-progress-value img {
   width: 24px;
   height: 24px;
   flex: 0 0 auto;
@@ -11127,13 +8425,13 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   opacity: 0.32;
 }
 
-.tutorial-highlight-knowledge-status .relic-shop-btn--knowledge,
-.tutorial-highlight-knowledge-button .relic-shop-btn--knowledge {
+.tutorial-highlight-knowledge-status .game-action-btn--knowledge,
+.tutorial-highlight-knowledge-button .game-action-btn--knowledge {
   opacity: 1;
 }
 
-.tutorial-highlight-knowledge-status .relic-shop-btn--knowledge::before,
-.tutorial-highlight-knowledge-button .relic-shop-btn--knowledge::before {
+.tutorial-highlight-knowledge-status .game-action-btn--knowledge::before,
+.tutorial-highlight-knowledge-button .game-action-btn--knowledge::before {
   content: "";
   position: absolute;
   inset: -11px;
@@ -11156,7 +8454,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   width: var(--game-side-section-width, 286px);
 }
 
-.progress-hud-panels button.relic-shop-btn--knowledge {
+.progress-hud-panels button.game-action-btn--knowledge {
   position: relative;
   top: auto;
   left: auto;
@@ -11167,23 +8465,6 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   align-items: stretch;
   justify-content: center;
   overflow: visible;
-}
-
-.progress-hud-panels .relic-shop-btn--culture {
-  position: relative;
-  top: auto;
-  left: auto;
-  width: var(--game-side-section-width, 286px);
-  height: 123px;
-  flex: 0 0 123px;
-  padding: 16px 18px;
-  align-items: stretch;
-  justify-content: center;
-  overflow: visible;
-}
-
-.progress-hud-panels .culture-level-tooltip {
-  width: var(--game-side-section-width, 286px);
 }
 
 .progress-hud-panels > .hud-stat-tooltip {
@@ -11221,8 +8502,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   pointer-events: auto;
 }
 
-.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge,
-.game-right-section .progress-hud-panels .relic-shop-btn--culture {
+.game-right-section .progress-hud-panels button.game-action-btn--knowledge {
   width: 100%;
   height: 78px;
   flex: 0 0 78px;
@@ -11242,13 +8522,13 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
     inset 0 -2px 0 #080808;
 }
 
-.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge {
+.game-right-section .progress-hud-panels button.game-action-btn--knowledge {
   cursor: var(--app-cursor-pointer);
 }
 
-.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge:hover:not(:disabled),
-.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge:focus-visible:not(:disabled),
-.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge.game-right-action--hovered:not(:disabled) {
+.game-right-section .progress-hud-panels button.game-action-btn--knowledge:hover:not(:disabled),
+.game-right-section .progress-hud-panels button.game-action-btn--knowledge:focus-visible:not(:disabled),
+.game-right-section .progress-hud-panels button.game-action-btn--knowledge.game-right-action--hovered:not(:disabled) {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.015)),
     #2e2e2e;
@@ -11263,7 +8543,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   filter: brightness(1.08);
 }
 
-.game-right-section .progress-hud-panels button.relic-shop-btn--knowledge:active:not(:disabled) {
+.game-right-section .progress-hud-panels button.game-action-btn--knowledge:active:not(:disabled) {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.02)),
     #1c1c1c;
@@ -11299,34 +8579,6 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
     #1c1c1c;
   outline: none;
   filter: brightness(0.94);
-}
-
-.game-right-section .progress-hud-panels .relic-shop-btn--culture {
-  cursor: help;
-}
-
-.game-right-section .progress-hud-panels .relic-shop-btn--culture::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  z-index: 0;
-  box-sizing: border-box;
-  border: 2px solid #0e0e0e;
-  pointer-events: none;
-}
-
-.game-right-section .progress-hud-panels .relic-shop-btn--culture:hover,
-.game-right-section .progress-hud-panels .relic-shop-btn--culture:active {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
-    #242424;
-  outline: none;
-  box-shadow:
-    inset 0 2px 0 #5a5a5a,
-    inset 2px 0 0 #3a3a3a,
-    inset -2px 0 0 #121212,
-    inset 0 -2px 0 #080808;
-  filter: none;
 }
 
 .game-right-section .progress-hud-panels > .hud-stat-tooltip {
@@ -11406,15 +8658,6 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   text-align: right;
 }
 
-.game-right-section .relic-shop-btn--culture .game-right-action-meta {
-  justify-content: flex-start;
-}
-
-.game-right-section .relic-shop-btn--culture .game-right-action-meta span:last-child {
-  margin-left: 0;
-  text-align: left;
-}
-
 .game-right-action-bar {
   position: relative;
   z-index: 1;
@@ -11442,10 +8685,6 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   background: #3b82f6;
 }
 
-.game-right-action-bar-fill--culture {
-  background: #c026d3;
-}
-
 .game-right-action-bar-value {
   position: absolute;
   inset: 0;
@@ -11465,23 +8704,12 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   pointer-events: none;
 }
 
-.game-right-section .relic-shop-btn--knowledge .running-total-pop,
-.game-right-section .relic-shop-btn--culture .running-total-pop {
+.game-right-section .game-action-btn--knowledge .running-total-pop {
   top: 50%;
   right: calc(100% + 12px);
   left: auto;
   bottom: auto;
   transform: translateY(-50%);
-}
-
-.game-right-section .progress-hud-panels .culture-level-tooltip {
-  top: 50%;
-  bottom: auto;
-  right: calc(100% + 12px);
-  left: auto;
-  width: var(--game-side-section-width, 286px);
-  transform: translateY(-50%);
-  text-align: left;
 }
 
 .game-right-status-panel {
@@ -11625,10 +8853,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 .game-right-section button.spin-btn.spin-btn--food-payment:active:not(:disabled),
 .game-right-section button.spin-btn.spin-btn--board-expansion,
 .game-right-section button.spin-btn.spin-btn--board-expansion:hover:not(:disabled),
-.game-right-section button.spin-btn.spin-btn--board-expansion:active:not(:disabled),
-.game-right-section button.spin-btn.spin-btn--relic-shop,
-.game-right-section button.spin-btn.spin-btn--relic-shop:hover:not(:disabled),
-.game-right-section button.spin-btn.spin-btn--relic-shop:active:not(:disabled) {
+.game-right-section button.spin-btn.spin-btn--board-expansion:active:not(:disabled) {
   flex: 0 0 78px;
   width: 100%;
   min-width: 0;
@@ -11642,8 +8867,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 
 .game-right-section button.spin-btn,
 .game-right-section button.spin-btn.spin-btn--food-payment,
-.game-right-section button.spin-btn.spin-btn--board-expansion,
-.game-right-section button.spin-btn.spin-btn--relic-shop {
+.game-right-section button.spin-btn.spin-btn--board-expansion {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11653,8 +8877,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
 
 .game-right-section button.spin-btn .spin-btn__state-label,
 .game-right-section button.spin-btn .spin-btn__food-payment-label,
-.game-right-section button.spin-btn .spin-btn__board-expansion-label,
-.game-right-section button.spin-btn .spin-btn__relic-shop-label {
+.game-right-section button.spin-btn .spin-btn__board-expansion-label {
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -11726,8 +8949,7 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   image-rendering: pixelated;
 }
 
-.game-right-section button.spin-btn .spin-btn__board-expansion-label,
-.game-right-section button.spin-btn .spin-btn__relic-shop-label {
+.game-right-section button.spin-btn .spin-btn__board-expansion-label {
   font-size: 27px;
 }
 
@@ -12070,24 +9292,6 @@ button.relic-shop-btn--knowledge .knowledge-upgrade-progress-value img {
   min-height: 100%;
   padding: 48px 20px;
   font-size: 22px;
-}
-
-.inventory-relic-tooltip {
-  text-align: left;
-}
-
-.inventory-relic-tooltip .symbol-tooltip-rarity {
-  align-self: flex-start;
-  padding: 2px 7px;
-  border: 1px solid currentColor;
-  background: rgba(15, 23, 42, 0.55);
-  font-size: 14px;
-  letter-spacing: 1px;
-}
-
-.inventory-relic-tooltip-count {
-  margin-top: 8px;
-  color: #fbbf24;
 }
 
 .tutorial-highlight-owned-close .owned-symbols-close-btn.owned-symbols-close-btn--simple::after,
@@ -12768,7 +9972,7 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowl
 
 .knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--locked .knowledge-upgrade-chip-image,
 .knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable .knowledge-upgrade-chip-image {
-  filter: grayscale(1) saturate(0) brightness(0.86);
+  filter: none;
 }
 
 .knowledge-upgrade-chip-copy {
@@ -13046,10 +10250,6 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable .k
   padding: 12px;
   border: 1px solid #2e2e2e;
   background: #080808;
-}
-
-.knowledge-upgrade-detail-relics {
-  margin-top: 12px;
 }
 
 .knowledge-upgrade-docked-research-btn,
@@ -14099,7 +11299,7 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowl
     inset 0 -2px 0 #080808;
 }
 
-.game-left-section button.game-left-owned-symbols-btn .relic-shop-btn-icon-layer {
+.game-left-section button.game-left-owned-symbols-btn .game-action-btn-icon-layer {
   position: relative;
   inset: auto;
   width: 48px;
@@ -14107,7 +11307,7 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowl
   flex: 0 0 48px;
 }
 
-.game-left-section button.game-left-owned-symbols-btn .relic-shop-btn-icon-layer img {
+.game-left-section button.game-left-owned-symbols-btn .game-action-btn-icon-layer img {
   width: 48px;
   height: 48px;
   object-fit: contain;
@@ -14138,213 +11338,6 @@ button.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unlocked.knowl
   transform: translate(12px, 50%);
 }
 
-.game-left-relic-panel {
-  position: relative;
-  z-index: 1;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-  border: 2px solid #141414;
-  background: #242424;
-  box-shadow:
-    inset 0 2px 0 #5a5a5a,
-    inset 2px 0 0 #3a3a3a,
-    inset -2px 0 0 #121212,
-    inset 0 -2px 0 #080808;
-  isolation: isolate;
-  overflow: visible;
-  pointer-events: auto;
-}
-
-.game-left-relic-panel::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  z-index: 0;
-  border: 2px solid #141414;
-  pointer-events: none;
-}
-
-.game-left-relic-grid {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(6, minmax(0, 1fr));
-  column-gap: 8px;
-  row-gap: 4px;
-}
-
-.game-left-relic-slot {
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
-}
-
-button.game-left-relic-slot {
-  appearance: none;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #ffffff;
-  font-family: var(--game-font-family), sans-serif;
-  cursor: var(--app-cursor-help);
-}
-
-.game-left-relic-slot--filled {
-  border: 0;
-  background: transparent;
-}
-
-.game-left-relic-slot--clickable {
-  cursor: var(--app-cursor-pointer);
-}
-
-.game-left-relic-slot--clickable:hover,
-.game-left-relic-slot--clickable:focus-visible {
-  outline: 0;
-  filter: brightness(1.16);
-  box-shadow: none;
-}
-
-.game-left-relic-empty-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(156, 163, 175, 0.28);
-}
-
-.game-left-relic-icon {
-  width: min(88%, 84px);
-  height: min(88%, 84px);
-  object-fit: contain;
-  image-rendering: pixelated;
-  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4));
-  transition: transform 120ms steps(2, end), filter 120ms steps(2, end);
-}
-
-.game-left-relic-slot--clickable:hover .game-left-relic-icon,
-.game-left-relic-slot--clickable:focus-visible .game-left-relic-icon {
-  transform: translateY(-2px);
-  filter:
-    drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4))
-    drop-shadow(0 0 7px var(--game-left-relic-rarity-color, rgba(255, 255, 255, 0.42)));
-}
-
-.game-left-relic-placeholder {
-  font-size: 38px;
-  color: rgba(255, 255, 255, 0.72);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
-}
-
-.game-left-relic-counter {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 5px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1;
-  text-shadow:
-    3px 0 #000000,
-    -3px 0 #000000,
-    0 3px #000000,
-    0 -3px #000000,
-    2px 2px #000000,
-    -2px 2px #000000,
-    2px -2px #000000,
-    -2px -2px #000000;
-}
-
-.game-left-relic-tooltip {
-  position: absolute;
-  top: 50%;
-  left: calc(100% + 12px);
-  z-index: 30;
-  width: 280px;
-  max-width: 280px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  border: 2px solid #141414;
-  background: rgba(20, 20, 20, 0.97);
-  color: #ffffff;
-  text-align: left;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-50%);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.08),
-    0 8px 0 rgba(0, 0, 0, 0.18);
-}
-
-.game-left-relic-slot--filled:hover .game-left-relic-tooltip,
-.game-left-relic-slot--filled:focus-visible .game-left-relic-tooltip {
-  opacity: 1;
-}
-
-.game-left-relic-tooltip-name {
-  color: #dcfce7;
-  font-size: 15px;
-  font-weight: 900;
-  line-height: 1.18;
-  text-align: left;
-  white-space: normal;
-}
-
-.game-left-relic-tooltip-rarity {
-  align-self: flex-start;
-  padding: 2px 7px;
-  border: 1px solid var(--game-left-relic-rarity-color, #777777);
-  background: rgba(15, 23, 42, 0.55);
-  color: var(--game-left-relic-rarity-color, #d1d5db);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.2;
-  text-align: left;
-}
-
-.game-left-relic-tooltip-desc {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 2px;
-  color: #e5e5e5;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.42;
-  text-align: left;
-  white-space: normal;
-}
-
-.game-left-relic-tooltip-desc-line {
-  display: block;
-  text-align: left;
-}
-
 .tutorial-highlight-owned-symbols-button .game-left-section {
   z-index: 640;
 }
@@ -14353,8 +11346,7 @@ button.game-left-relic-slot {
 :where(
   .demo-start-root,
   .initial-setup-root,
-  .leader-select-root,
-  .leader-progress-root,
+  .difficulty-select-root,
   .pregame-overlay,
   .pause-overlay,
   .selection-overlay,
@@ -14371,10 +11363,8 @@ button.game-left-relic-slot {
 :where(
   .main-menu,
   .initial-setup-panel,
-  .leader-select-shell,
-  .leader-select-summary,
-  .leader-progress-shell,
-  .leader-detail-hero,
+  .difficulty-select-shell,
+  .difficulty-select-panel,
   .pregame-panel,
   .pause-panel,
   .settings-panel,
@@ -14406,10 +11396,8 @@ button.game-left-relic-slot {
 :where(
   .main-menu,
   .initial-setup-panel,
-  .leader-select-shell,
-  .leader-select-summary,
-  .leader-progress-shell,
-  .leader-detail-hero,
+  .difficulty-select-shell,
+  .difficulty-select-panel,
   .pregame-panel,
   .pause-panel,
   .settings-panel,
@@ -14440,10 +11428,8 @@ button.game-left-relic-slot {
 :where(
   .main-menu,
   .initial-setup-panel,
-  .leader-select-shell,
-  .leader-select-summary,
-  .leader-progress-shell,
-  .leader-detail-hero,
+  .difficulty-select-shell,
+  .difficulty-select-panel,
   .pregame-panel,
   .pause-panel,
   .settings-panel,
@@ -14471,11 +11457,11 @@ button.game-left-relic-slot {
   padding: 34px 38px 42px;
 }
 
-.leader-select-shell {
+.difficulty-select-shell {
   padding: 24px 30px 28px;
 }
 
-.leader-select-summary,
+.difficulty-select-panel,
 .demo-achievement-section {
   padding: 18px;
 }
@@ -14524,295 +11510,18 @@ button.game-left-relic-slot {
 
 :where(
   .main-menu-button,
-  .main-menu-settings-button,
-  .main-menu-exit-button,
-  .leader-select-back,
-  .leader-difficulty-button,
-  .initial-setup-language-trigger,
-  .initial-setup-language-option,
-  .initial-setup-continue,
-  .initial-setup-option,
-  .pause-log-btn,
-  .pause-menu-btn,
-  .settings-tab,
-  .settings-seg-btn,
-  .settings-danger-btn,
-  .settings-confirm-btn,
-  .settings-back-btn,
-  .settings-key-bind-btn,
-  .settings-key-bindings-reset,
-  .selection-card,
-  .selection-event-card,
-  .selection-reroll-btn,
-  .selection-skip-btn,
-  .selection-peek-handle,
-  .relic-card-buy-btn,
-  .relic-shop-back-btn,
-  .knowledge-upgrades-back-btn,
-  .knowledge-upgrades-era-tab,
-  .knowledge-upgrade-chip,
-  .knowledge-upgrade-docked-research-btn,
-  .knowledge-upgrade-researched-banner,
-  .owned-symbols-close-btn,
-  .owned-symbols-type-pill,
-  .owned-symbols-sort-controls button,
-  .effect-log-action-btn,
-  .effect-log-filter-btn,
-  .effect-log-row-button,
-  .demo-achievements-giveaway-button,
-  .tutorial-exit-button,
-  .tutorial-dialog-next,
-  .endgame-btn
-) {
-  position: relative;
-  isolation: isolate;
-  border: 2px solid var(--game-ui-line);
-  border-radius: 0;
-  background: var(--game-ui-face);
-  color: var(--game-ui-text);
-  text-shadow: none;
-  box-shadow: var(--game-ui-bevel);
-  transition:
-    transform 140ms steps(2, end),
-    color 140ms steps(2, end),
-    border-color 140ms steps(2, end),
-    background 140ms steps(2, end),
-    box-shadow 140ms steps(2, end),
-    filter 140ms steps(2, end);
-}
-
-:where(
-  .main-menu-button,
-  .main-menu-settings-button,
-  .main-menu-exit-button,
-  .leader-select-back,
-  .leader-difficulty-button,
-  .initial-setup-language-trigger,
-  .initial-setup-language-option,
-  .initial-setup-continue,
-  .initial-setup-option,
-  .pause-log-btn,
-  .pause-menu-btn,
-  .settings-tab,
-  .settings-seg-btn,
-  .settings-danger-btn,
-  .settings-confirm-btn,
-  .settings-back-btn,
-  .settings-key-bind-btn,
-  .settings-key-bindings-reset,
-  .selection-card,
-  .selection-event-card,
-  .selection-reroll-btn,
-  .selection-skip-btn,
-  .selection-peek-handle,
-  .relic-card-buy-btn,
-  .relic-shop-back-btn,
-  .knowledge-upgrades-back-btn,
-  .knowledge-upgrades-era-tab,
-  .knowledge-upgrade-chip,
-  .knowledge-upgrade-docked-research-btn,
-  .knowledge-upgrade-researched-banner,
-  .owned-symbols-close-btn,
-  .owned-symbols-type-pill,
-  .owned-symbols-sort-controls button,
-  .effect-log-action-btn,
-  .effect-log-filter-btn,
-  .effect-log-row-button,
-  .demo-achievements-giveaway-button,
-  .tutorial-exit-button,
-  .tutorial-dialog-next,
-  .endgame-btn
-)::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  z-index: 0;
-  box-sizing: border-box;
-  border: 2px solid var(--game-ui-line);
-  pointer-events: none;
-}
-
-:where(
-  .main-menu-button,
-  .main-menu-settings-button,
-  .main-menu-exit-button,
-  .leader-select-back,
-  .leader-difficulty-button,
-  .initial-setup-language-trigger,
-  .initial-setup-language-option,
-  .initial-setup-continue,
-  .initial-setup-option,
-  .pause-log-btn,
-  .pause-menu-btn,
-  .settings-tab,
-  .settings-seg-btn,
-  .settings-danger-btn,
-  .settings-confirm-btn,
-  .settings-back-btn,
-  .settings-key-bind-btn,
-  .settings-key-bindings-reset,
-  .selection-card,
-  .selection-event-card,
-  .selection-reroll-btn,
-  .selection-skip-btn,
-  .selection-peek-handle,
-  .relic-card-buy-btn,
-  .relic-shop-back-btn,
-  .knowledge-upgrades-back-btn,
-  .knowledge-upgrades-era-tab,
-  .knowledge-upgrade-chip,
-  .knowledge-upgrade-docked-research-btn,
-  .knowledge-upgrade-researched-banner,
-  .owned-symbols-close-btn,
-  .owned-symbols-type-pill,
-  .owned-symbols-sort-controls button,
-  .effect-log-action-btn,
-  .effect-log-filter-btn,
-  .effect-log-row-button,
-  .demo-achievements-giveaway-button,
-  .tutorial-exit-button,
-  .tutorial-dialog-next,
-  .endgame-btn
-) > * {
-  position: relative;
-  z-index: 1;
-}
-
-:where(
-  .main-menu-button,
-  .main-menu-settings-button,
-  .main-menu-exit-button,
-  .leader-select-back,
-  .leader-difficulty-button,
-  .initial-setup-language-trigger,
-  .initial-setup-language-option,
-  .initial-setup-continue,
-  .initial-setup-option,
-  .pause-log-btn,
-  .pause-menu-btn,
-  .settings-tab,
-  .settings-seg-btn,
-  .settings-danger-btn,
-  .settings-confirm-btn,
-  .settings-back-btn,
-  .settings-key-bind-btn,
-  .settings-key-bindings-reset,
-  .selection-card,
-  .selection-event-card,
-  .selection-reroll-btn,
-  .selection-skip-btn,
-  .selection-peek-handle,
-  .relic-card-buy-btn,
-  .relic-shop-back-btn,
-  .knowledge-upgrades-back-btn,
-  .knowledge-upgrades-era-tab,
-  .knowledge-upgrade-chip,
-  .knowledge-upgrade-docked-research-btn,
-  .owned-symbols-close-btn,
-  .owned-symbols-type-pill,
-  .owned-symbols-sort-controls button,
-  .effect-log-action-btn,
-  .effect-log-filter-btn,
-  .effect-log-row-button,
-  .demo-achievements-giveaway-button,
-  .tutorial-exit-button,
-  .tutorial-dialog-next,
-  .endgame-btn
-):where(:hover, :focus-visible):not(:disabled):not([aria-disabled="true"]):not(.knowledge-upgrade-researched-banner) {
-  color: #ffffff;
-  border-color: var(--game-ui-line);
-  background: var(--game-ui-face-hover);
-  box-shadow: var(--game-ui-bevel-hover);
-  outline: none;
-  transform: translateY(-1px);
-}
-
-:where(
-  .main-menu-button,
-  .main-menu-settings-button,
-  .main-menu-exit-button,
-  .leader-select-back,
-  .leader-difficulty-button,
-  .initial-setup-language-trigger,
-  .initial-setup-language-option,
-  .initial-setup-continue,
-  .initial-setup-option,
-  .pause-log-btn,
-  .pause-menu-btn,
-  .settings-tab,
-  .settings-seg-btn,
-  .settings-danger-btn,
-  .settings-confirm-btn,
-  .settings-back-btn,
-  .settings-key-bind-btn,
-  .settings-key-bindings-reset,
-  .selection-card,
-  .selection-event-card,
-  .selection-reroll-btn,
-  .selection-skip-btn,
-  .selection-peek-handle,
-  .relic-card-buy-btn,
-  .relic-shop-back-btn,
-  .knowledge-upgrades-back-btn,
-  .knowledge-upgrades-era-tab,
-  .knowledge-upgrade-chip,
-  .knowledge-upgrade-docked-research-btn,
-  .owned-symbols-close-btn,
-  .owned-symbols-type-pill,
-  .owned-symbols-sort-controls button,
-  .effect-log-action-btn,
-  .effect-log-filter-btn,
-  .effect-log-row-button,
-  .demo-achievements-giveaway-button,
-  .tutorial-exit-button,
-  .tutorial-dialog-next,
-  .endgame-btn
-):active:not(:disabled):not([aria-disabled="true"]) {
-  background: var(--game-ui-face-active);
-  box-shadow:
-    inset 0 2px 0 #080808,
-    inset 2px 0 0 #121212,
-    inset -2px 0 0 #3a3a3a,
-    inset 0 -2px 0 #5a5a5a;
-  transform: translateY(1px);
-}
-
-:where(
-  .main-menu-button,
-  .leader-difficulty-button,
-  .initial-setup-continue,
-  .initial-setup-option,
-  .pause-menu-btn,
-  .settings-tab,
-  .settings-seg-btn,
-  .settings-danger-btn,
-  .settings-confirm-btn,
-  .settings-back-btn,
-  .settings-key-bind-btn,
-  .selection-card,
-  .selection-reroll-btn,
-  .selection-skip-btn,
-  .relic-card-buy-btn,
-  .knowledge-upgrades-era-tab,
-  .knowledge-upgrade-chip,
-  .knowledge-upgrade-docked-research-btn,
-  .endgame-btn
-):disabled,
-:where(
-  .main-menu-button,
-  .leader-difficulty-button,
+  .difficulty-button,
   .selection-reroll-btn,
   .knowledge-upgrade-chip
 )[aria-disabled="true"] {
   opacity: 0.42;
-  filter: grayscale(0.55);
   cursor: default;
   transform: none;
 }
 
 .settings-tab.active,
 .settings-seg-btn.active,
-.leader-difficulty-button--selected,
+.difficulty-button--selected,
 .initial-setup-option.active,
 .owned-symbols-type-pill--active,
 .effect-log-filter-btn--selected,
@@ -14852,8 +11561,6 @@ button.knowledge-upgrade-chip--available {
 }
 
 .initial-setup-language-menu,
-.culture-level-tooltip,
-.game-left-relic-tooltip,
 .hud-stat-tooltip,
 .bottom-action-hud-tooltip,
 .symbol-tooltip,
@@ -14868,9 +11575,7 @@ button.knowledge-upgrade-chip--available {
 
 .demo-achievement-progress,
 .knowledge-upgrades-era-tab-progress,
-.knowledge-upgrade-progress-bar,
-.leader-detail-xpbar,
-.leader-select-xpbar {
+.knowledge-upgrade-progress-bar {
   border: 2px solid var(--game-ui-line);
   background: var(--game-ui-panel-darker);
   box-shadow:
@@ -14892,8 +11597,8 @@ button.knowledge-upgrade-chip--available {
 button.main-menu-button,
 button.main-menu-settings-button,
 button.main-menu-exit-button,
-button.leader-select-back,
-button.leader-difficulty-button,
+button.menu-back-button,
+button.difficulty-button,
 button.initial-setup-language-trigger,
 button.initial-setup-language-option,
 button.initial-setup-continue,
@@ -14912,8 +11617,6 @@ button.selection-event-card,
 button.selection-reroll-btn,
 button.selection-skip-btn,
 button.selection-peek-handle,
-button.relic-card-buy-btn,
-button.relic-shop-back-btn,
 button.knowledge-upgrades-back-btn,
 button.knowledge-upgrades-era-tab,
 button.knowledge-upgrade-chip,
@@ -14941,10 +11644,10 @@ button.main-menu-settings-button:hover,
 button.main-menu-settings-button:focus-visible,
 button.main-menu-exit-button:hover,
 button.main-menu-exit-button:focus-visible,
-button.leader-select-back:hover,
-button.leader-select-back:focus-visible,
-button.leader-difficulty-button:hover:not(:disabled),
-button.leader-difficulty-button:focus-visible:not(:disabled),
+button.menu-back-button:hover,
+button.menu-back-button:focus-visible,
+button.difficulty-button:hover:not(:disabled),
+button.difficulty-button:focus-visible:not(:disabled),
 button.initial-setup-language-trigger:hover,
 button.initial-setup-language-trigger:focus-visible,
 button.initial-setup-language-option:hover,
@@ -14981,10 +11684,6 @@ button.selection-skip-btn:hover,
 button.selection-skip-btn:focus-visible,
 button.selection-peek-handle:hover,
 button.selection-peek-handle:focus-visible,
-button.relic-card-buy-btn:hover,
-button.relic-card-buy-btn:focus-visible,
-button.relic-shop-back-btn:hover,
-button.relic-shop-back-btn:focus-visible,
 button.knowledge-upgrades-back-btn:hover,
 button.knowledge-upgrades-back-btn:focus-visible,
 button.knowledge-upgrades-era-tab:hover,
@@ -15026,8 +11725,8 @@ button.endgame-btn:focus-visible:not(:active) {
 button.main-menu-button:active,
 button.main-menu-settings-button:active,
 button.main-menu-exit-button:active,
-button.leader-select-back:active,
-button.leader-difficulty-button:active:not(:disabled),
+button.menu-back-button:active,
+button.difficulty-button:active:not(:disabled),
 button.initial-setup-language-trigger:active,
 button.initial-setup-language-option:active,
 button.initial-setup-continue:active:not(:disabled),
@@ -15046,8 +11745,6 @@ button.selection-event-card:active,
 button.selection-reroll-btn:active:not([aria-disabled="true"]),
 button.selection-skip-btn:active,
 button.selection-peek-handle:active,
-button.relic-card-buy-btn:active,
-button.relic-shop-back-btn:active,
 button.knowledge-upgrades-back-btn:active,
 button.knowledge-upgrades-era-tab:active,
 button.knowledge-upgrade-chip:active:not([aria-disabled="true"]),
@@ -15074,7 +11771,7 @@ button.endgame-btn:active {
 
 button.settings-tab.active,
 button.settings-seg-btn.active,
-button.leader-difficulty-button--selected,
+button.difficulty-button--selected,
 button.initial-setup-option.active,
 button.owned-symbols-type-pill--active,
 button.effect-log-filter-btn--selected,
@@ -15090,63 +11787,11 @@ button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgra
   box-shadow: var(--game-ui-bevel-hover) !important;
 }
 
-.leader-detail-unlocks-panel,
-.leader-unlock-body,
-button.leader-progress-card {
-  position: relative;
-  isolation: isolate;
-  border: 2px solid var(--game-ui-line);
-  background: var(--game-ui-face) !important;
-  color: var(--game-ui-text);
-  box-shadow: var(--game-ui-bevel) !important;
-}
-
-.leader-detail-unlocks-panel::after,
-.leader-unlock-body::after,
-button.leader-progress-card::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  z-index: 0;
-  box-sizing: border-box;
-  border: 2px solid var(--game-ui-line);
-  pointer-events: none;
-}
-
-.leader-detail-unlocks-panel > *,
-.leader-unlock-body > *,
-button.leader-progress-card > * {
-  position: relative;
-  z-index: 1;
-}
-
-button.leader-progress-card:hover,
-button.leader-progress-card:focus-visible {
-  background: var(--game-ui-face-hover) !important;
-  color: #ffffff;
-  box-shadow: var(--game-ui-bevel-hover) !important;
-  outline: none;
-  transform: translateY(-1px);
-}
-
-button.leader-progress-card:active {
-  background: var(--game-ui-face-active) !important;
-  box-shadow:
-    inset 0 2px 0 #080808,
-    inset 2px 0 0 #121212,
-    inset -2px 0 0 #3a3a3a,
-    inset 0 -2px 0 #5a5a5a !important;
-  transform: translateY(1px);
-}
 
 .main-menu,
 .initial-setup-panel,
-.leader-select-shell,
-.leader-select-summary,
-.leader-progress-shell,
-.leader-detail-hero,
-.leader-detail-unlocks-panel,
-.leader-unlock-body,
+.difficulty-select-shell,
+.difficulty-select-panel,
 .pregame-panel,
 .pause-panel,
 .settings-panel,
@@ -15170,9 +11815,8 @@ button.leader-progress-card:active {
 button.main-menu-button,
 button.main-menu-settings-button,
 button.main-menu-exit-button,
-button.leader-select-back,
-button.leader-difficulty-button,
-button.leader-progress-card,
+button.menu-back-button,
+button.difficulty-button,
 button.initial-setup-language-trigger,
 button.initial-setup-language-option,
 button.initial-setup-continue,
@@ -15191,8 +11835,6 @@ button.selection-event-card,
 button.selection-reroll-btn,
 button.selection-skip-btn,
 button.selection-peek-handle,
-button.relic-card-buy-btn,
-button.relic-shop-back-btn,
 button.knowledge-upgrades-back-btn,
 button.knowledge-upgrades-era-tab,
 button.knowledge-upgrade-chip,
@@ -15213,8 +11855,7 @@ button.endgame-btn {
 
 /* Stage/layout shells should stay invisible; only actual controls/cards get the shared box style. */
 .main-menu,
-.leader-select-shell,
-.leader-progress-shell {
+.difficulty-select-shell {
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -15222,8 +11863,7 @@ button.endgame-btn {
 }
 
 .main-menu::after,
-.leader-select-shell::after,
-.leader-progress-shell::after {
+.difficulty-select-shell::after {
   content: none !important;
   display: none !important;
 }
@@ -15601,8 +12241,7 @@ button.main-menu-exit-button:active:not(:disabled) {
 }
 
 /* Keep every button physically stationary; hover/press should change only the surface styling. */
-button:where(:hover, :focus-visible, :active),
-a.demo-achievements-giveaway-button:where(:hover, :focus-visible, :active) {
+button:where(:hover, :focus-visible, :active), a.demo-achievements-giveaway-button:where(:hover, :focus-visible, :active) {
   transform: none !important;
 }
 
@@ -16041,118 +12680,6 @@ button.selection-peek-handle:active {
   backdrop-filter: none !important;
   transform: translateY(calc(-50% - 10px));
 }
-
-/* Relic choice: open-air shop display, with each relic card as the purchase target. */
-.selection-overlay--relic-choice .selection-panel,
-.selection-overlay--relic-choice .selection-panel::after {
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.selection-overlay--relic-choice .selection-panel {
-  padding: 0 !important;
-}
-
-.selection-overlay--relic-choice .selection-title--plain {
-  color: rgba(255, 230, 178, 0.96);
-}
-
-.selection-overlay--relic-choice .relic-choice-gold {
-  border-color: #0e0e0e;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0)),
-    #221b12;
-  color: #facc15;
-  box-shadow:
-    inset 0 2px 0 #5f5034,
-    inset 2px 0 0 #3a2d1a,
-    inset -2px 0 0 #120d08,
-    inset 0 -2px 0 #080604;
-}
-
-.selection-overlay--relic-choice .selection-cards.relic-choice-cards {
-  gap: 34px;
-}
-
-.selection-overlay--relic-choice .selection-relic-card-frame {
-  filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.28));
-}
-
-.selection-overlay--relic-choice .selection-card.relic-choice-card {
-  border: 2px solid color-mix(in srgb, var(--selection-era-color, #facc15) 56%, #0e0e0e);
-  background:
-    linear-gradient(180deg, rgba(255, 236, 179, 0.08), rgba(255, 236, 179, 0) 26%),
-    linear-gradient(90deg, rgba(250, 204, 21, 0.05), rgba(0, 0, 0, 0) 18%, rgba(250, 204, 21, 0.04)),
-    #211a13;
-  box-shadow:
-    inset 0 2px 0 rgba(255, 238, 198, 0.2),
-    inset 2px 0 0 rgba(255, 238, 198, 0.08),
-    inset -2px 0 0 rgba(0, 0, 0, 0.6),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.72) !important;
-}
-
-.selection-overlay--relic-choice .selection-card.relic-choice-card:hover,
-.selection-overlay--relic-choice .selection-card.relic-choice-card:focus-visible {
-  border-color: color-mix(in srgb, var(--selection-era-color, #facc15) 82%, #ffffff);
-  background:
-    linear-gradient(180deg, rgba(255, 236, 179, 0.12), rgba(255, 236, 179, 0.02) 30%),
-    linear-gradient(90deg, rgba(250, 204, 21, 0.08), rgba(0, 0, 0, 0) 18%, rgba(250, 204, 21, 0.06)),
-    #2a2117;
-}
-
-.selection-overlay--relic-choice .selection-card.relic-choice-card::after {
-  border-color: rgba(215, 181, 109, 0.58);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 236, 184, 0.16),
-    inset 0 0 0 5px rgba(141, 104, 43, 0.12);
-}
-
-.selection-overlay--relic-choice .relic-choice-rarity {
-  margin-bottom: 2px;
-  font-size: 18px;
-}
-
-.selection-overlay--relic-choice .relic-choice-name {
-  color: #fff1d0;
-}
-
-.selection-overlay--relic-choice .relic-choice-desc {
-  padding-top: 10px;
-}
-
-.selection-overlay--relic-choice .relic-choice-price {
-  width: auto;
-  height: auto;
-  min-height: 0;
-  max-height: none;
-  margin-top: auto;
-  padding: 10px 0 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  color: #facc15;
-  font-size: 30px;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 1px;
-  pointer-events: none;
-}
-
-.selection-overlay--relic-choice .relic-choice-price img {
-  width: 26px;
-  height: 26px;
-  flex: 0 0 26px;
-}
-
-.selection-overlay--relic-choice .relic-choice-original-price {
-  color: rgba(255, 244, 214, 0.46);
-  font-size: 20px;
-}
 /* === Knowledge upgrades === */
 .knowledge-tracks-overlay {
   --knowledge-track-surface: #111111;
@@ -16469,7 +12996,6 @@ button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgra
 button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable {
   border-color: var(--game-ui-line) !important;
   background: #141414 !important;
-  filter: grayscale(0.4) !important;
   opacity: 0.84 !important;
   color: rgba(255, 255, 255, 0.78) !important;
 }
@@ -16480,12 +13006,11 @@ button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgra
 button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--unavailable:focus-visible {
   border-color: var(--game-ui-line) !important;
   background: #141414 !important;
-  filter: grayscale(0.4) !important;
   opacity: 0.84 !important;
 }
 
 button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected) .knowledge-upgrade-chip-image {
-  filter: grayscale(1) saturate(0) brightness(0.86) !important;
+  filter: none !important;
 }
 
 button.knowledge-upgrade-chip.knowledge-upgrade-chip--horizontal.knowledge-upgrade-chip--available:not(.knowledge-upgrade-chip--selected) .knowledge-upgrade-chip-name,
