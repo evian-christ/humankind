@@ -1,8 +1,8 @@
-import { S, SymbolType } from '../../../data/symbolDefinitions';
+import { S } from '../../../data/symbolDefinitions';
 import { countEmptySlots, isCorner } from '../core';
 import type { SymbolEffectHandler } from '../core';
 
-export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, adj, state, relicEffects }) => {
+export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, state }) => {
     switch (symbolInstance.definition.id) {
         case S.oral_tradition:
             symbolInstance.effect_counter++;
@@ -12,10 +12,7 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
             return true;
 
         case S.totem:
-            if (
-                relicEffects.allSymbolsAreCorner ||
-                isCorner(x, y, boardGrid.length, boardGrid[x]?.length ?? boardGrid[0]?.length ?? 0)
-            ) state.knowledge += 12;
+            if (isCorner(x, y, boardGrid.length, boardGrid[x]?.length ?? boardGrid[0]?.length ?? 0)) state.knowledge += 12;
             return true;
 
         case S.omen:
@@ -46,31 +43,6 @@ export const handleAncientEffects: SymbolEffectHandler = ({ symbolInstance, boar
                 symbolInstance.is_marked_for_destruction = true;
             }
             return true;
-
-        case S.heqet: {
-            state.food += 1;
-            const adjacentGrasslands = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.grassland);
-            if (adjacentGrasslands.length > 0) {
-                state.food += 2;
-                state.contributors.push(...adjacentGrasslands);
-            }
-            const adjacentWheats = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.id === S.wheat);
-            if (adjacentWheats.length > 0) {
-                state.knowledge += 2;
-                state.contributors.push(...adjacentWheats);
-            }
-            return true;
-        }
-
-        case S.foxtail_millet: {
-            const adjacentTerrains = adj.filter((pos) => boardGrid[pos.x][pos.y]?.definition.type === SymbolType.TERRAIN);
-            const food = Math.floor(adjacentTerrains.length / 2) * 5;
-            if (food > 0) {
-                state.food += food;
-                state.contributors.push(...adjacentTerrains);
-            }
-            return true;
-        }
 
         default:
             return false;

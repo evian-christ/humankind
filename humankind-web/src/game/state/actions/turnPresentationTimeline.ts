@@ -1,8 +1,4 @@
-import {
-    COMBAT_BOUNCE_DURATION,
-    EFFECT_SPEED_DELAY,
-    type EffectSpeed,
-} from '../settingsStore';
+import { EFFECT_SPEED_DELAY, type EffectSpeed } from '../settingsStore';
 
 const PHASE1_DELAY: Record<EffectSpeed, number> = {
     '1x': 150,
@@ -24,14 +20,6 @@ export interface SlotEffectPresentationPlan {
     phase2DelayMs: number;
     continueDelayMs: number;
 }
-
-export interface CombatPresentationPlan {
-    bounceDurationMs: number;
-    stepDelayMs: number;
-    removalDelayMs: number;
-    initialEffectDelayMs: number;
-}
-
 export function buildSlotEffectPresentationPlan(args: {
     effectSpeed: EffectSpeed;
     contributorCount: number;
@@ -42,18 +30,5 @@ export function buildSlotEffectPresentationPlan(args: {
         phase1DelayMs: PHASE1_DELAY[effectSpeed],
         phase2DelayMs: PHASE2_DELAY[effectSpeed],
         continueDelayMs: EFFECT_SPEED_DELAY[effectSpeed],
-    };
-}
-
-export function buildCombatPresentationPlan(effectSpeed: EffectSpeed): CombatPresentationPlan {
-    const bounceDurationMs = COMBAT_BOUNCE_DURATION[effectSpeed];
-    const baseInitialEffectDelayMs = EFFECT_SPEED_DELAY[effectSpeed];
-    const removalMinDelayMs = effectSpeed === '8x' ? 100 : 200;
-    const initialEffectMinDelayMs = effectSpeed === '8x' ? 150 : 300;
-    return {
-        bounceDurationMs,
-        stepDelayMs: bounceDurationMs + baseInitialEffectDelayMs,
-        removalDelayMs: Math.max(bounceDurationMs * 2, removalMinDelayMs),
-        initialEffectDelayMs: Math.max(baseInitialEffectDelayMs, initialEffectMinDelayMs),
     };
 }

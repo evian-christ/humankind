@@ -79,7 +79,6 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
         boardWidth,
         boardHeight,
         unlockedKnowledgeUpgrades,
-        threatState,
         rng,
         createSymbolInstance,
         getThreatLabel,
@@ -89,7 +88,6 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     const newPlayerSymbols = [...playerSymbols];
     const spinUpgrades = unlockedKnowledgeUpgrades || [];
     const newThreats: { instanceId: string; label: string; key: ThreatLabelKey }[] = [];
-    const nextBarbarianSymbolThreat = 0;
 
     if (turn > 0 || forcedNaturalDisasterId !== null) {
         const shouldSpawnNaturalDisaster =
@@ -183,8 +181,6 @@ export function prepareTurn(input: TurnPreparationInput): TurnPreparationOutput 
     return {
         playerSymbols: anchoredSymbols,
         threatState: {
-            barbarianSymbolThreat: turn > 0 ? nextBarbarianSymbolThreat : threatState.barbarianSymbolThreat,
-            barbarianCampThreat: 0,
             naturalDisasterThreat: NATURAL_DISASTER_CHANCE,
         },
         pendingNewThreatFloats,

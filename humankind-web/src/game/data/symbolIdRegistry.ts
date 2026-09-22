@@ -3,7 +3,7 @@
  * ID를 바꿀 때는 이 파일의 값만 수정하면 되며,
  * 게임 로직에서는 `SYMBOL_NUMERIC_ID`(숫자 비교) 또는 `definition.key`(문자 식별)를 사용합니다.
  *
- * 배치 규칙: 지형(1–8) → 자원/사치품/특수(9–38) → 고대(39–46) → 중세(47–54) → 종교(55–58) → 현대 특수(59) → 특수 보상(60–62) → 유닛(63–67) → 적(69–74) → 재해(75–79)
+ * 배치 규칙: 지형(1–8) → 자원/사치품/특수(9–38) → 고대(39–46) → 중세(47–54) → 종교(55–58) → 현대 특수(59) → 특수 보상(60–62) → 재해(75–79)
  */
 export const SYMBOL_NUMERIC_ID = {
     // ── Terrain (1–8): 초원→평원→바다→숲→열대우림→사막→오아시스→산 ──
@@ -59,8 +59,6 @@ export const SYMBOL_NUMERIC_ID = {
     merchant: 34,
     monument: 35,
     library: 36,
-    stone_tablet: 37,
-    relic_caravan: 38,
 
     // ── Ancient (39–46) ──
     oral_tradition: 39,
@@ -72,13 +70,10 @@ export const SYMBOL_NUMERIC_ID = {
     stargazer: 45,
     wild_seeds: 46,
     bronze_tribute_chest: 86,
-    heqet: 87,
-    foxtail_millet: 88,
 
     // ── Medieval (47–54) ──
     tax: 47,
     scholar: 48,
-    holy_relic: 49,
     monastery_garden: 50,
     tax_storehouse: 51,
     pioneer: 52,
@@ -98,21 +93,6 @@ export const SYMBOL_NUMERIC_ID = {
     loot: 60,
     greater_loot: 61,
     radiant_loot: 62,
-
-    // ── Unit (63–67) ──
-    militia: 63,
-    warrior: 64,
-    archer: 65,
-    horseman: 66,
-    mercenary: 67,
-
-    // ── Enemy (74, 78–86) ──
-    enemy_warrior: 69,
-    enemy_cavalry: 70,
-    enemy_infantry: 71,
-    enemy_archer: 72,
-    enemy_crossbowman: 73,
-    enemy_cannon: 74,
 
     // ── Disaster (75–77) ──
     flood: 75,

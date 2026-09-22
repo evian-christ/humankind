@@ -1,6 +1,4 @@
 import { type EraScaledTuple, eraScaleIndex } from './eventDefinitions';
-import { RELICS } from './relicDefinitions';
-import { RELIC_ID } from '../logic/relics/relicIds';
 import type { Language } from '../state/settingsStore';
 import { t } from '../../i18n';
 
@@ -43,10 +41,6 @@ export interface RewardDefinition {
     food?: EraScaledTuple;
     gold?: EraScaledTuple;
     knowledge?: EraScaledTuple;
-    /** true이면 랜덤 유물 1개 획득 */
-    grantsRelic?: boolean;
-    /** 지정한 유물을 순서대로 획득 */
-    grantedRelicIds?: number[];
 }
 
 export const REWARDS: Record<number, RewardDefinition> = {
@@ -65,60 +59,6 @@ export const REWARDS: Record<number, RewardDefinition> = {
     13: { id: 13, key: 'knowledge_rare',      name: '고서',        rarity: '대형', knowledge: [18, 36,  72]  },
     15: { id: 15, key: 'knowledge_legendary', name: '신성한 지혜', rarity: '초대형', knowledge: [50, 100, 200] },
 
-    // ── 유물 보상 (초대형) ──
-    16: { id: 16, key: 'relic_legendary', name: '신비한 유물', rarity: '초대형', grantsRelic: true },
-
-    // ── 지정 유물 보상 ──
-    17: {
-        id: 17,
-        key: 'ancient_relic_debris_common',
-        name: '발굴 잔해',
-        rarity: '일반',
-        grantedRelicIds: [RELIC_ID.ANCIENT_RELIC_DEBRIS],
-    },
-    18: {
-        id: 18,
-        key: 'national_reform_rare',
-        name: '정비 명령서',
-        rarity: '대형',
-        grantedRelicIds: [RELIC_ID.OBLIVION_FURNACE],
-    },
-    19: {
-        id: 19,
-        key: 'ancient_relic_debris_rare',
-        name: '유물 잔해 더미',
-        rarity: '대형',
-        grantedRelicIds: [RELIC_ID.ANCIENT_RELIC_DEBRIS, RELIC_ID.ANCIENT_RELIC_DEBRIS],
-    },
-    20: {
-        id: 20,
-        key: 'national_reform_legendary',
-        name: '대정비 칙령',
-        rarity: '초대형',
-        grantedRelicIds: [RELIC_ID.OBLIVION_FURNACE, RELIC_ID.OBLIVION_FURNACE],
-    },
-    21: {
-        id: 21,
-        key: 'ancient_relic_debris_legendary',
-        name: '고대 유물 저장고',
-        rarity: '초대형',
-        grantedRelicIds: [
-            RELIC_ID.ANCIENT_RELIC_DEBRIS,
-            RELIC_ID.ANCIENT_RELIC_DEBRIS,
-            RELIC_ID.ANCIENT_RELIC_DEBRIS,
-        ],
-    },
-    22: {
-        id: 22,
-        key: 'pioneer_expedition_legendary',
-        name: '개척 원정대',
-        rarity: '초대형',
-        grantedRelicIds: [
-            RELIC_ID.ANCIENT_TRIBE_JOIN,
-            RELIC_ID.ANCIENT_RELIC_DEBRIS,
-            RELIC_ID.ANCIENT_RELIC_DEBRIS,
-        ],
-    },
 };
 
 export function getRewardName(reward: RewardDefinition, language: Language): string {
@@ -147,8 +87,6 @@ export function getRewardAmounts(
 
 /** 게임 내 플레이어에게 보여줄 설명 (현재 시대 기준) */
 export function getRewardDescription(reward: RewardDefinition, era: number, language: Language): string {
-    if (reward.grantsRelic) return t('lootReward.desc.randomRelic', language);
-    if (reward.grantedRelicIds) return getGrantedRelicDescription(reward.grantedRelicIds, language);
     const { food, gold, knowledge } = getRewardAmounts(reward, era);
     const parts: string[] = [];
     if (food) parts.push(`${t('resource.food', language)} ${food}`);
@@ -207,29 +145,10 @@ export function generateLootRewardChoices(tier: LootTier): RewardDefinition[] {
 
 /** 데이터 브라우저용 설명 — 세 시대 수치를 모두 x/y/z 형식으로 표시 */
 export function getRewardDescriptionAllEras(reward: RewardDefinition, language: Language): string {
-    if (reward.grantsRelic) return t('lootReward.desc.randomRelic', language);
-    if (reward.grantedRelicIds) return getGrantedRelicDescription(reward.grantedRelicIds, language);
     const [a, m, mo] = [1, 2, 3].map((e) => getRewardAmounts(reward, e));
     const parts: string[] = [];
     if (reward.food)      parts.push(`${t('resource.food', language)} ${a.food}/${m.food}/${mo.food}`);
     if (reward.gold)      parts.push(`${t('resource.gold', language)} ${a.gold}/${m.gold}/${mo.gold}`);
     if (reward.knowledge) parts.push(`${t('resource.knowledge', language)} ${a.knowledge}/${m.knowledge}/${mo.knowledge}`);
     return t('lootReward.desc.gain', language).replace('{items}', parts.join(', '));
-}
-
-function getGrantedRelicDescription(relicIds: number[], language: Language): string {
-    const counts = new Map<number, number>();
-    relicIds.forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1));
-
-    const parts = [...counts.entries()].map(([id, count]) => {
-        const relicNameKey = `relic.${id}.name`;
-        const translatedRelicName = t(relicNameKey, language);
-        const relicName = translatedRelicName === relicNameKey
-            ? RELICS[id]?.name ?? t('lootReward.relicFallback', language)
-            : translatedRelicName;
-        return t('lootReward.desc.relicCount', language)
-            .replace('{name}', relicName)
-            .replace('{count}', String(count));
-    });
-    return t('lootReward.desc.gain', language).replace('{items}', parts.join(t('lootReward.desc.and', language)));
 }

@@ -3,7 +3,6 @@ import {
     isDesertDestructibleSymbol,
 } from '../core';
 import type { SymbolEffectHandler } from '../core';
-import { SEAL_RELIC_IDS } from '../../relics/relicClassification';
 import {
     DESERT_STORAGE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
@@ -12,7 +11,7 @@ import {
     PASTORALISM_UPGRADE_ID,
 } from '../../../data/knowledgeUpgrades';
 
-export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, adj, upgrades, relicEffects, state }) => {
+export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, adj, upgrades, state }) => {
     switch (symbolInstance.definition.id) {
         // 바다는 자체 산출이 없는 참조용 지형입니다.
         // 가장자리에 놓이면 해안, 안쪽에 놓이면 해양으로 취급되며
@@ -43,13 +42,6 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             state.gold += growth?.gold ?? 0;
             state.knowledge += growth?.knowledge ?? 0;
 
-            adj.forEach(pos => {
-                const t = boardGrid[pos.x][pos.y];
-                if (t?.definition.id === S.banana && relicEffects.bananaFossilBonus) {
-                    state.food += 2;
-                    state.contributors.push(pos);
-                }
-            });
             return true;
         }
 
@@ -69,11 +61,6 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
             } else {
                 state.food += 2;
                 state.knowledge += 2;
-            }
-            if (relicEffects.quarryEmptyGold) {
-                adj.forEach(pos => {
-                    if (!boardGrid[pos.x][pos.y]) state.gold += 1;
-                });
             }
             return true;
 
@@ -142,13 +129,6 @@ export const handleTerrainEffects: SymbolEffectHandler = ({ symbolInstance, boar
                     forestAdj.forEach((pos) => state.contributors.push(pos));
                 }
 
-                // 10턴마다 무작위 인장 1개를 생산한다.
-                symbolInstance.effect_counter = (symbolInstance.effect_counter || 0) + 1;
-                if (symbolInstance.effect_counter >= 10) {
-                    symbolInstance.effect_counter -= 10;
-                    const sealIndex = Math.floor(Math.random() * SEAL_RELIC_IDS.length);
-                    state.grantRelicIds.push(SEAL_RELIC_IDS[sealIndex]);
-                }
             }
             return true;
 

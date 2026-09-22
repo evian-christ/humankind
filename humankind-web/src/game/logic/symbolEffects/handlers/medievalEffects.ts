@@ -20,20 +20,6 @@ export const handleMedievalEffects: SymbolEffectHandler = ({ symbolInstance, boa
             return true;
         }
 
-        case S.holy_relic: {
-            for (let bx = 0; bx < boardGrid.length; bx++) {
-                for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {
-                    const cell = boardGrid[bx][by];
-                    if (cell && !cell.is_marked_for_destruction && cell.definition.type === SymbolType.RELIGION) {
-                        state.knowledge += 7;
-                        state.gold += 7;
-                        return true;
-                    }
-                }
-            }
-            return true;
-        }
-
         case S.monastery_garden: {
             for (let bx = 0; bx < boardGrid.length; bx++) {
                 for (let by = 0; by < (boardGrid[bx]?.length ?? 0); by++) {

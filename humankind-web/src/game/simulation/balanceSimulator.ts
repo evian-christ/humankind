@@ -39,9 +39,8 @@ import {
     TROPICAL_AGRICULTURE_UPGRADE_ID,
     TROPICAL_DEVELOPMENT_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
-import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
-import { DEFAULT_RELIC_EFFECTS, processSingleSymbolEffects } from '../logic/symbolEffects';
+import { processSingleSymbolEffects } from '../logic/symbolEffects';
 import { applyKnowledgeAndLevelUps } from '../logic/progression/eraTransition';
 import { generateChoices, generateEventOnlyChoices } from '../logic/selection/selectionLogic';
 import {
@@ -136,9 +135,6 @@ interface SimulationState {
     unlockedKnowledgeUpgrades: number[];
     knowledgeResearchCredits: KnowledgeResearchCredit[];
     religionUnlocked: boolean;
-    qinCurrencyStandardTurnsRemaining: number;
-    barbarianSymbolThreat: number;
-    barbarianCampThreat: number;
     naturalDisasterThreat: number;
     forceTerrainInNextSymbolChoices: boolean;
     forceEventsInNextSymbolChoices: boolean;
@@ -156,7 +152,6 @@ const COMMON_OPERATION_SYMBOL_IDS: number[] = [
     S.merchant,
     S.monument,
     S.library,
-    S.relic_caravan,
     S.oral_tradition,
     S.pottery,
     S.tribal_village,
@@ -198,7 +193,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     sea_axis: {
         primaryTerrainIds: [S.sea],
         coreSymbolIds: [S.fish, S.crab, S.pearl, S.compass],
-        bridgeSymbolIds: [S.merchant, S.spices, S.salt, S.relic_caravan],
+        bridgeSymbolIds: [S.merchant, S.spices, S.salt],
         upgradeIds: [
             FISHERIES_UPGRADE_ID,
             SEAFARING_UPGRADE_ID,
@@ -236,7 +231,7 @@ const AXIS_PROFILES: Record<BalanceAxisStrategy, AxisProfile> = {
     desert_axis: {
         primaryTerrainIds: [S.desert, S.oasis],
         coreSymbolIds: [S.date, S.dye, S.papyrus, S.caravanserai],
-        bridgeSymbolIds: [S.salt, S.spices, S.relic_caravan, S.edict],
+        bridgeSymbolIds: [S.salt, S.spices, S.edict],
         upgradeIds: [
             FOREIGN_TRADE_UPGRADE_ID,
             DRY_STORAGE_UPGRADE_ID,
@@ -302,9 +297,9 @@ const createSimulationInstance = (
     definition: SymbolDefinition,
     unlockedUpgrades: readonly number[] = [],
 ): PlayerSymbolInstance => {
-    const resolvedDef = resolveUpgradedUnitDefinition(definition, unlockedUpgrades);
+    void unlockedUpgrades;
     return {
-        definition: resolvedDef,
+        definition,
         instanceId: `sim_symbol_${simulationInstanceCounter++}`,
         effect_counter: 0,
         is_marked_for_destruction: false,
@@ -341,9 +336,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
             unlockedKnowledgeUpgrades: [],
             knowledgeResearchCredits: [],
             religionUnlocked: false,
-            qinCurrencyStandardTurnsRemaining: 0,
-            barbarianSymbolThreat: 0,
-            barbarianCampThreat: 0,
             naturalDisasterThreat: 0,
             forceTerrainInNextSymbolChoices: false,
             forceEventsInNextSymbolChoices: false,
@@ -366,9 +358,6 @@ const makeInitialState = (config: Required<BalanceSimulationConfig>): Simulation
         unlockedKnowledgeUpgrades: [],
         knowledgeResearchCredits: [],
         religionUnlocked: false,
-        qinCurrencyStandardTurnsRemaining: 0,
-        barbarianSymbolThreat: 0,
-        barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
         forceTerrainInNextSymbolChoices: false,
         forceEventsInNextSymbolChoices: false,
@@ -511,17 +500,6 @@ const applyUpgrade = (state: SimulationState, upgradeId: number) => {
     state.unlockedKnowledgeUpgrades = nextUnlocked;
     if (upgradeId === THEOLOGY_UPGRADE_ID) state.religionUnlocked = true;
 
-    state.playerSymbols = state.playerSymbols.map((symbol) => {
-        if (symbol.definition.type !== SymbolType.UNIT) return symbol;
-        const nextDef = resolveUpgradedUnitDefinition(symbol.definition, nextUnlocked);
-        if (nextDef.id === symbol.definition.id) {
-            return symbol;
-        }
-        return {
-            ...symbol,
-            definition: nextDef,
-        };
-    });
 };
 
 const simulateTurn = (
@@ -540,8 +518,6 @@ const simulateTurn = (
         boardHeight: BOARD_HEIGHT,
         unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
         threatState: {
-            barbarianSymbolThreat: state.barbarianSymbolThreat,
-            barbarianCampThreat: state.barbarianCampThreat,
             naturalDisasterThreat: state.naturalDisasterThreat,
         },
         rng,
@@ -552,12 +528,9 @@ const simulateTurn = (
     state.board = prepared.board;
     state.playerSymbols = prepared.playerSymbols;
     state.turn = prepared.turn;
-    state.barbarianSymbolThreat = prepared.threatState.barbarianSymbolThreat;
-    state.barbarianCampThreat = prepared.threatState.barbarianCampThreat;
     state.naturalDisasterThreat = prepared.threatState.naturalDisasterThreat;
 
     const baseTotals = getHudTurnStartPassiveTotals(state);
-    state.qinCurrencyStandardTurnsRemaining = Math.max(0, state.qinCurrencyStandardTurnsRemaining - 1);
     const pipeline = createSlotEffectPipeline({
         board: state.board,
         boardWidth: BOARD_WIDTH,
@@ -573,7 +546,6 @@ const simulateTurn = (
                 args.x,
                 args.y,
                 args.effectCtx,
-                args.relicEffects,
                 args.disabledTerrainCoords,
             ),
     };
@@ -590,7 +562,6 @@ const simulateTurn = (
             x: slot.x,
             y: slot.y,
             effectCtx,
-            relicEffects: DEFAULT_RELIC_EFFECTS,
         });
         applySlotEffectResult(pipeline, slot, result);
         if (result.lootMerge) commitLootMerge(state.board, result.lootMerge);
@@ -613,18 +584,6 @@ const simulateTurn = (
         boardWidth: BOARD_WIDTH,
         boardHeight: BOARD_HEIGHT,
         effects: pipeline.accumulatedEffects,
-        leaderId: null,
-        currentEra: state.era,
-        currentGold: state.gold + pipeline.totals.gold,
-        unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
-        getAdjacentCoords,
-        relics: [],
-        ownedSymbols: state.playerSymbols,
-        relicStoreApi: {
-            incrementRelicCounter: () => {},
-            incrementRelicBonus: () => {},
-            decrementRelicCounterOrRemove: () => {},
-        },
     });
 
     const previousLevel = state.level;
@@ -689,8 +648,6 @@ const simulateTurn = (
                 choices: generateEventOnlyChoices({
                     era: state.era,
                     ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
-                    leaderId: null,
-                    leaderProgressLevel: 1,
                 }),
                 consumedForceTerrain: false,
             }
@@ -698,7 +655,6 @@ const simulateTurn = (
                 era: state.era,
                 religionUnlocked: state.religionUnlocked,
                 upgrades: state.unlockedKnowledgeUpgrades,
-                ownedRelicDefIds: [],
                 ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
             }),

@@ -13,8 +13,6 @@ export interface TurnEndPhaseResolution {
     foodCost: number;
     foodDelta: number;
     foodAfterPayment: number;
-    shouldRefreshRelicShop: boolean;
-    symbolSelectionRelicSourceId?: null;
 }
 
 export function resolveTurnEndPhase(input: TurnEndPhaseInput): TurnEndPhaseResolution {
@@ -28,7 +26,6 @@ export function resolveTurnEndPhase(input: TurnEndPhaseInput): TurnEndPhaseResol
             foodCost,
             foodDelta: 0,
             foodAfterPayment: input.food,
-            shouldRefreshRelicShop: false,
         };
     }
 
@@ -41,7 +38,5 @@ export function resolveTurnEndPhase(input: TurnEndPhaseInput): TurnEndPhaseResol
         foodCost,
         foodDelta,
         foodAfterPayment,
-        shouldRefreshRelicShop: isFoodPaymentTurn,
-        symbolSelectionRelicSourceId: null,
     };
 }

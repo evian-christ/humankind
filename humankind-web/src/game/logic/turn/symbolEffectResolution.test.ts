@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { S, SYMBOLS, Sym, type SymbolDefinition } from '../../data/symbolDefinitions';
-import { SEAL_RELIC_IDS } from '../relics/relicClassification';
 import {
     AGRICULTURAL_SURPLUS_UPGRADE_ID,
-    CASTLE_UPGRADE_ID,
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
@@ -15,7 +13,6 @@ import {
     IRRIGATION_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
-    MILITARY_SCIENCE_UPGRADE_ID,
     MODERN_AGRICULTURE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
@@ -32,7 +29,7 @@ import {
     THREE_FIELD_SYSTEM_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import type { PlayerSymbolInstance } from '../../types';
-import { DEFAULT_RELIC_EFFECTS, processSingleSymbolEffects } from '../symbolEffects';
+import { processSingleSymbolEffects } from '../symbolEffects';
 import { commitLootMerge } from './turnPipeline';
 import {
     buildFoodBySlotKey,
@@ -80,30 +77,6 @@ describe('symbolEffectResolution', () => {
         expect(result.knowledge).toBe(0);
     });
 
-    it('prevents barbarian invasion enemies from plundering food with Castle', () => {
-        const board = createEmptyBoard();
-        const enemy = createInstance(Sym.enemy_warrior, 'enemy');
-        enemy.spawnedByBarbarianInvasion = true;
-        enemy.barbarianInvasionTurnsRemaining = 3;
-        board[1][1] = enemy;
-
-        const result = processSingleSymbolEffects(enemy, board, 1, 1, { upgrades: [CASTLE_UPGRADE_ID] });
-
-        expect(result).toEqual({ food: 0, gold: 0, knowledge: 0 });
-    });
-
-    it('lets barbarian invasion enemies plunder food after Castle grace expires', () => {
-        const board = createEmptyBoard();
-        const enemy = createInstance(Sym.enemy_warrior, 'enemy');
-        enemy.spawnedByBarbarianInvasion = true;
-        enemy.barbarianInvasionTurnsRemaining = 0;
-        board[1][1] = enemy;
-
-        const result = processSingleSymbolEffects(enemy, board, 1, 1, { upgrades: [CASTLE_UPGRADE_ID] });
-
-        expect(result.food).toBe(-3);
-    });
-
     it('lets Bronze Tribute Chest produce gold for three turns then mark itself for destruction', () => {
         const board = createEmptyBoard();
         const chest = createInstance(Sym.bronze_tribute_chest, 'bronze-tribute-chest');
@@ -123,82 +96,6 @@ describe('symbolEffectResolution', () => {
         expect(third).toMatchObject({ food: 0, gold: 1, knowledge: 0 });
         expect(chest.effect_counter).toBe(3);
         expect(chest.is_marked_for_destruction).toBe(true);
-    });
-
-    it('lets Militia produce military and expire after five turns', () => {
-        const board = createEmptyBoard();
-        const militia = createInstance(Sym.militia, 'militia');
-        board[1][1] = militia;
-
-        for (let i = 1; i <= 4; i++) {
-            const result = processSingleSymbolEffects(militia, board, 1, 1, { upgrades: [] });
-            expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 0, military: 3 });
-            expect(militia.effect_counter).toBe(i);
-            expect(militia.is_marked_for_destruction).toBe(false);
-        }
-
-        const fifth = processSingleSymbolEffects(militia, board, 1, 1, { upgrades: [] });
-        expect(fifth).toMatchObject({ food: 0, gold: 0, knowledge: 0, military: 3 });
-        expect(militia.effect_counter).toBe(5);
-        expect(militia.is_marked_for_destruction).toBe(true);
-    });
-
-    it('lets Warrior and Archer produce military with Archer terrain adjacency bonus', () => {
-        const board = createEmptyBoard();
-        const warrior = createInstance(Sym.warrior, 'warrior');
-        const archer = createInstance(Sym.archer, 'archer');
-        board[1][1] = warrior;
-        board[3][1] = archer;
-
-        expect(processSingleSymbolEffects(warrior, board, 1, 1, { upgrades: [] })).toMatchObject({
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            military: 2,
-        });
-        expect(processSingleSymbolEffects(archer, board, 3, 1, { upgrades: [] })).toMatchObject({
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            military: 1,
-        });
-
-        board[2][1] = createInstance(Sym.forest, 'forest');
-        expect(processSingleSymbolEffects(archer, board, 3, 1, { upgrades: [] })).toMatchObject({
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            military: 3,
-        });
-    });
-
-    it('lets Horseman and Mercenary produce military with their costs and board enemy bonus', () => {
-        const board = createEmptyBoard();
-        const horseman = createInstance(Sym.horseman, 'horseman');
-        const mercenary = createInstance(Sym.mercenary, 'mercenary');
-        board[1][1] = horseman;
-        board[3][1] = mercenary;
-
-        expect(processSingleSymbolEffects(horseman, board, 1, 1, { upgrades: [] })).toMatchObject({
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            military: 1,
-        });
-        expect(processSingleSymbolEffects(mercenary, board, 3, 1, { upgrades: [] })).toMatchObject({
-            food: 0,
-            gold: -2,
-            knowledge: 0,
-            military: 4,
-        });
-
-        board[0][0] = createInstance(Sym.enemy_warrior, 'enemy');
-        expect(processSingleSymbolEffects(horseman, board, 1, 1, { upgrades: [] })).toMatchObject({
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            military: 5,
-        });
     });
 
     it('upgrades Mountain production in the Medieval and Modern Ages', () => {
@@ -247,7 +144,6 @@ describe('symbolEffectResolution', () => {
             0,
             1,
             { upgrades: [] },
-            undefined,
             disabled,
         );
         const saltResult = processSingleSymbolEffects(
@@ -256,7 +152,6 @@ describe('symbolEffectResolution', () => {
             1,
             1,
             { upgrades: [] },
-            undefined,
             disabled,
         );
 
@@ -279,7 +174,6 @@ describe('symbolEffectResolution', () => {
             1,
             1,
             { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
-            undefined,
             disabled,
         );
 
@@ -639,21 +533,6 @@ describe('symbolEffectResolution', () => {
         expect(merchant.merchant_store_pending).toBe(false);
     });
 
-    it('upgrades horse with Military Science', () => {
-        const board = createEmptyBoard();
-        const horse = createInstance(Sym.horse, 'horse');
-        board[1][1] = horse;
-        board[0][1] = createInstance(Sym.plains, 'plains');
-
-        const baseResult = processSingleSymbolEffects(horse, board, 1, 1, { upgrades: [] });
-        const upgradedResult = processSingleSymbolEffects(horse, board, 1, 1, { upgrades: [MILITARY_SCIENCE_UPGRADE_ID] });
-
-        expect(baseResult.food).toBe(2);
-        expect(baseResult.gold).toBe(2);
-        expect(upgradedResult.food).toBe(3);
-        expect(upgradedResult.gold).toBe(4);
-    });
-
     it('keeps Three-field System as a no-op placeholder for wheat payout', () => {
         const board = createEmptyBoard();
         const wheat = createInstance(Sym.wheat, 'wheat');
@@ -697,35 +576,6 @@ describe('symbolEffectResolution', () => {
         expect(village.is_marked_for_destruction).toBe(false);
     });
 
-    it('lets Heqet stack base food with grassland food and gain knowledge from wheat adjacency once each', () => {
-        const board = createEmptyBoard();
-        const heqet = createInstance(Sym.heqet, 'heqet');
-        board[1][1] = heqet;
-        board[0][1] = createInstance(Sym.grassland, 'grassland_1');
-        board[2][1] = createInstance(Sym.grassland, 'grassland_2');
-        board[1][0] = createInstance(Sym.wheat, 'wheat_1');
-        board[1][2] = createInstance(Sym.wheat, 'wheat_2');
-
-        const result = processSingleSymbolEffects(heqet, board, 1, 1, { upgrades: [] });
-
-        expect(result.food).toBe(3);
-        expect(result.knowledge).toBe(2);
-    });
-
-    it('lets Foxtail Millet gain food per two adjacent terrain symbols', () => {
-        const board = createEmptyBoard();
-        const millet = createInstance(Sym.foxtail_millet, 'foxtail_millet');
-        board[1][1] = millet;
-        board[0][1] = createInstance(Sym.grassland, 'grassland');
-        board[2][1] = createInstance(Sym.plains, 'plains');
-        board[1][0] = createInstance(Sym.sea, 'sea');
-        board[1][2] = createInstance(Sym.wheat, 'wheat');
-
-        const result = processSingleSymbolEffects(millet, board, 1, 1, { upgrades: [] });
-
-        expect(result.food).toBe(5);
-        expect(result.contributors).toHaveLength(3);
-    });
 
     it('stores scholar knowledge production per destroyed adjacent ancient symbol', () => {
         const board = createEmptyBoard();
@@ -754,19 +604,6 @@ describe('symbolEffectResolution', () => {
 
         expect(result.knowledge).toBe(5);
         expect(scholar.effect_counter).toBe(5);
-    });
-
-    it('grants holy relic resources when any religion symbol is on the board', () => {
-        const board = createEmptyBoard();
-        const relic = createInstance(Sym.holy_relic, 'holy_relic');
-        const doctrine = createInstance(Sym.christianity, 'christianity');
-        board[1][1] = relic;
-        board[4][3] = doctrine;
-
-        const result = processSingleSymbolEffects(relic, board, 1, 1, { upgrades: [] });
-
-        expect(result.knowledge).toBe(7);
-        expect(result.gold).toBe(7);
     });
 
     it('keeps Three-field System as a no-op placeholder for corn payout', () => {
@@ -863,23 +700,6 @@ describe('symbolEffectResolution', () => {
         const result = processSingleSymbolEffects(stargazer, board, 0, 0, { upgrades: [] });
 
         expect(result.knowledge).toBe(16);
-    });
-
-    it('gives Stone Tablet 2 knowledge per owned relic', () => {
-        const board = createEmptyBoard();
-        const tablet = createInstance(Sym.stone_tablet, 'tablet');
-        board[0][0] = tablet;
-
-        const result = processSingleSymbolEffects(
-            tablet,
-            board,
-            0,
-            0,
-            { upgrades: [] },
-            { ...DEFAULT_RELIC_EFFECTS, relicCount: 4 },
-        );
-
-        expect(result).toMatchObject({ food: 0, gold: 0, knowledge: 8 });
     });
 
     it('produces food per adjacent empty slot by default for Oasis', () => {
@@ -1512,25 +1332,6 @@ describe('symbolEffectResolution', () => {
         const result = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
 
         expect(result.food).toBe(1);
-    });
-
-    it('produces a random Seal every 10 turns', () => {
-        const board = createEmptyBoard();
-        const forest = createInstance(Sym.forest, 'forest_1');
-        board[0][0] = forest;
-
-        // 9턴째까지는 인장이 나오지 않는다.
-        for (let turn = 0; turn < 9; turn += 1) {
-            const result = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
-            expect(result.grantRelicIds).toBeUndefined();
-        }
-
-        const tenth = processSingleSymbolEffects(forest, board, 0, 0, { upgrades: [] });
-
-        expect(tenth.grantRelicIds).toHaveLength(1);
-        expect(SEAL_RELIC_IDS).toContain(tenth.grantRelicIds![0]);
-        // 카운터가 리셋되어 다음 주기가 다시 시작된다.
-        expect(forest.effect_counter).toBe(0);
     });
 
     it('applies the new Deer and Fur forest-adjacency rules', () => {

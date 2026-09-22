@@ -1,12 +1,6 @@
 import type { GrowthKind, PlayerSymbolInstance, RainforestGrowthBonus } from '../../types';
 import { S, SYMBOLS, EXCLUDED_FROM_BASE_POOL, SymbolType, isBasicSymbolType } from '../../data/symbolDefinitions';
-import type {
-    ActiveRelicEffects,
-    BoardGrid,
-    EffectResult,
-    LootMergeResolution,
-    SymbolEffectContext,
-} from './types';
+import type { BoardGrid, EffectResult, LootMergeResolution, SymbolEffectContext } from './types';
 export const SEA_TERRAIN_ID = S.sea;
 
 /** 열대우림 성장치가 이 값에 도달하면 소모되어 영구 생산량이 오른다. */
@@ -55,14 +49,8 @@ export interface EffectState {
     food: number;
     knowledge: number;
     gold: number;
-    culture: number;
-    military: number;
     addSymbolIds: number[];
     spawnOnBoard: number[];
-    /** 심볼 효과로 지급할 유물(인장) ID 목록 */
-    grantRelicIds: number[];
-    triggerRelicSelection: boolean;
-    triggerRelicRefresh: boolean;
     contributors: { x: number; y: number }[];
     forceTerrainInNextChoices: boolean;
     forceEventsInNextChoices: boolean;
@@ -76,7 +64,6 @@ export interface SymbolEffectHandlerContext {
     x: number;
     y: number;
     ctx: SymbolEffectContext;
-    relicEffects: ActiveRelicEffects;
     state: EffectState;
     adj: { x: number; y: number }[];
     upgrades: number[];
@@ -88,13 +75,8 @@ export const createEffectState = (): EffectState => ({
     food: 0,
     knowledge: 0,
     gold: 0,
-    culture: 0,
-    military: 0,
     addSymbolIds: [],
     spawnOnBoard: [],
-    grantRelicIds: [],
-    triggerRelicSelection: false,
-    triggerRelicRefresh: false,
     contributors: [],
     forceTerrainInNextChoices: false,
     forceEventsInNextChoices: false,
@@ -108,13 +90,8 @@ export const buildEffectResult = (state: EffectState): EffectResult => {
         knowledge: state.knowledge,
         gold: state.gold,
     };
-    if (state.culture !== 0) result.culture = state.culture;
-    if (state.military !== 0) result.military = state.military;
     if (state.addSymbolIds.length > 0) result.addSymbolIds = state.addSymbolIds;
     if (state.spawnOnBoard.length > 0) result.spawnOnBoard = state.spawnOnBoard;
-    if (state.grantRelicIds.length > 0) result.grantRelicIds = state.grantRelicIds;
-    if (state.triggerRelicSelection) result.triggerRelicSelection = true;
-    if (state.triggerRelicRefresh) result.triggerRelicRefresh = true;
     if (state.contributors.length > 0) result.contributors = state.contributors;
     if (state.forceTerrainInNextChoices) result.forceTerrainInNextChoices = true;
     if (state.forceEventsInNextChoices) result.forceEventsInNextChoices = true;

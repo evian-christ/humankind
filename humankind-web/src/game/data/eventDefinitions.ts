@@ -1,4 +1,4 @@
-export type GameEventCategory = 'basic' | 'conditional' | 'leader';
+export type GameEventCategory = 'basic' | 'conditional';
 export type GameEventEra = 1 | 2 | 3;
 export type GameEventReward = Partial<Record<'food' | 'gold' | 'knowledge', number>>;
 
@@ -9,8 +9,6 @@ export const CAPITAL_RELOCATION_DESTROY_COUNT = 2;
 export const CAPITAL_RELOCATION_MIN_SYMBOLS = 10;
 export const CAPITAL_RELOCATION_FOOD_REWARD = 25;
 export const CAPITAL_RELOCATION_KNOWLEDGE_REWARD = 15;
-export const BORDER_RAID_REWARD: EraScaledTuple = [10, 20, 40];
-export const BORDER_RAID_ENEMY_COUNT = 2;
 
 /** 지형 조건부 이벤트 시대 스케일 수치 — selectionFlow / i18n 공통 출처 */
 export const GRASSLAND_FESTIVAL_FOOD: EraScaledTuple = [10, 20, 40];
@@ -23,7 +21,6 @@ export const MOUNTAIN_LOOKOUT_PER_MOUNTAIN: EraScaledTuple = [7, 14, 28];
 export const OASIS_BLESSING_PER_EMPTY: EraScaledTuple = [4, 8, 16];
 /** every_terrain_bounty — 식량·골드·지식 각각에 동일하게 적용 */
 export const EVERY_TERRAIN_BOUNTY_EACH: EraScaledTuple = [50, 100, 200];
-export const MILITARY_DRAFT_FOOD: EraScaledTuple = [30, 60, 120];
 
 /** era(1/2/3) → 시대 스케일 인덱스(0/1/2). 범위 밖이면 클램프. */
 export const eraScaleIndex = (era: number): 0 | 1 | 2 => {
@@ -49,7 +46,6 @@ export const isGameEventDefinition = (choice: unknown): choice is GameEventDefin
 export const GAME_EVENT_CATEGORY_ORDER: GameEventCategory[] = [
     'basic',
     'conditional',
-    'leader',
 ];
 
 export const GAME_EVENTS: Record<number, GameEventDefinition> = {
@@ -134,20 +130,6 @@ export const GAME_EVENTS: Record<number, GameEventDefinition> = {
         era: 3,
         reward: { knowledge: 40 },
     },
-    10: {
-        id: 10,
-        key: 'artifact_market_refresh',
-        category: 'basic',
-        description: 'Refresh the relic shop.',
-        availability: '-',
-    },
-    11: {
-        id: 11,
-        key: 'border_raid',
-        category: 'basic',
-        description: 'Gain Food and Gold immediately. Summon 2 barbarian units.',
-        availability: '-',
-    },
     12: {
         id: 12,
         key: 'grassland_festival',
@@ -211,32 +193,11 @@ export const GAME_EVENTS: Record<number, GameEventDefinition> = {
         description: 'Gain Food per empty slot on the board. Scales with the current era.',
         availability: 'Requires owning at least 1 Oasis symbol.',
     },
-    22: {
-        id: 22,
-        key: 'military_draft',
-        category: 'conditional',
-        description: 'Gain Food immediately. Summon a barbarian unit.',
-        availability: 'Requires owning at least 3 unit symbols.',
-    },
     21: {
         id: 21,
         key: 'every_terrain_bounty',
         category: 'conditional',
         description: 'Gain Food, Gold, and Knowledge immediately. Scales with the current era.',
         availability: 'Requires owning at least 1 of every terrain symbol.',
-    },
-    23: {
-        id: 23,
-        key: 'kadesh_battle_escape',
-        category: 'leader',
-        description: 'Gain Food immediately.',
-        availability: '-',
-    },
-    24: {
-        id: 24,
-        key: 'currency_standardization',
-        category: 'leader',
-        description: 'For the next 5 turns, double Gold base production.',
-        availability: '-',
     },
 };

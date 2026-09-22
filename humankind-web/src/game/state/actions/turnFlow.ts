@@ -1,18 +1,11 @@
 import { t } from '../../../i18n';
 import {
-    recordDemoBaseGoldProductionProgress,
     recordDemoFoodPaymentTurn,
-    recordDemoLeaderGameCompletion,
+    recordDemoGameCompletion,
 } from '../../data/demoAchievements';
-import { RELICS } from '../../data/relicDefinitions';
-import { awardLeaderGameXp, isLeaderUnlockActive, type LeaderGameOutcome } from '../../data/leaders';
 import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
-import { getCultureLevel } from '../../data/cultureProgression';
 import { useSettingsStore, type EffectSpeed } from '../settingsStore';
-import { useRelicStore } from '../relicStore';
-import { type ActiveRelicEffects } from '../../logic/symbolEffects';
-import { getEffectiveAdjacentCoords } from '../../logic/symbolEffects/core';
 import {
     applyKnowledgeAndLevelUps,
 } from '../../logic/progression/eraTransition';
@@ -44,29 +37,21 @@ import {
     hasDesertOnlyTerrainSymbols,
 } from '../gameStoreHelpers';
 import type { PlayerSymbolInstance } from '../../types';
-import { RELIC_ID } from '../../logic/relics/relicIds';
-import { ELECTION_SYSTEM_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import {
-    buildCombatPresentationPlan,
-    buildSlotEffectPresentationPlan,
-} from './turnPresentationTimeline';
+import { buildSlotEffectPresentationPlan } from './turnPresentationTimeline';
 import { createTurnRunScheduler } from './turnRunScheduler';
 import { clearSavedGame, saveGameState } from '../saveGame';
 import {
-    createKnowledgeResearchCreditsForLevelGain,
     calculateFoodCost,
     getEraFromLevel,
     getHudTurnStartPassiveTotals,
     getKnowledgeRequiredForLevel,
-    normalizeKnowledgeResearchCredits,
 } from '../gameCalculations';
 import type { GamePhase, GameState } from '../gameStore';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
 
-const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
-    upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
+const getSelectionPhaseFreeRerollFloor = (_upgrades: readonly number[]): number => 0;
 
 const DESTROY_REMOVAL_BLINK_DURATION_MS: Record<EffectSpeed, number> = {
     '1x': 360,
@@ -86,25 +71,6 @@ const getNowMs = () =>
     typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
         ? globalThis.performance.now()
         : Date.now();
-
-const getRelicFloatDelta = (float: { text: string; color?: string }) => {
-    const numbers = [...float.text.matchAll(/[+-]?\d+/g)].map((match) => Number(match[0])).filter(Number.isFinite);
-    if (numbers.length === 0) return { food: 0, gold: 0, knowledge: 0, military: 0 };
-
-    if (numbers.length >= 3) {
-        return {
-            food: numbers[0] ?? 0,
-            gold: numbers[1] ?? 0,
-            knowledge: numbers[2] ?? 0,
-            military: 0,
-        };
-    }
-
-    const value = numbers[0] ?? 0;
-    if (float.color === '#fbbf24') return { food: 0, gold: value, knowledge: 0, military: 0 };
-    if (float.color === '#60a5fa') return { food: 0, gold: 0, knowledge: value, military: 0 };
-    return { food: value, gold: 0, knowledge: 0, military: 0 };
-};
 
 const collectMarkedSymbolSnapshots = (board: GameState['board']) => {
     const snapshots: Array<{ id: number; instanceId: string; x: number; y: number }> = [];
@@ -139,12 +105,10 @@ interface TurnFlowDeps {
         x: number,
         y: number,
         effectCtx: { upgrades: number[]; allSymbolsAdjacent?: boolean },
-        relicEffects: ActiveRelicEffects,
         disabledTerrainCoords?: ReadonlySet<string>,
     ) => ReturnType<typeof import('../../logic/symbolEffects').processSingleSymbolEffects>;
     createInstance: (def: SymbolDefinition, unlockedUpgrades?: readonly number[]) => PlayerSymbolInstance;
     getAdjacentCoords: (x: number, y: number) => { x: number; y: number }[];
-    buildActiveRelicEffects: () => ActiveRelicEffects;
 }
 
 export const createTurnFlowActions = (deps: TurnFlowDeps) => {
@@ -154,22 +118,10 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         processSingleSymbolEffects,
         createInstance,
         getAdjacentCoords,
-        buildActiveRelicEffects,
     } = deps;
     const turnRuns = createTurnRunScheduler();
-    const awardTerminalLeaderProgress = (outcome: LeaderGameOutcome) => {
-        const state = get();
-        if (!state.leaderId || state.isTutorialMode || state.lastLeaderProgressAward) return;
-        recordDemoLeaderGameCompletion(state.leaderId, outcome);
-        const award = awardLeaderGameXp(state.leaderId, {
-            survivedTurns: state.turn,
-            finalLevel: state.level,
-            outcome,
-        });
-        set({
-            leaderProgressLevel: award.next.level,
-            lastLeaderProgressAward: award,
-        });
+    const recordTerminalGameCompletion = (outcome: 'game_over' | 'victory') => {
+        if (!get().isTutorialMode) recordDemoGameCompletion(outcome);
     };
 
     const completeTurnEnd = () => {
@@ -190,7 +142,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         });
 
         if (phaseResolution.nextPhase === 'game_over') {
-            awardTerminalLeaderProgress('game_over');
+            recordTerminalGameCompletion('game_over');
             set({ phase: 'game_over' as GamePhase });
             clearSavedGame();
             return;
@@ -200,19 +152,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             set((current) => ({ food: current.food + phaseResolution.foodDelta }));
         }
 
-        if (phaseResolution.isFoodPaymentTurn) {
-            recordDemoFoodPaymentTurn(state.turn);
-            const venusRelics = useRelicStore
-                .getState()
-                .relics.filter((relic) => relic.definition.id === RELIC_ID.WILLENDORF_VENUS);
-            for (const relic of venusRelics) {
-                useRelicStore.getState().incrementRelicBonus(relic.instanceId, 1);
-            }
-        }
-
-        if (phaseResolution.shouldRefreshRelicShop) {
-            get().refreshRelicShop(true);
-        }
+        if (phaseResolution.isFoodPaymentTurn) recordDemoFoodPaymentTurn(state.turn);
 
         const nextActiveStatuses = createActiveStatusesForTurn(state.turn);
         const statusPatch = {
@@ -223,7 +163,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         set({
             ...statusPatch,
             phase: 'selection' as GamePhase,
-            symbolSelectionRelicSourceId: phaseResolution.symbolSelectionRelicSourceId ?? null,
             symbolSelectionSymbolSourceId: null,
             isTurnSymbolSelection: true,
             freeSelectionRerolls: Math.max(
@@ -247,7 +186,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                 delta: { food: 0, gold: 0, knowledge: 0 },
                 meta: { action: 'food_payment_failed', foodCost },
             });
-            awardTerminalLeaderProgress('game_over');
+            recordTerminalGameCompletion('game_over');
             set({ phase: 'game_over' as GamePhase, pendingFoodPayment: false });
             clearSavedGame();
             return;
@@ -265,13 +204,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             meta: { action: 'food_payment', foodCost },
         });
         recordDemoFoodPaymentTurn(state.turn);
-        const venusRelics = useRelicStore
-            .getState()
-            .relics.filter((relic) => relic.definition.id === RELIC_ID.WILLENDORF_VENUS);
-        for (const relic of venusRelics) {
-            useRelicStore.getState().incrementRelicBonus(relic.instanceId, 1);
-        }
-        get().refreshRelicShop(true);
         saveGameState(get());
     },
     claimBoardExpansion: () => {
@@ -279,7 +211,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         if (state.phase !== 'board_expansion_ready') return;
 
         if (getBoardExpansionCandidates(state.board).length === 0) {
-            set({ phase: 'relic_shop_ready' as GamePhase });
+            set({ phase: 'selection' as GamePhase, isTurnSymbolSelection: true });
             saveGameState(get());
             return;
         }
@@ -317,8 +249,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             boardHeight: currentBoardHeight,
             unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
             threatState: {
-                barbarianSymbolThreat: state.barbarianSymbolThreat,
-                barbarianCampThreat: state.barbarianCampThreat,
                 naturalDisasterThreat: state.naturalDisasterThreat,
             },
             rng: createMathRng(),
@@ -329,8 +259,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
 
         set({
             playerSymbols: prepared.playerSymbols,
-            barbarianSymbolThreat: prepared.threatState.barbarianSymbolThreat,
-            barbarianCampThreat: prepared.threatState.barbarianCampThreat,
             naturalDisasterThreat: prepared.threatState.naturalDisasterThreat,
             pendingDevNaturalDisasterId: null,
             pendingNewThreatFloats: prepared.pendingNewThreatFloats,
@@ -341,7 +269,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             phase: 'spinning',
             lastEffects: [],
             counterDisplayOverrides: [],
-            runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
             pendingContributors: [],
@@ -405,23 +333,18 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         const startFood = baseTotals.food;
         const startGold = baseTotals.gold;
         const startKnowledge = baseTotals.knowledge;
-        const startCulture = baseTotals.culture ?? 0;
-        const startMilitary = baseTotals.military ?? 0;
-        recordDemoBaseGoldProductionProgress(state.leaderId, startGold);
-
         set({
             phase: 'processing',
             effectPhase3ReachedThisRun: false,
             destroyRemovalBlinkStartedAtMs: null,
             earthquakeFx: null,
             lootMergeFx: null,
-            runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge, culture: startCulture, military: startMilitary },
-            qinCurrencyStandardTurnsRemaining: Math.max(0, (state.qinCurrencyStandardTurnsRemaining ?? 0) - 1),
+            runningTotals: { food: startFood, gold: startGold, knowledge: startKnowledge },
         });
         get().appendEventLog({
             turn: state.turn,
             kind: 'processing_start',
-            meta: { base: { food: startFood, gold: startGold, knowledge: startKnowledge, military: startMilitary } },
+            meta: { base: { food: startFood, gold: startGold, knowledge: startKnowledge } },
         });
 
         const slotPipeline = createSlotEffectPipeline({
@@ -430,7 +353,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             boardHeight: currentBoardHeight,
             baseTotals,
         });
-        const relicEffects = buildActiveRelicEffects();
         const effectCtx = {
             upgrades: (state.unlockedKnowledgeUpgrades || []).map((id) => Number(id)),
             allSymbolsAdjacent: slotPipeline.allSymbolsAdjacent,
@@ -443,7 +365,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     args.x,
                     args.y,
                     args.effectCtx,
-                    args.relicEffects,
                     args.disabledTerrainCoords,
                 ),
         };
@@ -451,9 +372,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
         const finishProcessing = (
             tFood: number,
             tKnowledge: number,
-            tCulture: number,
             tGold: number,
-            tMilitary: number,
             toAdd: number[],
             toSpawn: number[],
             effects: GameState['lastEffects'],
@@ -462,42 +381,22 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             get().appendEventLog({
                 turn: stateAtFinish.turn,
                 kind: 'processing_end',
-                meta: { totals: { food: tFood, gold: tGold, knowledge: tKnowledge, military: tMilitary } },
+                meta: { totals: { food: tFood, gold: tGold, knowledge: tKnowledge } },
             });
             const currentBoard = get().board;
-            const relics = useRelicStore.getState().relics;
-            const getRelicInst = (id: number) => relics.find((r) => r.definition.id === id);
-            const getPhaseAdjacentCoords = (x: number, y: number) =>
-                slotPipeline.allSymbolsAdjacent
-                    ? getEffectiveAdjacentCoords(currentBoard, x, y, true)
-                    : getAdjacentCoords(x, y);
             const post = runPostEffectsHooks({
                 board: currentBoard,
                 boardWidth: currentBoardWidth,
                 boardHeight: currentBoardHeight,
                 effects,
-                leaderId: stateAtFinish.leaderId,
-                leaderProgressLevel: stateAtFinish.leaderProgressLevel,
-                currentEra: stateAtFinish.era,
-                currentGold: stateAtFinish.gold + tGold,
-                unlockedKnowledgeUpgrades: stateAtFinish.unlockedKnowledgeUpgrades || [],
-                getAdjacentCoords: getPhaseAdjacentCoords,
-                relics,
-                ownedSymbols: stateAtFinish.playerSymbols,
-                relicStoreApi: useRelicStore.getState(),
             });
 
             const bonusFood = post.bonusFood;
-            let bonusGold = post.bonusGold;
+            const bonusGold = post.bonusGold;
             const bonusKnowledge = post.bonusKnowledge;
             const bonusAddSymbolIds = post.addSymbolIds;
             const agiVictory = post.agiVictory;
-            const relicOwnEffectFloats = post.relicOwnEffectFloats;
             const knowledgeOwnEffectFloats = post.knowledgeOwnEffectFloats;
-            const urWheelInstanceId: string | null = post.urWheelPlan?.instanceId ?? null;
-            const urWheelMinTarget: { x: number; y: number } | null = post.urWheelPlan?.target ?? null;
-            const urWheelShakeMs = 360;
-            const urWheelBounceDur = buildCombatPresentationPlan(useSettingsStore.getState().effectSpeed).bounceDurationMs;
 
             set({
                 lastEffects: [...effects],
@@ -505,30 +404,8 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     food: tFood + bonusFood,
                     gold: tGold + bonusGold,
                     knowledge: tKnowledge + bonusKnowledge,
-                    culture: tCulture,
-                    military: tMilitary,
                 },
             });
-
-            const applyUrWheelDestroyAndDecrement = () => {
-                if (!urWheelInstanceId) return;
-                const r = useRelicStore.getState().relics.find((x) => x.instanceId === urWheelInstanceId);
-                if (!r || r.effect_counter <= 0) return;
-                const boardRef = get().board;
-                if (urWheelMinTarget) {
-                    const sym = boardRef[urWheelMinTarget.x][urWheelMinTarget.y];
-                    if (sym) {
-                        sym.is_marked_for_destruction = true;
-                        bonusGold += 10;
-                        relicOwnEffectFloats.push({
-                            relicInstanceId: urWheelInstanceId,
-                            text: '+10',
-                            color: '#fbbf24',
-                        });
-                    }
-                }
-                useRelicStore.getState().decrementRelicCounterOrRemove(r.instanceId);
-            };
 
             const runFinishProcessingTail = () => {
                 if (!turnRun.isActive()) return;
@@ -554,13 +431,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     return;
                 }
 
-                const nileForDecrement = getRelicInst(RELIC_ID.NILE_SILT);
-                if (nileForDecrement && nileForDecrement.effect_counter > 0) {
-                    useRelicStore.getState().decrementRelicCounterOrRemove(nileForDecrement.instanceId);
-                }
-
-                const eraBeforeKnowledgeFinish = get().era;
-                const relicsForHistory = useRelicStore.getState().relics;
                 const destroyedDuringProcessing = collectMarkedSymbolSnapshots(get().board);
 
                 set((prev) => {
@@ -569,8 +439,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                         food: tFood + bonusFood,
                         gold: tGold + bonusGold,
                         knowledge: tKnowledge + bonusKnowledge,
-                        culture: tCulture,
-                        military: tMilitary,
                     };
                     const prog = applyKnowledgeAndLevelUps(
                         {
@@ -609,10 +477,9 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                         era: prog.newEra,
                         religionUnlocked: prev.religionUnlocked,
                         upgrades: (prev.unlockedKnowledgeUpgrades || []).map(Number),
-                        ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+                        symbolSetId: prev.symbolSetId,
+                        symbolSetIds: prev.symbolSetIds,
                         ownedSymbolDefIds: prev.playerSymbols.map((s) => s.definition.id),
-                        leaderId: prev.leaderId,
-                        leaderProgressLevel: prev.leaderProgressLevel,
                         choiceCount: getStandardSymbolChoiceCount(generated.board),
                         forceTerrainInNextSymbolChoices: forceTerrainForNextChoices,
                         forceEventsInNextSymbolChoices: forceEventsForNextChoices,
@@ -620,22 +487,10 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     const nextChoiceRes = generateChoicesSelection(selCtx);
                     const nextPhase: GamePhase = agiVictory ? 'victory' : 'processing';
 
-                    const nextResearchCredits = [
-                        ...normalizeKnowledgeResearchCredits(
-                            prev.level,
-                            prev.levelUpResearchPoints ?? 0,
-                            prev.knowledgeResearchCredits,
-                        ),
-                        ...createKnowledgeResearchCreditsForLevelGain(prev.level, prog.newLevel),
-                    ];
-
                     return {
                         food: prev.food + finalRunningTotals.food,
                         gold: prev.gold + finalRunningTotals.gold,
                         knowledge: prog.newKnowledge,
-                        culture: prev.culture + finalRunningTotals.culture,
-                        cultureLevel: getCultureLevel(prev.culture + finalRunningTotals.culture),
-                        military: (prev.military ?? 0) + finalRunningTotals.military,
                         level: prog.newLevel,
                         runningTotals: finalRunningTotals,
                         counterDisplayOverrides: [],
@@ -661,9 +516,8 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                             forceEventsForNextChoices && nextChoiceRes.consumedForceEvents
                                 ? false
                                 : forceEventsForNextChoices,
-                        levelUpResearchPoints: nextResearchCredits.length,
-                        knowledgeResearchCredits: nextResearchCredits,
-                        relicFloats: [...(prev.relicFloats ?? []), ...relicOwnEffectFloats],
+                        levelUpResearchPoints: 0,
+                        knowledgeResearchCredits: [],
                         knowledgeUpgradeFloats:
                             knowledgeOwnEffectFloats.length > 0
                                 ? [...(prev.knowledgeUpgradeFloats ?? []), ...knowledgeOwnEffectFloats]
@@ -683,48 +537,8 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     });
                 }
 
-                relicOwnEffectFloats.forEach((float) => {
-                    const relic = relicsForHistory.find((item) => item.instanceId === float.relicInstanceId);
-                    if (!relic) return;
-                    get().appendEventLog({
-                        turn: get().turn,
-                        kind: 'relic',
-                        delta: getRelicFloatDelta(float),
-                        meta: {
-                            relicId: relic.definition.id,
-                            action: 'passive_relic_effect',
-                            amount: float.text,
-                        },
-                    });
-                });
-
-                const eraAfter = get().era;
-                if (
-                    isLeaderUnlockActive(get().leaderId, get().leaderProgressLevel, 'shihuang_unification_foundation')
-                    && eraAfter > eraBeforeKnowledgeFinish
-                ) {
-                    const debrisDef = RELICS[RELIC_ID.ANCIENT_RELIC_DEBRIS];
-                    const tribeDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
-                    const rs = useRelicStore.getState();
-                    for (let e = eraBeforeKnowledgeFinish + 1; e <= eraAfter; e++) {
-                        if (debrisDef) {
-                            rs.addRelic(debrisDef);
-                            rs.addRelic(debrisDef);
-                        }
-                        if (tribeDef) rs.addRelic(tribeDef);
-                    }
-                    get().appendEventLog({
-                        turn: get().turn,
-                        kind: 'relic',
-                        meta: {
-                            action: 'shihuang_era_relics',
-                            erasEntered: eraAfter - eraBeforeKnowledgeFinish,
-                        },
-                    });
-                }
-
                 if (get().phase === 'victory') {
-                    awardTerminalLeaderProgress('victory');
+                    recordTerminalGameCompletion('victory');
                     clearSavedGame();
                     return;
                 }
@@ -739,7 +553,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
                                 tutorialSpinStep: 'corn_done',
                             });
                             return;
@@ -754,9 +568,8 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
                                 symbolChoices: [],
-                                symbolSelectionRelicSourceId: null,
                                 tutorialSpinStep: 'monument_done',
                             });
                             return;
@@ -769,9 +582,8 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
                                 symbolChoices: [],
-                                symbolSelectionRelicSourceId: null,
                                 tutorialSpinStep: 'adjacency_done',
                             });
                             return;
@@ -785,7 +597,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                                 activeContributors: [],
                                 pendingContributors: [],
                                 effectPhase: null,
-                                runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+                                runningTotals: { food: 0, gold: 0, knowledge: 0 },
                                 activeStatuses: nextActiveStatuses,
                                 activeStatusIds: getActiveStatusIdsFromStates(nextActiveStatuses),
                             };
@@ -793,7 +605,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                             set({
                                 ...basePatch,
                                 phase: 'selection' as GamePhase,
-                                symbolSelectionRelicSourceId: null,
                                 symbolSelectionSymbolSourceId: null,
                                 isTurnSymbolSelection: true,
                                 freeSelectionRerolls: Math.max(
@@ -810,18 +621,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                 });
             };
 
-            if (urWheelInstanceId) {
-                if (urWheelMinTarget && urWheelBounceDur > 0) {
-                    set({ preCombatShakeRelicDefId: RELIC_ID.UR_WHEEL });
-                    turnRun.schedule(urWheelShakeMs, () => {
-                        set({ preCombatShakeRelicDefId: null });
-                        applyUrWheelDestroyAndDecrement();
-                        runFinishProcessingTail();
-                    });
-                    return;
-                }
-                applyUrWheelDestroyAndDecrement();
-            }
             runFinishProcessingTail();
         };
 
@@ -835,7 +634,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     boardHeight: currentBoardHeight,
                     getAdjacentCoords,
                     unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades || [],
-                    relicEffects: buildActiveRelicEffects(),
                 });
                 const unplacedHorseEffects = computeUnplacedHorseEffects(
                     get().board,
@@ -869,9 +667,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     finishProcessing(
                         slotPipeline.totals.food,
                         slotPipeline.totals.knowledge,
-                        slotPipeline.totals.culture ?? 0,
                         slotPipeline.totals.gold,
-                        slotPipeline.totals.military ?? 0,
                         slotPipeline.symbolsToAdd,
                         slotPipeline.symbolsToSpawnOnBoard,
                         slotPipeline.accumulatedEffects,
@@ -897,22 +693,7 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                 x,
                 y,
                 effectCtx,
-                relicEffects,
             });
-
-            if (result.grantRelicIds?.length) {
-                const rs = useRelicStore.getState();
-                for (const relicId of result.grantRelicIds) {
-                    const def = RELICS[relicId];
-                    if (def) rs.addRelic(def);
-                }
-            }
-            if (result.triggerRelicRefresh) {
-                get().refreshRelicShop(true);
-            }
-            if (result.triggerRelicSelection) {
-                set({ isRelicShopOpen: true });
-            }
 
             const effectSpeed = useSettingsStore.getState().effectSpeed;
             const timelinePlan = buildSlotEffectPresentationPlan({
@@ -991,12 +772,8 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                     result.food !== 0 ||
                     result.gold !== 0 ||
                     result.knowledge !== 0 ||
-                    (result.culture ?? 0) !== 0 ||
-                    (result.military ?? 0) !== 0 ||
                     (result.addSymbolIds && result.addSymbolIds.length > 0) ||
-                    (result.spawnOnBoard && result.spawnOnBoard.length > 0) ||
-                    result.triggerRelicRefresh ||
-                    result.triggerRelicSelection
+                    (result.spawnOnBoard && result.spawnOnBoard.length > 0)
                 ) {
                     const contributors = (result.contributors ?? []).map(({ x: cx, y: cy }) => ({
                         x: cx,
@@ -1008,13 +785,11 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
                         kind: 'symbol_effect',
                         slot: { x, y },
                         symbolId: symbol.definition.id,
-                        delta: { food: result.food ?? 0, gold: result.gold ?? 0, knowledge: result.knowledge ?? 0, culture: result.culture ?? 0, military: result.military ?? 0 },
+                        delta: { food: result.food ?? 0, gold: result.gold ?? 0, knowledge: result.knowledge ?? 0 },
                         contributors,
                         meta: {
                             addSymbolIds: result.addSymbolIds ?? [],
                             spawnOnBoard: result.spawnOnBoard ?? [],
-                            triggerRelicRefresh: !!result.triggerRelicRefresh,
-                            triggerRelicSelection: !!result.triggerRelicSelection,
                         },
                     });
                 }
@@ -1051,13 +826,6 @@ export const createTurnFlowActions = (deps: TurnFlowDeps) => {
             }
         };
 
-        set({
-            combatAnimation: null,
-            combatShaking: false,
-            preCombatShakeTarget: null,
-            preCombatShakeRelicDefId: null,
-            combatFloats: [],
-        });
         processSlot(0);
     },
 

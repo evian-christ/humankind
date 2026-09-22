@@ -9,19 +9,13 @@ import {
 } from './symbolEffects/core';
 import { handleAncientEffects } from './symbolEffects/handlers/ancientEffects';
 import { handleDisasterEffects } from './symbolEffects/handlers/disasterEffects';
-import { handleEnemyEffects } from './symbolEffects/handlers/enemyEffects';
 import { handleMedievalEffects } from './symbolEffects/handlers/medievalEffects';
 import { handleNormalEffects } from './symbolEffects/handlers/normalEffects';
 import { handleReligionEffects } from './symbolEffects/handlers/religionEffects';
 import { handleTerrainEffects } from './symbolEffects/handlers/terrainEffects';
-import { DEFAULT_RELIC_EFFECTS, type ActiveRelicEffects, type BoardGrid, type EffectResult, type SymbolEffectContext } from './symbolEffects/types';
+import type { BoardGrid, EffectResult, SymbolEffectContext } from './symbolEffects/types';
 
 export type { EffectResult, SymbolEffectContext } from './symbolEffects/types';
-
-/** 현재 보유 유물의 활성 효과 플래그 (`relicDefinitions` 1–19 + 지식 업그레이드 일부, gameStore에서 조합) */
-export type { ActiveRelicEffects } from './symbolEffects/types';
-
-export { DEFAULT_RELIC_EFFECTS } from './symbolEffects/types';
 
 const EFFECT_HANDLERS: SymbolEffectHandler[] = [
     handleDisasterEffects,
@@ -29,7 +23,6 @@ const EFFECT_HANDLERS: SymbolEffectHandler[] = [
     handleAncientEffects,
     handleMedievalEffects,
     handleReligionEffects,
-    handleEnemyEffects,
     handleNormalEffects,
 ];
 
@@ -39,7 +32,6 @@ export const processSingleSymbolEffects = (
     x: number,
     y: number,
     ctx: SymbolEffectContext,
-    relicEffects: ActiveRelicEffects = DEFAULT_RELIC_EFFECTS,
     disabledTerrainCoords?: ReadonlySet<string>
 ): EffectResult => {
     symbolInstance.effect_counter = (symbolInstance.effect_counter || 0);
@@ -56,7 +48,6 @@ export const processSingleSymbolEffects = (
         x,
         y,
         ctx,
-        relicEffects,
         state,
         adj: getEffectiveAdjacentCoords(boardGrid, x, y, ctx.allSymbolsAdjacent),
         upgrades: ctx.upgrades,

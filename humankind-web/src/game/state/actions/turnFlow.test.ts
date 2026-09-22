@@ -5,7 +5,6 @@ import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import { STATUS_ID } from '../../data/statusDefinitions';
 import { isGameEventDefinition } from '../../data/eventDefinitions';
 import { prepareTurn } from '../../logic/turn/turnPreparation';
-import { useRelicStore } from '../relicStore';
 import { calculateFoodCost } from '../gameCalculations';
 
 vi.mock('../settingsStore', () => ({
@@ -16,7 +15,6 @@ vi.mock('../settingsStore', () => ({
         }),
     },
     EFFECT_SPEED_DELAY: { '1x': 1, '2x': 1, '4x': 1, '8x': 0 },
-    COMBAT_BOUNCE_DURATION: { '1x': 1, '2x': 1, '4x': 1, '8x': 0 },
 }));
 
 vi.mock('../../logic/turn/turnPreparation', () => ({
@@ -34,14 +32,9 @@ const makeState = (): GameState => {
     board[2][1] = oral;
 
     return {
-        leaderId: null,
-        leaderProgressLevel: 1,
-        lastLeaderProgressAward: null,
         food: 0,
         gold: 0,
         knowledge: 0,
-        culture: 0,
-        cultureLevel: 0,
         level: 0,
         era: 0,
         turn: 0,
@@ -49,9 +42,6 @@ const makeState = (): GameState => {
         playerSymbols: [oral],
         phase: 'idle',
         symbolChoices: [],
-        symbolSelectionRelicSourceId: null,
-        relicChoices: [null, null, null],
-        relicHalfPriceRelicId: null,
         lastEffects: [],
         counterDisplayOverrides: [],
         runningTotals: { food: 0, gold: 0, knowledge: 0 },
@@ -63,30 +53,18 @@ const makeState = (): GameState => {
         lootMergeFx: null,
         eventLog: [],
         prevBoard: createEmptyBoard(),
-        combatAnimation: null,
-        combatShaking: false,
-        preCombatShakeTarget: null,
-        preCombatShakeRelicDefId: null,
-        combatFloats: [],
-        relicFloats: [],
         knowledgeUpgradeFloats: [],
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
-        qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
         pendingBoardExpansions: 0,
-        isRelicShopOpen: false,
-        hasNewRelicShopStock: false,
         rerollsThisTurn: 2,
         returnPhaseAfterDevKnowledgeUpgrade: null,
-        barbarianSymbolThreat: 0,
-        barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
         pendingDevNaturalDisasterId: null,
         activeStatusIds: [],
         activeStatuses: [],
         pendingNewThreatFloats: [],
-        pendingOblivionFurnaceRelicId: null,
         pendingEdictSource: null,
         bonusSelectionQueue: [],
         forceTerrainInNextSymbolChoices: false,
@@ -102,10 +80,6 @@ const makeState = (): GameState => {
         selectEvent: () => {},
         skipSelection: () => {},
         rerollSymbols: () => {},
-        toggleRelicShop: () => {},
-        clearRelicShopStockBadge: () => {},
-        refreshRelicShop: () => {},
-        buyRelic: () => {},
         selectUpgrade: () => {},
         expandBoardSlotAt: () => {},
         initializeGame: () => {},
@@ -123,12 +97,9 @@ const makeState = (): GameState => {
         devAddBoardExpansion: () => {},
         devForceScreen: () => {},
         devTriggerNaturalDisaster: () => {},
-        confirmOblivionFurnaceDestroyAt: () => {},
-        cancelOblivionFurnacePick: () => {},
         activateEdictAt: () => {},
         confirmEdictDestroyAt: () => {},
         cancelEdictPick: () => {},
-        activateClickableRelic: () => {},
         consumeTribalVillageAt: () => {},
 
         openLootAt: () => {},
@@ -171,14 +142,6 @@ const createHarness = (
                 })),
             createInstance,
             getAdjacentCoords: deps.getAdjacentCoords ?? (() => []),
-            buildActiveRelicEffects: () => ({
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            }),
         }),
     };
 };
@@ -186,7 +149,6 @@ const createHarness = (
 describe('turnFlow actions', () => {
     beforeEach(() => {
         mockedPrepareTurn.mockReset();
-        useRelicStore.getState().resetRelics();
     });
 
     it('spinBoard applies prepared turn state and resets processing markers', () => {
@@ -198,11 +160,7 @@ describe('turnFlow actions', () => {
             prevBoard: createEmptyBoard(),
             playerSymbols: [oral],
             turn: 1,
-            threatState: {
-                barbarianSymbolThreat: 1,
-                barbarianCampThreat: 2,
-                naturalDisasterThreat: 3,
-            },
+            threatState: { naturalDisasterThreat: 3 },
             pendingNewThreatFloats: [{ x: 0, y: 0, label: 'test' }],
             activeStatusIds: [1],
         });
@@ -223,11 +181,7 @@ describe('turnFlow actions', () => {
             prevBoard: createEmptyBoard(),
             playerSymbols: [],
             turn: 1,
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             pendingNewThreatFloats: [],
             activeStatusIds: [],
         });
@@ -245,11 +199,7 @@ describe('turnFlow actions', () => {
             prevBoard: createEmptyBoard(),
             playerSymbols: [],
             turn: 10,
-            threatState: {
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
-                naturalDisasterThreat: 0,
-            },
+            threatState: { naturalDisasterThreat: 0 },
             pendingNewThreatFloats: [],
             activeStatusIds: [],
         });
@@ -321,8 +271,8 @@ describe('turnFlow actions', () => {
                 phase: 'spinning',
                 turn: 10,
                 food,
-                activeStatusIds: [STATUS_ID.CLAN_FORMATION],
-                activeStatuses: [{ id: STATUS_ID.CLAN_FORMATION, remainingTurns: 5 }],
+                activeStatusIds: [],
+                activeStatuses: [],
             });
 
             harness.actions.startProcessing();
@@ -332,7 +282,6 @@ describe('turnFlow actions', () => {
             expect(harness.get().pendingFoodPayment).toBe(true);
             expect(harness.get().food).toBe(food);
             expect(harness.get().activeStatuses).toEqual([
-                { id: STATUS_ID.BARBARIAN_STIRRING, remainingTurns: 0 },
                 { id: STATUS_ID.DISASTER_OMEN, remainingTurns: 0 },
             ]);
         } finally {
@@ -405,8 +354,8 @@ describe('turnFlow actions', () => {
             const harness = createHarness({
                 phase: 'spinning',
                 turn: 1,
-                activeStatusIds: [STATUS_ID.CLAN_FORMATION],
-                activeStatuses: [{ id: STATUS_ID.CLAN_FORMATION, remainingTurns: 5 }],
+                activeStatusIds: [],
+                activeStatuses: [],
             });
 
             harness.actions.startProcessing();
@@ -414,13 +363,9 @@ describe('turnFlow actions', () => {
 
             expect(harness.get().phase).toBe('selection');
             expect(harness.get().activeStatuses).toEqual([
-                { id: STATUS_ID.CLAN_FORMATION, remainingTurns: 4 },
                 { id: STATUS_ID.DISASTER_OMEN, remainingTurns: 0 },
             ]);
-            expect(harness.get().activeStatusIds).toEqual([
-                STATUS_ID.CLAN_FORMATION,
-                STATUS_ID.DISASTER_OMEN,
-            ]);
+            expect(harness.get().activeStatusIds).toEqual([STATUS_ID.DISASTER_OMEN]);
         } finally {
             vi.clearAllTimers();
             vi.useRealTimers();
@@ -439,6 +384,7 @@ describe('turnFlow actions', () => {
                     board,
                     playerSymbols: [colony],
                     era: 2,
+                    level: 10,
                     turn: 1,
                 },
                 {

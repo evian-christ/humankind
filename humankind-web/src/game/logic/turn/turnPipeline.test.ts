@@ -20,7 +20,6 @@ import {
     CARAVANSERAI_UPGRADE_ID,
     DESERT_STORAGE_UPGRADE_ID,
     GUILD_UPGRADE_ID,
-    MILITARY_SCIENCE_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import type { BoardGrid } from './turnTypes';
@@ -79,7 +78,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -88,14 +86,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
         applySlotEffectResult(pipeline, { x: 1, y: 1 }, result);
 
@@ -128,7 +118,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -137,14 +126,6 @@ describe('turnPipeline', () => {
             x: 0,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(result).toEqual({ food: 0, knowledge: 0, gold: 0 });
@@ -175,14 +156,6 @@ describe('turnPipeline', () => {
             x: 0,
             y: 0,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(result.counterDelta).toBe(1);
@@ -216,14 +189,6 @@ describe('turnPipeline', () => {
             x: 0,
             y: 0,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(wheat.effect_counter).toBe(1);
@@ -256,14 +221,6 @@ describe('turnPipeline', () => {
             x: 0,
             y: 0,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(result.counterDelta).toBe(2);
@@ -293,19 +250,9 @@ describe('turnPipeline', () => {
                     args.x,
                     args.y,
                     args.effectCtx,
-                    args.relicEffects,
                     args.disabledTerrainCoords,
                 ),
         };
-        const relicEffects = {
-            relicCount: 0,
-            quarryEmptyGold: false,
-            bananaFossilBonus: false,
-            horsemansihpPastureBonus: false,
-            terraFossilDisasterFood: false,
-            allSymbolsAreCorner: false,
-        };
-
         const firstResult = resolveSlotEffect({
             pipeline,
             deps,
@@ -314,7 +261,6 @@ describe('turnPipeline', () => {
             x: 0,
             y: 0,
             effectCtx: { upgrades: [] },
-            relicEffects,
         });
         commitLootMerge(board, firstResult.lootMerge!);
 
@@ -326,7 +272,6 @@ describe('turnPipeline', () => {
             x: 0,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects,
         });
 
         expect(lootB.is_marked_for_destruction).toBe(true);
@@ -381,7 +326,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -390,14 +334,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
         applySlotEffectResult(pipeline, { x: 1, y: 1 }, result);
 
@@ -434,7 +370,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -443,14 +378,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
         applySlotEffectResult(pipeline, { x: 1, y: 1 }, result);
 
@@ -485,7 +412,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -494,14 +420,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [DESERT_STORAGE_UPGRADE_ID] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
         applySlotEffectResult(pipeline, { x: 1, y: 1 }, result);
 
@@ -552,63 +470,16 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [DESERT_STORAGE_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
         applySlotEffectResult(pipeline, { x: 1, y: 1 }, result);
 
         expect(result.extraEffects).toEqual([
             { x: 0, y: 0, food: 20, gold: 0, knowledge: 0 },
-            { x: 0, y: 1, food: 0, gold: 0, knowledge: 0, culture: 30 },
+            { x: 0, y: 1, food: 0, gold: 0, knowledge: 30 },
             { x: 1, y: 0, food: 0, gold: 20, knowledge: 0 },
             { x: 2, y: 0, food: 0, gold: 0, knowledge: 20 },
         ]);
-        expect(pipeline.totals).toEqual({ food: 20, gold: 20, knowledge: 20, culture: 30 });
-    });
-
-    it('refreshes the relic shop immediately when Relic Caravan is destroyed', () => {
-        const board = createEmptyBoard();
-        const destroyer = createInstance(Sym.desert, 'destroyer');
-        const caravan = createInstance(Sym.relic_caravan, 'relic-caravan');
-        board[1][1] = destroyer;
-        board[0][1] = caravan;
-        const pipeline = createSlotEffectPipeline({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            baseTotals: { food: 0, gold: 0, knowledge: 0 },
-        });
-
-        const result = resolveSlotEffect({
-            pipeline,
-            deps: {
-                processSingleSymbolEffects: () => {
-                    caravan.is_marked_for_destruction = true;
-                    return { food: 0, knowledge: 0, gold: 0 };
-                },
-            },
-            symbol: destroyer,
-            board,
-            x: 1,
-            y: 1,
-            effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
-        });
-
-        expect(result.triggerRelicRefresh).toBe(true);
+        expect(pipeline.totals).toEqual({ food: 20, gold: 20, knowledge: 50 });
     });
 
     it('destroys the earthquake column immediately on the earthquake slot', () => {
@@ -638,7 +509,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -647,14 +517,6 @@ describe('turnPipeline', () => {
             x: 2,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(wheat.is_marked_for_destruction).toBe(true);
@@ -695,7 +557,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -704,14 +565,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
         applySlotEffectResult(pipeline, { x: 1, y: 1 }, result);
 
@@ -748,7 +601,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -757,14 +609,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(result.gold).toBe(10);
@@ -798,7 +642,6 @@ describe('turnPipeline', () => {
                         args.x,
                         args.y,
                         args.effectCtx,
-                        args.relicEffects,
                         args.disabledTerrainCoords,
                     ),
             },
@@ -807,14 +650,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [GUILD_UPGRADE_ID] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(result.gold).toBe(10);
@@ -847,14 +682,6 @@ describe('turnPipeline', () => {
             x: 1,
             y: 1,
             effectCtx: { upgrades: [THEOCRACY_UPGRADE_ID] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         const hinduBoard = createEmptyBoard();
@@ -879,14 +706,6 @@ describe('turnPipeline', () => {
             x: 0,
             y: 0,
             effectCtx: { upgrades: [THEOCRACY_UPGRADE_ID] },
-            relicEffects: {
-                relicCount: 0,
-                quarryEmptyGold: false,
-                bananaFossilBonus: false,
-                horsemansihpPastureBonus: false,
-                terraFossilDisasterFood: false,
-                allSymbolsAreCorner: false,
-            },
         });
 
         expect(islamResult.food).toBe(3);
@@ -903,16 +722,6 @@ describe('turnPipeline', () => {
         const result = computeUnplacedHorseEffects(board, [placedHorse, unplacedHorse, markedHorse], []);
 
         expect(result).toEqual({ count: 1, food: 2, gold: 2, knowledge: 0 });
-    });
-
-    it('uses Military Science values for unplaced horse effects', () => {
-        const board = createEmptyBoard();
-        const horseA = createInstance(Sym.horse, 'horse_a');
-        const horseB = createInstance(Sym.horse, 'horse_b');
-
-        const result = computeUnplacedHorseEffects(board, [horseA, horseB], [MILITARY_SCIENCE_UPGRADE_ID]);
-
-        expect(result).toEqual({ count: 2, food: 6, gold: 8, knowledge: 0 });
     });
 
     it('keeps counter-only slot effects for board floats without changing resource totals', () => {

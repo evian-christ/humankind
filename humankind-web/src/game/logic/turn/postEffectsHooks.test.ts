@@ -1,423 +1,63 @@
 import { describe, expect, it } from 'vitest';
-import { runPostEffectsHooks } from './postEffectsHooks';
-import { SYMBOLS, S } from '../../data/symbolDefinitions';
-import { CARAVANSERAI_UPGRADE_ID } from '../../data/knowledgeUpgrades';
-import { RELIC_ID } from '../relics/relicIds';
+import { SYMBOLS_BY_KEY, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
+import { runPostEffectsHooks, type BoardGrid } from './postEffectsHooks';
 
-const createEmptyBoard = (): (PlayerSymbolInstance | null)[][] => Array(5).fill(null).map(() => Array(4).fill(null));
-
-const createInstance = (definition: (typeof SYMBOLS)[number], id: string): PlayerSymbolInstance => ({
+const instance = (
+    definition: SymbolDefinition,
+    instanceId: string,
+    isMarkedForDestruction = false,
+): PlayerSymbolInstance => ({
     definition,
-    instanceId: id,
+    instanceId,
     effect_counter: 0,
-    is_marked_for_destruction: false,
+    is_marked_for_destruction: isMarkedForDestruction,
 });
 
-describe('postEffectsHooks', () => {
-    it('applies Ramesses Relic Vault only from leader level 5 and ignores consumable relics', () => {
-        const baseArgs = {
-            board: createEmptyBoard(),
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [],
-            leaderId: 'ramesses' as const,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [
-                { instanceId: 'relic-a', definition: { id: 9001 }, effect_counter: 0, bonus_stacks: 0 },
-                { instanceId: 'relic-b', definition: { id: 9002 }, effect_counter: 0, bonus_stacks: 0 },
-                { instanceId: 'relic-c', definition: { id: RELIC_ID.ANCIENT_RELIC_DEBRIS }, effect_counter: 0, bonus_stacks: 0 },
-            ],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        };
+const board = (width: number, height: number): BoardGrid =>
+    Array.from({ length: width }, () => Array.from({ length: height }, () => null));
 
-        expect(runPostEffectsHooks({ ...baseArgs, leaderProgressLevel: 4 }).bonusKnowledge).toBe(0);
-        expect(runPostEffectsHooks({ ...baseArgs, leaderProgressLevel: 5 }).bonusKnowledge).toBe(2);
+describe('runPostEffectsHooks', () => {
+    it('collects symbols marked for destruction', () => {
+        const grid = board(2, 1);
+        grid[0][0] = instance(SYMBOLS_BY_KEY.corn, 'corn', true);
+
+        const result = runPostEffectsHooks({ board: grid, boardWidth: 2, boardHeight: 1, effects: [] });
+
+        expect(result.destroyedCount).toBe(1);
+        expect(result.destroyedSymbols).toEqual([
+            { id: SYMBOLS_BY_KEY.corn.id, x: 0, y: 0 },
+        ]);
     });
 
-    it('applies Qin Shi Huang prosperity from leader level 1 with ancient ratios', () => {
-        const board = createEmptyBoard();
-        board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat-a');
-        board[1][0] = createInstance(SYMBOLS[S.corn]!, 'rice-a');
-        board[2][0] = createInstance(SYMBOLS[S.honey]!, 'honey-a');
-        board[3][0] = createInstance(SYMBOLS[S.monument]!, 'monument-a');
+    it('grants Caravanserai resources for a destroyed producing symbol', () => {
+        const grid = board(2, 1);
+        grid[0][0] = instance(SYMBOLS_BY_KEY.corn, 'corn', true);
+        grid[1][0] = instance(SYMBOLS_BY_KEY.caravanserai, 'caravanserai');
+        const effects = [{ x: 0, y: 0, food: 2, gold: 0, knowledge: 0 }];
 
-        const baseArgs = {
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [],
-            leaderId: 'shihuang' as const,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        };
-
-        const result = runPostEffectsHooks({ ...baseArgs, leaderProgressLevel: 1 });
-
-        expect(result.bonusFood).toBe(1);
-        expect(result.bonusKnowledge).toBe(4);
-    });
-
-    it('scales Qin Shi Huang prosperity by era', () => {
-        const board = createEmptyBoard();
-        board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat-a');
-        board[1][0] = createInstance(SYMBOLS[S.corn]!, 'rice-a');
-        board[2][0] = createInstance(SYMBOLS[S.honey]!, 'honey-a');
-        board[3][0] = createInstance(SYMBOLS[S.monument]!, 'monument-a');
-        board[4][0] = createInstance(SYMBOLS[S.library]!, 'library-a');
-        board[0][1] = createInstance(SYMBOLS[S.merchant]!, 'merchant-a');
-
-        const baseArgs = {
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [],
-            leaderId: 'shihuang' as const,
-            leaderProgressLevel: 1,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        };
-
-        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 2 }).bonusFood).toBe(2);
-        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 2 }).bonusKnowledge).toBe(4);
-        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 3 }).bonusFood).toBe(3);
-        expect(runPostEffectsHooks({ ...baseArgs, currentEra: 3 }).bonusKnowledge).toBe(7);
-    });
-
-    it('does not defer Date destroy food to post effects', () => {
-        const board = createEmptyBoard();
-        const date = createInstance(SYMBOLS[S.date]!, 'date');
-        date.is_marked_for_destruction = true;
-        board[0][0] = date;
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [],
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(result.bonusFood).toBe(0);
-    });
-
-    it('does not defer campfire food to post effects', () => {
-        const board = createEmptyBoard();
-        const campfire = createInstance(SYMBOLS[S.campfire]!, 'campfire');
-        const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
-        const fish = createInstance(SYMBOLS[S.fish]!, 'fish');
-        campfire.is_marked_for_destruction = true;
-        board[1][1] = campfire;
-        board[1][0] = wheat;
-        board[2][1] = fish;
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [
-                { x: 1, y: 0, food: 6, gold: 0, knowledge: 0 },
-                { x: 2, y: 1, food: 4, gold: 2, knowledge: 0 },
-            ],
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: (x, y) => {
-                const adj: { x: number; y: number }[] = [];
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        if (nx >= 0 && nx < 5 && ny >= 0 && ny < 4) adj.push({ x: nx, y: ny });
-                    }
-                }
-                return adj;
-            },
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(result.bonusFood).toBe(0);
-        expect(result.bonusGold).toBe(0);
-        expect(result.bonusKnowledge).toBe(0);
-        expect(result.destroyedSymbols).toContainEqual({ id: S.campfire, x: 1, y: 1 });
-    });
-
-
-
-    it('does not defer earthquake column destruction to post effects', () => {
-        const board = createEmptyBoard();
-        const earthquake = createInstance(SYMBOLS[S.earthquake]!, 'earthquake');
-        const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
-        const fish = createInstance(SYMBOLS[S.fish]!, 'fish');
-        const rice = createInstance(SYMBOLS[S.corn]!, 'corn');
-        earthquake.is_marked_for_destruction = true;
-        board[2][0] = wheat;
-        board[2][1] = earthquake;
-        board[2][3] = fish;
-        board[3][1] = rice;
-
-        runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [],
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(wheat.is_marked_for_destruction).toBe(false);
-        expect(earthquake.is_marked_for_destruction).toBe(true);
-        expect(fish.is_marked_for_destruction).toBe(false);
-        expect(rice.is_marked_for_destruction).toBe(false);
-    });
-
-    it('does not defer tax gold to post effects', () => {
-        const board = createEmptyBoard();
-        const tax = createInstance(SYMBOLS[S.tax]!, 'tax');
-        const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
-        board[1][1] = tax;
-        board[1][0] = wheat;
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [{ x: 1, y: 0, food: 5, gold: 0, knowledge: 0 }],
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: (x, y) => {
-                const adj: { x: number; y: number }[] = [];
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        if (nx >= 0 && nx < 5 && ny >= 0 && ny < 4) adj.push({ x: nx, y: ny });
-                    }
-                }
-                return adj;
-            },
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(result.bonusFood).toBe(0);
-        expect(result.bonusGold).toBe(0);
-    });
-
-    it('lets Caravanserai mirror destroyed symbols production types', () => {
-        const board = createEmptyBoard();
-        const wheat = createInstance(SYMBOLS[S.wheat]!, 'wheat');
-        const dye = createInstance(SYMBOLS[S.dye]!, 'dye');
-        const papyrus = createInstance(SYMBOLS[S.papyrus]!, 'papyrus');
-        const caravanserai = createInstance(SYMBOLS[S.caravanserai]!, 'caravanserai');
-        wheat.is_marked_for_destruction = true;
-        dye.is_marked_for_destruction = true;
-        papyrus.is_marked_for_destruction = true;
-        board[0][0] = wheat;
-        board[1][0] = dye;
-        board[2][0] = papyrus;
-        board[3][0] = caravanserai;
-
-        const effects = [
-            { x: 0, y: 0, food: 5, gold: 0, knowledge: 0 },
-            { x: 1, y: 0, food: 0, gold: 1, knowledge: 0 },
-            { x: 2, y: 0, food: 0, gold: 0, knowledge: 1 },
-        ];
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects,
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [CARAVANSERAI_UPGRADE_ID],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
+        const result = runPostEffectsHooks({ board: grid, boardWidth: 2, boardHeight: 1, effects });
 
         expect(result.bonusFood).toBe(10);
-        expect(result.bonusGold).toBe(10);
-        expect(result.bonusKnowledge).toBe(10);
-        expect(effects).toContainEqual({ x: 3, y: 0, food: 10, gold: 10, knowledge: 10 });
-    });
-
-    it('does not defer Date, Dye, or Papyrus destroy resource bonuses to post effects', () => {
-        const board = createEmptyBoard();
-        const date = createInstance(SYMBOLS[S.date]!, 'date');
-        const dye = createInstance(SYMBOLS[S.dye]!, 'dye');
-        const papyrus = createInstance(SYMBOLS[S.papyrus]!, 'papyrus');
-        date.is_marked_for_destruction = true;
-        dye.is_marked_for_destruction = true;
-        papyrus.is_marked_for_destruction = true;
-        board[0][0] = date;
-        board[1][0] = dye;
-        board[2][0] = papyrus;
-        const effects: { x: number; y: number; food: number; gold: number; knowledge: number }[] = [];
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects,
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(result.bonusFood).toBe(0);
         expect(result.bonusGold).toBe(0);
         expect(result.bonusKnowledge).toBe(0);
-        expect(effects).toEqual([]);
+        expect(effects).toContainEqual({ x: 1, y: 0, food: 10, gold: 0, knowledge: 0 });
     });
 
-    it('does not defer Oral Tradition destroy knowledge to post effects', () => {
-        const board = createEmptyBoard();
-        const oral = createInstance(SYMBOLS[S.oral_tradition]!, 'oral');
-        oral.is_marked_for_destruction = true;
-        board[1][1] = oral;
-        board[0][1] = createInstance(SYMBOLS[S.desert]!, 'desert');
-        board[2][2] = createInstance(SYMBOLS[S.wheat]!, 'wheat');
-        const effects: { x: number; y: number; food: number; gold: number; knowledge: number }[] = [];
+    it('charges the AGI core with positive knowledge and triggers victory at 500', () => {
+        const grid = board(1, 1);
+        const core = instance(SYMBOLS_BY_KEY.agi_core, 'agi');
+        core.effect_counter = 495;
+        grid[0][0] = core;
 
         const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects,
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: (x, y) => {
-                const adj: { x: number; y: number }[] = [];
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        if (dx === 0 && dy === 0) continue;
-                        const nx = x + dx;
-                        const ny = y + dy;
-                        if (nx >= 0 && nx < 5 && ny >= 0 && ny < 4) adj.push({ x: nx, y: ny });
-                    }
-                }
-                return adj;
-            },
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
+            board: grid,
+            boardWidth: 1,
+            boardHeight: 1,
+            effects: [{ x: 0, y: 0, food: 0, gold: 0, knowledge: 5 }],
         });
 
-        expect(result.bonusKnowledge).toBe(0);
-        expect(effects).toEqual([]);
-    });
-
-    it('lets AGI Core absorb all board knowledge production and trigger victory at 500', () => {
-        const board = createEmptyBoard();
-        const agiCore = createInstance(SYMBOLS[S.agi_core]!, 'agi_core');
-        const monument = createInstance(SYMBOLS[S.monument]!, 'monument');
-        agiCore.effect_counter = 490;
-        board[0][0] = agiCore;
-        board[1][0] = monument;
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [
-                { x: 1, y: 0, food: 0, gold: 0, knowledge: 7 },
-                { x: 2, y: 0, food: 0, gold: 0, knowledge: 5 },
-            ],
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(board[0][0]?.effect_counter).toBe(502);
-        expect(result.bonusKnowledge).toBe(0);
+        expect(core.effect_counter).toBe(500);
         expect(result.agiVictory).toBe(true);
-    });
-
-    it('targets the lowest actual Food producer for Chariot Wheel of Ur', () => {
-        const board = createEmptyBoard();
-        board[0][0] = createInstance(SYMBOLS[S.wheat]!, 'wheat');
-        board[1][0] = createInstance(SYMBOLS[S.grassland]!, 'grassland');
-
-        const result = runPostEffectsHooks({
-            board,
-            boardWidth: 5,
-            boardHeight: 4,
-            effects: [
-                { x: 0, y: 0, food: 3, gold: 0, knowledge: 0 },
-                { x: 0, y: 0, food: 4, gold: 0, knowledge: 0 },
-                { x: 1, y: 0, food: 2, gold: 0, knowledge: 0 },
-            ],
-            leaderId: null,
-            unlockedKnowledgeUpgrades: [],
-            getAdjacentCoords: () => [],
-            relics: [
-                {
-                    instanceId: 'ur-wheel',
-                    definition: { id: RELIC_ID.UR_WHEEL },
-                    effect_counter: 3,
-                    bonus_stacks: 0,
-                },
-            ],
-            relicStoreApi: {
-                incrementRelicBonus: () => undefined,
-                decrementRelicCounterOrRemove: () => undefined,
-            },
-        });
-
-        expect(result.urWheelPlan).toEqual({
-            instanceId: 'ur-wheel',
-            target: { x: 1, y: 0 },
-        });
     });
 });

@@ -3,7 +3,6 @@ import {
     CELESTIAL_NAVIGATION_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     FISHERY_GUILD_UPGRADE_ID,
-    MILITARY_SCIENCE_UPGRADE_ID,
     MARITIME_TRADE_UPGRADE_ID,
     OCEANIC_ROUTES_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
@@ -40,7 +39,7 @@ const getEffectiveSeaCount = (boardGrid: BoardGrid, upgrades: number[]): number 
     return seaCount * (upgrades.includes(SHIPBUILDING_UPGRADE_ID) ? 2 : 1);
 };
 
-export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, adj, upgrades, relicEffects, state }) => {
+export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, boardGrid, x, y, adj, upgrades, state }) => {
     switch (symbolInstance.definition.id) {
         case S.wheat: {
             const grassAdj = getSameRowCoordsBySymbolId(boardGrid, x, y, S.grassland);
@@ -138,10 +137,6 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
 
         case S.monument:
             state.knowledge += 5;
-            return true;
-
-        case S.stone_tablet:
-            state.knowledge += relicEffects.relicCount * 2;
             return true;
 
         case S.wild_seeds:
@@ -373,54 +368,9 @@ export const handleNormalEffects: SymbolEffectHandler = ({ symbolInstance, board
             return true;
         }
 
-        case S.relic_caravan:
-            symbolInstance.is_marked_for_destruction = true;
-            state.triggerRelicRefresh = true;
-            return true;
-
-        case S.militia:
-            state.military += 3;
-            symbolInstance.effect_counter++;
-            if (symbolInstance.effect_counter >= 5) {
-                symbolInstance.effect_counter = 5;
-                symbolInstance.is_marked_for_destruction = true;
-            }
-            return true;
-
-        case S.warrior:
-            state.military += 2;
-            return true;
-
-        case S.archer: {
-            const terrainAdj = adj.filter((pos) => {
-                const id = boardGrid[pos.x][pos.y]?.definition.id;
-                return id === S.forest || id === S.mountain;
-            });
-            state.military += terrainAdj.length > 0 ? 3 : 1;
-            terrainAdj.forEach((pos) => state.contributors.push(pos));
-            return true;
-        }
-
-        case S.horseman: {
-            const enemyCoords = boardGrid.flatMap((column, bx) =>
-                column.flatMap((symbol, by) =>
-                    symbol?.definition.type === SymbolType.ENEMY ? [{ x: bx, y: by }] : [],
-                ),
-            );
-            state.military += enemyCoords.length > 0 ? 5 : 1;
-            state.contributors.push(...enemyCoords);
-            return true;
-        }
-
-        case S.mercenary:
-            state.military += 4;
-            state.gold -= 2;
-            return true;
-
         case S.horse: {
-            const hasMilitaryScience = upgrades.includes(MILITARY_SCIENCE_UPGRADE_ID);
-            state.food += hasMilitaryScience ? 3 : 2;
-            state.gold += hasMilitaryScience ? 4 : 2;
+            state.food += 2;
+            state.gold += 2;
             return true;
         }
 

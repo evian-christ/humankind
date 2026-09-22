@@ -1,7 +1,5 @@
-import type { LeaderId } from '../../data/leaders';
-import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
-import { LEADERS, getLeaderProgressState, getLeaderStartingRelics, isLeaderPlayable } from '../../data/leaders';
 import { S, SYMBOLS, type SymbolDefinition } from '../../data/symbolDefinitions';
+import { isCompleteSymbolSetDeck, OWNED_SYMBOL_SET_IDS, type SymbolSetId } from '../../data/symbolSets';
 import type { GameState } from '../gameStore';
 import {
     createEmptyBoard,
@@ -12,7 +10,6 @@ import {
     placeStartingWildSeeds,
     placeOralTraditionAtBoardCenter,
 } from '../gameStoreHelpers';
-import { useRelicStore } from '../relicStore';
 import { clearSavedGame } from '../saveGame';
 import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../../data/statusDefinitions';
 import { beginGameLifecycle } from '../gameLifecycleRun';
@@ -24,11 +21,6 @@ interface GameLifecycleDeps {
     set: GameStoreSet;
     get: () => GameState;
     createInstance: (def: SymbolDefinition, unlockedUpgrades?: readonly number[]) => ReturnType<typeof import('../gameStoreHelpers').createInstance>;
-    generateRelicChoices: (cultureLevel?: number) => GameState['relicChoices'];
-    pickRelicHalfPriceIdForGoldenTrade: (
-        inStock: NonNullable<GameState['relicChoices'][number]>[],
-        hasGoldenTrade: boolean,
-    ) => number | null;
 }
 
 const createTutorialBoard = () =>
@@ -40,14 +32,15 @@ const isTutorialCrop = (symbol: ReturnType<typeof import('../gameStoreHelpers').
     symbol.definition.id === S.wheat || symbol.definition.id === S.corn;
 
 const createCommonResetPatch = () => ({
+    symbolSetId: null as SymbolSetId | null,
+    symbolSetIds: null as SymbolSetId[] | null,
     phase: 'idle' as const,
     symbolChoices: [],
-    symbolSelectionRelicSourceId: null,
     symbolSelectionSymbolSourceId: null,
     isTurnSymbolSelection: false,
     lastEffects: [],
     counterDisplayOverrides: [],
-    runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+    runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
     activeContributors: [],
     pendingContributors: [],
@@ -57,32 +50,18 @@ const createCommonResetPatch = () => ({
     earthquakeFx: null,
     lootMergeFx: null,
     eventLog: [],
-    combatAnimation: null,
-    combatShaking: false,
-    preCombatShakeTarget: null,
-    preCombatShakeRelicDefId: null,
-    combatFloats: [],
-    relicFloats: [],
     knowledgeUpgradeFloats: [],
-    culture: 0,
-    cultureLevel: 0,
-    religionUnlocked: false,
+    religionUnlocked: true,
     unlockedKnowledgeUpgrades: [],
     knowledgeUpgradeLevels: createEmptyKnowledgeUpgradeLevels(),
-    qinCurrencyStandardTurnsRemaining: 0,
     levelUpResearchPoints: 0,
     knowledgeResearchCredits: [],
     pendingBoardExpansions: 0,
-    isRelicShopOpen: false,
-    hasNewRelicShopStock: false,
     rerollsThisTurn: 0,
-    barbarianSymbolThreat: 0,
-    barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
     activeStatusIds: getActiveStatusIdsFromStates(createActiveStatusesForTurn(0)),
     activeStatuses: createActiveStatusesForTurn(0),
     pendingNewThreatFloats: [],
-    pendingOblivionFurnaceRelicId: null,
     pendingEdictSource: null,
     bonusSelectionQueue: [],
     forceTerrainInNextSymbolChoices: false,
@@ -100,53 +79,31 @@ export const createGameLifecycleActions = ({
     set,
     get,
     createInstance,
-    generateRelicChoices,
-    pickRelicHalfPriceIdForGoldenTrade,
 }: GameLifecycleDeps) => ({
     initializeGame: () => {
         beginGameLifecycle();
         const { board, playerSymbols: symbols } = createStartingBoard();
         set({
-            leaderId: null,
-            leaderProgressLevel: 1,
-            lastLeaderProgressAward: null,
             food: 0,
             gold: 0,
-            military: 0,
             knowledge: 0,
             era: 0,
             level: 0,
             turn: 0,
             board,
             playerSymbols: symbols,
-            relicChoices: generateRelicChoices(),
-            relicHalfPriceRelicId: null,
             prevBoard: createEmptyBoard(),
             ...createCommonResetPatch(),
         });
     },
 
-    startGameWithDraft: (symbolIds: number[], leaderId: LeaderId) => {
-        if (!isLeaderPlayable(leaderId)) return;
+    startGameWithDraft: (symbolIds: number[], symbolSetIds: readonly SymbolSetId[] | null = null) => {
+        if (symbolSetIds != null && (
+            !isCompleteSymbolSetDeck(symbolSetIds) ||
+            symbolSetIds.some((id) => !OWNED_SYMBOL_SET_IDS.includes(id))
+        )) return;
         beginGameLifecycle();
         clearSavedGame();
-        const relicStore = useRelicStore.getState();
-        const toRemove = relicStore.relics.map((r) => r.instanceId);
-        toRemove.forEach((id) => relicStore.removeRelic(id));
-
-        const leaderRelics = getLeaderStartingRelics(leaderId);
-        leaderRelics.forEach((def) => relicStore.addRelic(def));
-        recordDemoNonConsumableRelicProgress(leaderId, useRelicStore.getState().relics);
-
-        const leader = LEADERS[leaderId];
-        const leaderProgressLevel = getLeaderProgressState(leaderId).level;
-        const startingFood = leader?.startingFood ?? 0;
-        const startingGold = leader?.startingGold ?? 0;
-
-        const initialRelicChoices = generateRelicChoices();
-        const stockedRelics = initialRelicChoices.filter((choice): choice is NonNullable<typeof choice> => choice != null);
-        const initialHalfPriceRelicId = pickRelicHalfPriceIdForGoldenTrade(stockedRelics, leaderId === 'ramesses');
-
         let playerSymbols = symbolIds
             .map((id) => SYMBOLS[id])
             .filter((def): def is SymbolDefinition => def != null)
@@ -160,44 +117,31 @@ export const createGameLifecycleActions = ({
         const placed = placeStartingWildSeeds(oralPlaced.board, oralPlaced.playerSymbols);
 
         set({
-            leaderId,
-            leaderProgressLevel,
-            lastLeaderProgressAward: null,
-            food: startingFood,
-            gold: startingGold,
-            military: 0,
+            food: 0,
+            gold: 0,
             knowledge: 0,
             era: 0,
             level: 0,
             turn: 0,
             board: placed.board,
             playerSymbols: placed.playerSymbols,
-            relicChoices: initialRelicChoices,
-            relicHalfPriceRelicId: initialHalfPriceRelicId,
             prevBoard: cloneBoardPreservingSlots(placed.board),
             ...createCommonResetPatch(),
+            symbolSetIds: symbolSetIds ? [...symbolSetIds] : null,
         });
     },
 
     startTutorialGame: () => {
         beginGameLifecycle();
-        const relicStore = useRelicStore.getState();
-        relicStore.resetRelics();
         set({
-            leaderId: null,
-            leaderProgressLevel: 1,
-            lastLeaderProgressAward: null,
             food: 0,
             gold: 0,
-            military: 0,
             knowledge: 45,
             era: 0,
             level: 0,
             turn: 0,
             board: createEmptyBoard(),
             playerSymbols: [],
-            relicChoices: generateRelicChoices(),
-            relicHalfPriceRelicId: null,
             prevBoard: createEmptyBoard(),
             ...createCommonResetPatch(),
             isTutorialMode: true,
@@ -238,7 +182,7 @@ export const createGameLifecycleActions = ({
             tutorialSpinStep: 'corn_spin',
             lastEffects: [],
             counterDisplayOverrides: [],
-            runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
             pendingContributors: [],
@@ -265,7 +209,7 @@ export const createGameLifecycleActions = ({
             tutorialSpinStep: 'monument_spin',
             lastEffects: [],
             counterDisplayOverrides: [],
-            runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
             pendingContributors: [],
@@ -329,7 +273,7 @@ export const createGameLifecycleActions = ({
             tutorialSpinStep: 'adjacency_spin',
             lastEffects: [],
             counterDisplayOverrides: [],
-            runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
             pendingContributors: [],
@@ -349,7 +293,6 @@ export const createGameLifecycleActions = ({
         set({
             phase: 'selection',
             symbolChoices: [monument, corn, mountain],
-            symbolSelectionRelicSourceId: null,
             rerollsThisTurn: 0,
         });
     },

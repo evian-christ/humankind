@@ -6,7 +6,7 @@ import {
     type AudioManager,
 } from './audioManager';
 
-export type AudioCueLayer = 'ui' | 'gameplay' | 'combat' | 'milestone';
+export type AudioCueLayer = 'ui' | 'gameplay' | 'milestone';
 
 export interface AudioCueMetadata {
     id: AudioCueId;
@@ -40,11 +40,6 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
         volume: 0.66,
         preload: true,
     },
-    relic_buy: {
-        src: audioUrl('board_screen/relic_buy.wav'),
-        volume: 0.78,
-        preload: true,
-    },
     open_reward: {
         src: audioUrl('board_screen/open_reward.mp3'),
         volume: 0.78,
@@ -53,21 +48,6 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
     symbol_interact: {
         src: audioUrl('board_screen/symbol_interact.wav'),
         volume: 0.66,
-        preload: true,
-    },
-    attack_melee: {
-        src: audioUrl('board_screen/attack_melee.wav'),
-        volume: 0.78,
-        preload: true,
-    },
-    attack_ranged: {
-        src: audioUrl('board_screen/attack_ranged.wav'),
-        volume: 0.78,
-        preload: true,
-    },
-    enemy_invade: {
-        src: audioUrl('board_screen/enemy_invade.wav'),
-        volume: 0.9,
         preload: true,
     },
     symbol_choice_chose: {
@@ -103,17 +83,6 @@ export const DEFAULT_AUDIO_CUES: Record<AudioCueId, AudioCueDefinition> = {
     knowledge_upgraded_2: {
         src: audioUrl('board_screen/knowledge_upgraded_2.wav'),
         volume: 0.84,
-        preload: true,
-    },
-    level_up: {
-        src: audioUrl('board_screen/level_up.mp3'),
-        volume: 0.45,
-        preload: true,
-    },
-    xp_fill: {
-        src: audioUrl('board_screen/xp_fill.mp3'),
-        volume: 0.1,
-        loop: true,
         preload: true,
     },
     selection_open: {
@@ -258,11 +227,6 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         layer: 'ui',
         description: 'A command is rejected because its requirements are not met.',
     },
-    relic_buy: {
-        id: 'relic_buy',
-        layer: 'ui',
-        description: 'A relic is purchased from the relic shop.',
-    },
     open_reward: {
         id: 'open_reward',
         layer: 'ui',
@@ -272,21 +236,6 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         id: 'symbol_interact',
         layer: 'gameplay',
         description: 'A contributing symbol bounces during an interaction effect.',
-    },
-    attack_melee: {
-        id: 'attack_melee',
-        layer: 'combat',
-        description: 'A melee unit starts a combat attack animation.',
-    },
-    attack_ranged: {
-        id: 'attack_ranged',
-        layer: 'combat',
-        description: 'A ranged unit starts a combat attack animation.',
-    },
-    enemy_invade: {
-        id: 'enemy_invade',
-        layer: 'gameplay',
-        description: 'A barbarian invasion threat appears on the board.',
     },
     symbol_choice_chose: {
         id: 'symbol_choice_chose',
@@ -323,20 +272,10 @@ export const AUDIO_CUE_METADATA: Record<AudioCueId, AudioCueMetadata> = {
         layer: 'ui',
         description: 'The second part of a successful knowledge upgrade confirmation.',
     },
-    level_up: {
-        id: 'level_up',
-        layer: 'milestone',
-        description: 'A leader progress XP bar reaches the next level.',
-    },
-    xp_fill: {
-        id: 'xp_fill',
-        layer: 'milestone',
-        description: 'Looping leader progress XP fill sound with pitch tied to bar fill percent.',
-    },
     selection_open: {
         id: 'selection_open',
         layer: 'ui',
-        description: 'A symbol, relic, or upgrade choice overlay opens.',
+        description: 'A symbol or upgrade choice overlay opens.',
     },
     main_theme: {
         id: 'main_theme',

@@ -1,7 +1,7 @@
 import { S } from '../../../data/symbolDefinitions';
 import type { SymbolEffectHandler } from '../core';
 
-export const handleDisasterEffects: SymbolEffectHandler = ({ symbolInstance, relicEffects, state }) => {
+export const handleDisasterEffects: SymbolEffectHandler = ({ symbolInstance }) => {
     switch (symbolInstance.definition.id) {
         case S.flood:
         case S.drought:
@@ -12,7 +12,6 @@ export const handleDisasterEffects: SymbolEffectHandler = ({ symbolInstance, rel
             if (symbolInstance.effect_counter <= 0) {
                 symbolInstance.is_marked_for_destruction = true;
             }
-            if (relicEffects.terraFossilDisasterFood) state.food += 2;
             return true;
 
         case S.heatwave:
@@ -23,7 +22,6 @@ export const handleDisasterEffects: SymbolEffectHandler = ({ symbolInstance, rel
             if (symbolInstance.effect_counter <= 0) {
                 symbolInstance.is_marked_for_destruction = true;
             }
-            if (relicEffects.terraFossilDisasterFood) state.food += 2;
             return true;
 
         case S.plague:
@@ -34,11 +32,9 @@ export const handleDisasterEffects: SymbolEffectHandler = ({ symbolInstance, rel
             if (symbolInstance.effect_counter <= 0) {
                 symbolInstance.is_marked_for_destruction = true;
             }
-            if (relicEffects.terraFossilDisasterFood) state.food += 2;
             return true;
 
         case S.earthquake:
-            if (relicEffects.terraFossilDisasterFood) state.food += 2;
             symbolInstance.is_marked_for_destruction = true;
             return true;
 

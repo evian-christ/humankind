@@ -1,8 +1,6 @@
-import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
 import { S, SymbolType } from '../../data/symbolDefinitions';
 import { generateChoices as generateChoicesSelection } from '../../logic/selection/selectionLogic';
 import type { GameState } from '../gameStore';
-import { RELICS } from '../../data/relicDefinitions';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
@@ -12,9 +10,7 @@ import {
     getStandardSymbolChoiceCount,
     markBoardSymbolsForRemoval,
     removeBoardSymbolsByInstanceIds,
-    scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
-import { useRelicStore } from '../relicStore';
 import {
     generateLootRewardChoices,
     getRewardAmounts,
@@ -23,7 +19,6 @@ import {
 } from '../../data/rewardDefinitions';
 import { resolveKnowledgeProgression } from '../gameCalculations';
 import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
-import { getCultureLevel } from '../../data/cultureProgression';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -42,8 +37,7 @@ const LOOT_TIER_MAP: Record<number, LootTier> = {
     [S.radiant_loot]: 'large',
 };
 
-const isBoardDestroyBlockedType = (type: SymbolType) =>
-    type === SymbolType.ENEMY || type === SymbolType.DISASTER;
+const isBoardDestroyBlockedType = (type: SymbolType) => type === SymbolType.DISASTER;
 
 const BOARD_DESTROY_BLINK_DURATION_MS = 360;
 
@@ -142,27 +136,6 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         });
         scheduleMarkedBoardRemoval(set, removedIds, blinkStartedAtMs);
 
-        let grantedRelic = false;
-
-        if (reward.grantsRelic) {
-            const relicPool = Object.values(RELICS);
-            const relicDef = relicPool[Math.floor(Math.random() * relicPool.length)];
-            if (relicDef) {
-                grantedRelic = useRelicStore.getState().addRelic(relicDef) || grantedRelic;
-            }
-        }
-
-        reward.grantedRelicIds?.forEach((relicId) => {
-            const relicDef = RELICS[relicId];
-            if (relicDef) {
-                grantedRelic = useRelicStore.getState().addRelic(relicDef) || grantedRelic;
-            }
-        });
-
-        if (grantedRelic) {
-            recordDemoNonConsumableRelicProgress(prev.leaderId, useRelicStore.getState().relics);
-        }
-
         get().appendEventLog({
             turn: prev.turn,
             kind: 'board_action',
@@ -195,8 +168,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         if (!hasAdjacentTarget) return;
 
         set({
-            phase: 'oblivion_furnace_board',
-            pendingOblivionFurnaceRelicId: null,
+            phase: 'board_destroy_selection',
             pendingEdictSource: { x, y, instanceId: edict.instanceId },
         });
         get().appendEventLog({
@@ -209,7 +181,7 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
     },
     confirmEdictDestroyAt: (x: number, y: number) => {
         const state = get();
-        if (state.phase !== 'oblivion_furnace_board') return;
+        if (state.phase !== 'board_destroy_selection') return;
         const pending = state.pendingEdictSource;
         if (!pending) return;
         if (x < 0 || x >= state.board.length || y < 0 || y >= state.board[0]!.length) return;
@@ -227,14 +199,12 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
         const symAgg = aggregateCollectionDestroyEffects(removed, true, state.unlockedKnowledgeUpgrades || []);
         const storedFoodEffects = createStoredFoodDestroyEffects(removed, state.board, state.unlockedKnowledgeUpgrades || []);
         const boardOnlyDestroyDelta = getBoardOnlyDestroyEffectTotals(storedFoodEffects, state.board);
-        const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
-        const dFood = symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
-        const dGold = symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
-        const dKnowledge = symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
-        const dCulture = boardOnlyDestroyDelta.culture;
+        const dFood = symAgg.food + boardOnlyDestroyDelta.food;
+        const dGold = symAgg.gold + boardOnlyDestroyDelta.gold;
+        const dKnowledge = symAgg.knowledge + boardOnlyDestroyDelta.knowledge;
         const boardEffects = createBoardDestroyResourceEffects(
             { x, y },
-            { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
+            { food: dFood, gold: dGold, knowledge: dKnowledge },
             storedFoodEffects,
         );
 
@@ -254,16 +224,12 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             food: state.food + dFood,
             gold: state.gold + dGold,
             ...resolveKnowledgeProgression(state, dKnowledge),
-            culture: state.culture + dCulture,
-            cultureLevel: getCultureLevel(state.culture + dCulture),
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
             forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
             freeSelectionRerolls: (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
-            isRelicShopOpen: state.isRelicShopOpen || symAgg.openRelicShop,
             lastEffects: [...state.lastEffects, ...boardEffects],
             phase: phaseAfterBoardAction(state),
             pendingEdictSource: null,
-            pendingOblivionFurnaceRelicId: null,
             destroyRemovalBlinkStartedAtMs: getNowMs(),
         });
         const removeMarked = () => {
@@ -273,13 +239,12 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             }));
         };
         scheduleGameLifecycleTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
-        if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         get().appendEventLog({
             turn: state.turn,
             kind: 'board_action',
             slot: { x: pending.x, y: pending.y },
             symbolId: S.edict,
-            delta: { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
+            delta: { food: dFood, gold: dGold, knowledge: dKnowledge },
             meta: {
                 action: 'edict_destroy',
                 targetSlot: { x, y },
@@ -293,11 +258,10 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
     },
     cancelEdictPick: () => {
         const state = get();
-        if (state.phase !== 'oblivion_furnace_board' || !state.pendingEdictSource) return;
+        if (state.phase !== 'board_destroy_selection' || !state.pendingEdictSource) return;
         set({
             phase: phaseAfterBoardAction(state),
             pendingEdictSource: null,
-            pendingOblivionFurnaceRelicId: null,
         });
     },
     consumeTribalVillageAt: (x: number, y: number) => {
@@ -309,11 +273,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
 
         const removed = [sym];
         const symAgg = aggregateCollectionDestroyEffects(removed, false, prev.unlockedKnowledgeUpgrades || []);
-        const shBonus = scarabBonusForOwnedRemoves(prev.board, removed.length);
-
-        const dFood = symAgg.food + shBonus.food;
-        const dGold = symAgg.gold + shBonus.gold;
-        const dKnowledge = symAgg.knowledge + shBonus.knowledge;
+        const dFood = symAgg.food;
+        const dGold = symAgg.gold;
+        const dKnowledge = symAgg.knowledge;
 
         const instanceIds = new Set([sym.instanceId]);
         const markedBoard = markBoardSymbolsForRemoval(prev.board, instanceIds);
@@ -333,10 +295,9 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             era: knowledgeProgression.era,
             religionUnlocked: prev.religionUnlocked,
             upgrades: (prev.unlockedKnowledgeUpgrades || []).map(Number),
-            ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+            symbolSetId: prev.symbolSetId,
+            symbolSetIds: prev.symbolSetIds,
             ownedSymbolDefIds: newSymbols.map((s) => s.definition.id),
-            leaderId: prev.leaderId,
-            leaderProgressLevel: prev.leaderProgressLevel,
             choiceCount: getStandardSymbolChoiceCount(removedBoard),
             forceTerrainInNextSymbolChoices: prev.forceTerrainInNextSymbolChoices,
             forceEventsInNextSymbolChoices: prev.forceEventsInNextSymbolChoices,
@@ -360,21 +321,17 @@ export const createBoardInteractionActions = ({ get, set, getAdjacentCoords }: B
             forceTerrainInNextSymbolChoices: nextForceTerrain,
             forceEventsInNextSymbolChoices: nextForceEvents,
             freeSelectionRerolls: (prev.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
-            isRelicShopOpen: prev.isRelicShopOpen || symAgg.openRelicShop,
             lastEffects: [...prev.lastEffects, { x, y, food: dFood, gold: dGold, knowledge: dKnowledge }],
 
             // 2회 선택 페이즈 기동
             phase: 'selection',
             symbolChoices: choices,
             bonusSelectionQueue: ['any', 'any'], // 첫 번째는 지금 띄우고, 두 번째가 큐에 대기하여 총 2회 발동
-            symbolSelectionRelicSourceId: null,
             symbolSelectionSymbolSourceId: S.tribal_village,
             isTurnSymbolSelection: false,
             destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
         });
         scheduleMarkedBoardRemoval(set, instanceIds, blinkStartedAtMs);
-
-        if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
 
         get().appendEventLog({
             turn: prev.turn,

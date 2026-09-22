@@ -3,7 +3,6 @@ import { createInstance, createEmptyBoard } from '../gameStoreHelpers';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import { handleDisasterEffects } from '../../logic/symbolEffects/handlers/disasterEffects';
 import { createEffectState } from '../../logic/symbolEffects/core';
-import { DEFAULT_RELIC_EFFECTS, type ActiveRelicEffects } from '../../logic/symbolEffects/types';
 import { createSelectionFlowActions } from './selectionFlow';
 import type { GameState } from '../gameStore';
 import type { PlayerSymbolInstance } from '../../types';
@@ -11,7 +10,6 @@ import type { PlayerSymbolInstance } from '../../types';
 const runDisasterEffect = (
     symbolInstance: PlayerSymbolInstance,
     initialFood = 0,
-    relicEffectOverrides: Partial<ActiveRelicEffects> = {},
 ) => {
     const state = createEffectState();
     state.food = initialFood;
@@ -21,7 +19,6 @@ const runDisasterEffect = (
         x: 0,
         y: 0,
         ctx: { upgrades: [] },
-        relicEffects: { ...DEFAULT_RELIC_EFFECTS, ...relicEffectOverrides },
         state,
         adj: [],
         upgrades: [],
@@ -91,33 +88,15 @@ describe('Disaster Plague (ID 78) Tests', () => {
             expect(plagueInstance.is_marked_for_destruction).toBe(true);
         });
 
-        it('should scale food by +2 if terraFossilDisasterFood relic effect is active', () => {
-            const plagueInstance = createInstance(SYMBOLS[S.plague]!, []);
-            plagueInstance.effect_counter = 2;
-
-            const { handled, state } = runDisasterEffect(
-                plagueInstance,
-                10,
-                { terraFossilDisasterFood: true },
-            );
-
-            expect(handled).toBe(true);
-            expect(state.food).toBe(12);
-        });
     });
 
     describe('Plague selection blocking guard', () => {
         const makeState = (): GameState => {
             const board = createEmptyBoard();
             return {
-                leaderId: null,
-                leaderProgressLevel: 1,
-                lastLeaderProgressAward: null,
                 food: 0,
                 gold: 10,
                 knowledge: 0,
-                culture: 0,
-                cultureLevel: 0,
                 level: 1,
                 era: 1,
                 turn: 1,
@@ -125,9 +104,6 @@ describe('Disaster Plague (ID 78) Tests', () => {
                 playerSymbols: [],
                 phase: 'selection',
                 symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.corn]!],
-                symbolSelectionRelicSourceId: null,
-                relicChoices: [null, null, null],
-                relicHalfPriceRelicId: null,
                 lastEffects: [],
                 counterDisplayOverrides: [],
                 runningTotals: { food: 0, gold: 0, knowledge: 0 },
@@ -139,29 +115,17 @@ describe('Disaster Plague (ID 78) Tests', () => {
                 lootMergeFx: null,
                 eventLog: [],
                 prevBoard: createEmptyBoard(),
-                combatAnimation: null,
-                combatShaking: false,
-                preCombatShakeTarget: null,
-                preCombatShakeRelicDefId: null,
-                combatFloats: [],
-                relicFloats: [],
                 knowledgeUpgradeFloats: [],
                 religionUnlocked: false,
                 unlockedKnowledgeUpgrades: [],
-                qinCurrencyStandardTurnsRemaining: 0,
                 levelUpResearchPoints: 0,
                 pendingBoardExpansions: 0,
-                isRelicShopOpen: false,
-                hasNewRelicShopStock: false,
                 rerollsThisTurn: 0,
                 returnPhaseAfterDevKnowledgeUpgrade: null,
-                barbarianSymbolThreat: 0,
-                barbarianCampThreat: 0,
                 naturalDisasterThreat: 0,
                 pendingDevNaturalDisasterId: null,
                 activeStatusIds: [],
                 pendingNewThreatFloats: [],
-                pendingOblivionFurnaceRelicId: null,
                 pendingEdictSource: null,
                 bonusSelectionQueue: [],
                 forceTerrainInNextSymbolChoices: false,
@@ -179,10 +143,6 @@ describe('Disaster Plague (ID 78) Tests', () => {
                 selectEvent: () => {},
                 skipSelection: () => {},
                 rerollSymbols: () => {},
-                toggleRelicShop: () => {},
-                clearRelicShopStockBadge: () => {},
-                refreshRelicShop: () => {},
-                buyRelic: () => {},
                 selectUpgrade: () => {},
                 expandBoardSlotAt: () => {},
                 initializeGame: () => {},
@@ -200,12 +160,9 @@ describe('Disaster Plague (ID 78) Tests', () => {
                 devAddBoardExpansion: () => {},
                 devForceScreen: () => {},
                 devTriggerNaturalDisaster: () => {},
-                confirmOblivionFurnaceDestroyAt: () => {},
-                cancelOblivionFurnacePick: () => {},
                 activateEdictAt: () => {},
                 confirmEdictDestroyAt: () => {},
                 cancelEdictPick: () => {},
-                activateClickableRelic: () => {},
                 consumeTribalVillageAt: () => {},
                 openLootAt: () => {},
                 selectLootReward: () => {},
@@ -280,23 +237,6 @@ describe('Disaster Plague (ID 78) Tests', () => {
             harness.actions.rerollSymbols();
             expect(harness.get().rerollsThisTurn).toBe(0);
             expect(harness.get().gold).toBe(10);
-        });
-
-        it('should allow a relic selection when plague IS on the board', () => {
-            const board = createEmptyBoard();
-            board[0][0] = createInstance(SYMBOLS[S.plague]!, []);
-
-            const harness = createHarness({
-                board,
-                phase: 'selection',
-                isTurnSymbolSelection: false,
-                symbolSelectionRelicSourceId: 19,
-                symbolChoices: [SYMBOLS[S.plains]!, SYMBOLS[S.mountain]!],
-            });
-
-            harness.actions.selectSymbol(S.plains);
-
-            expect(harness.get().playerSymbols.some((s) => s.definition.id === S.plains)).toBe(true);
         });
 
         it('should allow a tribal village selection when plague IS on the board', () => {

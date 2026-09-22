@@ -1,8 +1,8 @@
-import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID, GUILD_UPGRADE_ID, MILITARY_SCIENCE_UPGRADE_ID, PLANTATION_UPGRADE_ID, THEOCRACY_UPGRADE_ID } from '../../data/knowledgeUpgrades';
+import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID, GUILD_UPGRADE_ID, PLANTATION_UPGRADE_ID, THEOCRACY_UPGRADE_ID } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType, type SymbolDefinition } from '../../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../../types';
 import { getEffectiveAdjacentCoords } from '../symbolEffects/core';
-import type { ActiveRelicEffects, EffectResult, LootMergeResolution, SymbolEffectContext } from '../symbolEffects/types';
+import type { EffectResult, LootMergeResolution, SymbolEffectContext } from '../symbolEffects/types';
 import {
     collectDisabledTerrainCoords,
     slotKey,
@@ -31,7 +31,6 @@ export interface ProcessSlotArgs {
     x: number;
     y: number;
     effectCtx: SymbolEffectContext;
-    relicEffects: ActiveRelicEffects;
     disabledTerrainCoords?: ReadonlySet<string>;
 }
 
@@ -43,8 +42,6 @@ export interface ResourceTotals {
     food: number;
     gold: number;
     knowledge: number;
-    culture?: number;
-    military?: number;
 }
 
 export interface TurnStartBaseInput<TState> {
@@ -79,7 +76,6 @@ export interface ResolveSlotEffectArgs {
     x: number;
     y: number;
     effectCtx: SymbolEffectContext;
-    relicEffects: ActiveRelicEffects;
 }
 
 export interface CompleteSlotEffectsArgs {
@@ -89,7 +85,6 @@ export interface CompleteSlotEffectsArgs {
     boardHeight: number;
     getAdjacentCoords: (x: number, y: number) => Array<{ x: number; y: number }>;
     unlockedKnowledgeUpgrades?: readonly number[];
-    relicEffects?: ActiveRelicEffects;
 }
 
 export interface ApplyGeneratedSymbolsArgs {
@@ -125,10 +120,7 @@ function getCounterFloatConfig(symbol: PlayerSymbolInstance, effectCtx?: SymbolE
             wrapThreshold: effectCtx?.upgrades.includes(PLANTATION_UPGRADE_ID) ? 5 : 10,
         };
     }
-    if (def.type !== SymbolType.ENEMY) {
-        return { anchor: 'bottom-right', mode: 'direct-progress' };
-    }
-    return null;
+    return { anchor: 'bottom-right', mode: 'direct-progress' };
 }
 
 function getCounterDisplayValue(rawValue: number): number {
@@ -267,7 +259,7 @@ function cloneBoardForPreview(board: BoardGrid): BoardGrid {
 }
 
 function previewSlotDeltaWithoutSideEffects(args: ResolveSlotEffectArgs, slot: { x: number; y: number }): ResourceTotals {
-    const { deps, board, effectCtx, relicEffects, pipeline } = args;
+    const { deps, board, effectCtx, pipeline } = args;
     const previewBoard = cloneBoardForPreview(board);
     const previewSymbol = previewBoard[slot.x]?.[slot.y];
     if (!previewSymbol || previewSymbol.is_marked_for_destruction) return { food: 0, gold: 0, knowledge: 0 };
@@ -281,15 +273,12 @@ function previewSlotDeltaWithoutSideEffects(args: ResolveSlotEffectArgs, slot: {
             x: slot.x,
             y: slot.y,
             effectCtx,
-            relicEffects,
             disabledTerrainCoords: pipeline.disabledTerrainCoords,
         });
         return {
             food: result.food ?? 0,
             gold: result.gold ?? 0,
             knowledge: result.knowledge ?? 0,
-            ...(result.culture ? { culture: result.culture } : {}),
-            ...(result.military ? { military: result.military } : {}),
         };
     } finally {
         Math.random = originalRandom;
@@ -300,20 +289,13 @@ function getAccumulatedSlotDelta(pipeline: SlotEffectPipeline, slot: { x: number
     let food = 0;
     let gold = 0;
     let knowledge = 0;
-    let culture = 0;
-    let military = 0;
     for (const effect of pipeline.accumulatedEffects) {
         if (effect.x !== slot.x || effect.y !== slot.y) continue;
         food += effect.food ?? 0;
         gold += effect.gold ?? 0;
         knowledge += effect.knowledge ?? 0;
-        culture += effect.culture ?? 0;
-        military += effect.military ?? 0;
     }
-    const totals: ResourceTotals = { food, gold, knowledge };
-    if (culture !== 0) totals.culture = culture;
-    if (military !== 0) totals.military = military;
-    return totals;
+    return { food, gold, knowledge };
 }
 
 function getSlotDeltaForThisTurn(args: ResolveSlotEffectArgs, slot: { x: number; y: number }): ResourceTotals {
@@ -378,8 +360,8 @@ function collectNewDestroyEffects(
                     knowledge: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
                 });
             } else if (symbol.definition.id === S.oral_tradition) {
-                const culture = getAdjacentCoords(bx, by).filter((pos) => board[pos.x]?.[pos.y] != null).length * 10;
-                if (culture > 0) effects.push({ x: bx, y: by, food: 0, gold: 0, knowledge: 0, culture });
+                const knowledge = getAdjacentCoords(bx, by).filter((pos) => board[pos.x]?.[pos.y] != null).length * 10;
+                if (knowledge > 0) effects.push({ x: bx, y: by, food: 0, gold: 0, knowledge });
             }
         }
     }
@@ -466,7 +448,7 @@ function applyImmediateTaxEffect(args: ResolveSlotEffectArgs, result: EffectResu
 }
 
 export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
-    const { pipeline, deps, symbol, board, x, y, effectCtx, relicEffects } = args;
+    const { pipeline, deps, symbol, board, x, y, effectCtx } = args;
 
     if (symbol.is_marked_for_destruction) {
         return { food: 0, knowledge: 0, gold: 0 };
@@ -480,7 +462,6 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         x,
         y,
         effectCtx,
-        relicEffects,
         disabledTerrainCoords: pipeline.disabledTerrainCoords,
     });
     const getPhaseAdjacentCoords = (ax: number, ay: number) =>
@@ -493,13 +474,6 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
     );
     if (destroyEffects.length > 0) {
         result.extraEffects = [...(result.extraEffects ?? []), ...destroyEffects];
-    }
-    if (
-        board.some((col) =>
-            col.some((cell) => cell?.is_marked_for_destruction && !markedBefore.has(cell.instanceId) && cell.definition.id === S.relic_caravan),
-        )
-    ) {
-        result.triggerRelicRefresh = true;
     }
     if (symbol.definition.id === S.campfire || symbol.definition.id === S.christianity) {
         if (symbol.definition.id === S.christianity && hasMultipleReligionSymbols(board)) {
@@ -577,8 +551,6 @@ export function resolveSlotEffect(args: ResolveSlotEffectArgs): EffectResult {
         food: result.food,
         knowledge: result.knowledge,
         gold: result.gold,
-        ...(result.culture ? { culture: result.culture } : {}),
-        ...(result.military ? { military: result.military } : {}),
     });
 
     if (result.addSymbolIds) pipeline.symbolsToAdd.push(...result.addSymbolIds);
@@ -595,7 +567,7 @@ export function applySlotEffectResult(
     slot: { x: number; y: number },
     result: EffectResult,
 ): void {
-    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.culture ?? 0) !== 0 || (result.military ?? 0) !== 0 || result.counterDelta) {
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || result.counterDelta) {
         const effect: SlotEffect = {
             x: slot.x,
             y: slot.y,
@@ -603,8 +575,6 @@ export function applySlotEffectResult(
             gold: result.gold,
             knowledge: result.knowledge,
         };
-        if (result.culture) effect.culture = result.culture;
-        if (result.military) effect.military = result.military;
         if (result.counterDelta) effect.counter = result.counterDelta;
         if (result.counterAnchor) effect.counterAnchor = result.counterAnchor;
         if (result.counterDisplayTextBefore !== undefined) {
@@ -615,20 +585,16 @@ export function applySlotEffectResult(
     if (result.extraEffects?.length) {
         pipeline.accumulatedEffects.push(...result.extraEffects);
     }
-    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0 || (result.culture ?? 0) !== 0 || (result.military ?? 0) !== 0) {
+    if (result.food !== 0 || result.knowledge !== 0 || result.gold !== 0) {
         pipeline.totals.food += result.food;
         pipeline.totals.knowledge += result.knowledge;
         pipeline.totals.gold += result.gold;
-        if (result.culture) pipeline.totals.culture = (pipeline.totals.culture ?? 0) + result.culture;
-        if (result.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + result.military;
     }
     if (result.extraEffects?.length) {
         for (const effect of result.extraEffects) {
             pipeline.totals.food += effect.food;
             pipeline.totals.gold += effect.gold;
             pipeline.totals.knowledge += effect.knowledge;
-            pipeline.totals.culture = (pipeline.totals.culture ?? 0) + (effect.culture ?? 0);
-            if (effect.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + effect.military;
         }
     }
 }
@@ -642,6 +608,7 @@ export function computeUnplacedHorseEffects(
     playerSymbols: readonly PlayerSymbolInstance[],
     unlockedKnowledgeUpgrades: readonly number[] = [],
 ): UnplacedHorseEffectResult {
+    void unlockedKnowledgeUpgrades;
     const boardInstanceIds = new Set<string>();
     for (const col of board) {
         for (const symbol of col) {
@@ -657,12 +624,10 @@ export function computeUnplacedHorseEffects(
             !symbol.is_marked_for_destruction &&
             !boardInstanceIds.has(symbol.instanceId),
     ).length;
-    const hasMilitaryScience = unlockedKnowledgeUpgrades.map(Number).includes(MILITARY_SCIENCE_UPGRADE_ID);
-
     return {
         count,
-        food: count * (hasMilitaryScience ? 3 : 2),
-        gold: count * (hasMilitaryScience ? 4 : 2),
+        food: count * 2,
+        gold: count * 2,
         knowledge: 0,
     };
 }
@@ -675,7 +640,6 @@ export function applyUnplacedHorseEffects(
     pipeline.totals.food += result.food;
     pipeline.totals.gold += result.gold;
     pipeline.totals.knowledge += result.knowledge;
-    if (result.military) pipeline.totals.military = (pipeline.totals.military ?? 0) + result.military;
 }
 
 export function removeMarkedSymbolsFromBoard(board: BoardGrid): BoardGrid {

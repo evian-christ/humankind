@@ -15,7 +15,6 @@ describe('resolveTurnEndPhase', () => {
         expect(result.foodCost).toBe(foodCost);
         expect(result.foodDelta).toBe(0);
         expect(result.foodAfterPayment).toBe(foodCost - 1);
-        expect(result.shouldRefreshRelicShop).toBe(false);
     });
 
     it('subtracts food and moves to selection when food is sufficient on a payment turn', () => {
@@ -30,7 +29,5 @@ describe('resolveTurnEndPhase', () => {
         expect(result.foodCost).toBe(foodCost);
         expect(result.foodDelta).toBe(-foodCost);
         expect(result.foodAfterPayment).toBe(7);
-        expect(result.shouldRefreshRelicShop).toBe(true);
-        expect(result.symbolSelectionRelicSourceId).toBeNull();
     });
 });

@@ -104,11 +104,9 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('merchant', { name: "Merchant", type: SymbolType.SPECIAL, description: "Produces Gold equal to the highest Food produced by an adjacent symbol.", sprite: "034.png" }),
     def('monument', { name: "Monument", type: SymbolType.SPECIAL, description: "+5 Knowledge.", sprite: "035.png" }),
     def('library', { name: "Library", type: SymbolType.SPECIAL, description: "+1 Knowledge per adjacent symbol.", sprite: "036.png" }),
-    def('stone_tablet', { name: "Stone Tablet", type: SymbolType.SPECIAL, description: "+2 Knowledge per Relic owned.", sprite: "037.png" }),
-    def('relic_caravan', { name: "Relic Caravan", type: SymbolType.SPECIAL, description: "Destroyed; on destroy: refreshes relic shop.", sprite: "038.png" }),
 
     // Ancient
-    def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Culture per adjacent symbol.", sprite: "039.png" }),
+    def('oral_tradition', { name: "Oral Tradition", type: SymbolType.ANCIENT, description: "10 turns: destroyed; on destroy: +10 Knowledge per adjacent symbol.", sprite: "039.png" }),
     def('totem', { name: "Totem", type: SymbolType.ANCIENT, description: "In a corner: +12 Knowledge.", sprite: "040.png" }),
     def('omen', { name: "Omen", type: SymbolType.ANCIENT, description: "50% chance for +3 Food.", sprite: "041.png" }),
     def('campfire', { name: "Campfire", type: SymbolType.ANCIENT, description: "Gain Food equal to the Food produced this turn by the highest-producing adjacent symbol. Destroyed.", sprite: "042.png" }),
@@ -117,8 +115,6 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('stargazer', { name: "Stargazer", type: SymbolType.ANCIENT, description: "+4 Knowledge per 4 empty slots.", sprite: "045.png" }),
     def('wild_seeds', { name: "Wild Seeds", type: SymbolType.ANCIENT, description: "+1 Food. Destroyed after 5 turns.", sprite: "046.png" }),
     def('bronze_tribute_chest', { name: "Bronze Tribute Chest", type: SymbolType.ANCIENT, description: "+1 Gold. Destroyed after 3 turns.", sprite: "086.png" }),
-    def('heqet', { name: "Heqet", type: SymbolType.ANCIENT, description: "+1 Food; adjacent to Grassland: +2 Food; adjacent to Wheat: +2 Knowledge.", sprite: "087.png" }),
-    def('foxtail_millet', { name: "Foxtail Millet", type: SymbolType.ANCIENT, description: "+5 Food per 2 adjacent Terrain symbols.", sprite: "088.png" }),
 
     // Medieval
     def('tax', { name: "Tax", type: SymbolType.MEDIEVAL, description: "+Gold equal to a random adjacent symbol's Food produced this turn.", sprite: "047.png" }),
@@ -128,13 +124,6 @@ const SYMBOL_LIST: SymbolDefinition[] = [
         description:
             "Destroys all adjacent Ancient symbols. This Scholar permanently produces +5 Knowledge per Ancient symbol destroyed.",
         sprite: "048.png",
-    }),
-    def('holy_relic', {
-        name: "Holy Relic",
-        type: SymbolType.MEDIEVAL,
-        description:
-            "If there is a Religion symbol on the board: +7 Knowledge, +7 Gold.",
-        sprite: "049.png",
     }),
     def('monastery_garden', {
         name: "Monastery Garden",
@@ -202,21 +191,6 @@ const SYMBOL_LIST: SymbolDefinition[] = [
     def('buddhism', { name: "Buddhism", type: SymbolType.RELIGION, description: "+2 Food per empty slot on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "057.png" }),
     def('hinduism', { name: "Hinduism", type: SymbolType.RELIGION, description: "If there are no duplicate symbols on the board: +1 Food per 2 symbols on the board. Destroyed if two or more Religion symbols are on the board.", sprite: "058.png" }),
 
-    // Unit
-    def('militia', { name: "Militia", type: SymbolType.UNIT, description: "+3 Military Power. Destroyed after 5 turns.", sprite: "063.png" }),
-    def('warrior', { name: "Warrior", type: SymbolType.UNIT, description: "+2 Military Power.", sprite: "064.png" }),
-    def('archer', { name: "Archer", type: SymbolType.UNIT, description: "+1 Military Power; adjacent to Forest or Mountain: +3 Military Power.", sprite: "065.png" }),
-    def('horseman', { name: "Horseman", type: SymbolType.UNIT, description: "+1 Military Power; if there is an Enemy symbol on the board: +5 Military Power.", sprite: "066.png" }),
-    def('mercenary', { name: "Mercenary", type: SymbolType.UNIT, description: "+4 Military Power; -2 Gold.", sprite: "067.png" }),
-
-    // Enemy
-    def('enemy_warrior', { name: "Warrior", type: SymbolType.ENEMY, description: "-3 Food.", sprite: "069.png" }),
-    def('enemy_cavalry', { name: "Knight", type: SymbolType.ENEMY, description: "-5 Food.", sprite: "070.png" }),
-    def('enemy_infantry', { name: "Infantry", type: SymbolType.ENEMY, description: "-8 Food.", sprite: "071.png" }),
-    def('enemy_archer', { name: "Archer", type: SymbolType.ENEMY, description: "-3 Food.", sprite: "072.png" }),
-    def('enemy_crossbowman', { name: "Crossbowman", type: SymbolType.ENEMY, description: "-5 Food.", sprite: "073.png" }),
-    def('enemy_cannon', { name: "Cannon", type: SymbolType.ENEMY, description: "-8 Food.", sprite: "074.png" }),
-
     // Disaster
     def('flood', { name: "Flood", type: SymbolType.DISASTER, description: "Disables production from adjacent terrain symbols. When counter reaches 0: Destroy.", sprite: "075.png" }),
     def('earthquake', { name: "Earthquake", type: SymbolType.DISASTER, description: "Destroyed. On destroy: destroy every symbol in the same column.", sprite: "076.png" }),
@@ -255,9 +229,7 @@ const EXCLUDED_POOL_KEYS: SymbolKey[] = [
     'agi_core',
     'loot', 'greater_loot', 'radiant_loot',
     'christianity', 'islam', 'buddhism', 'hinduism',
-    'warrior', 'archer', 'horseman', 'mercenary', 'stone_tablet', 'enemy_warrior',
     'flood', 'earthquake', 'drought', 'plague', 'heatwave',
-    'heqet', 'foxtail_millet',
 ];
 
 /**
@@ -289,7 +261,7 @@ export const isBasicSymbolType = (type: SymbolType): boolean =>
 
 /** 해당 심볼이 아무 조건 없이 기본 상점 풀에 포함되는지 여부 */
 export const isBasePool = (s: SymbolDefinition) => {
-    return (isBasicSymbolType(s.type) || s.type === SymbolType.TERRAIN || s.type === SymbolType.UNIT) &&
+    return (isBasicSymbolType(s.type) || s.type === SymbolType.TERRAIN) &&
         !EXCLUDED_FROM_BASE_POOL.has(s.id) &&
         !RELIGION_DOCTRINE_IDS.has(s.id);
 };
@@ -297,15 +269,15 @@ export const isBasePool = (s: SymbolDefinition) => {
 const FOOD_PRODUCING_KEYS: SymbolKey[] = [
     'wheat', 'corn', 'rice', 'cattle', 'banana', 'fish', 'grassland', 'oasis', 'rainforest', 'plains', 'mountain',
     'deer', 'date', 'christianity', 'buddhism', 'hinduism', 'salt', 'honey',
-    'sheep', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition', 'heqet', 'foxtail_millet',
+    'sheep', 'forest', 'horse', 'crab', 'wild_seeds', 'expedition',
 ];
 
 /** Food를 생산하는 심볼 ID 목록 */
 export const FOOD_PRODUCING_IDS = new Set<number>(FOOD_PRODUCING_KEYS.map((k) => SYMBOL_NUMERIC_ID[k]));
 
 const KNOWLEDGE_PRODUCING_KEYS: SymbolKey[] = [
-    'monument', 'totem', 'library', 'pearl', 'stargazer', 'stone_tablet',
-    'compass', 'papyrus', 'expedition', 'heqet',
+    'monument', 'totem', 'library', 'pearl', 'stargazer',
+    'compass', 'papyrus', 'expedition',
 ];
 
 /** Knowledge를 생산하는 심볼 ID 목록 */
@@ -329,8 +301,6 @@ export const getSymbolColor = (type: SymbolType): number => {
         case SymbolType.MEDIEVAL: return 16347926; // 오렌지/중세
         case SymbolType.MODERN: return 3900150; // 파랑/현대
         case SymbolType.TERRAIN: return 0x22c55e; // 녹색 지형
-        case SymbolType.UNIT: return 0x3b82f6; // 유닛 (파랑계열)
-        case SymbolType.ENEMY: return 0xef4444; // 적 (빨강)
         case SymbolType.SPECIAL: return 0xc084fc; // 특수
         default: return 0x9ca3af;
     }
@@ -345,8 +315,6 @@ export const getSymbolColorHex = (type: SymbolType): string => {
         case SymbolType.MEDIEVAL: return '#f97316';
         case SymbolType.MODERN: return '#3b82f6';
         case SymbolType.TERRAIN: return '#22c55e';
-        case SymbolType.UNIT: return '#3b82f6';
-        case SymbolType.ENEMY: return '#ef4444';
         case SymbolType.SPECIAL: return '#c084fc';
         default: return '#9ca3af';
     }
