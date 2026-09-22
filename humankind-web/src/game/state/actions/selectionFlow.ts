@@ -1,32 +1,10 @@
-import { SYMBOLS, S, SymbolType } from '../../data/symbolDefinitions';
-import {
-    COLONIALISM_UPGRADE_ID,
-    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    ELECTION_SYSTEM_UPGRADE_ID,
-    FEUDALISM_UPGRADE_ID,
-    GREAT_MIGRATION_UPGRADE_ID,
-    INQUISITION_UPGRADE_ID,
-    KNOWLEDGE_UPGRADES,
-    LAND_ALLOTMENT_UPGRADE_ID,
-    MODERN_AGE_UPGRADE_ID,
-    RESTRUCTURING_UPGRADE_ID,
-    STATE_LABOR_UPGRADE_ID,
-    TRIBAL_FEDERATION_UPGRADE_ID,
-    MERCENARIES_UPGRADE_ID,
-    TOTAL_MOBILIZATION_UPGRADE_ID,
-    SACRIFICIAL_RITE_UPGRADE_ID,
-    THEOLOGY_UPGRADE_ID,
-} from '../../data/knowledgeUpgrades';
-import { RELICS } from '../../data/relicDefinitions';
-import { recordDemoNonConsumableRelicProgress } from '../../data/demoAchievements';
+import { SYMBOLS, S } from '../../data/symbolDefinitions';
 import {
     CAPITAL_RELOCATION_DESTROY_COUNT,
     CAPITAL_RELOCATION_FOOD_REWARD,
     CAPITAL_RELOCATION_KNOWLEDGE_REWARD,
-    BORDER_RAID_REWARD,
     DESERT_CARAVAN_FOOD,
     EVERY_TERRAIN_BOUNTY_EACH,
-    MILITARY_DRAFT_FOOD,
     FOREST_HARVEST_FOOD,
     GAME_EVENTS,
     GRASSLAND_FESTIVAL_FOOD,
@@ -37,43 +15,26 @@ import {
     PLAINS_PASTURE_PER_SHEEP,
     eraScaleIndex,
 } from '../../data/eventDefinitions';
-import { RELIC_ID } from '../../logic/relics/relicIds';
 import {
     generateChoices as generateChoicesSelection,
     generateTerrainOnlyChoices as generateTerrainOnlyChoicesSelection,
 } from '../../logic/selection/selectionLogic';
-import { useRelicStore } from '../relicStore';
 import {
     aggregateCollectionDestroyEffects,
     appendSymbolDefIdsToPlayer,
     cloneBoardPreservingSlots,
-    createBoardDestroyResourceEffects,
     createStoredFoodDestroyEffects,
     getBoardOnlyDestroyEffectTotals,
-    getRemainingBoardExpansionCapacity,
     getStandardSymbolChoiceCount,
     markBoardSymbolsForRemoval,
     removeBoardSymbolsByInstanceIds,
-    scarabBonusForOwnedRemoves,
 } from '../gameStoreHelpers';
-import {
-    consumeKnowledgeResearchCreditForUpgrade,
-    getRerollCost,
-    isUpgradeLegalForKnowledgePick,
-    normalizeKnowledgeResearchCredits,
-    resolveKnowledgeProgression,
-} from '../gameCalculations';
+import { getRerollCost, resolveKnowledgeProgression } from '../gameCalculations';
 import { saveGameState } from '../saveGame';
 import type { GamePhase, GameState } from '../gameStore';
 import type { PlayerSymbolInstance } from '../../types';
 import type { BoardEffectDelta } from '../../logic/turn/turnTypes';
-import { getCultureLevel } from '../../data/cultureProgression';
 import { scheduleGameLifecycleTimeout } from '../gameLifecycleRun';
-import {
-    getKnowledgeUpgradeTrackStage,
-    getUnlockedUpgradeIdsForKnowledgeLevels,
-    normalizeKnowledgeUpgradeLevels,
-} from '../../data/knowledgeUpgradeTracks';
 
 export type GameStoreSet = (partial: Partial<GameState> | ((state: GameState) => Partial<GameState>)) => void;
 export type GameStoreGet = () => GameState;
@@ -91,24 +52,6 @@ interface SelectionFlowDeps {
     phaseAfterTurnFlowComplete: () => GamePhase;
 }
 
-const OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
-    SACRIFICIAL_RITE_UPGRADE_ID,
-    INQUISITION_UPGRADE_ID,
-    RESTRUCTURING_UPGRADE_ID,
-]);
-const SINGLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS = new Set<number>([
-    STATE_LABOR_UPGRADE_ID,
-    GREAT_MIGRATION_UPGRADE_ID,
-]);
-const MILITARY_LEVY_GRANT_UPGRADE_IDS = new Set<number>([
-    TRIBAL_FEDERATION_UPGRADE_ID,
-    MERCENARIES_UPGRADE_ID,
-    TOTAL_MOBILIZATION_UPGRADE_ID,
-]);
-
-const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
-    upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
-
 const BOARD_DESTROY_BLINK_DURATION_MS = 360;
 
 const getNowMs = () =>
@@ -117,29 +60,18 @@ const getNowMs = () =>
         : Date.now();
 
 const withSelectionPhaseFreeReroll = (
-    state: GameState,
+    _state: GameState,
     patch: Partial<GameState>,
-): Partial<GameState> => {
-    if (patch.phase !== 'selection') return patch;
-    const floor = getSelectionPhaseFreeRerollFloor(
-        patch.unlockedKnowledgeUpgrades ?? state.unlockedKnowledgeUpgrades ?? [],
-    );
-    if (floor <= 0) return patch;
-    return {
-        ...patch,
-        freeSelectionRerolls: Math.max(patch.freeSelectionRerolls ?? state.freeSelectionRerolls ?? 0, floor),
-    };
-};
+): Partial<GameState> => patch;
 
 const resolveStandardChoices = (state: GameState): ChoiceResolution => {
     const res = generateChoicesSelection({
         era: state.era,
         religionUnlocked: state.religionUnlocked,
         upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
-        ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+        symbolSetId: state.symbolSetId,
+        symbolSetIds: state.symbolSetIds,
         ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
-        leaderId: state.leaderId,
-        leaderProgressLevel: state.leaderProgressLevel,
         choiceCount: getStandardSymbolChoiceCount(state.board),
         forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
         forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
@@ -163,7 +95,8 @@ const resolveTerrainChoices = (state: GameState) =>
         era: state.era,
         religionUnlocked: state.religionUnlocked,
         upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
-        ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+        symbolSetId: state.symbolSetId,
+        symbolSetIds: state.symbolSetIds,
     });
 
 const countBoardSymbols = (board: GameState['board'], symbolId: number): number => {
@@ -265,9 +198,6 @@ const makeDestroyedSymbolSnapshots = (
     };
 });
 
-const isBoardDestroyBlockedType = (type: SymbolType) =>
-    type === SymbolType.ENEMY || type === SymbolType.DISASTER;
-
 const resolveCompletedSelectionPhase = (
     state: GameState,
     phaseAfterTurnFlowComplete: () => GamePhase,
@@ -297,7 +227,6 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
         return withSelectionPhaseFreeReroll(state, {
             bonusSelectionQueue: q,
             symbolChoices: nextChoices,
-            symbolSelectionRelicSourceId: null,
             isTurnSymbolSelection: false,
             forceTerrainInNextSymbolChoices: nextForceTerrain,
             phase: q.length > 0
@@ -310,7 +239,6 @@ const resolveAfterSelection = (state: GameState, phaseAfterTurnFlowComplete: () 
     return {
         phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
         symbolChoices: [],
-        symbolSelectionRelicSourceId: null,
         symbolSelectionSymbolSourceId: null,
         isTurnSymbolSelection: false,
     };
@@ -344,7 +272,6 @@ export const createSelectionFlowActions = ({
             meta: {
                 action: 'select_symbol',
                 choiceIds,
-                sourceRelicId: state.symbolSelectionRelicSourceId,
                 sourceSymbolId: state.symbolSelectionSymbolSourceId ?? null,
             },
         });
@@ -364,7 +291,6 @@ export const createSelectionFlowActions = ({
         let foodDelta = 0;
         let goldDelta = 0;
         let knowledgeDelta = 0;
-        let cultureDelta = 0;
         let destroyedSymbols: ReturnType<typeof makeDestroyedSymbolSnapshots> = [];
         let addedSymbolIds: number[] = [];
         let destroyedBoardIds: Set<string> | null = null;
@@ -375,14 +301,6 @@ export const createSelectionFlowActions = ({
             foodDelta += event.reward.food ?? 0;
             goldDelta += event.reward.gold ?? 0;
             knowledgeDelta += event.reward.knowledge ?? 0;
-        } else if (event.key === 'artifact_market_refresh') {
-            queueMicrotask(() => {
-                get().refreshRelicShop(true);
-                saveGameState(get());
-            });
-        } else if (event.key === 'border_raid') {
-            foodDelta += BORDER_RAID_REWARD[eraIdx];
-            goldDelta += BORDER_RAID_REWARD[eraIdx];
         } else if (event.key === 'grassland_festival') {
             foodDelta += GRASSLAND_FESTIVAL_FOOD[eraIdx];
         } else if (event.key === 'plains_pasture') {
@@ -423,12 +341,6 @@ export const createSelectionFlowActions = ({
         } else if (event.key === 'oasis_blessing') {
             const emptySlots = countBoardEmptySlots(state.board);
             foodDelta += emptySlots * OASIS_BLESSING_PER_EMPTY[eraIdx];
-        } else if (event.key === 'military_draft') {
-            foodDelta += MILITARY_DRAFT_FOOD[eraIdx];
-        } else if (event.key === 'kadesh_battle_escape') {
-            foodDelta += MILITARY_DRAFT_FOOD[eraIdx];
-        } else if (event.key === 'currency_standardization') {
-            patch.qinCurrencyStandardTurnsRemaining = 5;
         } else if (event.key === 'every_terrain_bounty') {
             const bounty = EVERY_TERRAIN_BOUNTY_EACH[eraIdx];
             foodDelta += bounty;
@@ -446,7 +358,6 @@ export const createSelectionFlowActions = ({
             addedSymbolIds = symAgg.addSymbolDefIds;
             const symbolDestroyEffects = createStoredFoodDestroyEffects(removed, state.board, state.unlockedKnowledgeUpgrades || []);
             const boardOnlyDestroyDelta = getBoardOnlyDestroyEffectTotals(symbolDestroyEffects, state.board);
-            const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
             const baseFiltered = state.playerSymbols.filter((symbol) => !removedIds.has(symbol.instanceId));
             patch.playerSymbols = appendSymbolDefIdsToPlayer(
                 baseFiltered,
@@ -455,28 +366,20 @@ export const createSelectionFlowActions = ({
             );
             patch.board = markedBoard;
             patch.destroyRemovalBlinkStartedAtMs = destroyBlinkStartedAtMs;
-            foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
-            goldDelta += symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
-            knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
-            cultureDelta += boardOnlyDestroyDelta.culture;
+            foodDelta += CAPITAL_RELOCATION_FOOD_REWARD + symAgg.food + boardOnlyDestroyDelta.food;
+            goldDelta += symAgg.gold + boardOnlyDestroyDelta.gold;
+            knowledgeDelta += CAPITAL_RELOCATION_KNOWLEDGE_REWARD + symAgg.knowledge + boardOnlyDestroyDelta.knowledge;
             if (symbolDestroyEffects.length > 0) {
                 patch.lastEffects = [...(state.lastEffects ?? []), ...symbolDestroyEffects];
             }
             patch.forceTerrainInNextSymbolChoices = state.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices;
             patch.forceEventsInNextSymbolChoices = state.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices;
             patch.freeSelectionRerolls = (state.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls;
-            patch.isRelicShopOpen = state.isRelicShopOpen || symAgg.openRelicShop;
-            if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
         }
 
         if (foodDelta !== 0) patch.food = state.food + foodDelta;
         if (goldDelta !== 0) patch.gold = state.gold + goldDelta;
         if (knowledgeDelta !== 0) Object.assign(patch, resolveKnowledgeProgression(state, knowledgeDelta));
-        if (cultureDelta !== 0) {
-            patch.culture = state.culture + cultureDelta;
-            patch.cultureLevel = getCultureLevel(state.culture + cultureDelta);
-        }
-
         set({
             ...patch,
             ...resolveAfterSelection({
@@ -488,12 +391,11 @@ export const createSelectionFlowActions = ({
         get().appendEventLog({
             turn: state.turn,
             kind: 'selection',
-            delta: { food: foodDelta, gold: goldDelta, knowledge: knowledgeDelta, culture: cultureDelta },
+            delta: { food: foodDelta, gold: goldDelta, knowledge: knowledgeDelta },
             meta: {
                 action: 'select_event',
                 eventId,
                 eventKey: event.key,
-                sourceRelicId: state.symbolSelectionRelicSourceId,
                 sourceSymbolId: state.symbolSelectionSymbolSourceId ?? null,
                 destroyedSymbols,
                 addSymbolIds: addedSymbolIds,
@@ -519,29 +421,15 @@ export const createSelectionFlowActions = ({
         const state = get();
         if (state.phase !== 'selection') return;
 
-        const antRelic = useRelicStore.getState().relics.find((r) => r.definition.id === RELIC_ID.ANTONINIANUS);
-        const skipGold = antRelic ? 2 : 0;
-
-        const relicFloatsNext =
-            skipGold > 0 && antRelic
-                ? [
-                      ...(state.relicFloats ?? []),
-                      { relicInstanceId: antRelic.instanceId, text: '+2', color: '#fbbf24' },
-                  ]
-                : (state.relicFloats ?? []);
-
         set({
             ...resolveAfterSelection(state, phaseAfterTurnFlowComplete),
-            gold: state.gold + skipGold,
-            relicFloats: relicFloatsNext,
         });
         get().appendEventLog({
             turn: state.turn,
             kind: 'selection',
-            delta: { food: 0, gold: skipGold, knowledge: 0 },
+            delta: { food: 0, gold: 0, knowledge: 0 },
             meta: {
                 action: 'skip_selection',
-                sourceRelicId: state.symbolSelectionRelicSourceId,
                 sourceSymbolId: state.symbolSelectionSymbolSourceId ?? null,
             },
         });
@@ -552,21 +440,11 @@ export const createSelectionFlowActions = ({
         if (state.phase !== 'selection') return;
 
         if (isPlagueBlockingSelection(state)) return;
-        if (
-            state.symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_RELIC_DEBRIS ||
-            state.symbolSelectionRelicSourceId === RELIC_ID.ANCIENT_TRIBE_JOIN ||
-            state.symbolSelectionRelicSourceId === RELIC_ID.MILITARY_LEVY ||
-            state.symbolSelectionRelicSourceId === RELIC_ID.PROPHECY_DIE ||
-            state.symbolSelectionSymbolSourceId === S.tribal_village
-        ) {
+        if (state.symbolSelectionSymbolSourceId === S.tribal_village) {
             return;
         }
 
-        const hasLydia = useRelicStore.getState().relics.some((r) => r.definition.id === RELIC_ID.LYDIA_COIN);
-        const rerollCost = getRerollCost(state.level, hasLydia ? 0.5 : 1, state.rerollsThisTurn);
-        const maxRerolls = hasLydia ? 3 : Infinity;
-
-        if (state.rerollsThisTurn >= maxRerolls) return;
+        const rerollCost = getRerollCost(state.level, 1, state.rerollsThisTurn);
 
         const freeLeft = state.freeSelectionRerolls ?? 0;
         const choiceResolution = resolveStandardChoices(state);
@@ -613,263 +491,6 @@ export const createSelectionFlowActions = ({
         });
     },
 
-    selectUpgrade: (upgradeId: number) => {
-        const state = get();
-        const researchCredits = normalizeKnowledgeResearchCredits(
-            state.level,
-            state.levelUpResearchPoints ?? 0,
-            state.knowledgeResearchCredits,
-        );
-        if (researchCredits.length <= 0) return;
+    selectUpgrade: (_upgradeId: number) => {},
 
-        const pickLevel = state.level;
-        const uid = Number(upgradeId);
-        const unlockedNorm = (state.unlockedKnowledgeUpgrades || []).map((x) => Number(x));
-        if (!KNOWLEDGE_UPGRADES[uid]) return;
-        const trackStage = getKnowledgeUpgradeTrackStage(uid);
-        if (!trackStage) return;
-        const knowledgeUpgradeLevels = normalizeKnowledgeUpgradeLevels(
-            unlockedNorm,
-            state.knowledgeUpgradeLevels,
-        );
-        if (knowledgeUpgradeLevels[trackStage.trackId] !== trackStage.stageIndex) return;
-        if (!isUpgradeLegalForKnowledgePick(uid, unlockedNorm, pickLevel, researchCredits)) return;
-
-        const nextResearchCredits = consumeKnowledgeResearchCreditForUpgrade(uid, researchCredits);
-        const nextResearchPts = nextResearchCredits.length;
-        const appendResearchLog = (extra: Record<string, unknown> = {}) => {
-            get().appendEventLog({
-                turn: state.turn,
-                kind: 'research',
-                meta: {
-                    action: 'select_upgrade',
-                    upgradeId: uid,
-                    remainingResearchPoints: nextResearchPts,
-                    ...extra,
-                },
-            });
-        };
-
-        const nextKnowledgeUpgradeLevels = {
-            ...knowledgeUpgradeLevels,
-            [trackStage.trackId]: trackStage.stageIndex + 1,
-        };
-        const newUnlocked = getUnlockedUpgradeIdsForKnowledgeLevels(
-            nextKnowledgeUpgradeLevels,
-            [...unlockedNorm, uid],
-        );
-        const mouseionRelic = useRelicStore
-            .getState()
-            .relics.find((r) => r.definition.id === RELIC_ID.ALEXANDRIA_MOUSEION_INSCRIPTION);
-        const mouseionGold = mouseionRelic ? 3 : 0;
-        const mouseionRelicFloat = mouseionRelic
-            ? [{ relicInstanceId: mouseionRelic.instanceId, text: '+3', color: '#fbbf24' }]
-            : [];
-
-        let grantedRelicForAchievement = false;
-
-        if (OBLIVION_FURNACE_GRANT_UPGRADE_IDS.has(uid)) {
-            const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
-            if (oblDef) {
-                const rs = useRelicStore.getState();
-                for (let i = 0; i < 3; i++) rs.addRelic(oblDef);
-                grantedRelicForAchievement = true;
-            }
-        }
-
-        if (SINGLE_OBLIVION_FURNACE_GRANT_UPGRADE_IDS.has(uid)) {
-            const oblDef = RELICS[RELIC_ID.OBLIVION_FURNACE];
-            if (oblDef) {
-                useRelicStore.getState().addRelic(oblDef);
-                grantedRelicForAchievement = true;
-            }
-        }
-
-        if (MILITARY_LEVY_GRANT_UPGRADE_IDS.has(uid)) {
-            const militaryLevyDef = RELICS[RELIC_ID.MILITARY_LEVY];
-            if (militaryLevyDef) {
-                const rs = useRelicStore.getState();
-                const count = uid === TOTAL_MOBILIZATION_UPGRADE_ID ? 4 : 2;
-                for (let i = 0; i < count; i++) rs.addRelic(militaryLevyDef);
-                grantedRelicForAchievement = true;
-            }
-        }
-
-        if (
-            uid === COLONIALISM_UPGRADE_ID ||
-            uid === GREAT_MIGRATION_UPGRADE_ID ||
-            uid === LAND_ALLOTMENT_UPGRADE_ID
-        ) {
-            const tribeJoinDef = RELICS[RELIC_ID.ANCIENT_TRIBE_JOIN];
-            if (tribeJoinDef) {
-                const rs = useRelicStore.getState();
-                const count = uid === GREAT_MIGRATION_UPGRADE_ID ? 2 : 3;
-                for (let i = 0; i < count; i++) rs.addRelic(tribeJoinDef);
-                grantedRelicForAchievement = true;
-            }
-        }
-
-        if (grantedRelicForAchievement) {
-            recordDemoNonConsumableRelicProgress(state.leaderId, useRelicStore.getState().relics);
-        }
-
-        let religionUnlocked = state.religionUnlocked;
-        if (uid === THEOLOGY_UPGRADE_ID) religionUnlocked = true;
-
-        const newBoard = cloneBoardPreservingSlots(state.board);
-        const newPlayerSymbols = [...state.playerSymbols];
-
-        const awardedBoardExpansions = (
-            uid === ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID ||
-            uid === FEUDALISM_UPGRADE_ID ||
-            uid === MODERN_AGE_UPGRADE_ID
-                ? 3
-                : 0
-        );
-        const boardExpansionCapacity = getRemainingBoardExpansionCapacity(state.board);
-        const nextPendingBoardExpansions = Math.min(
-            state.pendingBoardExpansions + awardedBoardExpansions,
-            boardExpansionCapacity,
-        );
-
-        const baseUnlock = {
-            unlockedKnowledgeUpgrades: newUnlocked,
-            knowledgeUpgradeLevels: nextKnowledgeUpgradeLevels,
-            religionUnlocked,
-            board: newBoard,
-            playerSymbols: newPlayerSymbols,
-            knowledge: state.knowledge,
-            gold: state.gold + mouseionGold,
-            relicFloats: mouseionRelicFloat.length > 0
-                ? [...(state.relicFloats ?? []), ...mouseionRelicFloat]
-                : state.relicFloats,
-            levelUpResearchPoints: nextResearchPts,
-            knowledgeResearchCredits: nextResearchCredits,
-            pendingBoardExpansions: nextPendingBoardExpansions,
-        };
-
-        if (state.returnPhaseAfterDevKnowledgeUpgrade != null) {
-            set(withSelectionPhaseFreeReroll(state, {
-                ...baseUnlock,
-                phase: state.returnPhaseAfterDevKnowledgeUpgrade,
-                returnPhaseAfterDevKnowledgeUpgrade: null,
-                symbolSelectionRelicSourceId: null,
-            }));
-            appendResearchLog({ returnPhase: state.returnPhaseAfterDevKnowledgeUpgrade });
-            return;
-        }
-
-        const choiceResolution =
-            state.symbolChoices.length > 0
-                ? {
-                      choices: state.symbolChoices,
-                      forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
-                      forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
-                  }
-                : resolveStandardChoices(state);
-
-        set(withSelectionPhaseFreeReroll(state, {
-            ...baseUnlock,
-            phase: 'selection' as GamePhase,
-            returnPhaseAfterDevKnowledgeUpgrade: null,
-            symbolSelectionRelicSourceId: null,
-            symbolSelectionSymbolSourceId: null,
-            isTurnSymbolSelection: true,
-            symbolChoices: choiceResolution.choices,
-            forceTerrainInNextSymbolChoices: choiceResolution.forceTerrainInNextSymbolChoices,
-            forceEventsInNextSymbolChoices: choiceResolution.forceEventsInNextSymbolChoices,
-        }));
-        appendResearchLog();
-    },
-
-    confirmOblivionFurnaceDestroyAt: (x: number, y: number) => {
-        const state = get();
-        if (state.phase !== 'oblivion_furnace_board') return;
-        const relicInstId = state.pendingOblivionFurnaceRelicId;
-        if (!relicInstId) return;
-        if (x < 0 || x >= state.board.length || y < 0 || y >= state.board[0]!.length) return;
-        const sym = state.board[x][y];
-        if (!sym) return;
-        if (isBoardDestroyBlockedType(sym.definition.type)) return;
-
-        const instanceIds = [sym.instanceId];
-        const removed = [sym];
-        const symAgg = aggregateCollectionDestroyEffects(removed, false, state.unlockedKnowledgeUpgrades || []);
-        const storedFoodEffects = createStoredFoodDestroyEffects(removed, state.board, state.unlockedKnowledgeUpgrades || []);
-        const boardOnlyDestroyDelta = getBoardOnlyDestroyEffectTotals(storedFoodEffects, state.board);
-        const shBonus = scarabBonusForOwnedRemoves(state.board, removed.length);
-        const dFood = symAgg.food + shBonus.food + boardOnlyDestroyDelta.food;
-        const dGold = symAgg.gold + shBonus.gold + boardOnlyDestroyDelta.gold;
-        const dKnowledge = symAgg.knowledge + shBonus.knowledge + boardOnlyDestroyDelta.knowledge;
-        const dCulture = boardOnlyDestroyDelta.culture;
-        const removedIdSet = new Set(instanceIds);
-        const markedBoard = markBoardSymbolsForRemoval(state.board, removedIdSet);
-        const blinkStartedAtMs = getNowMs();
-        const boardEffects = createBoardDestroyResourceEffects(
-            { x, y },
-            { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
-            storedFoodEffects,
-        );
-
-        const rewardPatch = (s: GameState) => ({
-            food: s.food + dFood,
-            gold: s.gold + dGold,
-            ...resolveKnowledgeProgression(s, dKnowledge),
-            culture: s.culture + dCulture,
-            cultureLevel: getCultureLevel(s.culture + dCulture),
-            forceTerrainInNextSymbolChoices: s.forceTerrainInNextSymbolChoices || symAgg.forceTerrainInNextChoices,
-            forceEventsInNextSymbolChoices: s.forceEventsInNextSymbolChoices || symAgg.forceEventsInNextChoices,
-            freeSelectionRerolls: (s.freeSelectionRerolls ?? 0) + symAgg.freeSelectionRerolls,
-            isRelicShopOpen: s.isRelicShopOpen || symAgg.openRelicShop,
-        });
-
-        const baseFiltered = state.playerSymbols.filter((s) => !instanceIds.includes(s.instanceId));
-        const newSymbols = appendSymbolDefIdsToPlayer(
-            baseFiltered,
-            symAgg.addSymbolDefIds,
-            state.unlockedKnowledgeUpgrades || [],
-        );
-
-        useRelicStore.getState().removeRelic(relicInstId);
-        set({
-            ...rewardPatch(state),
-            board: markedBoard,
-            playerSymbols: newSymbols,
-            lastEffects: [...(state.lastEffects ?? []), ...boardEffects],
-            phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
-            pendingOblivionFurnaceRelicId: null,
-            destroyRemovalBlinkStartedAtMs: blinkStartedAtMs,
-        });
-        const removeMarked = () => {
-            set((current) => ({
-                board: removeBoardSymbolsByInstanceIds(current.board, removedIdSet),
-                destroyRemovalBlinkStartedAtMs: null,
-            }));
-        };
-        scheduleGameLifecycleTimeout(removeMarked, BOARD_DESTROY_BLINK_DURATION_MS);
-        if (symAgg.refreshRelicShop) queueMicrotask(() => get().refreshRelicShop(true));
-        get().appendEventLog({
-            turn: state.turn,
-            kind: 'board_action',
-            slot: { x, y },
-            symbolId: sym.definition.id,
-            delta: { food: dFood, gold: dGold, knowledge: dKnowledge, culture: dCulture },
-            meta: {
-                action: 'oblivion_furnace_destroy',
-                relicInstanceId: relicInstId,
-                selectedInstanceIds: instanceIds,
-                destroyedSymbols: makeDestroyedSymbolSnapshots(removed, state.board),
-                addSymbolIds: symAgg.addSymbolDefIds,
-            },
-        });
-    },
-
-    cancelOblivionFurnacePick: () => {
-        const state = get();
-        if (state.phase !== 'oblivion_furnace_board') return;
-        set({
-            phase: resolveCompletedSelectionPhase(state, phaseAfterTurnFlowComplete),
-            pendingOblivionFurnaceRelicId: null,
-        });
-    },
 });

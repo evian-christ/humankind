@@ -15,15 +15,14 @@ describe('keyBindings', () => {
         });
         expect(new Set(Object.values(sanitizeKeyBindings({
             spin: 'KeyR',
-            relicShop: 'KeyR',
-        }))).size).toBe(11);
+            reroll: 'KeyR',
+        }))).size).toBe(10);
     });
 
     it('migrates the previous default layout to the new default layout', () => {
         expect(sanitizeKeyBindings({
             spin: 'Space',
             pause: 'Escape',
-            relicShop: 'KeyR',
             knowledge: 'KeyK',
             history: 'F12',
             ownedSymbols: 'KeyI',
@@ -34,14 +33,12 @@ describe('keyBindings', () => {
         expect(sanitizeKeyBindings({
             spin: 'KeyP',
             pause: 'Escape',
-            relicShop: 'KeyR',
             knowledge: 'KeyK',
             history: 'F12',
             ownedSymbols: 'KeyI',
         })).toMatchObject({
             spin: 'KeyP',
             pause: 'Escape',
-            relicShop: 'KeyQ',
             knowledge: 'KeyW',
             history: 'KeyA',
             ownedSymbols: 'KeyS',
@@ -50,10 +47,10 @@ describe('keyBindings', () => {
     });
 
     it('swaps actions when a key is already assigned', () => {
-        const next = rebindKey(DEFAULT_KEY_BINDINGS, 'spin', 'KeyQ');
+        const next = rebindKey(DEFAULT_KEY_BINDINGS, 'spin', 'KeyW');
 
-        expect(next.spin).toBe('KeyQ');
-        expect(next.relicShop).toBe('Space');
-        expect(getActionForKeyCode(next, 'KeyQ')).toBe('spin');
+        expect(next.spin).toBe('KeyW');
+        expect(next.knowledge).toBe('Space');
+        expect(getActionForKeyCode(next, 'KeyW')).toBe('spin');
     });
 });

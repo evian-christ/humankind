@@ -10,12 +10,12 @@ import {
     FOREIGN_TRADE_UPGRADE_ID,
     JUNGLE_EXPEDITION_UPGRADE_ID,
     MASS_MEDIA_UPGRADE_ID,
-    MECHANICS_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PUBLIC_ADMINISTRATION_UPGRADE_ID,
     TROPICAL_AGRICULTURE_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 import { S, SYMBOLS, SymbolType } from '../../data/symbolDefinitions';
+import { DEFAULT_SYMBOL_SET_DECK_IDS, OWNED_SYMBOL_SET_IDS, SYMBOL_SET_DECK_SIZE, SYMBOL_SETS } from '../../data/symbolSets';
 import { buildFlatPool, generateChoices, generateEventOnlyChoices, generateTerrainOnlyChoices } from './selectionLogic';
 
 describe('selectionLogic', () => {
@@ -23,12 +23,64 @@ describe('selectionLogic', () => {
         vi.restoreAllMocks();
     });
 
+    it('starts with eight owned sets equipped and four unowned empty sets', () => {
+        expect(SYMBOL_SETS).toHaveLength(12);
+        expect(OWNED_SYMBOL_SET_IDS).toHaveLength(SYMBOL_SET_DECK_SIZE);
+        expect(DEFAULT_SYMBOL_SET_DECK_IDS).toEqual(OWNED_SYMBOL_SET_IDS);
+        expect(SYMBOL_SETS.slice(SYMBOL_SET_DECK_SIZE).every((set) => set.symbolKeys.length === 0)).toBe(true);
+    });
+
+    it('offers every selected set symbol immediately without research or era unlocks', () => {
+        for (const set of SYMBOL_SETS) {
+            const pool = buildFlatPool({
+                era: 0,
+                religionUnlocked: false,
+                upgrades: [],
+                symbolSetId: set.id,
+            });
+            const pooledKeys = new Set(pool.map((sym) => sym.key));
+            for (const key of set.symbolKeys) expect(pooledKeys.has(key), `${set.id}: ${key}`).toBe(true);
+            expect(pooledKeys.has('grassland')).toBe(true);
+            expect(pooledKeys.has('agi_core')).toBe(true);
+            for (const otherSet of SYMBOL_SETS) {
+                if (otherSet.id === set.id) continue;
+                for (const key of otherSet.symbolKeys) expect(pooledKeys.has(key), `${set.id} excluded ${key}`).toBe(false);
+            }
+        }
+    });
+
+    it('keeps the selected set pool unchanged after era upgrades', () => {
+        const context = { era: 1, religionUnlocked: false, symbolSetId: 'agriculture', upgrades: [] as number[] };
+        const initial = buildFlatPool(context).map((sym) => sym.id).sort((a, b) => a - b);
+        const later = buildFlatPool({
+            ...context,
+            era: 3,
+            upgrades: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
+        }).map((sym) => sym.id).sort((a, b) => a - b);
+        expect(later).toEqual(initial);
+    });
+
+    it('uses the union of equipped sets, without symbols from other sets', () => {
+        const pool = buildFlatPool({
+            era: 0,
+            religionUnlocked: false,
+            upgrades: [],
+            symbolSetIds: ['agriculture', 'faith'],
+        });
+        const keys = new Set(pool.map((sym) => sym.key));
+        expect(keys.has('wheat')).toBe(true);
+        expect(keys.has('corn')).toBe(true);
+        expect(keys.has('christianity')).toBe(true);
+        expect(keys.has('monastery_garden')).toBe(true);
+        expect(keys.has('fish')).toBe(false);
+        expect(keys.has('merchant')).toBe(false);
+    });
+
     it('does not include Compass in the pool before the upgrade is unlocked', () => {
         const pool = buildFlatPool({
             era: 2,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.compass)).toBe(false);
@@ -39,7 +91,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(false);
@@ -50,7 +101,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
         });
         expect(lockedPool.some((sym) => sym.type === SymbolType.ANCIENT)).toBe(false);
 
@@ -58,7 +108,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
         expect(unlockedPool.some((sym) => sym.id === S.bronze_tribute_chest)).toBe(true);
     });
@@ -68,7 +117,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
         const medievalIds = Object.values(SYMBOLS)
             .filter((sym) => sym.type === SymbolType.MEDIEVAL)
@@ -87,7 +135,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID, COMPASS_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.compass)).toBe(true);
@@ -98,7 +145,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.cassava)).toBe(false);
@@ -109,7 +155,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [TROPICAL_AGRICULTURE_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.cassava)).toBe(true);
@@ -120,7 +165,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [FOREIGN_TRADE_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.date)).toBe(true);
@@ -131,7 +175,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.banana)).toBe(true);
@@ -142,7 +185,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID, JUNGLE_EXPEDITION_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.expedition)).toBe(true);
@@ -153,7 +195,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [DRY_STORAGE_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.dye)).toBe(true);
@@ -165,37 +206,9 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID, CARAVANSERAI_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.id === S.caravanserai)).toBe(true);
-    });
-
-    it('keeps legacy military upgrade chains out of the generated symbol pool', () => {
-        const pool = buildFlatPool({
-            era: 2,
-            religionUnlocked: false,
-            upgrades: [FEUDALISM_UPGRADE_ID, MECHANICS_UPGRADE_ID],
-            ownedRelicDefIds: [],
-        });
-
-        expect(pool.some((sym) => sym.id === S.archer)).toBe(false);
-        expect(pool.some((sym) => sym.id === 68)).toBe(false);
-    });
-
-    it('includes Militia in the base pool while keeping other player units excluded', () => {
-        const pool = buildFlatPool({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-        });
-
-        expect(pool.some((sym) => sym.id === S.militia)).toBe(true);
-        expect(pool.some((sym) => sym.id === S.warrior)).toBe(false);
-        expect(pool.some((sym) => sym.id === S.archer)).toBe(false);
-        expect(pool.some((sym) => sym.id === S.horseman)).toBe(false);
-        expect(pool.some((sym) => sym.id === S.mercenary)).toBe(false);
     });
 
     it('keeps medieval symbols while removing terrain symbols after modern age', () => {
@@ -203,7 +216,6 @@ describe('selectionLogic', () => {
             era: 3,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(pool.some((sym) => sym.type === SymbolType.MEDIEVAL)).toBe(true);
@@ -215,7 +227,6 @@ describe('selectionLogic', () => {
             era: 3,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
         expect(lockedPool.some((sym) => sym.id === S.agi_core)).toBe(false);
 
@@ -223,7 +234,6 @@ describe('selectionLogic', () => {
             era: 3,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID, AGI_PROJECT_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
         expect(unlockedPool.some((sym) => sym.id === S.agi_core)).toBe(true);
     });
@@ -237,7 +247,6 @@ describe('selectionLogic', () => {
             era: 3,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID, MODERN_AGE_UPGRADE_ID],
-            ownedRelicDefIds: [],
         });
 
         expect(choices).toHaveLength(3);
@@ -252,7 +261,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
             ownedSymbolDefIds: [],
             forceTerrainInNextSymbolChoices: false,
         });
@@ -269,8 +277,6 @@ describe('selectionLogic', () => {
         const choices = generateEventOnlyChoices({
             era: 2,
             ownedSymbolDefIds: [],
-            leaderId: null,
-            leaderProgressLevel: 1,
         });
 
         expect(choices).toHaveLength(3);
@@ -287,7 +293,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
             ownedSymbolDefIds: [],
             forceTerrainInNextSymbolChoices: false,
         });
@@ -297,146 +302,12 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [PUBLIC_ADMINISTRATION_UPGRADE_ID],
-            ownedRelicDefIds: [],
             ownedSymbolDefIds: [],
             forceTerrainInNextSymbolChoices: false,
         });
         expect(publicAdminResult.choices.every(isGameEventDefinition)).toBe(true);
     });
 
-    it('offers the Kadesh leader event only after Ramesses reaches leader level 3', () => {
-        const rollKadesh = () => {
-            const randomValues = [0, 0, 0, 0.04, 0.99, 0.04, 0.99, 0.04, 0.99];
-            let call = 0;
-            vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
-        };
-
-        rollKadesh();
-        const lockedResult = generateChoices({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            ownedSymbolDefIds: [],
-            leaderId: 'ramesses',
-            leaderProgressLevel: 2,
-            forceTerrainInNextSymbolChoices: false,
-        });
-        expect(lockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'kadesh_battle_escape')).toBe(false);
-
-        vi.restoreAllMocks();
-        rollKadesh();
-        const unlockedResult = generateChoices({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            ownedSymbolDefIds: [],
-            leaderId: 'ramesses',
-            leaderProgressLevel: 3,
-            forceTerrainInNextSymbolChoices: false,
-        });
-        expect(unlockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'kadesh_battle_escape')).toBe(true);
-    });
-
-    it('offers the Currency Standardization leader event only after Qin Shi Huang reaches leader level 3', () => {
-        const rollCurrencyStandardization = () => {
-            const randomValues = [0, 0, 0, 0.04, 0.99, 0.04, 0.99, 0.04, 0.99];
-            let call = 0;
-            vi.spyOn(Math, 'random').mockImplementation(() => randomValues[call++] ?? 0);
-        };
-
-        rollCurrencyStandardization();
-        const lockedResult = generateChoices({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            ownedSymbolDefIds: [],
-            leaderId: 'shihuang',
-            leaderProgressLevel: 2,
-            forceTerrainInNextSymbolChoices: false,
-        });
-        expect(lockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'currency_standardization')).toBe(false);
-
-        vi.restoreAllMocks();
-        rollCurrencyStandardization();
-        const unlockedResult = generateChoices({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            ownedSymbolDefIds: [],
-            leaderId: 'shihuang',
-            leaderProgressLevel: 3,
-            forceTerrainInNextSymbolChoices: false,
-        });
-        expect(unlockedResult.choices.filter(isGameEventDefinition).some((event) => event.key === 'currency_standardization')).toBe(true);
-    });
-
-    it('includes Heqet only after Ramesses reaches leader level 7', () => {
-        const lockedPool = buildFlatPool({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            leaderId: 'ramesses',
-            leaderProgressLevel: 6,
-        });
-        expect(lockedPool.some((sym) => sym.id === S.heqet)).toBe(false);
-
-        const wrongLeaderPool = buildFlatPool({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            leaderId: 'shihuang',
-            leaderProgressLevel: 7,
-        });
-        expect(wrongLeaderPool.some((sym) => sym.id === S.heqet)).toBe(false);
-
-        const unlockedPool = buildFlatPool({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            leaderId: 'ramesses',
-            leaderProgressLevel: 7,
-        });
-        expect(unlockedPool.some((sym) => sym.id === S.heqet)).toBe(true);
-    });
-
-    it('includes Foxtail Millet only after Qin Shi Huang reaches leader level 7', () => {
-        const lockedPool = buildFlatPool({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            leaderId: 'shihuang',
-            leaderProgressLevel: 6,
-        });
-        expect(lockedPool.some((sym) => sym.id === S.foxtail_millet)).toBe(false);
-
-        const wrongLeaderPool = buildFlatPool({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            leaderId: 'ramesses',
-            leaderProgressLevel: 7,
-        });
-        expect(wrongLeaderPool.some((sym) => sym.id === S.foxtail_millet)).toBe(false);
-
-        const unlockedPool = buildFlatPool({
-            era: 1,
-            religionUnlocked: false,
-            upgrades: [],
-            ownedRelicDefIds: [],
-            leaderId: 'shihuang',
-            leaderProgressLevel: 7,
-        });
-        expect(unlockedPool.some((sym) => sym.id === S.foxtail_millet)).toBe(true);
-    });
 
     it('stacks Mass Media multiplicatively with Public Administration', () => {
         vi.spyOn(Math, 'random').mockReturnValue(0.15);
@@ -445,7 +316,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [MASS_MEDIA_UPGRADE_ID],
-            ownedRelicDefIds: [],
             ownedSymbolDefIds: [],
             forceTerrainInNextSymbolChoices: false,
         });
@@ -455,7 +325,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [PUBLIC_ADMINISTRATION_UPGRADE_ID, MASS_MEDIA_UPGRADE_ID],
-            ownedRelicDefIds: [],
             ownedSymbolDefIds: [],
             forceTerrainInNextSymbolChoices: false,
         });
@@ -476,7 +345,6 @@ describe('selectionLogic', () => {
             era: 1,
             religionUnlocked: false,
             upgrades: [],
-            ownedRelicDefIds: [],
             ownedSymbolDefIds: [
                 S.oral_tradition,
                 S.wild_seeds,
@@ -502,7 +370,6 @@ describe('selectionLogic', () => {
             era: 2,
             religionUnlocked: false,
             upgrades: [FEUDALISM_UPGRADE_ID],
-            ownedRelicDefIds: [],
             ownedSymbolDefIds: [],
             forceTerrainInNextSymbolChoices: false,
             forceEventsInNextSymbolChoices: true,

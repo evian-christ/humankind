@@ -1,5 +1,4 @@
-import type { LeaderId } from './leaders';
-import { EXCLUDED_FROM_BASE_POOL, SymbolType, SYMBOLS, SYMBOL_NUMERIC_ID, type SymbolKey } from './symbolDefinitions';
+import { SymbolType, type SymbolKey } from './symbolDefinitions';
 
 /** 지식 업그레이드 설명에 나오는 심볼과, 선택 풀·효과에 미치는 관계 */
 export type KnowledgeUpgradeSymbolRelation = 'pool_add' | 'pool_remove' | 'effect_modify';
@@ -13,46 +12,6 @@ export interface KnowledgeUpgradeDescSymbol {
     relation: KnowledgeUpgradeSymbolRelation;
 }
 
-export interface KnowledgeUpgradeDescRelic {
-    relicId: number;
-    count: number;
-}
-
-/** 중세시대(15) 카드 칩 — 풀 제외/추가는 게임과 동기, 효과 변경은 산만(지형 등장 확률만 바뀌는 타일은 칩 제외) */
-/** 고대 시대(지식) — 고대 타입 심볼 풀 해금 카드 칩용 */
-export function buildAncientSymbolsUnlockDescSymbols(
-    _leaderId: LeaderId | null = null,
-    _leaderProgressLevel = 1,
-): KnowledgeUpgradeDescSymbol[] {
-    return Object.values(SYMBOLS)
-        .filter((s) => {
-            if (s.type !== SymbolType.ANCIENT) return false;
-            if (!EXCLUDED_FROM_BASE_POOL.has(s.id)) return true;
-            return false;
-        })
-        .sort((a, b) => a.id - b.id)
-        .map((s) => ({ symbolKey: s.key as SymbolKey, relation: 'pool_add' as const }));
-}
-
-export function buildFeudalismDescSymbols(): KnowledgeUpgradeDescSymbol[] {
-    const poolRemoveKeys = Object.values(SYMBOLS)
-        .filter((s) => s.type === SymbolType.ANCIENT)
-        .map((s) => s.key as SymbolKey)
-        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
-
-    /** `buildFlatPool`에서 중세시대 해금 시 포함되는 SymbolType.MEDIEVAL 심볼 */
-    const poolAddKeys = Object.values(SYMBOLS)
-        .filter((s) => s.type === SymbolType.MEDIEVAL)
-        .map((s) => s.key as SymbolKey)
-        .sort((a, b) => SYMBOL_NUMERIC_ID[a] - SYMBOL_NUMERIC_ID[b]);
-
-    return [
-        ...poolRemoveKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_remove' as const })),
-        ...poolAddKeys.map((symbolKey) => ({ symbolKey, relation: 'pool_add' as const })),
-        { symbolKey: 'mountain', relation: 'effect_modify' as const },
-    ];
-}
-
 export interface KnowledgeUpgrade {
     id: number;
     name: string;
@@ -61,20 +20,17 @@ export interface KnowledgeUpgrade {
     sprite?: string;
     /** 효과 설명에 등장하는 심볼 — 카드에서 아이콘·관계(추가/제외/효과 변경)·툴팁 */
     descSymbols?: KnowledgeUpgradeDescSymbol[];
-    /** 효과 설명에 등장하는 지급 유물 — 카드에서 아이콘·수량·툴팁 */
-    descRelics?: KnowledgeUpgradeDescRelic[];
 }
 
 export type KnowledgeUpgradeType = SymbolType;
 
-/** 고대 타입 심볼을 상점/선택 풀에 넣기 위한 선행 연구 */
+/** 과거 심볼 해금 연구의 ID는 저장 데이터 호환을 위해 유지한다. 새 게임에서는 시대 확장 연구다. */
 export const ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID = 1;
 export const HUNTING_UPGRADE_ID = 2;
 export const PASTORALISM_UPGRADE_ID = 3;
 export const FISHERIES_UPGRADE_ID = 4;
 export const AGRICULTURE_UPGRADE_ID = 5;
 export const FOREIGN_TRADE_UPGRADE_ID = 7;
-export const ARCHERY_UPGRADE_ID = 9;
 export const LAW_CODE_UPGRADE_ID = 10;
 export const CURRENCY_UPGRADE_ID = 11;
 export const SACRIFICIAL_RITE_UPGRADE_ID = 12;
@@ -88,7 +44,6 @@ export const WRITING_SYSTEM_UPGRADE_ID = 17;
 export const DRY_STORAGE_UPGRADE_ID = 19;
 export const TRACKING_UPGRADE_ID = 20;
 export const THEOLOGY_UPGRADE_ID = 21;
-export const IRON_WORKING_UPGRADE_ID = 22;
 export const MATHEMATICS_UPGRADE_ID = 23;
 export const NOMADIC_TRADITION_UPGRADE_ID = 24;
 export const STATE_LABOR_UPGRADE_ID = 25;
@@ -99,9 +54,7 @@ export const PLANTATION_UPGRADE_ID = 29;
 export const TANNING_UPGRADE_ID = 30;
 export const COMPASS_UPGRADE_ID = 31;
 export const DESERT_STORAGE_UPGRADE_ID = 32;
-export const MECHANICS_UPGRADE_ID = 33;
 export const MARITIME_TRADE_UPGRADE_ID = 34;
-export const MILITARY_SCIENCE_UPGRADE_ID = 35;
 export const GUILD_UPGRADE_ID = 37;
 export const SHIPBUILDING_UPGRADE_ID = 39;
 export const EDUCATION_UPGRADE_ID = 40;
@@ -112,30 +65,23 @@ export const PRINTING_PRESS_UPGRADE_ID = 44;
 export const CARAVANSERAI_UPGRADE_ID = 45;
 export const FORESTRY_UPGRADE_ID = 46;
 export const PASTURE_MANAGEMENT_UPGRADE_ID = 47;
-export const GUNPOWDER_UPGRADE_ID = 48;
 export const MODERN_AGE_UPGRADE_ID = 51;
 export const OCEANIC_ROUTES_UPGRADE_ID = 52;
 export const STEAM_POWER_UPGRADE_ID = 53;
 export const OASIS_RECOVERY_UPGRADE_ID = 54;
-export const BALLISTICS_UPGRADE_ID = 55;
 export const MODERN_AGRICULTURE_UPGRADE_ID = 56;
 export const PRESERVATION_UPGRADE_ID = 57;
 export const URBANIZATION_UPGRADE_ID = 58;
 export const SCIENTIFIC_THEORY_UPGRADE_ID = 59;
 export const TROPICAL_DEVELOPMENT_UPGRADE_ID = 60;
 export const ELECTRICITY_UPGRADE_ID = 61;
-export const INTERCHANGEABLE_PARTS_UPGRADE_ID = 62;
 export const AGI_PROJECT_UPGRADE_ID = 63;
 export const MODERN_AGE_LEVEL_UPGRADE_ID = MODERN_AGE_UPGRADE_ID;
 export const PUBLIC_ADMINISTRATION_UPGRADE_ID = 66;
 export const MASS_MEDIA_UPGRADE_ID = 67;
 export const ELECTION_SYSTEM_UPGRADE_ID = 68;
 export const BUTTRESS_UPGRADE_ID = 70;
-export const CASTLE_UPGRADE_ID = 71;
 export const COLONIALISM_UPGRADE_ID = 72;
-export const TRIBAL_FEDERATION_UPGRADE_ID = 73;
-export const MERCENARIES_UPGRADE_ID = 74;
-export const TOTAL_MOBILIZATION_UPGRADE_ID = 75;
 export const TROPICAL_AGRICULTURE_UPGRADE_ID = 76;
 export const GREAT_MIGRATION_UPGRADE_ID = 78;
 export const LAND_ALLOTMENT_UPGRADE_ID = 79;
@@ -145,9 +91,8 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
         name: 'Ancient Era',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Ancient-type symbols for the symbol selection pool. Expand the slot board three times.',
+        description: 'Expand the slot board three times.',
         sprite: '001.png',
-        descSymbols: buildAncientSymbolsUnlockDescSymbols(),
     },
     [AGRICULTURE_UPGRADE_ID]: {
         id: AGRICULTURE_UPGRADE_ID,
@@ -168,9 +113,9 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: PASTORALISM_UPGRADE_ID,
         name: 'Pastoralism',
         type: SymbolType.ANCIENT,
-        description: 'Unlocks Sheep.',
+        description: 'Plains produces 1 additional Food.',
         sprite: '003.png',
-        descSymbols: [{ symbolKey: 'sheep', relation: 'pool_add' }],
+        descSymbols: [{ symbolKey: 'plains', relation: 'effect_modify' }],
     },
     [FISHERIES_UPGRADE_ID]: {
         id: FISHERIES_UPGRADE_ID,
@@ -247,14 +192,14 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         description: 'In the selection phase, each card is 2x as likely to become an event.',
         sprite: '067.png',
     },
-    /** 레벨 10 이상에서만 선택지에 등장 — 중세 풀·지형 가중 */
+    /** 레벨 10 이상에서만 선택지에 등장 — 산 효과·보드 확장 */
     [FEUDALISM_UPGRADE_ID]: {
         id: FEUDALISM_UPGRADE_ID,
         name: 'Medieval Age',
         type: SymbolType.MEDIEVAL,
-        description: 'Ancient symbols no longer appear. Unlocks all Medieval symbols. Terrain symbol odds become x0.2. Upgrades Mountain. Expand the slot board three times.',
+        description: 'Upgrades Mountain. Expand the slot board three times.',
         sprite: '026.png',
-        descSymbols: buildFeudalismDescSymbols(),
+        descSymbols: [{ symbolKey: 'mountain', relation: 'effect_modify' }],
     },
 
     // ── Medieval Upgrades (require Medieval Age upgrade or era 2+) ──
@@ -320,7 +265,7 @@ export const KNOWLEDGE_UPGRADES: Record<number, KnowledgeUpgrade> = {
         id: MODERN_AGE_UPGRADE_ID,
         name: 'Modern Age',
         type: SymbolType.MODERN,
-        description: 'Medieval symbols no longer appear. Unlocks all Modern symbols. Terrain symbols no longer appear. Expand the slot board three times. Upgrades Mountain.',
+        description: 'Expand the slot board three times. Upgrades Mountain.',
         sprite: '051.png',
         descSymbols: [{ symbolKey: 'mountain', relation: 'effect_modify' }],
     },
@@ -341,10 +286,7 @@ export const KNOWLEDGE_UPGRADE_PREREQUISITES: Record<number, readonly number[]> 
     [AGRICULTURAL_SURPLUS_UPGRADE_ID]: [THREE_FIELD_SYSTEM_UPGRADE_ID],
     [MODERN_AGRICULTURE_UPGRADE_ID]: [AGRICULTURAL_SURPLUS_UPGRADE_ID],
 
-    [EDUCATION_UPGRADE_ID]: [WRITING_SYSTEM_UPGRADE_ID],
-    [THEOCRACY_UPGRADE_ID]: [THEOLOGY_UPGRADE_ID],
     [CURRENCY_UPGRADE_ID]: [FOREIGN_TRADE_UPGRADE_ID],
-    [GUILD_UPGRADE_ID]: [CURRENCY_UPGRADE_ID],
     [SCIENTIFIC_THEORY_UPGRADE_ID]: [EDUCATION_UPGRADE_ID],
 
     [FEUDALISM_UPGRADE_ID]: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],

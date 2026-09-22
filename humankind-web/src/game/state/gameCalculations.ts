@@ -9,8 +9,6 @@ import {
     MATHEMATICS_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
-    MERCENARIES_UPGRADE_ID,
-    TRIBAL_FEDERATION_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
@@ -141,7 +139,6 @@ export const TIMELINE_YEAR_ANCHORS = [
 
 export interface HudTurnStartPassiveState {
     unlockedKnowledgeUpgrades: number[];
-    qinCurrencyStandardTurnsRemaining?: number;
 }
 
 export const getGoldInflationMultiplier = (level: number): number => {
@@ -169,10 +166,6 @@ export const getInflationAdjustedGoldReward = (baseReward: number, level: number
     if (normalizedBaseReward === 0) return 0;
 
     return Math.max(1, Math.round(normalizedBaseReward * getGoldInflationMultiplier(level)));
-};
-
-export const getTrojanGoldLootReward = (level: number): number => {
-    return getInflationAdjustedGoldReward(25, level);
 };
 
 export const getRerollCost = (level: number, discountMultiplier = 1, rerollsThisTurn = 0): number => {
@@ -370,21 +363,12 @@ export const resolveKnowledgeProgression = (
         },
         getKnowledgeRequiredForLevel,
     );
-    const knowledgeResearchCredits = [
-        ...normalizeKnowledgeResearchCredits(
-            state.level,
-            state.levelUpResearchPoints ?? 0,
-            state.knowledgeResearchCredits,
-        ),
-        ...createKnowledgeResearchCreditsForLevelGain(state.level, progression.newLevel),
-    ];
-
     return {
         knowledge: progression.newKnowledge,
         level: progression.newLevel,
         era: progression.newEra,
-        levelUpResearchPoints: knowledgeResearchCredits.length,
-        knowledgeResearchCredits,
+        levelUpResearchPoints: 0,
+        knowledgeResearchCredits: [],
     };
 };
 
@@ -401,7 +385,6 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
     food: number;
     gold: number;
     knowledge: number;
-    military?: number;
 } {
     const upgrades = state.unlockedKnowledgeUpgrades || [];
     const knowledge =
@@ -416,21 +399,18 @@ export function getHudTurnStartPassiveTotals(state: HudTurnStartPassiveState): {
         (upgrades.includes(PRINTING_PRESS_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 4 : 0) +
-        (upgrades.includes(MERCENARIES_UPGRADE_ID) ? 2 : 0) +
         (upgrades.includes(STEAM_POWER_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0);
-    const gold = (state.qinCurrencyStandardTurnsRemaining ?? 0) > 0 ? baseGold * 2 : baseGold;
     const food =
         (upgrades.includes(LAND_ALLOTMENT_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(MATHEMATICS_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(STATE_LABOR_UPGRADE_ID) ? 1 : 0) +
-        (upgrades.includes(TRIBAL_FEDERATION_UPGRADE_ID) ? 1 : 0) +
         (upgrades.includes(URBANIZATION_UPGRADE_ID) ? 4 : 0) +
         (upgrades.includes(ELECTRICITY_UPGRADE_ID) ? 3 : 0) +
         (upgrades.includes(BUTTRESS_UPGRADE_ID) ? 2 : 0);
     return {
         food,
-        gold,
+        gold: baseGold,
         knowledge,
     };
 }

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { GAME_EVENTS } from '../game/data/eventDefinitions';
 import { KNOWLEDGE_UPGRADES } from '../game/data/knowledgeUpgrades';
-import { RELICS } from '../game/data/relicDefinitions';
 import { STATUSES } from '../game/data/statusDefinitions';
 import { SYMBOLS_BY_KEY } from '../game/data/symbolDefinitions';
 import { t } from './index';
@@ -26,7 +25,7 @@ describe('Russian localization coverage', () => {
 
     it('preserves placeholders while translating known fallback terms', () => {
         const fallback = getRussianFallback(
-            'relic.test.desc',
+            'symbol.test.desc',
             'Gain {amount} Knowledge from each Archive.',
         );
 
@@ -35,25 +34,11 @@ describe('Russian localization coverage', () => {
         expect(fallback).toContain('\u0437\u043d\u0430\u043d\u0438\u044f');
     });
 
-    it('describes unit pool changes without implying owned units are replaced', () => {
-        const descriptions = [33, 48, 55, 62]
-            .map((id) => t(`knowledgeUpgrade.${id}.desc`, 'ru'));
-
-        descriptions.forEach((description) => {
-            expect(description).toContain('\u0438\u0437 \u043f\u0443\u043b\u0430 \u0432\u044b\u0431\u043e\u0440\u0430');
-            expect(description).not.toMatch(/\b(Removes|adds|Replaces)\b/);
-        });
-    });
-
     it('does not emit mojibake characters in Russian gameplay text', () => {
         const keys = [
             ...Object.keys(SYMBOLS_BY_KEY).flatMap((key) => [
                 `symbol.${key}.name`,
                 `symbol.${key}.desc`,
-            ]),
-            ...Object.keys(RELICS).flatMap((id) => [
-                `relic.${id}.name`,
-                `relic.${id}.desc`,
             ]),
             ...Object.keys(KNOWLEDGE_UPGRADES).flatMap((id) => [
                 `knowledgeUpgrade.${id}.name`,

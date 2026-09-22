@@ -1,17 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSelectionFlowActions } from './selectionFlow';
 import type { GameState } from '../gameStore';
-import { useRelicStore } from '../relicStore';
 import { SYMBOLS, S } from '../../data/symbolDefinitions';
-import { RELIC_ID } from '../../logic/relics/relicIds';
-import { RELICS } from '../../data/relicDefinitions';
 import { createEmptyBoard, createInstance } from '../gameStoreHelpers';
 import {
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
     CURRENCY_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
     FOREIGN_TRADE_UPGRADE_ID,
+    GUILD_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
 } from '../../data/knowledgeUpgrades';
 
@@ -21,14 +20,9 @@ const makeState = (): GameState => {
     board[2][1] = oral;
 
     return {
-        leaderId: null,
-        leaderProgressLevel: 1,
-        lastLeaderProgressAward: null,
         food: 0,
         gold: 10,
         knowledge: 0,
-        culture: 0,
-        cultureLevel: 0,
         level: 1,
         era: 1,
         turn: 1,
@@ -36,9 +30,6 @@ const makeState = (): GameState => {
         playerSymbols: [oral],
         phase: 'selection',
         symbolChoices: [SYMBOLS[S.wheat]!, SYMBOLS[S.corn]!, SYMBOLS[S.honey]!],
-        symbolSelectionRelicSourceId: null,
-        relicChoices: [null, null, null],
-        relicHalfPriceRelicId: null,
         lastEffects: [],
         counterDisplayOverrides: [],
         runningTotals: { food: 0, gold: 0, knowledge: 0 },
@@ -50,29 +41,17 @@ const makeState = (): GameState => {
         lootMergeFx: null,
         eventLog: [],
         prevBoard: createEmptyBoard(),
-        combatAnimation: null,
-        combatShaking: false,
-        preCombatShakeTarget: null,
-        preCombatShakeRelicDefId: null,
-        combatFloats: [],
-        relicFloats: [],
         knowledgeUpgradeFloats: [],
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
-        qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
         pendingBoardExpansions: 0,
-        isRelicShopOpen: false,
-        hasNewRelicShopStock: false,
         rerollsThisTurn: 0,
         returnPhaseAfterDevKnowledgeUpgrade: null,
-        barbarianSymbolThreat: 0,
-        barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
         pendingDevNaturalDisasterId: null,
         activeStatusIds: [],
         pendingNewThreatFloats: [],
-        pendingOblivionFurnaceRelicId: null,
         pendingEdictSource: null,
         bonusSelectionQueue: [],
         forceTerrainInNextSymbolChoices: false,
@@ -90,10 +69,6 @@ const makeState = (): GameState => {
         selectEvent: () => {},
         skipSelection: () => {},
         rerollSymbols: () => {},
-        toggleRelicShop: () => {},
-        clearRelicShopStockBadge: () => {},
-        refreshRelicShop: () => {},
-        buyRelic: () => {},
         selectUpgrade: () => {},
         expandBoardSlotAt: () => {},
         initializeGame: () => {},
@@ -111,12 +86,9 @@ const makeState = (): GameState => {
         devAddBoardExpansion: () => {},
         devForceScreen: () => {},
         devTriggerNaturalDisaster: () => {},
-        confirmOblivionFurnaceDestroyAt: () => {},
-        cancelOblivionFurnacePick: () => {},
         activateEdictAt: () => {},
         confirmEdictDestroyAt: () => {},
         cancelEdictPick: () => {},
-        activateClickableRelic: () => {},
         consumeTribalVillageAt: () => {},
 
         openLootAt: () => {},
@@ -147,10 +119,6 @@ const createHarness = (overrides: Partial<GameState> = {}) => {
 };
 
 describe('selectionFlow actions', () => {
-    beforeEach(() => {
-        useRelicStore.getState().resetRelics();
-    });
-
     afterEach(() => {
         vi.useRealTimers();
         vi.restoreAllMocks();
@@ -167,7 +135,6 @@ describe('selectionFlow actions', () => {
         expect(harness.get().phase).toBe('selection');
         expect(harness.get().bonusSelectionQueue).toEqual(['any']);
         expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.plains)).toBe(true);
-        expect(harness.get().symbolSelectionRelicSourceId).toBeNull();
     });
 
     it('skips only the active tribal village selection while its second selection remains', () => {
@@ -215,57 +182,6 @@ describe('selectionFlow actions', () => {
         expect(harness.get().freeSelectionRerolls).toBe(0);
         expect(harness.get().rerollsThisTurn).toBe(1);
         expect(harness.get().symbolChoices).toHaveLength(3);
-    });
-
-    it('grants resources without summoning enemies when selecting Barbarian Suppression event', () => {
-        vi.spyOn(Math, 'random').mockReturnValue(0);
-        const harness = createHarness({
-            era: 3,
-            level: 25,
-            food: 5,
-            gold: 7,
-        });
-
-        harness.actions.selectEvent(11);
-
-        expect(harness.get().phase).toBe('idle');
-        expect(harness.get().food).toBe(45);
-        expect(harness.get().gold).toBe(47);
-        expect(harness.get().playerSymbols.some((sym) => sym.definition.type === SYMBOLS[S.enemy_warrior]?.type)).toBe(false);
-    });
-
-    it('grants food for Escape from Kadesh event', () => {
-        const harness = createHarness();
-
-        harness.actions.selectEvent(23);
-
-        expect(harness.get().phase).toBe('idle');
-        expect(harness.get().food).toBeGreaterThan(0);
-        expect(harness.get().playerSymbols.some((sym) => sym.definition.id === S.enemy_warrior)).toBe(false);
-    });
-
-    it('activates Qin Shi Huang Currency Standardization for 5 turns', () => {
-        const harness = createHarness();
-
-        harness.actions.selectEvent(24);
-
-        expect(harness.get().phase).toBe('idle');
-        expect(harness.get().qinCurrencyStandardTurnsRemaining).toBe(5);
-    });
-
-    it('refreshes the relic shop when selecting Relic Caravan event', async () => {
-        let refreshed = false;
-        const harness = createHarness({
-            refreshRelicShop: (force?: boolean) => {
-                refreshed = force === true;
-            },
-        });
-
-        harness.actions.selectEvent(10);
-        await Promise.resolve();
-
-        expect(harness.get().phase).toBe('idle');
-        expect(refreshed).toBe(true);
     });
 
     it('applies era-scaled immediate resource event rewards from event data', () => {
@@ -358,8 +274,7 @@ describe('selectionFlow actions', () => {
 
         expect(harness.get().phase).toBe('idle');
         expect(harness.get().food).toBe(28);
-        expect(harness.get().knowledge).toBe(19);
-        expect(harness.get().culture).toBe(10);
+        expect(harness.get().knowledge).toBe(29);
         expect(harness.get().playerSymbols).toHaveLength(3);
         expect(harness.get().playerSymbols.map((symbol) => symbol.instanceId)).toEqual([
             symbols[2]!.instanceId,
@@ -451,9 +366,9 @@ describe('selectionFlow actions', () => {
             unlockedKnowledgeUpgrades: [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
         });
 
-        harness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
+        harness.actions.selectUpgrade(PASTORALISM_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(PASTORALISM_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(1);
     });
 
@@ -471,9 +386,9 @@ describe('selectionFlow actions', () => {
         expect(harness.get().levelUpResearchPoints).toBe(1);
         expect(harness.get().pendingBoardExpansions).toBe(3);
 
-        harness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
+        harness.actions.selectUpgrade(PASTORALISM_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(PASTORALISM_UPGRADE_ID);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 
@@ -504,9 +419,9 @@ describe('selectionFlow actions', () => {
         expect(lockedHarness.get().unlockedKnowledgeUpgrades).not.toContain(CURRENCY_UPGRADE_ID);
         expect(lockedHarness.get().levelUpResearchPoints).toBe(1);
 
-        lockedHarness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
+        lockedHarness.actions.selectUpgrade(PASTORALISM_UPGRADE_ID);
 
-        expect(lockedHarness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
+        expect(lockedHarness.get().unlockedKnowledgeUpgrades).toContain(PASTORALISM_UPGRADE_ID);
         expect(lockedHarness.get().levelUpResearchPoints).toBe(0);
 
         const availableHarness = createHarness({
@@ -522,19 +437,22 @@ describe('selectionFlow actions', () => {
         expect(availableHarness.get().levelUpResearchPoints).toBe(0);
     });
 
-    it('advances Trade one stage at a time', () => {
+    it('researches Trade without the removed symbol-unlock stages', () => {
         const harness = createHarness({
             phase: 'idle',
-            levelUpResearchPoints: 2,
-            level: 4,
+            levelUpResearchPoints: 1,
+            level: 14,
+            unlockedKnowledgeUpgrades: [FEUDALISM_UPGRADE_ID],
         });
 
         harness.actions.selectUpgrade(FOREIGN_TRADE_UPGRADE_ID);
         harness.actions.selectUpgrade(CURRENCY_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).not.toContain(FOREIGN_TRADE_UPGRADE_ID);
+        expect(harness.get().unlockedKnowledgeUpgrades).not.toContain(CURRENCY_UPGRADE_ID);
+        harness.actions.selectUpgrade(GUILD_UPGRADE_ID);
 
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(FOREIGN_TRADE_UPGRADE_ID);
-        expect(harness.get().unlockedKnowledgeUpgrades).toContain(CURRENCY_UPGRADE_ID);
-        expect(harness.get().knowledgeUpgradeLevels?.trade).toBe(2);
+        expect(harness.get().unlockedKnowledgeUpgrades).toContain(GUILD_UPGRADE_ID);
+        expect(harness.get().knowledgeUpgradeLevels?.trade).toBe(1);
         expect(harness.get().levelUpResearchPoints).toBe(0);
     });
 
@@ -563,14 +481,7 @@ describe('selectionFlow actions', () => {
         expect(harness.get().symbolChoices).toBe(originalChoices);
     });
 
-    /**
-     * 유물 지급 업그레이드(희생 제의·이단심문·구조조정·식민주의·대이주·토지분배·
-     * 부족 연맹·용병·총동원령·국가노동력)를 트리에서 걷어내면서 해당 지급 검증도 제거했다.
-     * 지급 로직(`grantRelicsForUpgrade`) 자체는 살아 있으므로, 카드를 다시 넣을 때
-     * `removedGeneralUpgrades.ts`의 relicGrant 그룹을 참고해 테스트도 함께 복원한다.
-     */
-
-    it('unlocks religion only when Theology is researched', () => {
+    it('does not offer removed unlock-only research', () => {
         const otherHarness = createHarness({
             phase: 'idle',
             levelUpResearchPoints: 1,
@@ -579,7 +490,7 @@ describe('selectionFlow actions', () => {
 
         otherHarness.actions.selectUpgrade(FOREIGN_TRADE_UPGRADE_ID);
 
-        expect(otherHarness.get().unlockedKnowledgeUpgrades).toContain(FOREIGN_TRADE_UPGRADE_ID);
+        expect(otherHarness.get().unlockedKnowledgeUpgrades).not.toContain(FOREIGN_TRADE_UPGRADE_ID);
         expect(otherHarness.get().religionUnlocked).toBe(false);
 
         const theologyHarness = createHarness({
@@ -590,43 +501,8 @@ describe('selectionFlow actions', () => {
 
         theologyHarness.actions.selectUpgrade(THEOLOGY_UPGRADE_ID);
 
-        expect(theologyHarness.get().unlockedKnowledgeUpgrades).toContain(THEOLOGY_UPGRADE_ID);
-        expect(theologyHarness.get().religionUnlocked).toBe(true);
-    });
-
-    /**
-     * 레거시 군사 업그레이드(철제기술·등자·기계장치)를 트리에서 걷어내면서,
-     * 이미 보유한 유닛이 교체·재산정되지 않는지 확인하던 검증도 제거했다.
-     * 유닛 업그레이드 해석(`resolveUpgradedUnitDefinition`)은 살아 있으므로,
-     * 카드를 다시 넣을 때 `removedGeneralUpgrades.ts`의 military 그룹을 참고해 복원한다.
-     */
-
-    it('opens oblivion furnace board mode only when a relic-backed cell destroy resolves', () => {
-        const relicDef = RELICS[RELIC_ID.OBLIVION_FURNACE]!;
-        useRelicStore.getState().addRelic(relicDef);
-        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
-        const harness = createHarness({ phase: 'oblivion_furnace_board', pendingOblivionFurnaceRelicId: relicInstanceId });
-
-        harness.actions.cancelOblivionFurnacePick();
-
-        expect(harness.get().phase).toBe('idle');
-        expect(harness.get().pendingOblivionFurnaceRelicId).toBeNull();
-    });
-
-    it('returns to food payment when an oblivion furnace pick is cancelled during pending payment', () => {
-        const relicDef = RELICS[RELIC_ID.OBLIVION_FURNACE]!;
-        useRelicStore.getState().addRelic(relicDef);
-        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
-        const harness = createHarness({
-            phase: 'oblivion_furnace_board',
-            pendingFoodPayment: true,
-            pendingOblivionFurnaceRelicId: relicInstanceId,
-        });
-
-        harness.actions.cancelOblivionFurnacePick();
-
-        expect(harness.get().phase).toBe('food_payment');
-        expect(harness.get().pendingOblivionFurnaceRelicId).toBeNull();
+        expect(theologyHarness.get().unlockedKnowledgeUpgrades).not.toContain(THEOLOGY_UPGRADE_ID);
+        expect(theologyHarness.get().religionUnlocked).toBe(false);
     });
 
     /**
@@ -634,17 +510,4 @@ describe('selectionFlow actions', () => {
      * 승리 심볼 로직은 유지하지만, 연구 카드로 다시 넣을 때 테스트도 함께 복원한다.
      */
 
-    it('blocks rerolls when MILITARY_LEVY selection is active', () => {
-        const harness = createHarness({
-            phase: 'selection',
-            symbolSelectionRelicSourceId: RELIC_ID.MILITARY_LEVY,
-            freeSelectionRerolls: 1,
-            rerollsThisTurn: 0,
-        });
-
-        harness.actions.rerollSymbols();
-
-        expect(harness.get().freeSelectionRerolls).toBe(1);
-        expect(harness.get().rerollsThisTurn).toBe(0);
-    });
 });

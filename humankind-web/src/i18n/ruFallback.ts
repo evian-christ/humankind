@@ -1,6 +1,5 @@
 const R = {
     effect: '\u042d\u0444\u0444\u0435\u043a\u0442',
-    relic: '\u0420\u0435\u043b\u0438\u043a\u0432\u0438\u044f',
     event: '\u0421\u043e\u0431\u044b\u0442\u0438\u0435',
     status: '\u0421\u0442\u0430\u0442\u0443\u0441',
     upgrade: '\u0423\u043b\u0443\u0447\u0448\u0435\u043d\u0438\u0435',
@@ -26,8 +25,6 @@ const R = {
     each: '\u043a\u0430\u0436\u0434\u044b\u0439',
     random: '\u0441\u043b\u0443\u0447\u0430\u0439\u043d\u044b\u0439',
     chance: '\u0448\u0430\u043d\u0441',
-    enemy: '\u0432\u0440\u0430\u0433',
-    enemies: '\u0432\u0440\u0430\u0433\u0438',
     terrain: '\u043b\u0430\u043d\u0434\u0448\u0430\u0444\u0442',
     religion: '\u0440\u0435\u043b\u0438\u0433\u0438\u044f',
     selection: '\u0432\u044b\u0431\u043e\u0440',
@@ -36,12 +33,6 @@ const R = {
     upgrades: '\u0443\u043b\u0443\u0447\u0448\u0430\u0435\u0442',
     replaces: '\u0437\u0430\u043c\u0435\u043d\u044f\u0435\u0442',
     withWord: '\u043d\u0430',
-    attack: '\u0430\u0442\u0430\u043a\u0430',
-    defense: '\u0437\u0430\u0449\u0438\u0442\u0430',
-    clan: '\u0424\u043e\u0440\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 \u043a\u043b\u0430\u043d\u0430',
-    clanDesc: '\u0428\u0430\u043d\u0441 \u0432\u0442\u043e\u0440\u0436\u0435\u043d\u0438\u044f \u0432\u0430\u0440\u0432\u0430\u0440\u043e\u0432 \u0437\u0430\u0444\u0438\u043a\u0441\u0438\u0440\u043e\u0432\u0430\u043d \u043d\u0430 0%.',
-    barbarianStirring: '\u0410\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u044c \u0432\u0430\u0440\u0432\u0430\u0440\u043e\u0432',
-    barbarianStirringDesc: '\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e \u0432\u0442\u043e\u0440\u0436\u0435\u043d\u0438\u0435 \u0432\u0430\u0440\u0432\u0430\u0440\u043e\u0432.',
     disasterOmen: '\u041f\u0440\u0435\u0434\u0432\u0435\u0441\u0442\u0438\u0435 \u0431\u0435\u0434\u0441\u0442\u0432\u0438\u044f',
     disasterOmenDesc: '\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u043e \u0441\u0442\u0438\u0445\u0438\u0439\u043d\u043e\u0435 \u0431\u0435\u0434\u0441\u0442\u0432\u0438\u0435.',
     currentChance: '\u0422\u0435\u043a\u0443\u0449\u0430\u044f \u0432\u0435\u0440\u043e\u044f\u0442\u043d\u043e\u0441\u0442\u044c: {chance}%',
@@ -55,20 +46,14 @@ const NAME_FALLBACKS: Record<string, string> = {
     Stone: '\u043a\u0430\u043c\u0435\u043d\u044c', Fur: '\u043c\u0435\u0445', Deer: '\u043e\u043b\u0435\u043d\u044c', Banana: '\u0431\u0430\u043d\u0430\u043d', Date: '\u0444\u0438\u043d\u0438\u043a', Dye: '\u043a\u0440\u0430\u0441\u0438\u0442\u0435\u043b\u044c', Papyrus: '\u043f\u0430\u043f\u0438\u0440\u0443\u0441',
     Library: '\u0431\u0438\u0431\u043b\u0438\u043e\u0442\u0435\u043a\u0430', Merchant: '\u0442\u043e\u0440\u0433\u043e\u0432\u0435\u0446', Corn: '\u043a\u0443\u043a\u0443\u0440\u0443\u0437\u0430', Salt: '\u0441\u043e\u043b\u044c', Monument: '\u043c\u043e\u043d\u0443\u043c\u0435\u043d\u0442', Honey: '\u043c\u0435\u0434', Spices: '\u043f\u0440\u044f\u043d\u043e\u0441\u0442\u0438',
     Christianity: '\u0445\u0440\u0438\u0441\u0442\u0438\u0430\u043d\u0441\u0442\u0432\u043e', Islam: '\u0438\u0441\u043b\u0430\u043c', Buddhism: '\u0431\u0443\u0434\u0434\u0438\u0437\u043c', Hinduism: '\u0438\u043d\u0434\u0443\u0438\u0437\u043c',
-    Warrior: '\u0432\u043e\u0438\u043d', Archer: '\u043b\u0443\u0447\u043d\u0438\u043a', Knight: '\u0440\u044b\u0446\u0430\u0440\u044c', Crossbowman: '\u0430\u0440\u0431\u0430\u043b\u0435\u0442\u0447\u0438\u043a', Cannon: '\u043f\u0443\u0448\u043a\u0430', Infantry: '\u043f\u0435\u0445\u043e\u0442\u0430',
     'AGI Core': '\u044f\u0434\u0440\u043e AGI', Pioneers: '\u043f\u0435\u0440\u0432\u043e\u043f\u0440\u043e\u0445\u043e\u0434\u0446\u044b', 'State Reorganization': '\u0433\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043d\u043d\u0430\u044f \u0440\u0435\u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u044f',
-    'Conscription Orders': '\u043f\u0440\u0438\u043a\u0430\u0437\u044b \u043e \u043f\u0440\u0438\u0437\u044b\u0432\u0435',
     'Ancient Era': '\u0414\u0440\u0435\u0432\u043d\u044f\u044f \u044d\u043f\u043e\u0445\u0430', 'Medieval Age': '\u0421\u0440\u0435\u0434\u043d\u0435\u0432\u0435\u043a\u043e\u0432\u044c\u0435', 'Modern Age': '\u0421\u043e\u0432\u0440\u0435\u043c\u0435\u043d\u043d\u0430\u044f \u044d\u043f\u043e\u0445\u0430',
-    'Writing System': '\u041f\u0438\u0441\u044c\u043c\u0435\u043d\u043d\u043e\u0441\u0442\u044c', 'Iron Working': '\u041e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u0430 \u0436\u0435\u043b\u0435\u0437\u0430', Irrigation: '\u0418\u0440\u0440\u0438\u0433\u0430\u0446\u0438\u044f', Theology: '\u0422\u0435\u043e\u043b\u043e\u0433\u0438\u044f', Archery: '\u0421\u0442\u0440\u0435\u043b\u044c\u0431\u0430 \u0438\u0437 \u043b\u0443\u043a\u0430', Currency: '\u0412\u0430\u043b\u044e\u0442\u0430', Horsemanship: '\u0412\u0435\u0440\u0445\u043e\u0432\u0430\u044f \u0435\u0437\u0434\u0430',
+    'Writing System': '\u041f\u0438\u0441\u044c\u043c\u0435\u043d\u043d\u043e\u0441\u0442\u044c', Irrigation: '\u0418\u0440\u0440\u0438\u0433\u0430\u0446\u0438\u044f', Theology: '\u0422\u0435\u043e\u043b\u043e\u0433\u0438\u044f', Currency: '\u0412\u0430\u043b\u044e\u0442\u0430', Horsemanship: '\u0412\u0435\u0440\u0445\u043e\u0432\u0430\u044f \u0435\u0437\u0434\u0430',
     'Public Administration': '\u0413\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0435 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435', 'Mass Media': '\u041c\u0430\u0441\u0441\u043e\u0432\u044b\u0435 \u043c\u0435\u0434\u0438\u0430', 'Election System': '\u0418\u0437\u0431\u0438\u0440\u0430\u0442\u0435\u043b\u044c\u043d\u0430\u044f \u0441\u0438\u0441\u0442\u0435\u043c\u0430',
     'Steam Power': '\u041f\u0430\u0440\u043e\u0432\u0430\u044f \u044d\u043d\u0435\u0440\u0433\u0438\u044f', Urbanization: '\u0423\u0440\u0431\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u044f', Electricity: '\u042d\u043b\u0435\u043a\u0442\u0440\u0438\u0447\u0435\u0441\u0442\u0432\u043e', 'Tropical Agriculture': '\u0422\u0440\u043e\u043f\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0437\u0435\u043c\u043b\u0435\u0434\u0435\u043b\u0438\u0435', 'Mason Guild': '\u0413\u0438\u043b\u044c\u0434\u0438\u044f \u043a\u0430\u043c\u0435\u043d\u0449\u0438\u043a\u043e\u0432', 'Great Migration': '\u0412\u0435\u043b\u0438\u043a\u043e\u0435 \u043f\u0435\u0440\u0435\u0441\u0435\u043b\u0435\u043d\u0438\u0435',
 };
 
 const EXACT: Record<string, string> = {
-    'status.clan_formation.name': R.clan,
-    'status.clan_formation.desc': R.clanDesc,
-    'status.barbarian_stirring.name': R.barbarianStirring,
-    'status.barbarian_stirring.desc': R.barbarianStirringDesc,
     'status.disaster_omen.name': R.disasterOmen,
     'status.disaster_omen.desc': R.disasterOmenDesc,
     'status.currentChance': R.currentChance,
@@ -95,8 +80,7 @@ function translateResources(value: string): string {
     return value
         .replace(/Food/g, R.food)
         .replace(/Gold/g, R.gold)
-        .replace(/Knowledge/g, R.knowledge)
-        .replace(/Defense/g, R.defense);
+        .replace(/Knowledge/g, R.knowledge);
 }
 
 function translateCommon(value: string): string {
@@ -107,7 +91,7 @@ function translateCommon(value: string): string {
         [/empty slots/g, R.empty + '\u0438'], [/empty slot/g, R.empty], [/random/g, R.random], [/chance/g, R.chance], [/produces/g, R.produces], [/produce/g, R.produces], [/production/g, R.production],
         [/Gain/g, R.gain], [/gain/g, R.gain], [/gains/g, R.gains], [/Destroy/g, R.destroy], [/destroyed/g, R.destroyed], [/destroy/g, R.destroy],
         [/([0-9]+) or more/g, '$1 \u0438\u043b\u0438 \u0431\u043e\u043b\u044c\u0448\u0435'], [/or more/g, '\u0438\u043b\u0438 \u0431\u043e\u043b\u044c\u0448\u0435'], [/the only terrain/g, '\u0435\u0434\u0438\u043d\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 ' + R.terrain], [/are placed/g, '\u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u044b'], [/is placed/g, '\u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d'], [/placed/g, '\u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d'],
-        [/If/g, R.ifWord], [/if/g, R.ifWord], [/When/g, R.when], [/when/g, R.when], [/Enemy/g, R.enemy], [/enemy/g, R.enemy], [/Terrain/g, R.terrain], [/terrain/g, R.terrain], [/Religion/g, R.religion],
+        [/If/g, R.ifWord], [/if/g, R.ifWord], [/When/g, R.when], [/when/g, R.when], [/Terrain/g, R.terrain], [/terrain/g, R.terrain], [/Religion/g, R.religion],
         [/selection/g, R.selection], [/pool/g, R.pool], [/Unlocks/g, R.unlocks], [/Upgrades/g, R.upgrades], [/Replaces/g, R.replaces], [/\bwith\b/g, R.withWord], [/\band\b/g, '\u0438'], [/\bor\b/g, '\u0438\u043b\u0438'],
     ];
     replacements.forEach(([pattern, replacement]) => { text = text.replace(pattern, replacement); });
@@ -132,7 +116,6 @@ function escapeRegExp(value: string): string {
 function fallbackName(key: string, english: string): string {
     const translated = NAME_FALLBACKS[english];
     if (translated != null) return translated;
-    if (key.startsWith('relic.')) return R.relic;
     if (key.startsWith('event.')) return R.event;
     if (key.startsWith('status.')) return R.status;
     return R.upgrade;

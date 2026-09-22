@@ -7,16 +7,15 @@ import {
     FEUDALISM_UPGRADE_ID,
     LAND_ALLOTMENT_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
+    PASTORALISM_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
     GUILD_UPGRADE_ID,
     MATHEMATICS_UPGRADE_ID,
-    MERCENARIES_UPGRADE_ID,
     PRINTING_PRESS_UPGRADE_ID,
     STATE_LABOR_UPGRADE_ID,
     STEAM_POWER_UPGRADE_ID,
     THEOLOGY_UPGRADE_ID,
-    TRIBAL_FEDERATION_UPGRADE_ID,
     URBANIZATION_UPGRADE_ID,
     WRITING_SYSTEM_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
@@ -35,7 +34,6 @@ import {
     getKnowledgeResearchLockedThroughLevel,
     getTimelineYearForTurn,
     getRerollCost,
-    getTrojanGoldLootReward,
     isUpgradeLegalForKnowledgePick,
     normalizeKnowledgeResearchCredits,
     resolveKnowledgeProgression,
@@ -60,7 +58,7 @@ describe('gold inflation costs', () => {
         expect(getGoldInflationMultiplier(30)).toBeCloseTo(4.03);
     });
 
-    it('applies inflation to relic-scale gold costs before discounts', () => {
+    it('applies inflation to gold costs before discounts', () => {
         expect(getInflatedGoldCost(20, 0)).toBe(20);
         expect(getInflatedGoldCost(20, 10)).toBe(33);
         expect(getInflatedGoldCost(20, 20)).toBe(54);
@@ -73,13 +71,6 @@ describe('gold inflation costs', () => {
         expect(getInflationAdjustedGoldReward(25, 10)).toBe(42);
         expect(getInflationAdjustedGoldReward(25, 20)).toBe(67);
         expect(getInflationAdjustedGoldReward(25, 30)).toBe(101);
-    });
-
-    it('keeps Trojan Gold Loot display and activation on the same reward value', () => {
-        expect(getTrojanGoldLootReward(0)).toBe(25);
-        expect(getTrojanGoldLootReward(10)).toBe(42);
-        expect(getTrojanGoldLootReward(20)).toBe(67);
-        expect(getTrojanGoldLootReward(30)).toBe(101);
     });
 
     it('replaces the old reroll step curve with the shared gold inflation curve', () => {
@@ -199,7 +190,7 @@ describe('knowledge research credits', () => {
             { grantLevel: 10, minLevel: 10, maxLevel: 10 },
         ]);
         expect(isUpgradeLegalForKnowledgePick(
-            THEOLOGY_UPGRADE_ID,
+            PASTORALISM_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
             credits,
@@ -219,7 +210,7 @@ describe('knowledge research credits', () => {
         const remaining = consumeKnowledgeResearchCreditForUpgrade(FEUDALISM_UPGRADE_ID, credits);
 
         expect(isUpgradeLegalForKnowledgePick(
-            THEOLOGY_UPGRADE_ID,
+            PASTORALISM_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID, FEUDALISM_UPGRADE_ID],
             10,
             remaining,
@@ -255,7 +246,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
      * 승리 심볼 로직은 유지하지만, 연구 카드로 다시 넣을 때 이 검증을 복원한다.
      */
 
-    it('requires Writing System before Education', () => {
+    it('allows Education without the removed Writing System unlock', () => {
         expect(isUpgradeLegalForKnowledgePick(
             EDUCATION_UPGRADE_ID,
             [],
@@ -263,7 +254,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             EDUCATION_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, WRITING_SYSTEM_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID],
             15,
         )).toBe(true);
     });
@@ -281,7 +272,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(true);
     });
 
-    it('requires Theology before Theocracy at level 16', () => {
+    it('allows Theocracy without the removed Theology unlock', () => {
         expect(isUpgradeLegalForKnowledgePick(
             THEOCRACY_UPGRADE_ID,
             [],
@@ -289,12 +280,12 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             THEOCRACY_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, THEOLOGY_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID],
             16,
         )).toBe(true);
     });
 
-    it('requires Currency before Guild at level 14', () => {
+    it('allows Guild without the removed Currency unlock', () => {
         expect(isUpgradeLegalForKnowledgePick(
             GUILD_UPGRADE_ID,
             [],
@@ -302,7 +293,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
         )).toBe(false);
         expect(isUpgradeLegalForKnowledgePick(
             GUILD_UPGRADE_ID,
-            [FEUDALISM_UPGRADE_ID, CURRENCY_UPGRADE_ID],
+            [FEUDALISM_UPGRADE_ID],
             14,
         )).toBe(true);
     });
@@ -339,20 +330,14 @@ describe('isUpgradeLegalForKnowledgePick', () => {
      * 승리 심볼 로직은 유지하지만, 연구 카드로 다시 넣을 때 이 검증을 복원한다.
      */
 
-    /**
-     * 레거시 군사 카드(궁술·철제기술·기계장치·등자·탄도학·교체식 부품)를 트리에서
-     * 걷어내면서 "선행조건 없이 뽑힌다"를 확인하던 검증도 제거했다.
-     * 재도입 시 `removedGeneralUpgrades.ts`의 military 그룹을 참고한다.
-     */
-
     it('locks earlier research tiers at explicit locked-through levels', () => {
         expect(isUpgradeLegalForKnowledgePick(
-            THEOLOGY_UPGRADE_ID,
+            PASTORALISM_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             9,
         )).toBe(true);
         expect(isUpgradeLegalForKnowledgePick(
-            THEOLOGY_UPGRADE_ID,
+            PASTORALISM_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
             9,
@@ -372,7 +357,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
 
     it('uses locked-through level separately from the reached player level', () => {
         expect(isUpgradeLegalForKnowledgePick(
-            THEOLOGY_UPGRADE_ID,
+            PASTORALISM_UPGRADE_ID,
             [ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID],
             10,
             0,
@@ -400,7 +385,7 @@ describe('isUpgradeLegalForKnowledgePick', () => {
     /**
      * 지형축(숲/평원/초원/바다/사막/열대우림) 선행조건 체인 검증은 축을 트리에서
      * 걷어내면서 함께 제거했다. 축을 다시 넣을 때 해당 체인 테스트도 함께 복원한다.
-     * 남아 있는 체인(문자→교육→과학이론, 화폐→길드, 신학→신정, 시대 전환)은 위에서 검증한다.
+     * 남아 있는 체인(교육→과학이론, 시대 전환)은 위에서 검증한다.
      */
 });
 
@@ -423,29 +408,10 @@ describe('getHudTurnStartPassiveTotals', () => {
         })).toEqual({ food: 1, gold: 2, knowledge: 2 });
     });
 
-    it('applies Tribal Federation passive food production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [TRIBAL_FEDERATION_UPGRADE_ID],
-        })).toEqual({ food: 1, gold: 1, knowledge: 2 });
-    });
-
     it('applies Land Allotment passive food production', () => {
         expect(getHudTurnStartPassiveTotals({
             unlockedKnowledgeUpgrades: [LAND_ALLOTMENT_UPGRADE_ID],
         })).toEqual({ food: 1, gold: 1, knowledge: 2 });
-    });
-
-    it('applies Mercenaries passive gold production', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [MERCENARIES_UPGRADE_ID],
-        })).toEqual({ food: 0, gold: 3, knowledge: 2 });
-    });
-
-    it('doubles passive gold production during Qin Shi Huang Currency Standardization', () => {
-        expect(getHudTurnStartPassiveTotals({
-            unlockedKnowledgeUpgrades: [PRINTING_PRESS_UPGRADE_ID, MERCENARIES_UPGRADE_ID],
-            qinCurrencyStandardTurnsRemaining: 5,
-        })).toEqual({ food: 0, gold: 10, knowledge: 4 });
     });
 
     it('applies Urbanization passive food and gold production', () => {

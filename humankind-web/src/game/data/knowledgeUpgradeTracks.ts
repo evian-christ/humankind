@@ -1,34 +1,18 @@
 import {
-    AGRICULTURAL_SURPLUS_UPGRADE_ID,
-    AGRICULTURE_UPGRADE_ID,
     ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    CURRENCY_UPGRADE_ID,
     EDUCATION_UPGRADE_ID,
     FEUDALISM_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
     GUILD_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
-    IRRIGATION_UPGRADE_ID,
-    MODERN_AGRICULTURE_UPGRADE_ID,
     MODERN_AGE_UPGRADE_ID,
     PASTORALISM_UPGRADE_ID,
     SCIENTIFIC_THEORY_UPGRADE_ID,
     THEOCRACY_UPGRADE_ID,
-    THEOLOGY_UPGRADE_ID,
-    THREE_FIELD_SYSTEM_UPGRADE_ID,
-    TROPICAL_AGRICULTURE_UPGRADE_ID,
-    WRITING_SYSTEM_UPGRADE_ID,
 } from './knowledgeUpgrades';
 
 export const KNOWLEDGE_UPGRADE_TRACK_IDS = [
     'era',
-    'hunting',
     'pastoralism',
-    'agriculture',
-    'fisheries',
     'trade',
-    'tropicalAgriculture',
     'scholarship',
     'faith',
 ] as const;
@@ -58,50 +42,19 @@ export const KNOWLEDGE_UPGRADE_TRACKS: readonly KnowledgeUpgradeTrack[] = [
         ],
     },
     {
-        id: 'hunting',
-        name: 'Hunting',
-        stages: [{ upgradeId: HUNTING_UPGRADE_ID, requiredLevel: 2 }],
-    },
-    {
         id: 'pastoralism',
         name: 'Pastoralism',
         stages: [{ upgradeId: PASTORALISM_UPGRADE_ID, requiredLevel: 2 }],
     },
     {
-        id: 'agriculture',
-        name: 'Agriculture',
-        stages: [
-            { upgradeId: AGRICULTURE_UPGRADE_ID, requiredLevel: 2 },
-            { upgradeId: IRRIGATION_UPGRADE_ID, requiredLevel: 5 },
-            { upgradeId: THREE_FIELD_SYSTEM_UPGRADE_ID, requiredLevel: 11 },
-            { upgradeId: AGRICULTURAL_SURPLUS_UPGRADE_ID, requiredLevel: 18 },
-            { upgradeId: MODERN_AGRICULTURE_UPGRADE_ID, requiredLevel: 23 },
-        ],
-    },
-    {
-        id: 'fisheries',
-        name: 'Fisheries',
-        stages: [{ upgradeId: FISHERIES_UPGRADE_ID, requiredLevel: 2 }],
-    },
-    {
         id: 'trade',
         name: 'Trade',
-        stages: [
-            { upgradeId: FOREIGN_TRADE_UPGRADE_ID, requiredLevel: 2 },
-            { upgradeId: CURRENCY_UPGRADE_ID, requiredLevel: 3 },
-            { upgradeId: GUILD_UPGRADE_ID, requiredLevel: 14 },
-        ],
-    },
-    {
-        id: 'tropicalAgriculture',
-        name: 'Tropical Agriculture',
-        stages: [{ upgradeId: TROPICAL_AGRICULTURE_UPGRADE_ID, requiredLevel: 2 }],
+        stages: [{ upgradeId: GUILD_UPGRADE_ID, requiredLevel: 14 }],
     },
     {
         id: 'scholarship',
         name: 'Scholarship',
         stages: [
-            { upgradeId: WRITING_SYSTEM_UPGRADE_ID, requiredLevel: 5 },
             { upgradeId: EDUCATION_UPGRADE_ID, requiredLevel: 15 },
             { upgradeId: SCIENTIFIC_THEORY_UPGRADE_ID, requiredLevel: 25 },
         ],
@@ -110,7 +63,6 @@ export const KNOWLEDGE_UPGRADE_TRACKS: readonly KnowledgeUpgradeTrack[] = [
         id: 'faith',
         name: 'Faith',
         stages: [
-            { upgradeId: THEOLOGY_UPGRADE_ID, requiredLevel: 7 },
             { upgradeId: THEOCRACY_UPGRADE_ID, requiredLevel: 16 },
         ],
     },
@@ -153,17 +105,10 @@ export function deriveKnowledgeUpgradeLevels(
 
 export function normalizeKnowledgeUpgradeLevels(
     unlockedUpgradeIds: readonly number[] | undefined,
-    savedLevels?: Partial<KnowledgeUpgradeLevels> | null,
+    _savedLevels?: Partial<KnowledgeUpgradeLevels> | null,
 ): KnowledgeUpgradeLevels {
-    const levels = deriveKnowledgeUpgradeLevels(unlockedUpgradeIds);
-    for (const track of KNOWLEDGE_UPGRADE_TRACKS) {
-        const savedLevel = Math.floor(Number(savedLevels?.[track.id] ?? 0));
-        levels[track.id] = Math.max(
-            0,
-            Math.min(track.stages.length, Math.max(levels[track.id], savedLevel)),
-        );
-    }
-    return levels;
+    // 세트 도입 전 저장된 트랙 단계는 해금 연구를 포함한다. 현재 단계는 실제 활성 연구 ID로 재구성한다.
+    return deriveKnowledgeUpgradeLevels(unlockedUpgradeIds);
 }
 
 export function getUnlockedUpgradeIdsForKnowledgeLevels(

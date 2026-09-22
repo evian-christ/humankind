@@ -1,9 +1,6 @@
 import { SYMBOLS, S, SymbolType, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
 import { CARAVANSERAI_UPGRADE_ID, DESERT_STORAGE_UPGRADE_ID } from '../data/knowledgeUpgrades';
-import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
-import { RELIC_ID } from '../logic/relics/relicIds';
-import { useRelicStore } from './relicStore';
 import type { GamePhase } from './gameStore';
 import type { BoardEffectDelta } from '../logic/turn/turnTypes';
 
@@ -253,7 +250,8 @@ export const createInstance = (
     def: SymbolDefinition,
     unlockedUpgrades: readonly number[] = [],
 ): PlayerSymbolInstance => {
-    const resolvedDef = resolveUpgradedUnitDefinition(def, unlockedUpgrades);
+    void unlockedUpgrades;
+    const resolvedDef = def;
 
     let effect_counter = 0;
     if (resolvedDef.id === S.plague) {
@@ -275,8 +273,6 @@ export interface CollectionDestroyAgg {
     gold: number;
     knowledge: number;
     addSymbolDefIds: number[];
-    openRelicShop: boolean;
-    refreshRelicShop: boolean;
     forceTerrainInNextChoices: boolean;
     forceEventsInNextChoices: boolean;
     freeSelectionRerolls: number;
@@ -292,8 +288,6 @@ export const aggregateCollectionDestroyEffects = (
         gold: 0,
         knowledge: 0,
         addSymbolDefIds: [],
-        openRelicShop: false,
-        refreshRelicShop: false,
         forceTerrainInNextChoices: false,
         forceEventsInNextChoices: false,
         freeSelectionRerolls: 0,
@@ -307,9 +301,6 @@ export const aggregateCollectionDestroyEffects = (
                 break;
             case S.date:
                 out.food += unlockedKnowledgeUpgrades.includes(DESERT_STORAGE_UPGRADE_ID) ? 20 : 10;
-                break;
-            case S.relic_caravan:
-                out.refreshRelicShop = true;
                 break;
             case S.honey:
                 out.food += 5;
@@ -331,21 +322,6 @@ export const aggregateCollectionDestroyEffects = (
         }
     }
     return out;
-};
-
-export const scarabBonusForOwnedRemoves = (
-    _board: (PlayerSymbolInstance | null)[][],
-    removeCount: number,
-): { gold: number; food: number; knowledge: number } => {
-    let gold = 0;
-    const food = 0;
-    const knowledge = 0;
-    if (removeCount <= 0) return { gold, food, knowledge };
-    const relics = useRelicStore.getState().relics;
-    if (relics.some((r) => r.definition.id === RELIC_ID.SCARAB)) {
-        gold += removeCount * 3;
-    }
-    return { gold, food, knowledge };
 };
 
 export const appendSymbolDefIdsToPlayer = (
@@ -409,8 +385,8 @@ export const createStoredFoodDestroyEffects = (
                 knowledge: unlockedKnowledgeUpgrades.includes(CARAVANSERAI_UPGRADE_ID) ? 20 : 10,
             });
         } else if (symbol.definition.id === S.oral_tradition) {
-            const culture = countAdjacentBoardSymbols(board, slot.x, slot.y) * 10;
-            if (culture > 0) effects.push({ ...slot, food: 0, gold: 0, knowledge: 0, culture });
+            const knowledge = countAdjacentBoardSymbols(board, slot.x, slot.y) * 10;
+            if (knowledge > 0) effects.push({ ...slot, food: 0, gold: 0, knowledge });
         }
     }
     return effects;
@@ -436,7 +412,7 @@ const countAdjacentBoardSymbols = (
 
 export const createBoardDestroyResourceEffects = (
     primarySlot: { x: number; y: number },
-    delta: { food: number; gold: number; knowledge: number; culture?: number },
+    delta: { food: number; gold: number; knowledge: number },
     symbolDestroyEffects: readonly BoardEffectDelta[],
 ): BoardEffectDelta[] => {
     const symbolDestroyTotals = symbolDestroyEffects.reduce(
@@ -444,9 +420,8 @@ export const createBoardDestroyResourceEffects = (
             food: totals.food + effect.food,
             gold: totals.gold + effect.gold,
             knowledge: totals.knowledge + effect.knowledge,
-            culture: totals.culture + (effect.culture ?? 0),
         }),
-        { food: 0, gold: 0, knowledge: 0, culture: 0 },
+        { food: 0, gold: 0, knowledge: 0 },
     );
     const primaryEffect = {
         x: primarySlot.x,
@@ -454,10 +429,9 @@ export const createBoardDestroyResourceEffects = (
         food: delta.food - symbolDestroyTotals.food,
         gold: delta.gold - symbolDestroyTotals.gold,
         knowledge: delta.knowledge - symbolDestroyTotals.knowledge,
-        culture: (delta.culture ?? 0) - symbolDestroyTotals.culture,
     };
     const effects: BoardEffectDelta[] = [];
-    if (primaryEffect.food !== 0 || primaryEffect.gold !== 0 || primaryEffect.knowledge !== 0 || primaryEffect.culture !== 0) {
+    if (primaryEffect.food !== 0 || primaryEffect.gold !== 0 || primaryEffect.knowledge !== 0) {
         effects.push(primaryEffect);
     }
     effects.push(...symbolDestroyEffects);
@@ -467,7 +441,7 @@ export const createBoardDestroyResourceEffects = (
 export const getBoardOnlyDestroyEffectTotals = (
     effects: readonly BoardEffectDelta[],
     board: (PlayerSymbolInstance | null)[][],
-): { food: number; gold: number; knowledge: number; culture: number } =>
+): { food: number; gold: number; knowledge: number } =>
     effects.reduce(
         (totals, effect) => {
             const symbol = board[effect.x]?.[effect.y];
@@ -476,10 +450,9 @@ export const getBoardOnlyDestroyEffectTotals = (
                 food: totals.food + effect.food,
                 gold: totals.gold + effect.gold,
                 knowledge: totals.knowledge + effect.knowledge,
-                culture: totals.culture + (effect.culture ?? 0),
             };
         },
-        { food: 0, gold: 0, knowledge: 0, culture: 0 },
+        { food: 0, gold: 0, knowledge: 0 },
     );
 
 export const markBoardSymbolsForRemoval = (

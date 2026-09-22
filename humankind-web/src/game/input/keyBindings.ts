@@ -1,8 +1,6 @@
 export const KEY_BINDING_ACTIONS = [
     'spin',
     'pause',
-    'relicShop',
-    'knowledge',
     'history',
     'ownedSymbols',
     'reroll',
@@ -18,8 +16,6 @@ export type KeyBindings = Record<KeyBindingAction, string>;
 export const DEFAULT_KEY_BINDINGS: KeyBindings = {
     spin: 'Space',
     pause: 'Escape',
-    relicShop: 'KeyQ',
-    knowledge: 'KeyW',
     history: 'KeyA',
     ownedSymbols: 'KeyS',
     reroll: 'KeyR',
@@ -32,8 +28,6 @@ export const DEFAULT_KEY_BINDINGS: KeyBindings = {
 const LEGACY_DEFAULT_KEY_BINDINGS = {
     spin: 'Space',
     pause: 'Escape',
-    relicShop: 'KeyR',
-    knowledge: 'KeyK',
     history: 'F12',
     ownedSymbols: 'KeyI',
 } as const;

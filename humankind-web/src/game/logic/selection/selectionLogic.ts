@@ -1,44 +1,20 @@
 import type { SymbolDefinition } from '../../data/symbolDefinitions';
-import { SYMBOLS, SymbolType, RELIGION_DOCTRINE_IDS, EXCLUDED_FROM_BASE_POOL, S, Sym } from '../../data/symbolDefinitions';
-import type { LeaderId } from '../../data/leaders';
-import { isLeaderUnlockActive } from '../../data/leaders';
+import { SYMBOLS, SymbolType, S, Sym } from '../../data/symbolDefinitions';
+import { SYMBOL_SET_BY_ID, SYMBOL_SET_MEMBER_KEYS, type SymbolSetId } from '../../data/symbolSets';
 import {
     CAPITAL_RELOCATION_MIN_SYMBOLS,
     GAME_EVENTS,
     isGameEventDefinition,
     type GameEventDefinition,
 } from '../../data/eventDefinitions';
-import { resolveUpgradedUnitDefinition } from '../../data/unitUpgrades';
-import {
-    AGI_PROJECT_UPGRADE_ID,
-    AGRICULTURE_UPGRADE_ID,
-    ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID,
-    CARAVANSERAI_UPGRADE_ID,
-    COMPASS_UPGRADE_ID,
-    CURRENCY_UPGRADE_ID,
-    DRY_STORAGE_UPGRADE_ID,
-    FEUDALISM_UPGRADE_ID,
-    FISHERIES_UPGRADE_ID,
-    FOREIGN_TRADE_UPGRADE_ID,
-    HORSEMANSHIP_UPGRADE_ID,
-    HUNTING_UPGRADE_ID,
-    JUNGLE_EXPEDITION_UPGRADE_ID,
-    MASS_MEDIA_UPGRADE_ID,
-    MODERN_AGE_UPGRADE_ID,
-    PASTORALISM_UPGRADE_ID,
-    PUBLIC_ADMINISTRATION_UPGRADE_ID,
-    TROPICAL_AGRICULTURE_UPGRADE_ID,
-    WRITING_SYSTEM_UPGRADE_ID,
-} from '../../data/knowledgeUpgrades';
 
 export interface SelectionContext {
     era: number;
     religionUnlocked: boolean;
     upgrades: number[];
-    ownedRelicDefIds: number[];
+    symbolSetId?: SymbolSetId | null;
+    symbolSetIds?: readonly SymbolSetId[] | null;
     ownedSymbolDefIds?: number[];
-    leaderId?: LeaderId | null;
-    leaderProgressLevel?: number;
     /** Ongoing board effects may reduce the standard symbol choice count. */
     choiceCount?: number;
     /** 개척자(68): 다음 선택지에 지형 1칸 이상 강제 */
@@ -52,8 +28,6 @@ export interface SelectionContext {
 export type SelectionChoice = SymbolDefinition | GameEventDefinition;
 
 const EVENT_REPLACE_CHANCE_PER_CARD = 0.05;
-const PUBLIC_ADMINISTRATION_EVENT_CHANCE_MULTIPLIER = 2;
-const MASS_MEDIA_EVENT_CHANCE_MULTIPLIER = 2;
 
 /** 지형 보유 임계값으로 활성화되는 조건부 이벤트 룩업 — 키 추가만으로 풀이 확장됨 */
 const TERRAIN_EVENT_REQUIREMENTS: Record<string, { symbolId: number; threshold: number }> = {
@@ -79,19 +53,10 @@ const EVERY_TERRAIN_REQUIRED_IDS: readonly number[] = [
     S.mountain,
 ];
 
-function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds' | 'leaderId' | 'leaderProgressLevel'>): GameEventDefinition[] {
+function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds'>): GameEventDefinition[] {
     const ownedSymbolDefIds = ctx.ownedSymbolDefIds ?? [];
 
     return Object.values(GAME_EVENTS).filter((event) => {
-        if (event.category === 'leader') {
-            if (event.key === 'kadesh_battle_escape') {
-                return isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'kadesh_battle_escape');
-            }
-            if (event.key === 'currency_standardization') {
-                return isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'currency_standardization');
-            }
-            return false;
-        }
         if (event.era != null && event.era !== ctx.era) return false;
         if (event.category !== 'conditional') return true;
 
@@ -104,10 +69,6 @@ function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefId
             return EVERY_TERRAIN_REQUIRED_IDS.every((id) => owned.has(id));
         }
 
-        if (event.key === 'military_draft') {
-            return false;
-        }
-
         const req = TERRAIN_EVENT_REQUIREMENTS[event.key];
         if (req) {
             const count = ownedSymbolDefIds.reduce((acc, id) => (id === req.symbolId ? acc + 1 : acc), 0);
@@ -118,137 +79,71 @@ function getEligibleEvents(ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefId
     });
 }
 
-function getEventReplaceChancePerCard(upgrades: readonly number[]): number {
-    let multiplier = 1;
-    if (upgrades.includes(PUBLIC_ADMINISTRATION_UPGRADE_ID)) {
-        multiplier *= PUBLIC_ADMINISTRATION_EVENT_CHANCE_MULTIPLIER;
-    }
-    if (upgrades.includes(MASS_MEDIA_UPGRADE_ID)) {
-        multiplier *= MASS_MEDIA_EVENT_CHANCE_MULTIPLIER;
-    }
-    return Math.min(1, EVENT_REPLACE_CHANCE_PER_CARD * multiplier);
-}
-
 function maybeReplaceChoicesWithEvents(choices: SymbolDefinition[], ctx: SelectionContext): SelectionChoice[] {
     const events = getEligibleEvents(ctx);
     if (events.length === 0 || choices.length === 0) {
         return choices;
     }
 
-    const eventReplaceChance = getEventReplaceChancePerCard(ctx.upgrades ?? []);
     return choices.map((choice) => {
-        if (Math.random() >= eventReplaceChance) return choice;
+        if (Math.random() >= EVENT_REPLACE_CHANCE_PER_CARD) return choice;
         return events[Math.floor(Math.random() * events.length)]!;
     });
 }
 
-/** 유물에 의해 대체될 심볼 맵 (Relic ID -> [Original Symbol ID, Replacement Symbol ID]) */
-const SYMBOL_REPLACEMENTS_BY_RELIC: Record<number, [number, number]> = {
-    // 8: [7, 39] // (Disabled: Now adds Tablet as additional symbol)
+/** 심볼을 시대별로 그룹화 */
+const getActiveSymbolSets = (ctx: Pick<SelectionContext, 'symbolSetId' | 'symbolSetIds'>) => {
+    const ids = ctx.symbolSetIds?.length ? ctx.symbolSetIds : ctx.symbolSetId ? [ctx.symbolSetId] : [];
+    return ids.map((id) => SYMBOL_SET_BY_ID.get(id)).filter((set) => set != null);
 };
 
-/** 심볼을 시대별로 그룹화 (적 심볼은 이벤트로만 등장하므로 선택 풀에서 제외) */
-export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel' | 'includeModernTerrain'>): Record<number, SymbolDefinition[]> {
+export function getSymbolsByEra(ctx: Pick<SelectionContext, 'religionUnlocked' | 'upgrades' | 'includeModernTerrain' | 'symbolSetId' | 'symbolSetIds'>): Record<number, SymbolDefinition[]> {
     const result: Record<number, SymbolDefinition[]> = {};
-    const hasRelic = (relicId: number) => ctx.ownedRelicDefIds.includes(relicId);
 
-    // 현재 유물에 의해 대체되어야 할 심볼 ID들과 그 대체물들 파악
-    const activeReplacements = new Map<number, number>();
-    for (const [relicId, [oldId, newId]] of Object.entries(SYMBOL_REPLACEMENTS_BY_RELIC)) {
-        if (hasRelic(Number(relicId))) {
-            activeReplacements.set(oldId, newId);
+    const selectedSets = getActiveSymbolSets(ctx);
+    if (selectedSets.length > 0) {
+        const includedKeys = new Set(selectedSets.flatMap((set) => [...set.symbolKeys]));
+        for (const sym of Object.values(SYMBOLS)) {
+            if (sym.type === SymbolType.DISASTER || sym.id === S.loot || sym.id === S.greater_loot || sym.id === S.radiant_loot) continue;
+            if (SYMBOL_SET_MEMBER_KEYS.has(sym.key as keyof typeof Sym) && !includedKeys.has(sym.key as keyof typeof Sym)) continue;
+            const category = sym.type === SymbolType.ANCIENT ? SymbolType.RESOURCE : sym.type;
+            (result[category] ??= []).push(sym);
         }
+        return result;
     }
 
-    const upgrades = ctx.upgrades ?? [];
-    const feudal = upgrades.includes(FEUDALISM_UPGRADE_ID);
-    const modernAge = upgrades.includes(MODERN_AGE_UPGRADE_ID);
-
     for (const sym of Object.values(SYMBOLS)) {
-        let finalSym = sym;
+        if (sym.type === SymbolType.DISASTER || sym.id === S.loot || sym.id === S.greater_loot || sym.id === S.radiant_loot) continue;
 
-        // 1. 제외 목록에 있고, 어떤 유물의 대체물도 아니라면 건너뜀
-        const isReplacementTarget = Array.from(activeReplacements.values()).includes(sym.id);
-
-        if (feudal && sym.type === SymbolType.ANCIENT) continue;
-        if (modernAge && sym.type === SymbolType.TERRAIN && !ctx.includeModernTerrain) continue;
-
-        // 업그레이드로 해금되는 심볼들 예외 처리
-        let isUnlocked = !EXCLUDED_FROM_BASE_POOL.has(sym.id);
-        if (sym.type === SymbolType.ANCIENT && !upgrades.includes(ANCIENT_SYMBOLS_UNLOCK_UPGRADE_ID)) {
-            isUnlocked = false;
-        }
-        if (sym.id === S.library && upgrades.includes(WRITING_SYSTEM_UPGRADE_ID)) isUnlocked = true; // Writing -> Library
-        if (sym.id === S.merchant && upgrades.includes(CURRENCY_UPGRADE_ID)) isUnlocked = true; // Currency -> Merchant
-        if (sym.id === S.horse && upgrades.includes(HORSEMANSHIP_UPGRADE_ID)) isUnlocked = true; // Horsemanship -> Horse
-        if (sym.id === S.corn && upgrades.includes(AGRICULTURE_UPGRADE_ID)) isUnlocked = true; // Agriculture -> Corn
-        if (sym.id === S.sheep && upgrades.includes(PASTORALISM_UPGRADE_ID)) isUnlocked = true; // Pastoralism -> Sheep
-        if (sym.id === S.pearl && upgrades.includes(FISHERIES_UPGRADE_ID)) isUnlocked = true; // Fisheries -> Pearl
-        if (sym.id === S.date && upgrades.includes(FOREIGN_TRADE_UPGRADE_ID)) isUnlocked = true; // Foreign Trade -> Date
-        if (sym.id === S.compass && upgrades.includes(COMPASS_UPGRADE_ID)) isUnlocked = true; // Compass -> Compass
-        if (sym.id === S.expedition && upgrades.includes(JUNGLE_EXPEDITION_UPGRADE_ID)) isUnlocked = true; // Jungle Expedition -> Expedition
-        if (sym.id === S.cassava && upgrades.includes(TROPICAL_AGRICULTURE_UPGRADE_ID)) isUnlocked = true; // Tropical Agriculture -> Cassava
-        if ((sym.id === S.dye || sym.id === S.papyrus) && upgrades.includes(DRY_STORAGE_UPGRADE_ID)) isUnlocked = true; // Dry Storage -> Dye, Papyrus
-        if (sym.id === S.caravanserai && upgrades.includes(CARAVANSERAI_UPGRADE_ID)) isUnlocked = true; // Caravanserai -> Caravanserai
-        if (sym.id === S.agi_core && upgrades.includes(AGI_PROJECT_UPGRADE_ID)) isUnlocked = true; // AGI Project -> AGI Core
-        if (sym.id === S.stone_tablet && hasRelic(8)) isUnlocked = true; // Ten Commandments -> Tablet (Pool Unlock)
-        if (RELIGION_DOCTRINE_IDS.has(sym.id) && ctx.religionUnlocked) isUnlocked = true; // Theology -> Religion (Doctrine)
-        if (sym.id === S.deer && upgrades.includes(HUNTING_UPGRADE_ID)) isUnlocked = true; // Hunting -> Deer
-        if (sym.id === S.heqet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'heqet')) isUnlocked = true;
-        if (sym.id === S.foxtail_millet && isLeaderUnlockActive(ctx.leaderId ?? null, ctx.leaderProgressLevel ?? 1, 'foxtail_millet')) isUnlocked = true;
-
-        if (!isUnlocked && !isReplacementTarget) continue;
-
-        // 2. 현재 활성화된 유물에 의해 대체되어야 하는 심볼인 경우 대체
-        if (activeReplacements.has(sym.id)) {
-            const replacementId = activeReplacements.get(sym.id)!;
-            finalSym = SYMBOLS[replacementId] || sym;
-        }
-
-        finalSym = resolveUpgradedUnitDefinition(finalSym, upgrades);
-
-        if (finalSym.type === SymbolType.ENEMY) continue;
-        let e = finalSym.type as number;
+        let e = sym.type as number;
 
         // ANCIENT 는 확률 테이블 상 기본 자원 묶음으로 편입
         if (e === SymbolType.ANCIENT) {
             e = SymbolType.RESOURCE;
         }
 
-        // 종교 심볼은 해금되었을 때만 결과 풀에 넣음
-        if (e === SymbolType.RELIGION && !ctx.religionUnlocked) continue;
-
         if (!result[e]) result[e] = [];
 
-        // 중복 방지 (이미 대체된 심볼이 들어와 있을 수 있음)
-        if (!result[e].find((s) => s.id === finalSym.id)) {
-            result[e].push(finalSym);
+        if (!result[e].find((s) => s.id === sym.id)) {
+            result[e].push(sym);
         }
     }
     return result;
 }
 
 /** 현재 시대에 등장 가능한 심볼 플랫 풀 빌드 (균등 확률용) */
-export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel' | 'includeModernTerrain'>): SymbolDefinition[] {
+export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'includeModernTerrain' | 'symbolSetId' | 'symbolSetIds'>): SymbolDefinition[] {
     const symbolsByEra = getSymbolsByEra({
         religionUnlocked: ctx.religionUnlocked,
         upgrades: ctx.upgrades,
-        ownedRelicDefIds: ctx.ownedRelicDefIds,
-        leaderId: ctx.leaderId,
-        leaderProgressLevel: ctx.leaderProgressLevel,
         includeModernTerrain: ctx.includeModernTerrain,
+        symbolSetId: ctx.symbolSetId,
+        symbolSetIds: ctx.symbolSetIds,
     });
+    if (getActiveSymbolSets(ctx).length > 0) return Object.values(symbolsByEra).flat();
     const flat: SymbolDefinition[] = [];
-    const feudal = ctx.upgrades?.includes(FEUDALISM_UPGRADE_ID);
-    const modernAge = ctx.upgrades?.includes(MODERN_AGE_UPGRADE_ID);
-
-    for (const [catStr, syms] of Object.entries(symbolsByEra)) {
+    for (const syms of Object.values(symbolsByEra)) {
         if (!syms || syms.length === 0) continue;
-        const cat = Number(catStr);
-        if (cat === SymbolType.RELIGION && !ctx.religionUnlocked) continue;
-        if (cat === SymbolType.MEDIEVAL && !feudal) continue;
-        if (cat === SymbolType.MODERN && !modernAge) continue;
-        if (modernAge && cat === SymbolType.TERRAIN && !ctx.includeModernTerrain) continue;
         flat.push(...syms);
     }
 
@@ -256,7 +151,7 @@ export function buildFlatPool(ctx: Pick<SelectionContext, 'era' | 'religionUnloc
 }
 
 /** 지형 심볼만 3개 (영토 정비 보너스 선택용) */
-export function generateTerrainOnlyChoices(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds'>): SymbolDefinition[] {
+export function generateTerrainOnlyChoices(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'symbolSetId' | 'symbolSetIds'>): SymbolDefinition[] {
     const pool = buildFlatPool({ ...ctx, includeModernTerrain: true }).filter((s) => s.type === SymbolType.TERRAIN);
     const choices: SymbolDefinition[] = [];
     for (let i = 0; i < 3; i++) {
@@ -269,15 +164,9 @@ export function generateTerrainOnlyChoices(ctx: Pick<SelectionContext, 'era' | '
     return choices;
 }
 
-/** 유닛 심볼만 3개 (군사 소집 유물용) */
-export function generateUnitOnlyChoices(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds' | 'leaderId' | 'leaderProgressLevel'>): SymbolDefinition[] {
-    void ctx;
-    return [];
-}
-
 /** 현재 플레이어에게 가능한 이벤트만 3개 뽑습니다. */
 export function generateEventOnlyChoices(
-    ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds' | 'leaderId' | 'leaderProgressLevel'>,
+    ctx: Pick<SelectionContext, 'era' | 'ownedSymbolDefIds'>,
 ): GameEventDefinition[] {
     const pool = getEligibleEvents(ctx);
     const choices: GameEventDefinition[] = [];
@@ -294,11 +183,9 @@ export interface GenerateChoicesResult {
     consumedForceEvents?: boolean;
 }
 
-/** 심볼 3개 생성 — 중세시대(15) 해금 시 지형 가중 x0.2 */
+/** 지식 연구 없이 현재 덱의 전체 해금 심볼 풀에서 선택지를 생성합니다. */
 export function generateChoices(ctx: SelectionContext): GenerateChoicesResult {
     const pool = buildFlatPool(ctx);
-    const upgrades = ctx.upgrades || [];
-    const feudalTerrainWeight = upgrades.includes(FEUDALISM_UPGRADE_ID);
     const choiceCount = ctx.choiceCount ?? 3;
 
     const terrainSyms = pool.filter((s) => s.type === SymbolType.TERRAIN);
@@ -308,7 +195,7 @@ export function generateChoices(ctx: SelectionContext): GenerateChoicesResult {
         if (terrainSyms.length === 0 && otherSyms.length === 0) return Sym.wheat;
         if (terrainSyms.length === 0) return otherSyms[Math.floor(Math.random() * otherSyms.length)]!;
         if (otherSyms.length === 0) return terrainSyms[Math.floor(Math.random() * terrainSyms.length)]!;
-        const tw = feudalTerrainWeight ? 0.2 * terrainSyms.length : terrainSyms.length;
+        const tw = terrainSyms.length;
         const ow = otherSyms.length;
         if (Math.random() * (tw + ow) < tw) {
             return terrainSyms[Math.floor(Math.random() * terrainSyms.length)]!;
@@ -354,7 +241,7 @@ export function generateChoices(ctx: SelectionContext): GenerateChoicesResult {
 }
 
 /** 개발자용: 현재 상태에서 각 심볼이 한 번 픽될 확률(%) 반환 (균등) */
-export function getSymbolPoolProbabilities(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'ownedRelicDefIds'>): {
+export function getSymbolPoolProbabilities(ctx: Pick<SelectionContext, 'era' | 'religionUnlocked' | 'upgrades' | 'symbolSetId' | 'symbolSetIds'>): {
     id: number;
     name: string;
     symbolType: number;

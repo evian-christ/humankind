@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RELICS } from '../data/relicDefinitions';
-import { isGameEventDefinition } from '../data/eventDefinitions';
-import { RELIC_ID } from '../logic/relics/relicIds';
 import { Sym, type SymbolDefinition } from '../data/symbolDefinitions';
 import type { PlayerSymbolInstance } from '../types';
-import { useRelicStore } from './relicStore';
 
 const BOARD_WIDTH = 5;
 const BOARD_HEIGHT = 4;
@@ -47,10 +43,10 @@ describe('gameStore board interactions', () => {
         expect(useGameStore.getState().pendingBoardExpansions).toBe(3);
     });
 
-    it('offers the relic shop after placing the food-payment expansion', async () => {
+    it('returns to symbol selection after placing the food-payment expansion', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
-        useGameStore.getState().startGameWithDraft([], 'ramesses');
+        useGameStore.getState().startGameWithDraft([]);
         useGameStore.setState({
             phase: 'board_expansion_placement',
             pendingBoardExpansions: 1,
@@ -59,14 +55,14 @@ describe('gameStore board interactions', () => {
         useGameStore.getState().expandBoardSlotAt(1, -1);
 
         expect(useGameStore.getState().pendingBoardExpansions).toBe(0);
-        expect(useGameStore.getState().phase).toBe('relic_shop_ready');
+        expect(useGameStore.getState().phase).toBe('selection');
     });
 
     it('starts a drafted game with the six-slot board', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
 
-        useGameStore.getState().startGameWithDraft([], 'ramesses');
+        useGameStore.getState().startGameWithDraft([]);
 
         const board = useGameStore.getState().board;
         expect(board).toHaveLength(3);
@@ -147,80 +143,6 @@ describe('gameStore board interactions', () => {
         ]);
     });
 
-    it('opens radiant loot choice and can grant a relic reward', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const rewardMod = await import('../data/rewardDefinitions');
-        const lootChoicesSpy = vi.spyOn(rewardMod, 'generateLootRewardChoices').mockReturnValue([
-            rewardMod.REWARDS[16]!,
-            rewardMod.REWARDS[8]!,
-            rewardMod.REWARDS[13]!,
-        ]);
-
-        useRelicStore.getState().resetRelics();
-        const board = createEmptyBoard();
-        const loot = createInstance(Sym.radiant_loot, 'radiant_loot');
-        board[1][1] = loot;
-        vi.spyOn(Math, 'random').mockReturnValue(0);
-
-        useGameStore.setState({
-            board,
-            playerSymbols: [loot],
-            phase: 'idle',
-            era: 1,
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            lastEffects: [],
-        });
-
-        useGameStore.getState().openLootAt(1, 1);
-        expect(useGameStore.getState().phase).toBe('loot_reward_selection');
-        vi.useFakeTimers();
-        useGameStore.getState().selectLootReward(16);
-
-        const next = useGameStore.getState();
-        expect(next.board[1][1]?.is_marked_for_destruction).toBe(true);
-        expect(next.phase).toBe('idle');
-        expect(next.food).toBe(0);
-        expect(next.gold).toBe(0);
-        expect(useRelicStore.getState().relics).toHaveLength(1);
-        await vi.advanceTimersByTimeAsync(360);
-        expect(useGameStore.getState().board[1][1]).toBeNull();
-        vi.useRealTimers();
-        lootChoicesSpy.mockRestore();
-        vi.restoreAllMocks();
-    });
-
-    it('can grant configured relics from a loot reward', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-        const board = createEmptyBoard();
-        const loot = createInstance(Sym.radiant_loot, 'configured_relic_loot');
-        board[1][1] = loot;
-
-        useRelicStore.getState().resetRelics();
-        useGameStore.setState({
-            board,
-            playerSymbols: [loot],
-            phase: 'idle',
-            era: 1,
-            food: 0,
-            gold: 0,
-            knowledge: 0,
-            lastEffects: [],
-        });
-
-        useGameStore.getState().openLootAt(1, 1);
-        useGameStore.getState().selectLootReward(22);
-
-        expect(useRelicStore.getState().relics.map((relic) => relic.definition.id)).toEqual([
-            RELIC_ID.ANCIENT_TRIBE_JOIN,
-            RELIC_ID.ANCIENT_RELIC_DEBRIS,
-            RELIC_ID.ANCIENT_RELIC_DEBRIS,
-        ]);
-    });
-
     it('consumes edict to destroy an adjacent symbol chosen by the player', async () => {
         ensureDomGlobals();
         const { useGameStore } = await import('./gameStore');
@@ -242,7 +164,7 @@ describe('gameStore board interactions', () => {
 
         useGameStore.getState().activateEdictAt(1, 1);
         expect(useGameStore.getState().pendingEdictSource?.instanceId).toBe('edict');
-        expect(useGameStore.getState().phase).toBe('oblivion_furnace_board');
+        expect(useGameStore.getState().phase).toBe('board_destroy_selection');
 
         vi.useFakeTimers();
         try {
@@ -264,138 +186,6 @@ describe('gameStore board interactions', () => {
         }
     });
 
-    it('consumes Military Levy without opening combat symbol choices', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-
-        useRelicStore.getState().resetRelics();
-        useRelicStore.getState().addRelic(RELICS[RELIC_ID.MILITARY_LEVY]!);
-        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
-
-        useGameStore.setState({
-            phase: 'idle',
-            era: 1,
-            religionUnlocked: false,
-            unlockedKnowledgeUpgrades: [],
-            symbolChoices: [],
-            symbolSelectionRelicSourceId: null,
-        });
-
-        useGameStore.getState().activateClickableRelic(relicInstanceId);
-
-        const next = useGameStore.getState();
-        expect(next.phase).toBe('idle');
-        expect(next.symbolSelectionRelicSourceId).toBeNull();
-        expect(next.symbolChoices).toHaveLength(0);
-        expect(useRelicStore.getState().relics).toHaveLength(0);
-    });
-
-    it('allows a consumable relic to open its selection while food payment is pending', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-
-        useRelicStore.getState().resetRelics();
-        useRelicStore.getState().addRelic(RELICS[RELIC_ID.MILITARY_LEVY]!);
-        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
-
-        useGameStore.setState({
-            phase: 'food_payment',
-            pendingFoodPayment: true,
-            era: 1,
-            religionUnlocked: false,
-            unlockedKnowledgeUpgrades: [],
-            symbolChoices: [],
-            symbolSelectionRelicSourceId: null,
-        });
-
-        useGameStore.getState().activateClickableRelic(relicInstanceId);
-
-        const next = useGameStore.getState();
-        expect(next.phase).toBe('food_payment');
-        expect(next.pendingFoodPayment).toBe(true);
-        expect(next.symbolSelectionRelicSourceId).toBeNull();
-        expect(next.symbolChoices).toHaveLength(0);
-        expect(useRelicStore.getState().relics).toHaveLength(0);
-        useGameStore.setState({ pendingFoodPayment: false });
-    });
-
-    it('allows an instant-use relic during food payment without leaving the payment phase', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-
-        useRelicStore.getState().resetRelics();
-        useRelicStore.getState().addRelic(RELICS[RELIC_ID.EGYPTIAN_GRANARY_MODEL]!);
-        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
-
-        useGameStore.setState({
-            phase: 'food_payment',
-            pendingFoodPayment: true,
-            era: 1,
-            food: 0,
-            relicFloats: [],
-        });
-
-        useGameStore.getState().activateClickableRelic(relicInstanceId);
-
-        const next = useGameStore.getState();
-        expect(next.phase).toBe('food_payment');
-        expect(next.pendingFoodPayment).toBe(true);
-        expect(next.food).toBe(30);
-        useGameStore.setState({ pendingFoodPayment: false });
-    });
-
-    it('scales Trojan Gold Loot with gold inflation before the era changes', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-
-        useRelicStore.getState().resetRelics();
-        useRelicStore.getState().addRelic(RELICS[RELIC_ID.TROY_GOLD_LOOT]!);
-        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
-
-        useGameStore.setState({
-            phase: 'idle',
-            era: 1,
-            level: 10,
-            gold: 0,
-            relicFloats: [],
-        });
-
-        useGameStore.getState().activateClickableRelic(relicInstanceId);
-
-        const next = useGameStore.getState();
-        expect(next.gold).toBe(42);
-        expect(next.relicFloats.at(-1)).toMatchObject({
-            relicInstanceId,
-            text: '+42',
-            color: '#fbbf24',
-        });
-    });
-
-    it('activates Prophecy Die into an event-only selection', async () => {
-        ensureDomGlobals();
-        const { useGameStore } = await import('./gameStore');
-
-        useRelicStore.getState().resetRelics();
-        useRelicStore.getState().addRelic(RELICS[RELIC_ID.PROPHECY_DIE]!);
-        const relicInstanceId = useRelicStore.getState().relics[0]!.instanceId;
-
-        useGameStore.setState({
-            phase: 'idle',
-            era: 1,
-            playerSymbols: [],
-            symbolChoices: [],
-            symbolSelectionRelicSourceId: null,
-        });
-
-        useGameStore.getState().activateClickableRelic(relicInstanceId);
-
-        const next = useGameStore.getState();
-        expect(next.phase).toBe('selection');
-        expect(next.symbolSelectionRelicSourceId).toBe(RELIC_ID.PROPHECY_DIE);
-        expect(next.symbolChoices).toHaveLength(3);
-        expect(next.symbolChoices.every(isGameEventDefinition)).toBe(true);
-        expect(useRelicStore.getState().relics).toHaveLength(0);
-    });
 
     it('consumes tribal village to trigger symbol selection 2 times consecutively', async () => {
         ensureDomGlobals();

@@ -1,30 +1,15 @@
 import { create } from 'zustand';
 import { SYMBOLS, S } from '../data/symbolDefinitions';
-import { processSingleSymbolEffects, type ActiveRelicEffects } from '../logic/symbolEffects';
-import { RELIC_LIST, type RelicDefinition } from '../data/relicDefinitions';
-import { generateCultureWeightedRelicChoices, getCultureLevel } from '../data/cultureProgression';
-import { useRelicStore } from './relicStore';
-import { RELIC_ID } from '../logic/relics/relicIds';
-import { countRelics, isRelicAvailableForShop } from '../logic/relics/relicClassification';
+import type { SymbolSetId } from '../data/symbolSets';
+import { processSingleSymbolEffects } from '../logic/symbolEffects';
 import {
     generateChoices as generateChoicesSelection,
     getSymbolPoolProbabilities as getSymbolPoolProbabilitiesSelection,
     type SelectionChoice,
 } from '../logic/selection/selectionLogic';
 import type { RewardDefinition } from '../data/rewardDefinitions';
-import type { LeaderProgressAwardResult } from '../data/leaders';
 import type { PlayerSymbolInstance } from '../types';
-import {
-    createKnowledgeResearchCreditForLevel,
-    createKnowledgeResearchCreditsForLevelGain,
-    getEraFromLevel,
-    normalizeKnowledgeResearchCredits,
-    type KnowledgeResearchCredit,
-} from './gameCalculations';
-import {
-    ELECTION_SYSTEM_UPGRADE_ID,
-    HORSEMANSHIP_UPGRADE_ID,
-} from '../data/knowledgeUpgrades';
+import { getEraFromLevel, type KnowledgeResearchCredit } from './gameCalculations';
 import {
     createEmptyKnowledgeUpgradeLevels,
     type KnowledgeUpgradeLevels,
@@ -44,9 +29,7 @@ import {
     shiftBoardToMatchExpansion,
 } from './gameStoreHelpers';
 import { createSelectionFlowActions } from './actions/selectionFlow';
-import { createRelicActivationActions } from './actions/relicActivation';
 import { createTurnFlowActions } from './actions/turnFlow';
-import { createRelicShopFlowActions } from './actions/relicShopFlow';
 import { createGameLifecycleActions } from './actions/gameLifecycle';
 import { createBoardInteractionActions } from './actions/boardInteraction';
 import type { BoardEffectDelta, PendingThreatFloat } from '../logic/turn/turnTypes';
@@ -73,11 +56,9 @@ export type GamePhase =
     | 'food_payment'
     | 'board_expansion_ready'
     | 'board_expansion_placement'
-    | 'relic_shop_ready'
-    | 'relic_shop'
     | 'selection'
     | 'loot_reward_selection'
-    | 'oblivion_furnace_board'
+    | 'board_destroy_selection'
     | 'game_over'
     | 'victory';
 export type GameEventLogKind =
@@ -86,11 +67,8 @@ export type GameEventLogKind =
     | 'symbol_effect'
     | 'processing_end'
     | 'turn_end'
-    | 'combat'
-    | 'relic'
     | 'selection'
     | 'research'
-    | 'shop'
     | 'threat'
     | 'board_action'
     | 'system';
@@ -105,7 +83,7 @@ export interface GameEventLogEntry {
     /** 주체 심볼 (있으면) */
     symbolId?: number;
     /** 수치 변화 (있으면) */
-    delta?: { food: number; gold: number; knowledge: number; culture?: number; military?: number };
+    delta?: { food: number; gold: number; knowledge: number };
     /** 기여자 스냅샷 (있으면) */
     contributors?: Array<{ x: number; y: number; symbolId?: number }>;
     /** 추가 정보 (디테일용) */
@@ -113,20 +91,16 @@ export interface GameEventLogEntry {
 }
 
 export interface GameState {
-    leaderId: import('../data/leaders').LeaderId | null;
-    leaderProgressLevel: number;
-    lastLeaderProgressAward: LeaderProgressAwardResult | null;
     food: number;
     gold: number;
-    military?: number;
     knowledge: number; // 기존 knowledge
-    culture: number;
-    cultureLevel: number;
     level: number;
     era: number; // derived from level
     turn: number;
     board: (PlayerSymbolInstance | null)[][];
     playerSymbols: PlayerSymbolInstance[];
+    symbolSetId?: SymbolSetId | null;
+    symbolSetIds?: SymbolSetId[] | null;
     phase: GamePhase;
     isTutorialMode?: boolean;
     tutorialSpinStep?:
@@ -140,20 +114,14 @@ export interface GameState {
         | 'adjacency_done'
         | null;
     symbolChoices: SelectionChoice[];
-    /** 심볼 선택이 고대 유물 잔해(13)·고대 부족 합류(19) 클릭으로 열린 경우 해당 유물 정의 ID (표시·리롤 비활성) */
-    symbolSelectionRelicSourceId: number | null;
     /** Symbol that opened the current symbol selection when its name should be shown in the UI. */
     symbolSelectionSymbolSourceId?: number | null;
     /** Whether the current selection is the standard selection granted at the end of each turn. */
     isTurnSymbolSelection?: boolean;
-    /** 유물 상점에 표시되는 유물 목록 (3개) */
-    relicChoices: (RelicDefinition | null)[];
-    /** 람세스 황금의 거래: 이번 입고(상점 갱신)에서 50% 할인된 유물 ID */
-    relicHalfPriceRelicId: number | null;
     lastEffects: BoardEffectDelta[];
     counterDisplayOverrides: Array<{ x: number; y: number; text: string | null }>;
     /** processing 중 누적 합산 (food, gold, knowledge) */
-    runningTotals: { food: number; gold: number; knowledge: number; culture?: number; military?: number };
+    runningTotals: { food: number; gold: number; knowledge: number };
     /** 현재 처리 중인 슬롯 좌표 (null이면 하이라이트 없음) */
     activeSlot: { x: number; y: number } | null;
     /** 현재 슬롯의 효과에 기여한 인접 심볼 좌표 */
@@ -184,58 +152,35 @@ export interface GameState {
     eventLog: GameEventLogEntry[];
     /** spinning 시작 직전의 보드 (릴 시작점용) */
     prevBoard: (PlayerSymbolInstance | null)[][];
-    /** 전투 애니메이션 트리거 (공격자 → 대상 좌표 + 피해량) */
-    combatAnimation: { ax: number; ay: number; tx: number; ty: number; atkDmg: number; counterDmg: number } | null;
-    /** 전투 후 삭제 직전 진동 표시 */
-    combatShaking: boolean;
-    /** 전투 직전(유물 등) 특정 적 심볼 흔들림 연출 */
-    preCombatShakeTarget: { x: number; y: number } | null;
-    /** 전투 직전(유물 발동) 흔들릴 유물 definition id */
-    preCombatShakeRelicDefId: number | null;
-    /** 전투 중/직전 전용 플로팅 텍스트 */
-    combatFloats: Array<{ x: number; y: number; text: string; color?: string }>;
-    /** 유물 클릭 발동 등: 유물 아이콘 위치 플로팅 텍스트 */
-    relicFloats: Array<{ relicInstanceId: string; text: string; color?: string }>;
-    /** 지식 업그레이드 아이콘 위 플로팅 (유물과 동일; 기본 생산량 +N 타입 업그레이드는 제외) */
+    /** 지식 업그레이드 아이콘 위 플로팅 (기본 생산량 +N 타입 업그레이드는 제외) */
     knowledgeUpgradeFloats: Array<
         | { upgradeId: number; text: string; color?: string }
         | { upgradeId: number; inlineParts: { text: string; color: string }[] }
     >;
-    /** 종교 심볼이 선택 풀에 해금되었는지 */
+    /** Save compatibility: religion symbols are now available from game start. */
     religionUnlocked: boolean;
-    /** 플레이어가 획득한 지식 업그레이드 ID 목록 */
+    /** Legacy save compatibility. New games and loaded saves keep this empty. */
     unlockedKnowledgeUpgrades: number[];
-    /** 아홉 업그레이드의 현재 레벨. 업그레이드 ID 목록은 효과 호환을 위해 함께 유지한다. */
+    /** Legacy save compatibility; no knowledge upgrade levels are used. */
     knowledgeUpgradeLevels?: KnowledgeUpgradeLevels;
-    /** 진시황 전용 이벤트 화폐 통일: 남은 기본 골드 생산량 2배 턴 수 */
-    qinCurrencyStandardTurnsRemaining: number;
-
-    /** Unused research picks shown in the UI. Kept in sync with knowledgeResearchCredits. */
+    /** Legacy save compatibility; research points are no longer awarded. */
     levelUpResearchPoints: number;
-    /** 연구 포인트의 획득 레벨 메타데이터. 포인트 자체는 모든 현재 연구 가능 단계에 공통으로 사용한다. */
+    /** Legacy save compatibility; always empty. */
     knowledgeResearchCredits?: KnowledgeResearchCredit[];
     /** Era upgrades grant three single-slot board expansions. */
     pendingBoardExpansions: number;
-    /** 유물 상점 오버레이 열림 여부 */
-    isRelicShopOpen: boolean;
-    /** 자동 재입고 이후 아직 확인하지 않은 신규 입고 배지 */
-    hasNewRelicShopStock: boolean;
-    /** 이번 선택 페이즈에서 리롤한 횟수 (리디아 유물: 최대 3회) */
+    /** 이번 선택 페이즈에서 리롤한 횟수 */
     rerollsThisTurn: number;
 
-    /** Knowledge tree overlay: phase to restore after a research pick resolves */
+    /** Legacy save compatibility; no research overlay uses this field. */
     returnPhaseAfterDevKnowledgeUpgrade: GamePhase | null;
 
-    barbarianSymbolThreat: number;
-    barbarianCampThreat: number;
     naturalDisasterThreat: number;
     pendingDevNaturalDisasterId: number | null;
     activeStatusIds: number[];
     activeStatuses?: ActiveStatusState[];
-    /** 첫 배치된 야만인/재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
+    /** 첫 배치된 재해 심볼에 플로팅 텍스트 표시 후 효과 iteration 진행용 */
     pendingNewThreatFloats: PendingThreatFloat[];
-    /** 망각의 화로 발동 시 제거할 유물 instanceId */
-    pendingOblivionFurnaceRelicId: string | null;
     /** 칙령 발동 시 소비할 심볼 위치/인스턴스 */
     pendingEdictSource: { x: number; y: number; instanceId: string } | null;
     /** 영토 정비(22): 남은 보너스 선택 (첫 턴은 symbolChoices로 이미 지형 3개가 열림) */
@@ -261,15 +206,11 @@ export interface GameState {
     skipSelection: () => void;
     rerollSymbols: () => void;
 
-    toggleRelicShop: () => void;
-    clearRelicShopStockBadge: () => void;
-    refreshRelicShop: (force?: boolean) => void;
-    buyRelic: (relicId: number) => void;
     selectUpgrade: (upgradeId: number) => void;
     expandBoardSlotAt: (x: number, y: number) => void;
 
     initializeGame: () => void;
-    startGameWithDraft: (symbolIds: number[], leaderId: import('../data/leaders').LeaderId) => void;
+    startGameWithDraft: (symbolIds: number[], symbolSetIds?: readonly SymbolSetId[] | null) => void;
     startTutorialGame: () => void;
     setupTutorialCornStep: () => void;
     spinTutorialCornStep: () => void;
@@ -279,22 +220,16 @@ export interface GameState {
     spinTutorialAdjacencyStep: () => void;
     devAddSymbol: (symbolId: number) => void;
     devRemoveSymbol: (instanceId: string) => void;
-    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'culture' | 'level' | 'turn', value: number) => void;
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => void;
     devAddBoardExpansion: () => void;
-    devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => void;
+    devForceScreen: (screen: 'symbol' | 'level') => void;
     devTriggerNaturalDisaster: (symbolId: number) => void;
-    /** 망각의 화로: 보드 (x,y) 심볼 파괴 확정 */
-    confirmOblivionFurnaceDestroyAt: (x: number, y: number) => void;
-    /** 망각의 화로 보드 선택 모드 취소 (유물 유지) */
-    cancelOblivionFurnacePick: () => void;
     /** 칙령: idle 시 발동하여 인접 심볼 파괴 대상을 선택 */
     activateEdictAt: (x: number, y: number) => void;
     /** 칙령: 인접 보드 심볼 파괴 확정 */
     confirmEdictDestroyAt: (x: number, y: number) => void;
     /** 칙령 대상 선택 취소 */
     cancelEdictPick: () => void;
-    /** 조몬 토기 조각·고대 유물 잔해 등 클릭 발동 유물 */
-    activateClickableRelic: (instanceId: string) => void;
     /** 부족 마을: idle 시 소모하여 심볼 선택 페이즈를 연속 발동 */
     consumeTribalVillageAt: (x: number, y: number) => void;
 
@@ -334,83 +269,41 @@ const getAdjacentCoords = (x: number, y: number): { x: number; y: number }[] => 
 
 const INITIAL_STARTING_BOARD_STATE = createStartingBoard();
 
-const getSelectionPhaseFreeRerollFloor = (upgrades: readonly number[]): number =>
-    upgrades.map(Number).includes(ELECTION_SYSTEM_UPGRADE_ID) ? 1 : 0;
+const getSelectionPhaseFreeRerollFloor = (_upgrades: readonly number[]): number => 0;
 
 
 // (선택 풀 구성 로직은 `../logic/selection/selectionLogic.ts`로 이동)
 
 /** 현재 시대에 등장 가능한 심볼 플랫 풀 빌드 (균등 확률용) */
-export const getSymbolPoolProbabilities = (era: number, religionUnlocked: boolean): { id: number; name: string; symbolType: number; probability: number }[] =>
+export const getSymbolPoolProbabilities = (era: number, religionUnlocked: boolean, symbolSetIds?: readonly SymbolSetId[] | null, symbolSetId?: SymbolSetId | null): { id: number; name: string; symbolType: number; probability: number }[] =>
     getSymbolPoolProbabilitiesSelection({
         era,
         religionUnlocked,
         upgrades: (useGameStore.getState().unlockedKnowledgeUpgrades || []).map(Number),
-        ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+        symbolSetIds: symbolSetIds ?? useGameStore.getState().symbolSetIds,
+        symbolSetId: symbolSetId ?? useGameStore.getState().symbolSetId,
     });
 
-
-const generateRelicChoices = (cultureLevel = 0): RelicDefinition[] => {
-    // 3 unique relics
-    const choices: RelicDefinition[] = [];
-    const pool = [...RELIC_LIST];
-    // Relics are unique; owned Seals may return to later shop stocks.
-    const ownedIds = new Set(useRelicStore.getState().relics.map(r => r.definition.id));
-    const available = pool.filter(r => isRelicAvailableForShop(r.id, ownedIds));
-    choices.push(...generateCultureWeightedRelicChoices(available, cultureLevel, 3));
-    return choices;
-};
-
-/** 황금의 거래: 입고된 유물 중 무작위 1개를 50% 할인 대상으로 지정 */
-const pickRelicHalfPriceIdForGoldenTrade = (inStock: RelicDefinition[], hasGoldenTrade: boolean): number | null => {
-    if (!hasGoldenTrade || inStock.length === 0) return null;
-    return inStock[Math.floor(Math.random() * inStock.length)]!.id;
-};
-
-/** 현재 보유 유물에서 ActiveRelicEffects 플래그를 조합 */
-const buildActiveRelicEffects = (): ActiveRelicEffects => {
-    const relics = useRelicStore.getState().relics;
-    const hasRelic = (id: number) => relics.some(r => r.definition.id === id);
-
-    const upgrades = (useGameStore.getState().unlockedKnowledgeUpgrades || []).map((x) => Number(x));
-
-    return {
-        relicCount: countRelics(relics),
-        quarryEmptyGold: hasRelic(RELIC_ID.EGYPT_SAW),
-        bananaFossilBonus: hasRelic(RELIC_ID.GOANNA_BANANA),
-        horsemansihpPastureBonus: upgrades.includes(HORSEMANSHIP_UPGRADE_ID),
-        terraFossilDisasterFood: hasRelic(RELIC_ID.TERRA_FOSSIL_GRAPE),
-        allSymbolsAreCorner: hasRelic(RELIC_ID.GUDEA_FOUNDATION_PEG),
-    };
-};
-
 export const useGameStore = create<GameState>((set, get) => ({
-    leaderId: null,
-    leaderProgressLevel: 1,
-    lastLeaderProgressAward: null,
     food: 0,
     gold: 0,
-    military: 0,
     knowledge: 0,
-    culture: 0,
-    cultureLevel: 0,
     level: 0,
     era: 0,
     turn: 0,
     board: INITIAL_STARTING_BOARD_STATE.board,
     playerSymbols: INITIAL_STARTING_BOARD_STATE.playerSymbols,
+    symbolSetId: null,
+    symbolSetIds: null,
     phase: 'idle' as GamePhase,
     isTutorialMode: false,
     tutorialSpinStep: null,
     symbolChoices: [],
-    symbolSelectionRelicSourceId: null,
     symbolSelectionSymbolSourceId: null,
     isTurnSymbolSelection: false,
-    relicChoices: generateRelicChoices(),
-    relicHalfPriceRelicId: null,
     lastEffects: [],
     counterDisplayOverrides: [],
-    runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+    runningTotals: { food: 0, gold: 0, knowledge: 0 },
     activeSlot: null,
     activeContributors: [],
     pendingContributors: [],
@@ -421,34 +314,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     lootMergeFx: null,
     eventLog: [],
     prevBoard: createEmptyBoard(),
-    combatAnimation: null,
-    combatShaking: false,
-    preCombatShakeTarget: null,
-    preCombatShakeRelicDefId: null,
-    combatFloats: [],
-    relicFloats: [],
     knowledgeUpgradeFloats: [],
-    religionUnlocked: false,
+    religionUnlocked: true,
     unlockedKnowledgeUpgrades: [],
     knowledgeUpgradeLevels: createEmptyKnowledgeUpgradeLevels(),
-    qinCurrencyStandardTurnsRemaining: 0,
 
     levelUpResearchPoints: 0,
     knowledgeResearchCredits: [],
     pendingBoardExpansions: 0,
-    isRelicShopOpen: false,
-    hasNewRelicShopStock: false,
     rerollsThisTurn: 0,
     returnPhaseAfterDevKnowledgeUpgrade: null,
 
-    barbarianSymbolThreat: 0,
-    barbarianCampThreat: 0,
     naturalDisasterThreat: 0,
     pendingDevNaturalDisasterId: null,
     activeStatusIds: getActiveStatusIdsForTurn(0),
     activeStatuses: createActiveStatusesForTurn(0),
     pendingNewThreatFloats: [],
-    pendingOblivionFurnaceRelicId: null,
     pendingEdictSource: null,
     bonusSelectionQueue: [],
     forceTerrainInNextSymbolChoices: false,
@@ -483,8 +364,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             pendingBoardExpansions: remainingBoardExpansions,
             phase:
                 state.phase === 'board_expansion_placement' && remainingBoardExpansions === 0
-                    ? 'relic_shop_ready'
+                    ? 'selection'
                     : state.phase,
+            isTurnSymbolSelection:
+                state.phase === 'board_expansion_placement' && remainingBoardExpansions === 0
+                    ? true
+                    : state.isTurnSymbolSelection,
             lastEffects: [],
             counterDisplayOverrides: [],
             activeSlot: null,
@@ -501,7 +386,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         processSingleSymbolEffects,
         createInstance,
         getAdjacentCoords,
-        buildActiveRelicEffects,
     }),
 
     ...createSelectionFlowActions({
@@ -511,51 +395,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         phaseAfterTurnFlowComplete,
     }),
 
-    toggleRelicShop: () => {
-        set((state) => ({
-            isRelicShopOpen: !state.isRelicShopOpen,
-            hasNewRelicShopStock: state.isRelicShopOpen ? state.hasNewRelicShopStock : false,
-        }));
-    },
-
-    clearRelicShopStockBadge: () => {
-        set({ hasNewRelicShopStock: false });
-    },
-
-    refreshRelicShop: (force = false) => {
-        if (!force) return; // 수동 새로고침(5G) 제거 — 10턴마다 자동(force: true)만
-
-        const state = get();
-
-        const hasGoldenTrade = state.leaderId === 'ramesses';
-
-        const newChoices = generateRelicChoices(state.cultureLevel);
-        const nextHalfRelicId = pickRelicHalfPriceIdForGoldenTrade(newChoices, hasGoldenTrade);
-
-        set({
-            relicChoices: newChoices,
-            relicHalfPriceRelicId: nextHalfRelicId,
-            hasNewRelicShopStock: true,
-        });
-    },
-
-    ...createRelicShopFlowActions({
-        get,
-        set,
-    }),
-
-    ...createRelicActivationActions({
-        get,
-        set,
-        phaseAfterTurnFlowComplete,
-    }),
-
     ...createGameLifecycleActions({
         set,
         get,
         createInstance,
-        generateRelicChoices,
-        pickRelicHalfPriceIdForGoldenTrade,
     }),
 
     ...createBoardInteractionActions({
@@ -581,7 +424,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
     },
 
-    devSetStat: (stat: 'food' | 'gold' | 'military' | 'knowledge' | 'culture' | 'level' | 'turn', value: number) => {
+    devSetStat: (stat: 'food' | 'gold' | 'knowledge' | 'level' | 'turn', value: number) => {
         if (stat === 'level') {
             const L = Math.max(0, Math.round(value));
             set({ level: L, era: getEraFromLevel(L) });
@@ -597,11 +440,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
             return;
         }
-        if (stat === 'culture') {
-            const culture = Math.max(0, value);
-            set({ culture, cultureLevel: getCultureLevel(culture) });
-            return;
-        }
         set({ [stat]: Math.max(0, value) });
     },
 
@@ -613,17 +451,16 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
     },
 
-    devForceScreen: (screen: 'symbol' | 'upgrade' | 'levelWithResearch') => {
+    devForceScreen: (screen: 'symbol' | 'level') => {
         const state = get();
         if (screen === 'symbol') {
             const res = generateChoicesSelection({
                 era: state.era,
                 religionUnlocked: state.religionUnlocked,
                 upgrades: (state.unlockedKnowledgeUpgrades || []).map(Number),
-                ownedRelicDefIds: useRelicStore.getState().relics.map((r) => r.definition.id),
+                symbolSetId: state.symbolSetId,
+                symbolSetIds: state.symbolSetIds,
                 ownedSymbolDefIds: state.playerSymbols.map((s) => s.definition.id),
-                leaderId: state.leaderId,
-                leaderProgressLevel: state.leaderProgressLevel,
                 choiceCount: getStandardSymbolChoiceCount(state.board),
                 forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
                 forceEventsInNextSymbolChoices: state.forceEventsInNextSymbolChoices,
@@ -634,37 +471,18 @@ export const useGameStore = create<GameState>((set, get) => ({
             set({
                 phase: 'selection',
                 symbolChoices: choices,
-                symbolSelectionRelicSourceId: null,
                 freeSelectionRerolls: Math.max(
                     state.freeSelectionRerolls ?? 0,
                     getSelectionPhaseFreeRerollFloor(state.unlockedKnowledgeUpgrades ?? []),
                 ),
             });
-        } else if (screen === 'upgrade') {
-            const nextCredits = [
-                ...(state.knowledgeResearchCredits ?? []),
-                createKnowledgeResearchCreditForLevel(Math.max(1, state.level)),
-            ];
-            set({
-                levelUpResearchPoints: nextCredits.length,
-                knowledgeResearchCredits: nextCredits,
-            });
-        } else if (screen === 'levelWithResearch') {
+        } else if (screen === 'level') {
             const nextLevel = Math.max(0, Math.round(state.level)) + 1;
-
-            const nextCredits = [
-                ...normalizeKnowledgeResearchCredits(
-                    state.level,
-                    state.levelUpResearchPoints ?? 0,
-                    state.knowledgeResearchCredits,
-                ),
-                ...createKnowledgeResearchCreditsForLevelGain(state.level, nextLevel),
-            ];
             set({
                 level: nextLevel,
                 era: getEraFromLevel(nextLevel),
-                levelUpResearchPoints: nextCredits.length,
-                knowledgeResearchCredits: nextCredits,
+                levelUpResearchPoints: 0,
+                knowledgeResearchCredits: [],
             });
         }
     },

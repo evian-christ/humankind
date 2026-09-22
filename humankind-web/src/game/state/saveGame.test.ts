@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
     AGRICULTURE_UPGRADE_ID,
-    IRON_WORKING_UPGRADE_ID,
     IRRIGATION_UPGRADE_ID,
 } from '../data/knowledgeUpgrades';
 import { SYMBOLS, S } from '../data/symbolDefinitions';
+import { DEFAULT_SYMBOL_SET_DECK_IDS } from '../data/symbolSets';
 import type { PlayerSymbolInstance } from '../types';
 import type { GameState } from './gameStore';
 import { hasSavedGame, loadSavedGamePatch, saveGameState } from './saveGame';
@@ -41,9 +41,6 @@ const createSerializableState = (): GameState => {
     board[0][0] = symbol;
 
     return {
-        leaderId: 'shihuang',
-        leaderProgressLevel: 1,
-        lastLeaderProgressAward: null,
         food: 12,
         gold: 3,
         knowledge: 7,
@@ -54,9 +51,6 @@ const createSerializableState = (): GameState => {
         board,
         playerSymbols: [symbol],
         symbolChoices: [],
-        symbolSelectionRelicSourceId: null,
-        relicChoices: [],
-        relicHalfPriceRelicId: null,
         lastEffects: [{ x: 0, y: 0, food: 1, gold: 2, knowledge: 3, counter: 1 }],
         counterDisplayOverrides: [],
         runningTotals: { food: 0, gold: 0, knowledge: 0 },
@@ -67,26 +61,13 @@ const createSerializableState = (): GameState => {
         effectPhase3ReachedThisRun: false,
         eventLog: [],
         prevBoard: board,
-        combatAnimation: null,
-        combatShaking: false,
-        preCombatShakeTarget: null,
-        preCombatShakeRelicDefId: null,
-        combatFloats: [],
-        relicFloats: [],
         knowledgeUpgradeFloats: [],
         religionUnlocked: false,
         unlockedKnowledgeUpgrades: [],
-        qinCurrencyStandardTurnsRemaining: 0,
         levelUpResearchPoints: 0,
-        isRelicShopOpen: false,
-        hasNewRelicShopStock: false,
         rerollsThisTurn: 0,
         returnPhaseAfterDevKnowledgeUpgrade: null,
-        barbarianSymbolThreat: 0,
-        barbarianCampThreat: 0,
         naturalDisasterThreat: 0,
-        pendingNewThreatFloats: [],
-        pendingOblivionFurnaceRelicId: null,
         pendingEdictSource: null,
         bonusSelectionQueue: [],
         forceTerrainInNextSymbolChoices: false,
@@ -97,6 +78,33 @@ const createSerializableState = (): GameState => {
 };
 
 describe('saveGameState', () => {
+    it('restores all eight equipped symbol sets', () => {
+        const localStorage = createLocalStorageMock();
+        vi.stubGlobal('localStorage', localStorage);
+
+        saveGameState({ ...createSerializableState(), symbolSetIds: [...DEFAULT_SYMBOL_SET_DECK_IDS] });
+        expect(loadSavedGamePatch()?.symbolSetIds).toEqual(DEFAULT_SYMBOL_SET_DECK_IDS);
+
+        vi.unstubAllGlobals();
+    });
+
+    it('restores the selected symbol set and leaves older saves without one', () => {
+        const localStorage = createLocalStorageMock();
+        vi.stubGlobal('localStorage', localStorage);
+
+        saveGameState({ ...createSerializableState(), symbolSetId: 'faith' });
+        expect(loadSavedGamePatch()?.symbolSetId).toBe('faith');
+
+        const raw = localStorage.getItem('humankind.save.v1');
+        const saved = JSON.parse(raw!);
+        delete saved.state.symbolSetId;
+        saved.version = 4;
+        localStorage.setItem('humankind.save.v1', JSON.stringify(saved));
+        expect(loadSavedGamePatch()?.symbolSetId).toBeNull();
+
+        vi.unstubAllGlobals();
+    });
+
     it('does not persist one-shot board effect floats into continue saves', () => {
         const localStorage = createLocalStorageMock();
         vi.stubGlobal('localStorage', localStorage);
@@ -133,27 +141,6 @@ describe('saveGameState', () => {
         vi.unstubAllGlobals();
     });
 
-    it('restores saved symbols without combat stats', () => {
-        const localStorage = createLocalStorageMock();
-        vi.stubGlobal('localStorage', localStorage);
-
-        const warrior = createSymbol(S.warrior, 'symbol_warrior');
-        const state = createSerializableState();
-        state.playerSymbols = [warrior];
-        state.board = createEmptyBoard();
-        state.board[0][0] = warrior;
-        state.prevBoard = state.board;
-        state.unlockedKnowledgeUpgrades = [IRON_WORKING_UPGRADE_ID];
-
-        saveGameState(state);
-
-        const patch = loadSavedGamePatch();
-        expect(patch?.playerSymbols?.[0]?.definition.id).toBe(S.warrior);
-        expect(patch?.playerSymbols?.[0]?.instanceId).toBe('symbol_warrior');
-
-        vi.unstubAllGlobals();
-    });
-
     it('derives field levels when loading a pre-field save', () => {
         const localStorage = createLocalStorageMock();
         vi.stubGlobal('localStorage', localStorage);
@@ -169,10 +156,29 @@ describe('saveGameState', () => {
         localStorage.setItem('humankind.save.v1', JSON.stringify(saved));
 
         const patch = loadSavedGamePatch();
-        expect(patch?.knowledgeUpgradeLevels?.agriculture).toBe(2);
+        expect(patch?.knowledgeUpgradeLevels?.trade).toBe(0);
         expect(patch?.unlockedKnowledgeUpgrades).toEqual(
             expect.arrayContaining([AGRICULTURE_UPGRADE_ID, IRRIGATION_UPGRADE_ID]),
         );
+
+        vi.unstubAllGlobals();
+    });
+
+    it('resumes an older save without reopening a removed shop', () => {
+        const localStorage = createLocalStorageMock();
+        vi.stubGlobal('localStorage', localStorage);
+
+        saveGameState(createSerializableState());
+        const saved = JSON.parse(localStorage.getItem('humankind.save.v1')!);
+        saved.version = 3;
+        saved.state.phase = 'relic_shop';
+        saved.state.isRelicShopOpen = true;
+        saved.state.relicChoices = [1, 2, 3];
+        localStorage.setItem('humankind.save.v1', JSON.stringify(saved));
+
+        const patch = loadSavedGamePatch();
+        expect(patch?.phase).toBe('idle');
+        expect(patch).not.toHaveProperty('relicChoices');
 
         vi.unstubAllGlobals();
     });

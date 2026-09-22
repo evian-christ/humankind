@@ -1,28 +1,30 @@
-import { RELICS } from '../data/relicDefinitions';
 import { SYMBOLS } from '../data/symbolDefinitions';
+import { isSymbolSetId, normalizeSymbolSetIds, SYMBOL_SET_DECK_SIZE } from '../data/symbolSets';
 import { createActiveStatusesForTurn, getActiveStatusIdsFromStates } from '../data/statusDefinitions';
 import type { ActiveStatusState } from '../data/statusDefinitions';
 import { GAME_EVENTS, isGameEventDefinition } from '../data/eventDefinitions';
-import { resolveUpgradedUnitDefinition } from '../data/unitUpgrades';
 import type { PlayerSymbolInstance } from '../types';
 import type { GamePhase, GameState, GameEventLogEntry } from './gameStore';
 import { createEmptyBoard, isBoardSlotActive } from './gameStoreHelpers';
-import { normalizeKnowledgeResearchCredits, type KnowledgeResearchCredit } from './gameCalculations';
-import { useRelicStore, type RelicInstance } from './relicStore';
-import { remapLegacyRelicId } from '../logic/relics/relicIds';
+import type { KnowledgeResearchCredit } from './gameCalculations';
 import {
-    getUnlockedUpgradeIdsForKnowledgeLevels,
-    normalizeKnowledgeUpgradeLevels,
+    createEmptyKnowledgeUpgradeLevels,
     type KnowledgeUpgradeLevels,
 } from '../data/knowledgeUpgradeTracks';
 
 const SAVE_KEY = 'humankind.save.v1';
-const LEGACY_SAVE_VERSION = 1;
-const PREVIOUS_SAVE_VERSION = 2;
-const SAVE_VERSION = 3;
+const SUPPORTED_SAVE_VERSIONS = new Set([1, 2, 3, 4, 5, 6]);
+const SAVE_VERSION = 6;
 const MAX_SAVED_EVENT_LOG = 400;
 
 type SerializedBoard = (string | null | false)[][];
+type SavedGamePhase = GamePhase | 'relic_shop_ready' | 'relic_shop' | 'oblivion_furnace_board';
+
+const restorePhase = (phase: SavedGamePhase, hasPendingEdict: boolean): GamePhase => {
+    if (phase === 'relic_shop_ready' || phase === 'relic_shop') return 'idle';
+    if (phase === 'oblivion_furnace_board') return hasPendingEdict ? 'board_destroy_selection' : 'idle';
+    return phase;
+};
 
 interface SerializedSymbol {
     definitionId: number;
@@ -33,60 +35,39 @@ interface SerializedSymbol {
     stored_gold?: number;
     merchant_store_pending?: boolean;
     suppress_destroy_overlay?: boolean;
-    spawnedByBarbarianInvasion?: boolean;
-    barbarianInvasionTurnsRemaining?: number;
-}
-
-interface SerializedRelic {
-    definitionId: number;
-    instanceId: string;
-    effect_counter: number;
-    bonus_stacks: number;
 }
 
 interface SavedGame {
     version: number;
     savedAt: number;
     state: {
-        leaderId: GameState['leaderId'];
-        leaderProgressLevel?: number;
         food: number;
         gold: number;
-        military?: number;
         knowledge: number;
-        culture?: number;
-        cultureLevel?: number;
         level: number;
         era: number;
         turn: number;
-        phase: GamePhase;
+        phase: SavedGamePhase;
+        symbolSetId?: string | null;
+        symbolSetIds?: string[] | null;
         board: SerializedBoard;
         playerSymbols: SerializedSymbol[];
         symbolChoices: number[];
-        symbolSelectionRelicSourceId: number | null;
         symbolSelectionSymbolSourceId?: number | null;
         isTurnSymbolSelection?: boolean;
-        relicChoices: Array<number | null>;
-        relicHalfPriceRelicId: number | null;
         lastEffects?: GameState['lastEffects'];
         prevBoard: SerializedBoard;
         religionUnlocked: boolean;
         unlockedKnowledgeUpgrades: number[];
         knowledgeUpgradeLevels?: Partial<KnowledgeUpgradeLevels>;
-        qinCurrencyStandardTurnsRemaining?: number;
         levelUpResearchPoints: number;
         knowledgeResearchCredits?: KnowledgeResearchCredit[];
         pendingBoardExpansions?: number;
-        isRelicShopOpen: boolean;
-        hasNewRelicShopStock: boolean;
         rerollsThisTurn: number;
-        returnPhaseAfterDevKnowledgeUpgrade: GamePhase | null;
-        barbarianSymbolThreat: number;
-        barbarianCampThreat: number;
+        returnPhaseAfterDevKnowledgeUpgrade: SavedGamePhase | null;
         naturalDisasterThreat: number;
         activeStatusIds?: number[];
         activeStatuses?: ActiveStatusState[];
-        pendingOblivionFurnaceRelicId: string | null;
         pendingEdictSource: GameState['pendingEdictSource'];
         bonusSelectionQueue: GameState['bonusSelectionQueue'];
         forceTerrainInNextSymbolChoices: boolean;
@@ -95,7 +76,6 @@ interface SavedGame {
         pendingFoodPayment?: boolean;
         eventLog: GameEventLogEntry[];
     };
-    relics: SerializedRelic[];
 }
 
 const storage = (): Storage | null => {
@@ -115,19 +95,15 @@ const serializeSymbol = (symbol: PlayerSymbolInstance): SerializedSymbol => ({
     stored_gold: symbol.stored_gold,
     merchant_store_pending: symbol.merchant_store_pending,
     suppress_destroy_overlay: symbol.suppress_destroy_overlay,
-    spawnedByBarbarianInvasion: symbol.spawnedByBarbarianInvasion,
-    barbarianInvasionTurnsRemaining: symbol.barbarianInvasionTurnsRemaining,
 });
 
 const deserializeSymbol = (
     saved: SerializedSymbol,
-    unlockedUpgrades: readonly number[],
 ): PlayerSymbolInstance | null => {
     const baseDefinition = SYMBOLS[saved.definitionId];
     if (!baseDefinition) return null;
-    const definition = resolveUpgradedUnitDefinition(baseDefinition, unlockedUpgrades);
     return {
-        definition,
+        definition: baseDefinition,
         instanceId: saved.instanceId,
         effect_counter: saved.effect_counter ?? 0,
         is_marked_for_destruction: saved.is_marked_for_destruction ?? false,
@@ -135,8 +111,6 @@ const deserializeSymbol = (
         stored_gold: saved.stored_gold,
         merchant_store_pending: saved.merchant_store_pending,
         suppress_destroy_overlay: saved.suppress_destroy_overlay,
-        spawnedByBarbarianInvasion: saved.spawnedByBarbarianInvasion,
-        barbarianInvasionTurnsRemaining: saved.barbarianInvasionTurnsRemaining,
     };
 };
 
@@ -166,27 +140,6 @@ const deserializeBoard = (
     return board;
 };
 
-const serializeRelic = (relic: RelicInstance): SerializedRelic => ({
-    definitionId: relic.definition.id,
-    instanceId: relic.instanceId,
-    effect_counter: relic.effect_counter,
-    bonus_stacks: relic.bonus_stacks,
-});
-
-const deserializeRelic = (saved: SerializedRelic, hasLegacyRelicIds = false): RelicInstance | null => {
-    const definitionId = hasLegacyRelicIds
-        ? remapLegacyRelicId(saved.definitionId)
-        : saved.definitionId;
-    const definition = RELICS[definitionId];
-    if (!definition) return null;
-    return {
-        definition,
-        instanceId: saved.instanceId,
-        effect_counter: saved.effect_counter ?? 0,
-        bonus_stacks: saved.bonus_stacks ?? 0,
-    };
-};
-
 const EVENT_CHOICE_SAVE_OFFSET = 10000;
 
 const serializeSelectionChoiceId = (choice: GameState['symbolChoices'][number]): number =>
@@ -194,13 +147,12 @@ const serializeSelectionChoiceId = (choice: GameState['symbolChoices'][number]):
 
 const mapSelectionChoices = (
     ids: number[],
-    unlockedUpgrades: readonly number[],
 ): GameState['symbolChoices'] =>
     ids
         .map((id) => {
             if (id >= EVENT_CHOICE_SAVE_OFFSET) return GAME_EVENTS[id - EVENT_CHOICE_SAVE_OFFSET] ?? null;
             const definition = SYMBOLS[id];
-            return definition ? resolveUpgradedUnitDefinition(definition, unlockedUpgrades) : null;
+            return definition ?? null;
         })
         .filter((choice): choice is GameState['symbolChoices'][number] => choice != null);
 
@@ -210,9 +162,7 @@ export function hasSavedGame(): boolean {
     try {
         const save = JSON.parse(raw) as Partial<SavedGame>;
         return (
-            save.version === SAVE_VERSION ||
-            save.version === PREVIOUS_SAVE_VERSION ||
-            save.version === LEGACY_SAVE_VERSION
+            save.version != null && SUPPORTED_SAVE_VERSIONS.has(save.version)
         )
             && save.state != null
             && save.state.phase !== 'game_over'
@@ -240,45 +190,33 @@ export function saveGameState(state: GameState): void {
         version: SAVE_VERSION,
         savedAt: Date.now(),
         state: {
-            leaderId: state.leaderId,
-            leaderProgressLevel: state.leaderProgressLevel,
             food: state.food,
             gold: state.gold,
-            military: state.military ?? 0,
             knowledge: state.knowledge,
-            culture: state.culture,
-            cultureLevel: state.cultureLevel,
             level: state.level,
             era: state.era,
             turn: state.turn,
             phase: state.phase,
+            symbolSetId: state.symbolSetId ?? null,
+            symbolSetIds: state.symbolSetIds ?? null,
             board: serializeBoard(state.board),
             playerSymbols: state.playerSymbols.map(serializeSymbol),
             symbolChoices: state.symbolChoices.map(serializeSelectionChoiceId),
-            symbolSelectionRelicSourceId: state.symbolSelectionRelicSourceId,
             symbolSelectionSymbolSourceId: state.symbolSelectionSymbolSourceId ?? null,
             isTurnSymbolSelection: state.isTurnSymbolSelection ?? false,
-            relicChoices: state.relicChoices.map((relic) => relic?.id ?? null),
-            relicHalfPriceRelicId: state.relicHalfPriceRelicId,
             lastEffects: [],
             prevBoard: serializeBoard(state.prevBoard),
             religionUnlocked: state.religionUnlocked,
             unlockedKnowledgeUpgrades: state.unlockedKnowledgeUpgrades,
             knowledgeUpgradeLevels: state.knowledgeUpgradeLevels,
-            qinCurrencyStandardTurnsRemaining: state.qinCurrencyStandardTurnsRemaining,
             levelUpResearchPoints: state.levelUpResearchPoints,
             knowledgeResearchCredits: state.knowledgeResearchCredits ?? [],
             pendingBoardExpansions: state.pendingBoardExpansions,
-            isRelicShopOpen: state.isRelicShopOpen,
-            hasNewRelicShopStock: state.hasNewRelicShopStock,
             rerollsThisTurn: state.rerollsThisTurn,
             returnPhaseAfterDevKnowledgeUpgrade: state.returnPhaseAfterDevKnowledgeUpgrade,
-            barbarianSymbolThreat: state.barbarianSymbolThreat,
-            barbarianCampThreat: state.barbarianCampThreat,
             naturalDisasterThreat: state.naturalDisasterThreat,
             activeStatusIds: state.activeStatusIds,
             activeStatuses: state.activeStatuses,
-            pendingOblivionFurnaceRelicId: state.pendingOblivionFurnaceRelicId,
             pendingEdictSource: state.pendingEdictSource,
             bonusSelectionQueue: state.bonusSelectionQueue,
             forceTerrainInNextSymbolChoices: state.forceTerrainInNextSymbolChoices,
@@ -287,7 +225,6 @@ export function saveGameState(state: GameState): void {
             pendingFoodPayment: state.pendingFoodPayment,
             eventLog: state.eventLog.slice(-MAX_SAVED_EVENT_LOG),
         },
-        relics: useRelicStore.getState().relics.map(serializeRelic),
     };
 
     store.setItem(SAVE_KEY, JSON.stringify(save));
@@ -300,83 +237,50 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
     try {
         const save = JSON.parse(raw) as SavedGame;
         if (
-            save.version !== SAVE_VERSION &&
-            save.version !== PREVIOUS_SAVE_VERSION &&
-            save.version !== LEGACY_SAVE_VERSION
+            !SUPPORTED_SAVE_VERSIONS.has(save.version)
         ) return null;
-        const hasLegacyRelicIds = save.version === LEGACY_SAVE_VERSION;
         if (save.state.phase === 'game_over' || save.state.phase === 'victory') {
             clearSavedGame();
             return null;
         }
 
-        const knowledgeUpgradeLevels = normalizeKnowledgeUpgradeLevels(
-            save.state.unlockedKnowledgeUpgrades,
-            save.state.knowledgeUpgradeLevels,
-        );
-        const unlockedKnowledgeUpgrades = getUnlockedUpgradeIdsForKnowledgeLevels(
-            knowledgeUpgradeLevels,
-            save.state.unlockedKnowledgeUpgrades,
-        );
+        const knowledgeUpgradeLevels = createEmptyKnowledgeUpgradeLevels();
+        const unlockedKnowledgeUpgrades: number[] = [];
         const playerSymbols = save.state.playerSymbols
-            .map((symbol) => deserializeSymbol(symbol, unlockedKnowledgeUpgrades))
+            .map((symbol) => deserializeSymbol(symbol))
             .filter((symbol): symbol is PlayerSymbolInstance => symbol != null);
         const symbolByInstanceId = new Map(playerSymbols.map((symbol) => [symbol.instanceId, symbol]));
-        const relics = save.relics
-            .map((relic) => deserializeRelic(relic, hasLegacyRelicIds))
-            .filter((relic): relic is RelicInstance => relic != null);
-        useRelicStore.getState().hydrateRelics(relics);
-        const knowledgeResearchCredits = normalizeKnowledgeResearchCredits(
-            save.state.level,
-            save.state.levelUpResearchPoints,
-            save.state.knowledgeResearchCredits,
-        );
 
         const activeStatuses = createActiveStatusesForTurn(save.state.turn);
 
+        const phase = restorePhase(save.state.phase, save.state.pendingEdictSource != null);
+        const savedSymbolSetIds = normalizeSymbolSetIds(save.state.symbolSetIds);
+
         return {
-            leaderId: save.state.leaderId,
-            leaderProgressLevel: save.state.leaderProgressLevel ?? 1,
-            lastLeaderProgressAward: null,
             isTutorialMode: false,
             food: save.state.food,
             gold: save.state.gold,
-            military: save.state.military ?? 0,
             knowledge: save.state.knowledge,
-            culture: save.state.culture ?? 0,
-            cultureLevel: save.state.cultureLevel ?? 0,
             level: save.state.level,
             era: save.state.era,
             turn: save.state.turn,
-            phase: save.state.phase,
+            phase,
+            symbolSetId: isSymbolSetId(save.state.symbolSetId) ? save.state.symbolSetId : null,
+            symbolSetIds: savedSymbolSetIds.length === SYMBOL_SET_DECK_SIZE ? savedSymbolSetIds : null,
             board: deserializeBoard(save.state.board, symbolByInstanceId),
             playerSymbols,
-            symbolChoices: mapSelectionChoices(save.state.symbolChoices, unlockedKnowledgeUpgrades),
-            symbolSelectionRelicSourceId:
-                hasLegacyRelicIds && save.state.symbolSelectionRelicSourceId != null
-                    ? remapLegacyRelicId(save.state.symbolSelectionRelicSourceId)
-                    : save.state.symbolSelectionRelicSourceId,
+            symbolChoices: mapSelectionChoices(save.state.symbolChoices),
             symbolSelectionSymbolSourceId: save.state.symbolSelectionSymbolSourceId ?? null,
             isTurnSymbolSelection:
                 save.state.isTurnSymbolSelection ??
                 (
-                    save.state.phase === 'selection' &&
-                    save.state.symbolSelectionRelicSourceId == null &&
+                    phase === 'selection' &&
                     save.state.symbolSelectionSymbolSourceId == null &&
                     save.state.bonusSelectionQueue.length === 0
                 ),
-            relicChoices: save.state.relicChoices.map((id) => {
-                if (id == null) return null;
-                const definitionId = hasLegacyRelicIds ? remapLegacyRelicId(id) : id;
-                return RELICS[definitionId] ?? null;
-            }),
-            relicHalfPriceRelicId:
-                hasLegacyRelicIds && save.state.relicHalfPriceRelicId != null
-                    ? remapLegacyRelicId(save.state.relicHalfPriceRelicId)
-                    : save.state.relicHalfPriceRelicId,
             lastEffects: [],
             counterDisplayOverrides: [],
-            runningTotals: { food: 0, gold: 0, knowledge: 0, military: 0 },
+            runningTotals: { food: 0, gold: 0, knowledge: 0 },
             activeSlot: null,
             activeContributors: [],
             pendingContributors: [],
@@ -387,31 +291,19 @@ export function loadSavedGamePatch(): Partial<GameState> | null {
             lootMergeFx: null,
             eventLog: save.state.eventLog ?? [],
             prevBoard: deserializeBoard(save.state.prevBoard, symbolByInstanceId),
-            combatAnimation: null,
-            combatShaking: false,
-            preCombatShakeTarget: null,
-            preCombatShakeRelicDefId: null,
-            combatFloats: [],
-            relicFloats: [],
             knowledgeUpgradeFloats: [],
-            religionUnlocked: save.state.religionUnlocked,
+            religionUnlocked: true,
             unlockedKnowledgeUpgrades,
             knowledgeUpgradeLevels,
-            qinCurrencyStandardTurnsRemaining: save.state.qinCurrencyStandardTurnsRemaining ?? 0,
-            levelUpResearchPoints: knowledgeResearchCredits.length,
-            knowledgeResearchCredits,
+            levelUpResearchPoints: 0,
+            knowledgeResearchCredits: [],
             pendingBoardExpansions: save.state.pendingBoardExpansions ?? 0,
-            isRelicShopOpen: save.state.isRelicShopOpen,
-            hasNewRelicShopStock: save.state.hasNewRelicShopStock,
             rerollsThisTurn: save.state.rerollsThisTurn,
-            returnPhaseAfterDevKnowledgeUpgrade: save.state.returnPhaseAfterDevKnowledgeUpgrade,
-            barbarianSymbolThreat: save.state.barbarianSymbolThreat,
-            barbarianCampThreat: save.state.barbarianCampThreat,
+            returnPhaseAfterDevKnowledgeUpgrade: null,
             naturalDisasterThreat: save.state.naturalDisasterThreat,
             activeStatusIds: getActiveStatusIdsFromStates(activeStatuses),
             activeStatuses,
             pendingNewThreatFloats: [],
-            pendingOblivionFurnaceRelicId: save.state.pendingOblivionFurnaceRelicId,
             pendingEdictSource: save.state.pendingEdictSource,
             bonusSelectionQueue: save.state.bonusSelectionQueue,
             forceTerrainInNextSymbolChoices: save.state.forceTerrainInNextSymbolChoices,
