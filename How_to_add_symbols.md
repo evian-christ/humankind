@@ -19,7 +19,7 @@
 |---|---|
 | 1-8 | 지형 |
 | 9-38 | 자원/사치품/특수 |
-| 39-46, 86-88 | 고대 및 리더 해금 고대 |
+| 39-46, 86 | 고대 |
 | 47-54 | 중세 |
 | 55-58 | 종교 |
 | 59 | 현대 특수 |
@@ -110,24 +110,14 @@ sprite: "-"
 
 ## 선택 풀 기준
 
-새 심볼이 정의됐다고 항상 선택지에 등장하는 것은 아닙니다. `selectionLogic.ts`와 `symbolDefinitions.ts`의 풀 규칙을 확인해야 합니다.
+새 게임에서는 난이도 화면에서 보유한 심볼 세트 8개를 장착합니다. `symbolSets.ts`의 장착한 8개 세트에 속한 심볼과 공통 심볼이 첫 턴부터 선택 풀에 들어갑니다. 시대 전환이나 연구로 심볼을 해금하지 않습니다. 재해와 전리품처럼 별도 경로로 생성되는 심볼은 일반 선택 풀에서 제외합니다. 현재 12개 세트 중 8개만 임시 보유 상태이고 4개는 심볼도 배정되지 않은 미보유 자리입니다.
 
-기본 흐름:
+- 세트 전용 심볼: `humankind-web/src/game/data/symbolSets.ts`의 해당 세트 `symbolKeys`에 추가합니다.
+- 공통 심볼: 어느 세트의 `symbolKeys`에도 넣지 않습니다.
+- 세트 이름/설명: `humankind-web/src/i18n/`의 번역을 함께 갱신합니다.
+- 선택 풀 규칙: `humankind-web/src/game/logic/selection/selectionLogic.ts`와 관련 테스트를 확인합니다.
 
-1. `EXCLUDED_FROM_BASE_POOL`에 없고 기본 타입 조건을 만족하면 기본 풀에 들어갑니다.
-2. 고대 타입은 `Ancient Era` 업그레이드 전에는 제외됩니다.
-3. 봉건제 이후 고대 심볼은 일반 풀에서 빠집니다.
-4. 봉건제 이후 중세 심볼이 열립니다.
-5. 현대 이후 일반 선택 풀에서 지형은 제외됩니다. 단, 지형 전용 선택은 `includeModernTerrain` 경로로 별도 동작할 수 있습니다.
-6. 종교 심볼은 `Theology`로 `religionUnlocked`가 켜져야 등장합니다.
-7. 적 심볼은 일반 선택 풀에서 제외되고, 위협/이벤트/전투 시스템을 통해 등장합니다.
-
-업그레이드로 해금되는 심볼이면 다음도 갱신합니다.
-
-- `humankind-web/src/game/data/knowledgeUpgrades.ts`
-- `humankind-web/src/game/data/knowledgeUpgradeTiers.ts`
-- `humankind-web/src/game/logic/selection/selectionLogic.ts`
-- 관련 테스트: `knowledgeUpgrades.test.ts`, `selectionLogic.test.ts`, 필요 시 `gameCalculations.test.ts`
+세트 도입 이전 저장 파일은 기존 해금 상태에 따른 선택 풀을 유지하는 호환 경로를 사용합니다.
 
 ---
 
@@ -141,7 +131,6 @@ sprite: "-"
 | 고대 | `logic/symbolEffects/handlers/ancientEffects.ts` |
 | 중세 | `logic/symbolEffects/handlers/medievalEffects.ts` |
 | 종교 | `logic/symbolEffects/handlers/religionEffects.ts` |
-| 적 | `logic/symbolEffects/handlers/enemyEffects.ts` |
 | 재해 | `logic/symbolEffects/handlers/disasterEffects.ts` |
 | 일반/자원/특수 | `logic/symbolEffects/handlers/normalEffects.ts` |
 
@@ -149,14 +138,13 @@ sprite: "-"
 
 - 턴 누적/생성/파괴: `logic/turn/turnPipeline.ts`
 - 여러 심볼 생산 결과 참조: `logic/turn/symbolEffectResolution.ts`
-- 턴 전체 후처리, 유물/리더/AGI 등: `logic/turn/postEffectsHooks.ts`
 - 턴 종료 페이즈, 식량 납부, 선택 페이즈: `logic/turn/phaseResolution.ts`, `state/actions/turnFlow.ts`
 
-전투/재해/전리품/이벤트와 연결되면 추가로 확인합니다.
+재해/전리품/이벤트와 연결되면 추가로 확인합니다.
 
-- 유닛/적 전투: `logic/combat/*`, `logic/turn/combatResolution.ts`, `data/unitUpgrades.ts`, `data/enemyPools.ts`
 - 상태/재해 확률: `data/statusDefinitions.ts`, `logic/turn/turnPreparation.ts`
 - 전리품 보상: `data/rewardDefinitions.ts`, `state/actions/boardInteraction.ts`
+- 턴 전체 후처리, AGI 등: `logic/turn/postEffectsHooks.ts`
 - 이벤트 선택지: `data/eventDefinitions.ts`, `state/actions/selectionFlow.ts`
 
 ---
@@ -166,7 +154,7 @@ sprite: "-"
 - 심볼 효과 handler에서 `setTimeout`이나 Pixi 객체를 직접 다루지 않습니다.
 - 계산 결과를 먼저 확정하고, 연출은 `state/actions/turnPresentationTimeline.ts`, `turnRunScheduler.ts`, `components/canvas/renderers/*`, React 오버레이에서 표시합니다.
 - 새 hover/hit area나 보드 위 상호작용이 필요하면 `components/canvas/PixiGameApp.ts`와 `components/canvas/renderers/rendererShared.ts`의 판정 헬퍼를 확인합니다.
-- 새 보드 대상 선택 UI가 필요하면 기존 `OblivionFurnaceBoardOverlay.tsx`, `SymbolCellBoardOverlays.tsx`, `boardInteraction.ts` 패턴을 먼저 따릅니다.
+- 새 보드 대상 선택 UI가 필요하면 기존 `BoardDestroySelectionOverlay.tsx`, `SymbolCellBoardOverlays.tsx`, `boardInteraction.ts` 패턴을 먼저 따릅니다.
 
 ---
 
@@ -177,10 +165,9 @@ sprite: "-"
 | 변경 종류 | 우선 테스트 |
 |---|---|
 | 심볼 ID/정의/스프라이트 | `data/symbolDefinitions.test.ts` |
-| 선택 풀/해금/제외 | `logic/selection/selectionLogic.test.ts`, `data/knowledgeUpgrades.test.ts` |
+| 세트 선택 풀/제외 | `logic/selection/selectionLogic.test.ts` |
 | 효과 계산 | `logic/turn/symbolEffectResolution.test.ts`, handler 관련 테스트 |
 | 턴 흐름/식량 납부/페이즈 | `state/actions/turnFlow.test.ts`, `logic/turn/phaseResolution.test.ts` |
-| 전투/유닛/적 | `logic/turn/combatResolution.test.ts`, `data/unitUpgrades.test.ts`, `data/enemyPools.test.ts` |
 | 재해 | `state/actions/disasterPlague.test.ts`, `logic/turn/turnPreparation.test.ts` |
 | 저장/복원 영향 | `state/saveGame.test.ts` |
 | 시뮬레이션 영향 | `simulation/balanceSimulator.test.ts` |
@@ -197,7 +184,7 @@ sprite: "-"
 6. [ ] 보드 상태/업그레이드에 따라 설명이 변하면 `getBoardSymbolTooltipDesc(...)` 갱신
 7. [ ] 효과 handler 또는 `logic/turn/*`에 실제 계산 추가
 8. [ ] 선택 풀 등장 조건이 필요하면 `EXCLUDED_FROM_BASE_POOL`, `selectionLogic.ts`, 업그레이드 데이터를 갱신
-9. [ ] 전투/재해/전리품/이벤트/리더와 엮이면 관련 데이터와 액션 파일을 같이 갱신
+9. [ ] 재해/전리품/이벤트와 엮이면 관련 데이터와 액션 파일을 같이 갱신
 10. [ ] 필요한 React/Pixi 표시, hover, 보드 상호작용을 추가
 11. [ ] 관련 테스트 추가/갱신
 12. [ ] `npm run test` 또는 범위 테스트로 검증

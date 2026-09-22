@@ -18,4 +18,4 @@
 - **시대**: Ancient(Lv. 0) → Medieval(Lv. 10) → Modern(Lv. 20) (지식 누적으로 전환)
 - **핵심 루프**: 턴 진행 → 심볼 효과 순차 처리 → 심볼 선택 → 10턴마다 식량 납부
 - **턴 구현 기준**: 계산 파이프라인과 연출 타임라인을 분리하고, 타이머 콜백은 run id/cancel token으로 보호
-- **Pixi 구현 기준**: `PixiGameApp`는 조율자, 실제 렌더링은 `components/canvas/renderers/`의 보드/HUD/유물/업그레이드/플로팅/전투 렌더러가 담당
+- **Pixi 구현 기준**: `PixiGameApp`는 조율자, 실제 렌더링은 `components/canvas/renderers/`의 보드/HUD/업그레이드/플로팅/상태 렌더러가 담당
